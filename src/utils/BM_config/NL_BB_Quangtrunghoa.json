@@ -1,0 +1,90 @@
+{
+  "code": "NL_PhoitronQuang",
+  "title": "NHẬT KÝ THAO TÁC PHỐI TRỘN QUẶNG TRUNG HÒA",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.06/QT.05.01",
+    "effectiveDate": "01/06/2023",
+    "revision": "01"
+  },
+ "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value":1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày", "type": "date", "key": "NgaySX","required": true }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "Nguyên liệu đầu vào trộn quặng",
+      "key": "table1",
+      "columns": [
+        { "title": "Tên nguyên liệu phối liệu", "dataIndex": "tenNguyenLieu" },
+        {
+          "title": "Thành phần hóa học (%)",
+          "children": [
+            { "title": "TFe", "dataIndex": "tfe" },
+            { "title": "SiO₂", "dataIndex": "sio2" },
+            { "title": "Al₂O₃", "dataIndex": "al2o3" },
+            { "title": "CaO", "dataIndex": "cao" },
+            { "title": "MgO", "dataIndex": "mgo" },
+            { "title": "Zn", "dataIndex": "zn" }
+          ]
+        },
+        { "title": "Tỷ lệ phối theo YCCN (%)", "dataIndex": "tyLeYCCN" },
+        { "title": "Tỷ lệ phối thực tế (%)", "dataIndex": "tyLeThucTe" },
+        {
+          "title": "Khối lượng phối trộn thực tế (tấn)",
+          "dataIndex": "khoiLuongPhoiTron"
+        },
+        {
+          "title": "Sản lượng quặng trung hòa trong kíp (tấn)",
+          "dataIndex": "sanLuongTrongKip"
+        }
+      ]
+    },
+    {
+      "sectionType": "text",
+      "title": "Tình hình vận hành thiết bị trong kíp",
+      "key": "tinhHinhVanHanh",
+      "type": "textarea",
+      "placeholder": "Nhập ghi chú về tình hình vận hành thiết bị..."
+    }
+  ],
+  "footerNotes": [
+    "Áp dụng cho giai đoạn phối 08 silo chứa quặng đơn.",
+    "Các thông số tỷ lệ phối theo YCCN và thực tế cần được đối chiếu sau mỗi ca sản xuất.",
+    "Tổng hợp sản lượng theo từng trộn (Trộn #3, Trộn #4, ...)."
+  ],
+  "signatures": [
+    {
+      "label": "Người giao kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiGiaoKip",
+      "maphongBan": "NM.QLSX",
+      "capduyet": 1,
+      "isChon": false,
+      "required": true
+    },
+    {
+      "label": "Người nhận kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiNhanKip",
+      "maphongBan": "NM.NL",
+      "capduyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

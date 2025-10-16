@@ -1,0 +1,9 @@
+export { default as Home } from './Home/Home';
+export { default as Dashboard } from './Dashboard/Dashboard';
+export { default as TicketProcessing } from './TicketProcessing/TicketProcessing';
+export { default as Reports } from './Reports/Reports';
+export { default as Settings } from './Settings/Settings';
+export { default as DemoForm } from './DemoForm/DemoForm';
+export { default as TaoYeuCau } from './TaoYeuCau/TaoYeuCau';
+export { default as BienBanPhoiNong } from './NMCTD/BienBanPhoiNong/BienBanPhoiNong';
+export { default as BienBanPhoiNguoi } from './NMCTD/BienBanPhoiNguoi/BienBanPhoiNguoi';

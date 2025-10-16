@@ -1,0 +1,73 @@
+{
+  "code": "HRC1_BB_Theplong",
+  "title": "BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.16/QT.05.10",
+    "effectiveDate": "01/09/2023",
+    "revision": "01"
+  },
+
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca ngày", "value": 1 },
+        { "label": "Ca đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày sản xuất", "type": "date", "key": "NgaySX", "required": true }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết giao nhận thép lỏng",
+      "key": "table1",
+      "columns": [
+        { "title": "Máy đúc", "dataIndex": "mayDuc" },
+        { "title": "Mẻ", "dataIndex": "me" },
+        { "title": "Mác thép", "dataIndex": "macThep" },
+        { "title": "Thùng số", "dataIndex": "thungSo" },
+        { "title": "Thời gian", "dataIndex": "thoiGian" },
+        { "title": "KL thùng & thép lỏng vào bệ xoay (tấn) - lần 1", "dataIndex": "klLan1" },
+        { "title": "KL thùng (tấn) - lần 2", "dataIndex": "klLan2" },
+        { "title": "KL thép lẫn 3 (tấn)", "dataIndex": "klLan3" },
+        { "title": "KL thép lỏng (tấn)", "dataIndex": "klThepLong" },
+        { "title": "Ghi chú", "dataIndex": "ghiChu" },
+        { "title": "Tinh luyện / Lên thẳng", "dataIndex": "tinhLuyenLenThang" }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+    "Biên bản này được lập thành 2 bản có giá trị như nhau: bên giao và bên nhận mỗi bên giữ 1 bản."
+  ],
+
+  "signatures": [
+    {
+      "label": "Bên giao",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Giao",
+      "maphongBan": "NM.CTD",
+      "capduyet": 1,
+      "isChon": false,
+      "required": false
+    },
+    {
+      "label": "Bên nhận",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Nhan",
+      "maphongBan": "NM.CTD",
+      "capduyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

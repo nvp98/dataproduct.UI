@@ -1,0 +1,44 @@
+{
+  "code": "BM.09-QT.05.13",
+  "title": "SỔ THEO DÕI SẢN XUẤT HÀNG NGÀY",
+   "isoInfo": {
+    "code": "BM.06/QT.05.11",
+    "effectiveDate": "16/05/2025",
+    "revision": "01"
+  },
+  "headerFields": [
+    { "label": "Kíp", "type": "text", "value": "2C" },
+    { "label": "Thời gian từ", "type": "datetime", "value": "2025-08-17T20:00:00" },
+    { "label": "Đến", "type": "datetime", "value": "2025-08-18T08:00:00" }
+  ],
+  "sections": [
+    {
+      "title": "1. Nguyên liệu và sản phẩm",
+      "columns": [
+        { "title": "Mác phôi loại", "dataIndex": "macPhoi" },
+        { "title": "Kích thước", "dataIndex": "kichThuoc" },
+        { "title": "Số phôi ra khỏi lò", "dataIndex": "soPhoiRaKhoiLo" },
+        { "title": "Số phôi lỗi", "dataIndex": "soPhoiLoi" },
+        { "title": "Số phôi cán ra sản phẩm", "dataIndex": "soPhoiTP" },
+        { "title": "Số phôi phế công nghệ", "dataIndex": "soPhoiPheCN" },
+        { "title": "Loại sản phẩm", "dataIndex": "loaiSP" },
+        { "title": "Lệnh sản xuất", "dataIndex": "lenhSX" }
+      ]
+    },
+    {
+      "title": "2. Diễn biến sản xuất",
+      "columns": [
+        { "title": "Từ giờ", "dataIndex": "tuGio" },
+        { "title": "Đến giờ", "dataIndex": "denGio" },
+        { "title": "Thiết bị", "dataIndex": "thietBi" },
+        { "title": "Mô tả sự cố / dừng sản xuất", "dataIndex": "moTa" },
+        { "title": "Loại sự cố", "dataIndex": "loaiSuCo" },
+        { "title": "Phế công nghệ", "dataIndex": "pheCN" }
+      ]
+    }
+  ],
+  "signatures": [
+    { "label": "Trưởng kíp", "signer": "Mai Châu Tòng" },
+    { "label": "NV vận hành", "signer": "Lê Văn Anh" }
+  ]
+}

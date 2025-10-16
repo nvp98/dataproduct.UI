@@ -1,0 +1,86 @@
+{
+  "code": "CTD_BB_Phoinong",
+  "title": "BIÊN BẢN GIAO NHẬN PHÔI NÓNG",
+  "headerInfo": {
+    "company": "HÒA PHÁT DUNG QUẤT",
+    "subCompany": "CÔNG TY CỔ PHẦN THÉP "
+  },
+  "isoInfo": {
+    "code": "BM.06/QT.05.11",
+    "effectiveDate": "10/05/2025",
+    "revision": "01"
+  },
+
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value":1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày", "type": "date", "key": "NgaySX","required": true },
+    { "label": "Máy Đúc", "type": "select","required": true, "key": "mayduc","options": [
+        { "label": "Đúc 1", "value": 1 },
+        { "label": "Đúc 2", "value": 2 },
+        { "label": "Đúc 3", "value": 3 },
+        { "label": "Đúc 4", "value": 4 }
+      ] }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key":"table1",
+      "dataSource": {
+        "type": "api",
+        "url": "BKPhoiThep",
+        "params": { "kip": "@kip" }
+      },
+      "columns": [
+        { "title": "Mẻ", "dataIndex": "me" },
+        { "title": "Mác", "dataIndex": "mac"},
+        { "title": "Kích thước", "dataIndex": "kichThuoc"},
+        {
+          "title": "Loại I",
+          "children": [
+            { "title": "Số thanh", "dataIndex": "loaiI_TP" },
+            { "title": "Khối lượng (tấn)", "dataIndex": "loaiI_BM" }
+          ]
+        },
+        {
+          "title": "Loại II",
+          "children": [
+            { "title": "Số thanh", "dataIndex": "loaiII_TP" },
+            { "title": "Khối lượng (tấn)", "dataIndex": "loaiII_BM" }
+          ]
+        },
+        {
+          "title": "Loại III",
+          "children": [
+            { "title": "Số thanh", "dataIndex": "loaiIII_TP" },
+            { "title": "Khối lượng (tấn)", "dataIndex": "loaiIII_BM" }
+          ]
+        },
+        { "title": "Tổng khối lượng", "dataIndex": "tongKhoi" },
+        { "title": "Ghi chú", "dataIndex": "ghiChu" }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+    "Tất cả phôi đạt chỉ tiêu trong nhà máy, đủ điều kiện đưa vào cán (nếu không có lỗi).",
+    "Thời điểm xác nhận biên bản giao nhận phôi nóng từ lúc giao lò SM/P đến 20h05p.",
+    "Trọng lượng kiểm theo thẻ bàn giao phôi, chênh lệch theo thực tế kiểm đếm."
+  ],
+
+  "signatures": [
+    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_CTD" ,"maphongBan":"NM.CTD","capduyet":1,"isChon":false},
+    { "label": "P.QLCL","type":"selectNguoiKy", "key": "nguoiKy_QLCL","maphongBan":"P.QLCL","capduyet":2,"isChon":true,"required": true },
+    { "label": "NM.HRC1","type":"selectNguoiKy", "key": "nguoiKy_NMHRC1","maphongBan":"NM.HRC1","capduyet":3,"isChon":true,"required": true }
+  ]
+}

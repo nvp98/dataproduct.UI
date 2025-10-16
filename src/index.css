@@ -1,0 +1,18 @@
+/* index.css */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: 'Lato', sans-serif;
+  background-color: #f5f6fa;
+  color: #222;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
