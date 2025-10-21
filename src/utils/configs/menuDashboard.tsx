@@ -36,6 +36,25 @@ export const MenuDataDashboard = [
       },
     ],
   },
+  {
+    category: "NM.LG",
+    icon: "nmlg",
+    color: "#019221ff",
+    items: [
+      {
+        code: "naplieulocao",
+        title: "BM.05/QT.05.09 SỔ THEO DÕI NẠP LIỆU LÒ CAO",
+      },
+      {
+        code: "khoiluongsilo",
+        title: "BM.07/QT.05.09 CHỐT KHỐI LƯỢNG SILO LÒ CAO",
+      },
+      {
+        code: "vanhanhthanphun",
+        title: "BM.10/QT.05.09 NHẬT KÝ VẬN HÀNH THAN PHUN LÒ CAO",
+      },
+    ],
+  },
   // {
   //   category: "Quản lý thiết bị",
   //   icon: "equipment",

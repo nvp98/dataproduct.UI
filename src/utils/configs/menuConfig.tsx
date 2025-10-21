@@ -102,17 +102,6 @@ export const menuConfig = [
           // { key: "6", label: "Option 6" },
         ],
       },
-      // {
-      //   key: "sub2-3",
-      //   label: "NM.HRC2",
-      //   children: [
-      //     {
-      //       key: "5",
-      //       label: <NavLink to="/dashboard">BM.06/QT.05.10</NavLink>,
-      //     },
-      //     // { key: "6", label: "Option 6" },
-      //   ],
-      // },
       {
         key: "sub2-4",
         label: "NM.CTD",
@@ -133,6 +122,43 @@ export const menuConfig = [
               <Tooltip title="BM.07/QT.05.10 (Biên bản giao nhận phôi nguội)">
                 <NavLink to="/bienbanphoinguoi">
                   BM.06/QT.05.10 (Biên bản giao nhận phôi nguội)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          // { key: "6", label: "Option 6" },
+        ],
+      },
+      {
+        key: "sub2-5",
+        label: "NM.LG",
+        children: [
+          {
+            key: "sub2-5-1",
+            label: (
+              <Tooltip title="BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
+                <NavLink to="/naplieulocao">
+                  BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-5-2",
+            label: (
+              <Tooltip title="BM.07/QT.05.09 (Chốt khối lượng silo lò cao)">
+                <NavLink to="/khoiluongsilo">
+                  BM.07/QT.05.09 (Chốt khối lượng silo lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-5-3",
+            label: (
+              <Tooltip title="BM.10/QT.05.09 (Nhật ký vận hành than phun lò cao)">
+                <NavLink to="/vanhanhthanphun">
+                  BM.10/QT.05.09 (Nhật ký vận hành than phun lò cao)
                 </NavLink>
               </Tooltip>
             ),

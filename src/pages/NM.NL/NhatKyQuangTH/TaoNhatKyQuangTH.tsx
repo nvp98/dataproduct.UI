@@ -6,6 +6,8 @@ import { useState, useEffect } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { useLocation } from "react-router-dom";
+import { nguyenlieuApi } from "../../../services/BKNguyenLieuApi";
+import { v4 as uuidv4 } from "uuid";
 
 const TaoPhieuNhatKyQuang = () => {
   const location = useLocation();
@@ -17,8 +19,8 @@ const TaoPhieuNhatKyQuang = () => {
   const [tableData, setTableData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   // Theo dõi thay đổi trên các field chính
-  // const ngaySX = Form.useWatch("NgaySX", form);
-  // const ca = Form.useWatch("ca", form);
+  const ngaySX = Form.useWatch("NgaySX", form);
+  const ca = Form.useWatch("ca", form);
   // const mayduc = Form.useWatch("mayduc", form);
 
   // Lấy tất cả field keys từ columns
@@ -58,41 +60,75 @@ const TaoPhieuNhatKyQuang = () => {
   // };
 
   /* Map dữ liệu API thành table */
+
+  const mapApiToTable = (res: any[]) => {
+    if (!res || res.length === 0) {
+      return [
+        {
+          key: uuidv4(),
+          tenNguyenLieu: "",
+          tfe: 0,
+          sio2: 0,
+          al2o3: 0,
+          cao: 0,
+          mgo: 0,
+          zn: 0,
+        },
+      ];
+    }
+    return (res || []).map((item: any) => ({
+      key: item.id || uuidv4(),
+      tenNguyenLieu: item.tenNvl ?? "",
+      tfe: item.tfe ?? 0,
+      sio2: item.sio2 ?? 0,
+      al2o3: item.al2o3 ?? 0,
+      cao: item.cao ?? 0,
+      mgo: item.mgo ?? 0,
+      zn: item.zn ?? 0,
+      tyLeYCCN: item.tyLeYCCN ?? 0,
+      tyLeThucTe: item.tyLeThucTe ?? 0,
+      khoiLuongPhoiTron: item.khoiLuongPhoiTron ?? 0,
+      sanLuongTrongKip: item.sanLuongTrongKip ?? 0,
+    }));
+  };
   // const mapApiToTable = (res: any[]) =>
   //   (res || []).map((item: any) => ({
   //     key: item.id || uuidv4(),
-  //     me: item.me ?? "",
-  //     mac: item.mac ?? "",
-  //     kichThuoc: item.kichThuoc ?? "",
-  //     loaiI_TP: item.LoaiI_TP ?? 0,
-  //     loaiI_BM: item.LoaiI_BM ?? 0,
-  //     loaiII_TP: item.LoaiII_TP ?? 0,
-  //     loaiII_BM: item.LoaiII_BM ?? 0,
-  //     loaiIII_TP: item.LoaiIII_TP ?? 0,
-  //     loaiIII_BM: item.LoaiIII_BM ?? 0,
-  //     tongKhoi: item.tongKhoiLuog ?? 0,
-  //     ghiChu: item.GhiChu ?? "",
+  //     tenNguyenLieu: item.tenNvl ?? "",
+  //     tfe: item.tfe ?? 0,
+  //     sio2: item.sio2 ?? 0,
+  //     al2o3: item.al2o3 ?? 0,
+  //     cao: item.cao ?? 0,
+  //     mgo: item.mgo ?? 0,
+  //     zn: item.zn ?? 0,
+  //     tyLeYCCN: item.tyLeYCCN ?? 0,
+  //     tyLeThucTe: item.tyLeThucTe ?? 0,
+  //     khoiLuongPhoiTron: item.khoiLuongPhoiTron ?? 0,
+  //     sanLuongTrongKip: item.sanLuongTrongKip ?? 0,
   //   }));
 
   // Hàm tải dữ liệu bảng (dùng chung cho init + watcher)
-  // const fetchTableData = async (params: any) => {
-  //   try {
-  //     setLoading(true);
-  //     const tablePhoiNong = config.layout.find(
-  //       (l) => l.sectionType === "table" && l.key === "phoiNongTable"
-  //     );
-  //     if (!tablePhoiNong) return; // check đúng bảng phôi nóng
+  const fetchTableData = async (params: any) => {
+    try {
+      setLoading(true);
+      const tablePhoiNong = config.layout.find(
+        (l) =>
+          l.sectionType === "table" &&
+          l.key === "table1" &&
+          config.code === "NL_PhoitronQuang"
+      );
+      if (!tablePhoiNong) return; // check đúng bảng phôi nóng
 
-  //     if (tablePhoiNong && tablePhoiNong.dataSource.url !== "") {
-  //       const res = await phoiGiaoNhanApi.getData(params);
-  //       setTableData(mapApiToTable(res as any));
-  //     }
-  //   } catch (err: any) {
-  //     message.error("Không thể tải dữ liệu ban đầu!");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+      if (tablePhoiNong) {
+        const res = await nguyenlieuApi.getData(params);
+        setTableData(mapApiToTable(res as any));
+      }
+    } catch (err: any) {
+      message.error("Không thể tải dữ liệu ban đầu!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Hàm khởi tạo dữ liệu ban đầu
   const initData = async () => {
@@ -136,15 +172,14 @@ const TaoPhieuNhatKyQuang = () => {
   }, [idphieu]);
 
   /** Theo dõi form → load lại bảng */
-  // useEffect(() => {
-  //   if (ngaySX || ca || mayduc) {
-  //     fetchTableData({
-  //       NgaySX: ngaySX ? dayjs(ngaySX).format("YYYY-MM-DD") : null,
-  //       Ca: ca,
-  //       MayDuc: mayduc,
-  //     });
-  //   }
-  // }, [ngaySX, ca, mayduc]);
+  useEffect(() => {
+    if (ngaySX || ca) {
+      fetchTableData({
+        NgaySX: ngaySX ? dayjs(ngaySX).format("YYYY-MM-DD") : null,
+        Ca: ca,
+      });
+    }
+  }, [ngaySX, ca]);
 
   // Gửi dữ liệu form
   const handleSubmit = async (values: any) => {
