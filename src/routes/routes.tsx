@@ -141,7 +141,7 @@ export const routes = [
         ),
       },
       {
-        path: "chitietphieuphoinong",
+        path: "chitietphieuphoinong/:id",
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>

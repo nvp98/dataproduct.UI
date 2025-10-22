@@ -170,7 +170,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
             if (type === "viecdentoi") {
-              return navigate("/chitietphieuphoinong", {
+              return navigate(`/chitietphieuphoinong/${record.idphieu}`, {
                 state: {
                   idphieu: record.idphieu,
                   pheduyet: record?.pheDuyet?.[0] ?? null,
