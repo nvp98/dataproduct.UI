@@ -1,12 +1,4 @@
-// import { useSelector, useDispatch } from "react-redux";
-// import type { RootState } from "../../store";
-// import EditableTable from '../../components/CustomTable';
-// import DynamicForm from "../../components/DynamicForm";
-// import type { JSONSchema7 } from "json-schema";
-// import DynamicBM from "../../components/DynamicForm";
-
-// import CTD_BB_Phoinguoi from "../../utils/BM_config/CTD_BB_Phoinguoi.json";
-// import CTD_BB_Phoinong from "../../utils/BM_config/CTD_BB_Phoinong.json";
+﻿import HRC1_BB_Lothoi from "../../../utils/BM_config/HRC1_BB_Lothoi.json";
 import {
   Button,
   Card,
@@ -24,10 +16,9 @@ import {
   Tag,
 } from "antd";
 // import PdfMakeExample from "../../components/PdfMakeExample";
-import CTD_BB_Phoinong from "../../../utils/BM_config/CTD_BB_Phoinong.json";
 import {
   DeleteTwoTone,
-  EyeOutlined,
+  EditTwoTone,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -37,8 +28,8 @@ import { useNavigate } from "react-router-dom";
 import { PhieuApi } from "../../../services/PhieuApi";
 // Dữ liệu mẫu
 
-const BienBanPhoiNong = ({ type }: { type?: string }) => {
-  const config = CTD_BB_Phoinong;
+const TieuHaoLoThoi = () => {
+  const config = HRC1_BB_Lothoi;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
@@ -64,27 +55,14 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
   const fetchData = async (page = 1, pageSize = 10, filters = {}) => {
     setLoading(true);
     try {
-      if (type === "viecdentoi") {
-        const res = await PhieuApi.getData({
-          MaBM: config.code,
-          NguoiDuyetID: userObj.id,
-          isCheckDuyet: 1,
-          page,
-          pageSize,
-          ...filters,
-        });
-        setData(res as any);
-      } else {
-        const res = await PhieuApi.getData({
-          MaBM: config.code,
-          NguoiTaoID: userObj.id,
-          page,
-          pageSize,
-          ...filters,
-        });
-        setData(res as any);
-      }
-
+      const res = await PhieuApi.getData({
+        MaBM: config.code,
+        NguoiTaoID: userObj.id,
+        page,
+        pageSize,
+        ...filters,
+      });
+      setData(res as any);
       // setPagination({
       //   current: page,
       //   pageSize: pageSize,
@@ -143,11 +121,11 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       message.success("Đã xóa ticket!");
     }, 500);
   };
-  // const handleEdit = (record: any) => {
-  //   console.log("Edit record:", record);
-  //   setEditModal({ open: true, record });
-  //   editForm.setFieldsValue(record);
-  // };
+  const handleEdit = (record: any) => {
+    console.log("Edit record:", record);
+    setEditModal({ open: true, record });
+    editForm.setFieldsValue(record);
+  };
 
   const handleEditFinish = (values: any) => {
     setData((prev) =>
@@ -168,20 +146,11 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       render: (text: string, record: any) => (
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
-          onClick={() => {
-            if (type === "viecdentoi") {
-              return navigate(`/chitietphieuphoinong/${record.idphieu}`, {
-                state: {
-                  idphieu: record.idphieu,
-                  pheduyet: record?.pheDuyet?.[0] ?? null,
-                },
-              });
-            } else {
-              return navigate("/taophieuphoinong", {
-                state: { idphieu: record.idphieu },
-              });
-            }
-          }}
+          onClick={() =>
+            navigate("/taotieuhaolothoi", {
+              state: { idphieu: record.idphieu },
+            })
+          }
         >
           {text}
         </b>
@@ -190,8 +159,8 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     },
     {
       title: "Quy trình",
-      dataIndex: "maBm",
-      key: "maBm",
+      dataIndex: "quyTrinh",
+      key: "quyTrinh",
       width: 220,
       ellipsis: true,
     },
@@ -204,8 +173,8 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     },
     {
       title: "Xưởng sản xuất",
-      dataIndex: "xuongId",
-      key: "xuongId",
+      dataIndex: "xuong",
+      key: "xuong",
       width: 220,
       ellipsis: true,
     },
@@ -219,8 +188,8 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     },
     {
       title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
+      dataIndex: "nguoiTao",
+      key: "nguoiTao",
       // width: 220,
       ellipsis: true,
     },
@@ -234,8 +203,8 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     },
     {
       title: "Trạng thái",
-      dataIndex: "tinhTrang",
-      key: "tinhTrang",
+      dataIndex: "ticketStatus",
+      key: "ticketStatus",
       width: 110,
       render: (status: string) => (
         <Tag color={statusConfig[status]?.color || "default"}>
@@ -277,12 +246,8 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           </Popconfirm>
           <Button
             type="text"
-            icon={<EyeOutlined twoToneColor="#1890ff" />}
-            onClick={() =>
-              navigate("/chitietphieuphoinong", {
-                state: { idphieu: record.idphieu },
-              })
-            }
+            icon={<EditTwoTone twoToneColor="#1890ff" />}
+            onClick={() => handleEdit(record)}
           />
         </Space>
       ),
@@ -317,17 +282,15 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           <Col>
             <Button onClick={handleClearFilter}>Xóa bộ lọc</Button>
           </Col>
-          {!type && (
-            <Col>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => navigate("/taophieuphoinong")}
-              >
-                Tạo phiếu mới
-              </Button>
-            </Col>
-          )}
+          <Col>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate("/taotieuhaolothoi")}
+            >
+              Tạo phiếu mới
+            </Button>
+          </Col>
         </Row>
       </Card>
       <Card>
@@ -335,6 +298,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           columns={columns}
           dataSource={data}
           loading={loading}
+          rowKey={(record) => record.idphieu || record.soPhieu || record.key} 
           // pagination={{
           //   total: data.length,
           //   pageSize: pagination.pageSize,
@@ -370,7 +334,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
         open={editModal.open}
         onCancel={() => setEditModal({ open: false, record: undefined })}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form layout="vertical" form={editForm} onFinish={handleEditFinish}>
           <Form.Item
@@ -439,4 +403,4 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
   );
 };
 
-export default BienBanPhoiNong;
+export default TieuHaoLoThoi;

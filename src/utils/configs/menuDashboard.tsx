@@ -19,6 +19,10 @@ export const MenuDataDashboard = [
         code: "bienbantheplong",
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
       },
+      {
+        code: "tieuhaolothoi",
+        title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+      },
     ],
   },
   {

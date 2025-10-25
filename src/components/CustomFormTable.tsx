@@ -6,13 +6,17 @@ interface CustomFormTableProps {
   columns: Array<{
     title: string;
     dataIndex?: string;
+    isLabel?: boolean; // Xác định cột này là cột label
+    width?: number;
     children?: Array<{
       title: string;
       dataIndex: string | number;
+      width?: number;
     }>;
   }>;
   initialData?: any[];
   onDataChange?: (data: any[]) => void;
+  className?: string;
   addRowButtonText?: string;
   showAddButton?: boolean;
   showDeleteButton?: boolean;
@@ -27,6 +31,7 @@ export default function CustomFormTable({
   columns,
   initialData = [{ key: 1 }],
   onDataChange,
+  className = "",
   addRowButtonText = "+ Thêm dòng",
   showAddButton = true,
   showDeleteButton = true,
@@ -108,13 +113,16 @@ export default function CustomFormTable({
         // Merge header: cột cha có con
         return {
           title: col.title,
+          width: col.width,
           children: col.children.map(
             (child: {
               title: string | undefined;
               dataIndex: string | number;
+              width?: number;
             }) => ({
               title: child.title,
               dataIndex: child.dataIndex,
+              width: child.width,
               render: (_: any, record: any, idx: number) => (
                 <Input
                   placeholder={child.title}
@@ -133,10 +141,23 @@ export default function CustomFormTable({
           ),
         };
       } else {
+        // Check if this is a label column
+        if (col.isLabel) {
+          return {
+            title: col.title,
+            dataIndex: col.dataIndex,
+            width: col.width,
+            render: (_: any, record: any) => (
+              <div style={{ paddingLeft: 8 }}>{record[col.dataIndex || ""]}</div>
+            ),
+          };
+        }
+
         // Cột bình thường
         return {
           title: col.title,
           dataIndex: col.dataIndex,
+          width: col.width,
           render: (_: any, record: any, idx: number) => (
             <Input
               placeholder={col.title}
@@ -199,10 +220,12 @@ export default function CustomFormTable({
           <Table
             bordered
             pagination={false}
+            className={className}
             size="small"
             columns={tableColumns}
             dataSource={rows}
             style={{ marginTop: 20 }}
+            scroll={{ x: 'max-content' }}
           />
           {showAddButton && editable && (
             <Button onClick={handleAddRow} type="dashed" className="my-2">
