@@ -22,6 +22,25 @@ export const MenuDataDashboard = [
     ],
   },
   {
+    category: "NM.HRC2",
+    icon: "nmhrc2",
+    color: "#019221ff",
+    items: [
+      {
+        code: "tieuhaonauluyen_lf",
+        title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
+      },
+      {
+        code: "tieuhaonauluyen_bof",
+        title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+      },
+      {
+        code: "tieuhaonauluyen_rf",
+        title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
+      },
+    ],
+  },
+  {
     category: "NM.CTD",
     icon: "nmctd",
     color: "#722ed1",
@@ -55,6 +74,7 @@ export const MenuDataDashboard = [
       },
     ],
   },
+  
   // {
   //   category: "Quản lý thiết bị",
   //   icon: "equipment",

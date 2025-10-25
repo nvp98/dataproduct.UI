@@ -24,7 +24,13 @@ import TaoPhieuThepLong from "../pages/NM.HRC1/BienBanThepLong/TaoBienBanThepLon
 import ChiTietPhieuPhoiNong from "../pages/NMCTD/BienBanPhoiNong/ChiTietPhieuPhoiNong";
 import SanLuongPhoi from "../pages/KhoDuLieu/NM.CTD/SanLuongPhoi";
 import BKNguyenLieu from "../pages/KhoDuLieu/NM.NL/BKNguyenLieu";
-
+import ThoiLuyenThep from "../pages/KhoDuLieu/NM.HRC2/ThoiLuyenThep";
+  import TieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/TieuHaoNauLuyen_LF";
+  import ChiTietTieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/ChiTietLF";
+  import TaoPhieuTieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/TaoPhieuLF";
+  import TieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/TieuHaoNauLuyen_RH";
+  import TaoPhieuTieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/TaoPhieuRH";
+  import ChiTietTieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/ChiTietRH";
 export const routes = [
   {
     path: "/",
@@ -206,6 +212,76 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoPhieuThepLong />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thoiluyenthep",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThoiLuyenThep />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "tieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_LF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieutieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuTieuHaoNauLuyen_LF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitiettieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoNauLuyen_LF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "tieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_RH />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieutieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuTieuHaoNauLuyen_RH />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitiettieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoNauLuyen_RH />
             </RequireRole>
           </RequireAuth>
         ),

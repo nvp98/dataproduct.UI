@@ -1,0 +1,108 @@
+{
+  "code": "HRC2_BB_NauLuyen_LF",
+  "title": "BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.14/QT.05.155",
+    "effectiveDate": "10/01/2025",
+    "revision": "00"
+  },
+
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key": "table1",
+      "dataSource": {
+        "type": "api",
+        "url": "TieuHaoNauLuyen_LF",
+        "params": { "ngaySX": "@ngaySX", "ca": "@ca" }
+      },
+      "columns": [
+        { "title": "STT", "dataIndex": "stt" },
+        { "title": "Mẻ nấu số", "dataIndex": "me" },
+        {
+          "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
+          "dataIndex": "klThepLong"
+        },
+        {
+          "title": "Chất hợp kim hóa",
+          "children": [
+            { "title": "FeSi (Kg)", "dataIndex": "fesi" },
+            { "title": "FeMn (Kg)", "dataIndex": "femn" },
+            { "title": "SiMn (Kg)", "dataIndex": "simn" },
+            { "title": "Than (Kg)", "dataIndex": "than" },
+            { "title": "FeCr (Kg)", "dataIndex": "fecr" },
+            { "title": "FeV (Kg)", "dataIndex": "fev" },
+            { "title": "Niken (Kg)", "dataIndex": "niken" },
+            { "title": "FeP (Kg)", "dataIndex": "fep" },
+            { "title": "Đồng (Kg)", "dataIndex": "cu" },
+            { "title": "Khác", "dataIndex": "hopKimKhac" }
+          ]
+        },
+        {
+          "title": "Phụ gia và chất khử oxy",
+          "children": [
+            { "title": "Huỳnh thạch (Kg)", "dataIndex": "huynhthach" },
+            { "title": "Nhôm thỏi (Kg)", "dataIndex": "nhomthoi" },
+            { "title": "Dolomite (Kg)", "dataIndex": "dolomite" },
+            { "title": "Quaczít (Kg)", "dataIndex": "quaczit" },
+            { "title": "Dây FeCa (Kg)", "dataIndex": "dayfeca" },
+            { "title": "Dây FeSi (Kg)", "dataIndex": "dayfesi" },
+            { "title": "Dây CaSi (Kg)", "dataIndex": "daycasi" },
+            { "title": "Dây Ca (Kg)", "dataIndex": "dayca" },
+            { "title": "Khác", "dataIndex": "phuGiaKhac" }
+          ]
+        },
+        {
+          "title": "Khí",
+          "children": [{ "title": "Argon (m³)", "dataIndex": "argon" }]
+        },
+        { "title": "Que lấy mẫu (Cái)", "dataIndex": "quelaymau" },
+        { "title": "Que đo nhiệt (Cái)", "dataIndex": "quedonhiet" },
+        { "title": "Ghi chú", "dataIndex": "ghiChu" }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+  ],
+
+  "signatures": [
+    {
+      "label": "Tổ trưởng",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_NMHRC1", 
+      "maphongBan": "NM.HRC1",
+      "capduyet": 3,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Người lập",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_QLCL",
+      "maphongBan": "P.QLCL",
+      "capduyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

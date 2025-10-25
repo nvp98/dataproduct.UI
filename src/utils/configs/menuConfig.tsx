@@ -52,7 +52,21 @@ export const menuConfig = [
           // { key: "6", label: "Option 6" },
         ],
       },
-      // { key: "sub1-2", label: "Option 4" },
+      {
+        key: "sub1-3",
+        label: "NM.HRC2",
+        children: [
+          {
+            key: "sub1-1.3",
+            label: (
+              <Tooltip title="Thổi luyện thép">
+                <NavLink to="/thoiluyenthep">Thổi luyện thép</NavLink>
+              </Tooltip>
+            ),
+          },
+          // { key: "6", label: "Option 6" },
+        ],
+      },
     ],
   },
   {
@@ -164,6 +178,32 @@ export const menuConfig = [
             ),
           },
           // { key: "6", label: "Option 6" },
+        ],
+      },
+      {
+        key: "sub2-6",
+        label: "NM.HRC2",
+        children: [
+          {
+            key: "sub2-6-1",
+            label: (
+              <Tooltip title="BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
+                <NavLink to="/tieuhaonauluyen_lf">
+                BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-6-2",
+            label: (
+              <Tooltip title="BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
+                <NavLink to="/tieuhaonauluyen_rh">
+                BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
