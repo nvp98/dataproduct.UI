@@ -99,7 +99,16 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
-          // { key: "6", label: "Option 6" },
+          {
+            key: "sub2-3-1",
+            label: (
+              <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
+                <NavLink to="/tieuhaolothoi">
+                  BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -165,7 +174,7 @@ export const menuConfig = [
           },
           // { key: "6", label: "Option 6" },
         ],
-      },
+        },
     ],
   },
   {
