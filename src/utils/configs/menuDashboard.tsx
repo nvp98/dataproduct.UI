@@ -23,6 +23,10 @@ export const MenuDataDashboard = [
         code: "tieuhaolothoi",
         title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
       },
+      {
+        code: "sogiaonhankip",
+        title: "BM.01/QT.05.15 SỔ GIAO NHẬN KÍP",
+      },
     ],
   },
   {

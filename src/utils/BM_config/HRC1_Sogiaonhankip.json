@@ -1,0 +1,315 @@
+{
+  "code": "HRC1_Sogiaonhankip",
+  "title": "SỔ GIAO NHẬN KÍP",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.01/QT.05.15",
+    "effectiveDate": "10/01/2025",
+    "revision": "00"
+  },
+
+  "headerFields": [
+    {
+      "label": "Xưởng",
+      "type": "select",
+      "key": "xuong",
+      "required": true,
+      "options": [
+        {
+          "label": "Đúc 1",
+          "value": 1
+        },
+        {
+          "label": "Đúc 2",
+          "value": 2
+        },
+        {
+          "label": "Đúc 3",
+          "value": 3
+        },
+        {
+          "label": "Đúc 4",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "label": "Ngày sản xuất",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "text",
+      "title": "1. Chỉ đạo chung của GĐNM:",
+      "key": "chiDaoChungCuaGDNM"
+    },
+    {
+      "title": "2. Nhân lực:",
+      "children": [
+        {
+          "type": "text",
+          "title": "Tổng số:",
+          "key": "tongSoNhanLuc"
+        },
+        {
+          "type": "text",
+          "title": "Vắng:",
+          "key": "nhanLucVang"
+        }
+      ]
+    },
+    {
+      "sectionType": "table",
+      "title": "3. Nội dung trong kíp:\n3.1. Tình hình sản xuất:\n3.2.1 Quá trình tiếp nhận và xử lý xỉ",
+      "key": "table1",
+      "columns": [
+        {
+          "title": "Nguyên liệu đầu vào",
+          "dataIndex": "nguyenLieuDauVao"
+        },
+        {
+          "title": "Khối lượng xỉ nhận (Tấn)",
+          "dataIndex": "khoiLuongXiNhan"
+        },
+        {
+          "title": "Khối lượng xỉ được xử lý (Tấn)",
+          "dataIndex": "khoiLuongXiDuocXuLy"
+        },
+        {
+          "title": "Khối lượng xỉ chưa được xử lý (Tấn)",
+          "dataIndex": "khoiLuongChuaXiDuocXuLy"
+        },
+        {
+          "title": "Phân bố xuất thành phẩm (Tấn)",
+          "dataIndex": "phanBoXuatThanhPham"
+        },
+        {
+          "title": "Ghi chú",
+          "dataIndex": "ghiChu",
+          "width": 120
+        }
+      ],
+      "initialData": [
+        {
+          "nguyenLieuDauVao": "Xỉ lò thổi"
+        },
+        {
+          "nguyenLieuDauVao": "Xỉ đúc"
+        },
+        {
+          "nguyenLieuDauVao": "Xỉ khử S"
+        },
+        {
+          "nguyenLieuDauVao": "Xỉ tổng hợp"
+        },
+        {
+          "nguyenLieuDauVao": "Xỉ hạt lò cao"
+        },
+        {
+          "nguyenLieuDauVao": "Xỉ cục"
+        }
+      ]
+    },
+    {
+      "sectionType": "table",
+      "title": "3.2.2 Quá trình xuất thành phẩm",
+      "key": "table2",
+      "columns": [
+        {
+          "title": "Thành phẩm",
+          "dataIndex": "thanhPham"
+        },
+        {
+          "title": "PX.LT-NM.HRC1",
+          "dataIndex": "pxltNMHRC1"
+        },
+        {
+          "title": "NM.NL",
+          "dataIndex": "NMNL"
+        },
+        {
+          "title": "Bp.Kho",
+          "dataIndex": "bpKho"
+        },
+        {
+          "title": "Bp/NM khác",
+          "dataIndex": "bpNMKhac"
+        },
+        {
+          "title": "Ghi chú",
+          "dataIndex": "ghiChu",
+          "width": 120
+        }
+      ],
+      "initialData": [
+        {
+          "thanhPham": "Xỉ thép sau ủ"
+        },
+        {
+          "thanhPham": "Mê thép>200mm(HC)"
+        },
+        {
+          "thanhPham": "Mê thép>200mm(KHC)"
+        },
+        {
+          "thanhPham": "Mê thép thu hồi từ KLH"
+        }
+      ]
+    },
+    {
+      "sectionType": "table",
+      "title": "3.2.3 Tiêu hao sản xuất",
+      "key": "table3",
+      "columns": [
+        {
+          "title": "Các chỉ tiêu",
+          "dataIndex": "cacChiTieu"
+        },
+        {
+          "title": "Giá trị",
+          "dataIndex": "giaTri"
+        },
+        {
+          "title": "Đơn vị tính",
+          "dataIndex": "donViTinh"
+        }
+      ],
+      "initialData": [
+        {
+          "cacChiTieu": "Điện sản xuất",
+          "donViTinh": "KWh"
+        },
+        {
+          "cacChiTieu": "Khí oxy cắt mê thép",
+          "donViTinh": "Nm3"
+        }
+      ]
+    },
+    {
+      "sectionType": "table",
+      "title": "3.2.4 Tình hình thiết bị",
+      "key": "table4",
+      "columns": [
+        {
+          "title": "Hạng mục",
+          "dataIndex": "hangMuc"
+        },
+        {
+          "title": "Nội dung",
+          "dataIndex": "noiDung"
+        },
+        {
+          "title": "BT",
+          "dataIndex": "bt"
+        },
+        {
+          "title": "KBT",
+          "dataIndex": "kbt"
+        },
+        {
+          "title": "Ghi rõ tình trạng hư hỏng",
+          "dataIndex": "ghiRoTinhTrangHuHong"
+        }
+      ]
+    },
+    {
+      "sectionType": "text",
+      "title": "3.3. Nội dung công việc:",
+      "key": "noiDungCongViec"
+    },
+    {
+      "title": "3.4. Tình hình VSCN, ATLĐ, PCCN:",
+      "children": [
+        {
+          "type": "select",
+          "key": "tinhHinhVSCNATLDPCCN",
+          "value": 1,
+          "options": [
+            {
+              "label": "Đạt",
+              "value": 1
+            },
+            {
+              "label": "Không đạt",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "title": "Lý do không đạt:",
+          "key": "lyDoKhongDat"
+        }
+      ]
+    },
+    {
+      "sectionType": "table",
+      "title": "4. Những công việc bàn giao cho kíp sau:\n4.1. Bàn giao công cụ/dụng cụ:",
+      "key": "table5",
+      "columns": [
+        {
+          "title": "Công cụ/dụng cụ",
+          "dataIndex": "congCuDungCu"
+        },
+        {
+          "title": "Số lượng",
+          "dataIndex": "soLuong"
+        },
+        {
+          "title": "Còn lại",
+          "dataIndex": "conLai"
+        },
+        {
+          "title": "Tình trạng hoạt động",
+          "children": [
+            {
+              "title": "BT",
+              "dataIndex": "btTinhTrangHoatDong"
+            },
+            {
+              "title": "KBT",
+              "dataIndex": "kbtTinhTrangHoatDong"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionType": "text",
+      "title": "4.2. Các vấn đề cần giải quyết/chuẩn bị/kiến nghị:",
+      "key": "cacVanDeCanGiaiQuyet"
+    }
+  ],
+
+  "footerNotes": [
+    "Biên bản này được lập thành 2 bản có giá trị như nhau: bên giao và bên nhận mỗi bên giữ 1 bản."
+  ],
+
+  "signatures": [
+    {
+      "label": "Người nhận kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_NguoiNhanKip",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Người giao kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_NguoiGiaoKip",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

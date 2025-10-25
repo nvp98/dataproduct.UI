@@ -109,6 +109,16 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub2-3-2",
+            label: (
+              <Tooltip title="BM.01/QT.05.15 (Sổ giao nhận kíp)">
+                <NavLink to="/sogiaonhankip-hrc1">
+                  BM.01/QT.05.15 (Sổ giao nhận kíp)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {

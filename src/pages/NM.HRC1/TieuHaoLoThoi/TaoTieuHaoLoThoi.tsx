@@ -200,7 +200,7 @@ const TaoTieuHaoLoThoi = () => {
         message.success("Cập nhật phiếu thành công!");
       } else {
         // Gửi POST API
-        //const res = await PhieuApi.postData(payload);
+        const res = await PhieuApi.postData(payload);
 
         // Nếu thành công
         message.success(`Tạo phiếu thành công: ${(res as any)?.soPhieu || ""}`);
@@ -267,14 +267,20 @@ const TaoTieuHaoLoThoi = () => {
             {layout.sectionType === "table" && (
               <CustomFormTable
                 columns={layout.columns || []}
-                initialData={table1Data}
-                onDataChange={setTable1Data}
+                initialData={
+                  layout.key === "table1"
+                    ? table1Data
+                    : table2Data?.length
+                      ? table2Data
+                      : layout.initialData
+                }
+                onDataChange={layout.key === "table1" ? setTable1Data : setTable2Data}
                 className="w-full overflow-x-auto"
                 addRowButtonText="+ Thêm dòng"
-                showAddButton={true}
-                showDeleteButton={true}
-                minRows={1}
-                editable={(layout as any).editable !== false} // Default true nếu không có config
+                showAddButton={layout.key === "table1"}
+                showDeleteButton={layout.key === "table1"}
+                minRows={layout.key === "table1" ? 1 : layout.initialData?.length || 1}
+                editable={(layout as any).editable !== false}
                 loading={loading}
               // onRefresh={() => {
               //   const tableLayout = config.layout.find(
@@ -284,24 +290,6 @@ const TaoTieuHaoLoThoi = () => {
               //     fetchTableData(tableLayout);
               //   }
               // }}
-              />
-            )}
-          </div>
-        ))}
-
-        {config.layout2.map((layout, idx) => (
-          <div key={idx}>
-            {layout.sectionType === "table" && (
-              <CustomFormTable
-                columns={layout.columns || []}
-                initialData={table2Data.length ? table2Data : layout.initialData}
-                onDataChange={setTable2Data}
-                className="w-full overflow-x-auto"
-                showAddButton={false}
-                showDeleteButton={false}
-                minRows={layout.initialData?.length || 1}
-                editable={(layout as any).editable !== false}
-                loading={loading}
               />
             )}
           </div>
