@@ -36,48 +36,113 @@
         "params": { "ngaySX": "@ngaySX", "ca": "@ca" }
       },
       "columns": [
-        { "title": "STT", "dataIndex": "stt" },
-        { "title": "Mẻ nấu số", "dataIndex": "me" },
-        {
+        { "title": "Mẻ nấu số", "dataIndex": "me", "width": 100 },
+        { "title": "Mác thép", "dataIndex": "macthep", "width": 100 },
+        { 
           "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
-          "dataIndex": "klThepLong"
+          "dataIndex": "klThepLong", "width": 80
         },
         {
           "title": "Chất hợp kim hóa",
           "children": [
-            { "title": "FeSi (Kg)", "dataIndex": "fesi" },
-            { "title": "FeMn (Kg)", "dataIndex": "femn" },
-            { "title": "SiMn (Kg)", "dataIndex": "simn" },
-            { "title": "Than (Kg)", "dataIndex": "than" },
-            { "title": "FeCr (Kg)", "dataIndex": "fecr" },
-            { "title": "FeV (Kg)", "dataIndex": "fev" },
-            { "title": "Niken (Kg)", "dataIndex": "niken" },
-            { "title": "FeP (Kg)", "dataIndex": "fep" },
-            { "title": "Đồng (Kg)", "dataIndex": "cu" },
-            { "title": "Khác", "dataIndex": "hopKimKhac" }
+            { "title": "FeSi (Kg)", "dataIndex": "fesi", "width": 60 },
+            { "title": "FeMn (Kg)", "dataIndex": "femn", "width": 60  },
+            { "title": "SiMn (Kg)", "dataIndex": "simn", "width": 60  },
+            { "title": "Than (Kg)", "dataIndex": "than", "width": 60  },
+            { "title": "FeCr (Kg)", "dataIndex": "fecr", "width": 60  },
+            { "title": "FeV (Kg)", "dataIndex": "fev", "width": 60  },
+            { "title": "Niken (Kg)", "dataIndex": "niken", "width": 60  },
+            { "title": "FeP (Kg)", "dataIndex": "fep", "width": 60  },
+            { "title": "Đồng (Kg)", "dataIndex": "cu" , "width": 60 },
+            { "title": "Khác", "dataIndex": "hopKimKhac", "width": 60  }
           ]
         },
         {
           "title": "Phụ gia và chất khử oxy",
           "children": [
-            { "title": "Huỳnh thạch (Kg)", "dataIndex": "huynhthach" },
-            { "title": "Nhôm thỏi (Kg)", "dataIndex": "nhomthoi" },
-            { "title": "Dolomite (Kg)", "dataIndex": "dolomite" },
-            { "title": "Quaczít (Kg)", "dataIndex": "quaczit" },
-            { "title": "Dây FeCa (Kg)", "dataIndex": "dayfeca" },
-            { "title": "Dây FeSi (Kg)", "dataIndex": "dayfesi" },
-            { "title": "Dây CaSi (Kg)", "dataIndex": "daycasi" },
-            { "title": "Dây Ca (Kg)", "dataIndex": "dayca" },
-            { "title": "Khác", "dataIndex": "phuGiaKhac" }
+            { "title": "Huỳnh thạch (Kg)", "dataIndex": "huynhthach", "width": 60  },
+            { "title": "Nhôm thỏi (Kg)", "dataIndex": "nhomthoi", "width": 60  },
+            { "title": "Dolomite (Kg)", "dataIndex": "dolomite", "width": 60  },
+            { "title": "Quaczít (Kg)", "dataIndex": "quaczit", "width": 60  },
+            { "title": "Dây FeCa (Kg)", "dataIndex": "dayfeca", "width": 60  },
+            { "title": "Dây FeSi (Kg)", "dataIndex": "dayfesi", "width": 60  },
+            { "title": "Dây CaSi (Kg)", "dataIndex": "daycasi", "width": 60  },
+            { "title": "Dây Ca (Kg)", "dataIndex": "dayca", "width": 60  },
+            { "title": "Khác", "dataIndex": "phuGiaKhac", "width": 60  }
           ]
         },
         {
           "title": "Khí",
-          "children": [{ "title": "Argon (m³)", "dataIndex": "argon" }]
+          "children": [{ "title": "Argon (m³)", "dataIndex": "argon", "width": 60  }]
         },
-        { "title": "Que lấy mẫu (Cái)", "dataIndex": "quelaymau" },
-        { "title": "Que đo nhiệt (Cái)", "dataIndex": "quedonhiet" },
-        { "title": "Ghi chú", "dataIndex": "ghiChu" }
+        { "title": "Que lấy mẫu (Cái)", "dataIndex": "quelaymau", "width": 80  },
+        { "title": "Que đo nhiệt (Cái)", "dataIndex": "quedonhiet", "width": 80  },
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 80 }
+      ]
+    }
+  ],
+
+  "layout2": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết tiêu hao nấu luyện lò thổi LF (bảng 2)",
+      "key": "table2",
+      "columns": [
+        {
+          "title": "",
+          "dataIndex": "materialName",
+          "isLabel": true
+        },
+        {
+          "title": "Tồn đầu kíp",
+          "dataIndex": "tonDauKip"
+        },
+        {
+          "title": "Nhập trong kíp",
+          "dataIndex": "nhapTrongKip"
+        },
+        {
+          "title": "Tồn cuối kíp",
+          "dataIndex": "tonCuoiKip"
+        }
+      ],
+      "initialData": [
+        {
+          "key": "1",
+          "materialName": "Tồn trên silo"
+        },
+        {
+          "key": "2",
+          "materialName": "Lượng SiMn (kg)"
+        },
+        {
+          "key": "3",
+          "materialName": "Lượng FeSi (kg)"
+        },
+        {
+          "key": "4",
+          "materialName": "Lượng vôi (kg)"
+        },
+        {
+          "key": "5",
+          "materialName": "Lượng than (kg)"
+        },
+        {
+          "key": "6",
+          "materialName": "Lượng FeMn (kg)"
+        },
+        {
+          "key": "7",
+          "materialName": "Lượng Huỳnh thạch (kg)"
+        },
+        {
+          "key": "8",
+          "materialName": "Lượng Nhôm (kg)"
+        },
+        {
+          "key": "9",
+          "materialName": "Khác"
+        }
       ]
     }
   ],

@@ -16,6 +16,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
   const [form] = Form.useForm();
 
   const [tableData, setTableData] = useState<any[]>([]);
+  const [table2Data, setTable2Data] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   // Theo dõi thay đổi trên các field chính
@@ -210,6 +211,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
         xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
         idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
         table1: tableData,
+        table2: table2Data,
         pheDuyet: pheDuyetFlow,
       };
       // Kiểm tra có IDPhiếu hay không
@@ -317,6 +319,23 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
                 //     fetchTableData(tableLayout);
                 //   }
                 // }}
+              />
+            )}
+          </div>
+        ))}
+        {config.layout2.map((layout, idx) => (
+          <div key={idx}>
+            {layout.sectionType === "table" && (
+              <CustomFormTable
+                columns={layout.columns || []}
+                initialData={table2Data.length ? table2Data : layout.initialData}
+                onDataChange={setTable2Data}
+                className="w-full overflow-x-auto"
+                showAddButton={false}
+                showDeleteButton={false}
+                minRows={layout.initialData?.length || 1}
+                editable={(layout as any).editable !== false}
+                loading={loading}
               />
             )}
           </div>

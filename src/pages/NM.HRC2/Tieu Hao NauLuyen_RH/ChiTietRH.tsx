@@ -62,13 +62,22 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
 
   const formData = data?.jsonData || {};
   const tableData = formData?.table1 || [];
-  console.log("jjj", formData);
+  const table2Data = formData?.table2 || [];
+
   // cấu hình bảng hiển thị
   const tableSection = config.layout.find(
     (section: any) =>
       section.sectionType === "table" && section.key === "table1"
   );
+
   const columns = tableSection?.columns || [];
+
+  const tableSection2 = config.layout2.find(
+    (section: any) =>
+      section.sectionType === "table" && section.key === "table2"
+  );
+  const columns2 = tableSection2?.columns || [];
+
   // xử lý phiếu
   const handleSubmit = async () => {
     if (!action) return;
@@ -244,7 +253,17 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           pagination={false}
           size="small"
         />
-
+        <Table
+          bordered
+          columns={columns2}
+          dataSource={table2Data?.map((r: any, i: number) => ({
+            key: i,
+            stt: i + 1,
+            ...r,
+          }))}
+          pagination={false}
+          size="small"
+        />
         {/* Khu vực ký duyệt */}
         <Row
           justify="space-around"
