@@ -13,6 +13,38 @@
 
   "headerFields": [
     {
+      "label": "Lò thổi",
+      "type": "select",
+      "key": "loThoi",
+      "required": true,
+      "options": [
+        {
+          "label": "Lò thổi 1",
+          "value": 1
+        },
+        {
+          "label": "Lò thổi 2",
+          "value": 2
+        },
+        {
+          "label": "Lò thổi 3",
+          "value": 3
+        },
+        {
+          "label": "Lò thổi 4",
+          "value": 4
+        },
+        {
+          "label": "Lò thổi 5",
+          "value": 5
+        },
+        {
+          "label": "Lò thổi 6",
+          "value": 6
+        }
+      ]
+    },
+    {
       "label": "Ca",
       "type": "select",
       "key": "ca",
@@ -39,13 +71,12 @@
   "layout": [
     {
       "sectionType": "table",
-      "title": "Chi tiết tiêu hao nấu luyện lò thổi",
       "key": "table1",
       "columns": [
         {
           "title": "Mẻ nấu số",
           "dataIndex": "meNauSo",
-          "width": 80
+          "width": 100
         },
         {
           "title": "Mác thép",
@@ -86,11 +117,6 @@
               "width": 80
             },
             {
-              "title": "Vôi",
-              "dataIndex": "voi",
-              "width": 80
-            },
-            {
               "title": "Vôi LF",
               "dataIndex": "voiLf",
               "width": 80
@@ -118,7 +144,7 @@
             {
               "title": "HC-FeMn75",
               "dataIndex": "hcFeMn75",
-              "width": 80
+              "width": 100
             },
             {
               "title": "LDSF",
@@ -221,7 +247,6 @@
     },
     {
       "sectionType": "table",
-      "title": "Chi tiết tiêu hao nấu luyện lò thổi (bảng 2)",
       "key": "table2",
       "columns": [
         {
