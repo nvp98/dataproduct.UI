@@ -26,13 +26,16 @@ import TaoPhieuThepLong from "../pages/NM.HRC1/BienBanThepLong/TaoBienBanThepLon
 import ChiTietPhieuPhoiNong from "../pages/NMCTD/BienBanPhoiNong/ChiTietPhieuPhoiNong";
 import SanLuongPhoi from "../pages/KhoDuLieu/NM.CTD/SanLuongPhoi";
 import BKNguyenLieu from "../pages/KhoDuLieu/NM.NL/BKNguyenLieu";
-import ThoiLuyenThep from "../pages/KhoDuLieu/NM.HRC2/ThoiLuyenThep";
   import TieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/TieuHaoNauLuyen_LF";
   import ChiTietTieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/ChiTietLF";
   import TaoPhieuTieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/TaoPhieuLF";
   import TieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/TieuHaoNauLuyen_RH";
   import TaoPhieuTieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/TaoPhieuRH";
   import ChiTietTieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/ChiTietRH";
+import BienBanGiaoNhanPhoiTam from "../pages/NM.HRC2/BienBanGiaoNhanPhoiTam/BienBanGiaoNhanPhoiTam";
+import TaoBienBanGiaoNhanPhoiTam from "../pages/NM.HRC2/BienBanGiaoNhanPhoiTam/TaoBienBanGiaoNhanPhoiTam";
+import DLNMHRC2LuyenThep from "../pages/KhoDuLieu/NM.HRC2/DLNMHRC2LuyenThep";
+import DLNMHRC2ChiTiet from "../pages/KhoDuLieu/NM.HRC2/DLNMHRC2ChiTiet";
 export const routes = [
   {
     path: "/",
@@ -219,11 +222,21 @@ export const routes = [
         ),
       },
       {
-        path: "thoiluyenthep",
+        path: "dlnmhrc2luyenthep",
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
-              <ThoiLuyenThep />
+              <DLNMHRC2LuyenThep />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "dlnmhrc2chitiet",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <DLNMHRC2ChiTiet />
             </RequireRole>
           </RequireAuth>
         ),
@@ -304,6 +317,26 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoTieuHaoLoThoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "bbgnphoitam",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanGiaoNhanPhoiTam />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "form-bbgnphoitam",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoBienBanGiaoNhanPhoiTam />
             </RequireRole>
           </RequireAuth>
         ),

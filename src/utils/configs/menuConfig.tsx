@@ -59,8 +59,8 @@ export const menuConfig = [
           {
             key: "sub1-1.3",
             label: (
-              <Tooltip title="Thổi luyện thép">
-                <NavLink to="/thoiluyenthep">Thổi luyện thép</NavLink>
+              <Tooltip title="HRC2 - Dữ liệu luyện thép">
+                <NavLink to="/dlnmhrc2luyenthep">HRC2 - Dữ liệu luyện thép</NavLink>
               </Tooltip>
             ),
           },
@@ -209,6 +209,16 @@ export const menuConfig = [
               <Tooltip title="BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
                 <NavLink to="/tieuhaonauluyen_rh">
                 BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-6-4",
+            label: (
+              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+                <NavLink to="/bbgnphoitam">
+                BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),

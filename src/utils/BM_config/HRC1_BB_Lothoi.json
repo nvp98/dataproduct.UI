@@ -137,7 +137,7 @@
             },
             {
               "title": "Al",
-              "dataIndex": "al",
+              "dataIndex": "nhomThoi",
               "width": 80
             },
             {
@@ -182,12 +182,12 @@
             },
             {
               "title": "CaSi (m)",
-              "dataIndex": "casi",
+              "dataIndex": "daycasi",
               "width": 80
             },
             {
               "title": "FeSi (Al thấp)",
-              "dataIndex": "feSi",
+              "dataIndex": "feSiAl",
               "width": 80
             },
             {

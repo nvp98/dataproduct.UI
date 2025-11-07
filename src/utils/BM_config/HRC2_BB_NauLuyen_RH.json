@@ -45,14 +45,14 @@
         {
           "title": "Chất hợp kim hóa",
           "children": [
-            { "title": "FeSi (Kg)", "dataIndex": "fesi", "width": 60   },
-            { "title": "FeMn (Kg)", "dataIndex": "femn", "width": 60 },
-            { "title": "SiMn (Kg)", "dataIndex": "simn", "width": 60 },
+            { "title": "FeSi (Kg)", "dataIndex": "feSi", "width": 60   },
+            { "title": "FeMn (Kg)", "dataIndex": "feMn", "width": 60 },
+            { "title": "SiMn (Kg)", "dataIndex": "siMn", "width": 60 },
             { "title": "Than (Kg)", "dataIndex": "than", "width": 60 },
-            { "title": "FeCr (Kg)", "dataIndex": "fecr", "width": 60 },
-            { "title": "FeV (Kg)", "dataIndex": "fev", "width": 60 },
+            { "title": "FeCr (Kg)", "dataIndex": "feCr", "width": 60 },
+            { "title": "FeV (Kg)", "dataIndex": "feV", "width": 60 },
             { "title": "Niken (Kg)", "dataIndex": "niken", "width": 60 },
-            { "title": "FeP (Kg)", "dataIndex": "fep", "width": 60 },
+            { "title": "FeP (Kg)", "dataIndex": "feP", "width": 60 },
             { "title": "Đồng (Kg)", "dataIndex": "cu", "width": 60 },
             { "title": "Khác", "dataIndex": "hopKimKhac", "width": 60 }
           ]
@@ -60,14 +60,14 @@
         {
           "title": "Phụ gia và chất khử oxy",
           "children": [
-            { "title": "Huỳnh thạch (Kg)", "dataIndex": "huynhthach", "width": 60 },
-            { "title": "Nhôm thỏi (Kg)", "dataIndex": "nhomthoi", "width": 60 },
+            { "title": "Huỳnh thạch (Kg)", "dataIndex": "huynhThach", "width": 60 },
+            { "title": "Nhôm thỏi (Kg)", "dataIndex": "nhomThoi", "width": 60 },
             { "title": "Vôi (Kg)", "dataIndex": "voi", "width": 60 },
             { "title": "Dolomite (Kg)", "dataIndex": "dolomite", "width": 60 },
             { "title": "Quaczít (Kg)", "dataIndex": "quaczit", "width": 60 },
-            { "title": "Dây FeCa (Kg)", "dataIndex": "dayfeca", "width": 60 },
-            { "title": "Dây CaSi (Kg)", "dataIndex": "daycasi", "width": 60 },
-            { "title": "Dây Ca (Kg)", "dataIndex": "dayca", "width": 60 },
+            { "title": "Dây FeCa (m)", "dataIndex": "dayFeCa", "width": 60 },
+            { "title": "Dây CaSi (m)", "dataIndex": "dayCaSi", "width": 60 },
+            { "title": "Dây Ca (m)", "dataIndex": "dayCa", "width": 60 },
             { "title": "Khác", "dataIndex": "phuGiaKhac", "width": 60 }
           ]
         },
@@ -79,8 +79,8 @@
             { "title": "Oxi", "dataIndex": "oxi", "width": 60 }
           ]
         },
-        { "title": "Que lấy mẫu (Cái)", "dataIndex": "quelaymau", "width": 80 },
-        { "title": "Que đo nhiệt (Cái)", "dataIndex": "quedonhiet", "width": 80 },
+        { "title": "Que lấy mẫu (Cái)", "dataIndex": "queLayMau", "width": 80 },
+        { "title": "Que đo nhiệt (Cái)", "dataIndex": "queDoNhiet", "width": 80 },
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 80 }
       ]
     }
@@ -155,18 +155,18 @@
     {
       "label": "Tổ trưởng",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_NMHRC1",
-      "maphongBan": "NM.HRC1",
-      "capduyet": 3,
+      "key": "nguoiKy_HRC2", 
+      "maphongBan": "NM.HRC2",
+      "capduyet": 2,
       "isChon": true,
       "required": true
     },
     {
       "label": "Người lập",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_QLCL",
-      "maphongBan": "P.QLCL",
-      "capduyet": 2,
+      "key": "nguoiKy_HRC2",
+      "maphongBan": "NM.HRC2",
+      "capduyet": 1,
       "isChon": true,
       "required": true
     }
