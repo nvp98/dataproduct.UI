@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Table, Button, Input, Popconfirm, Space, Spin } from "antd";
+import { Table, Button, Input, Popconfirm, Space, Spin, Checkbox } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 
 interface CustomFormTableProps {
@@ -21,6 +21,17 @@ interface CustomFormTableProps {
   // Parent control
   loading?: boolean; // Loading state từ parent
   onRefresh?: () => void; // Callback để refresh data từ parent
+  transferEnabled?: boolean;
+  transferTitle?: string;
+  onTransfer?: (rowKey: string | number, row: any, checked: boolean) => void;
+  selectionEnabled?: boolean;
+  selectedRowKeys?: Array<string | number>;
+  onSelectionChange?: (keys: Array<string | number>, rows: any[]) => void;
+  isRowSelectable?: (row: any) => boolean;
+  rowTransferEnabled?: boolean;
+  onRowTransferAll?: (rowKey: string | number, row: any) => void;
+  onRowTransferPartial?: (rowKey: string | number, row: any) => void;
+  isRowTransferable?: (row: any) => boolean;
 }
 
 export default function CustomFormTable({
@@ -34,14 +45,23 @@ export default function CustomFormTable({
   editable = true,
   loading = false,
   onRefresh,
+  transferEnabled = false,
+  transferTitle = "Chuyển thùng",
+  onTransfer,
+  selectionEnabled = false,
+  selectedRowKeys,
+  onSelectionChange,
+  isRowSelectable,
+  rowTransferEnabled = false,
+  onRowTransferAll,
+  onRowTransferPartial,
+  isRowTransferable,
 }: CustomFormTableProps) {
   const [rows, setRows] = useState(initialData);
 
   // Sync với initialData khi có thay đổi
   useEffect(() => {
-    if (initialData && initialData.length > 0) {
-      setRows(initialData);
-    }
+    setRows(initialData || []);
   }, [initialData]);
 
   // Xử lý thêm dòng trong bảng
@@ -68,7 +88,7 @@ export default function CustomFormTable({
     console.log("rows:", rows, key);
     const newRows = rows.filter((row) => row.key !== key);
     setRows(newRows);
-    // onDataChange?.(newRows);
+    onDataChange?.(newRows);
   };
 
   // Lấy tất cả field keys từ columns (bao gồm cả children)
@@ -150,6 +170,55 @@ export default function CustomFormTable({
         };
       }
     }),
+    ...(transferEnabled
+      ? [
+          {
+            title: transferTitle,
+            key: "transfer",
+            width: 120,
+            render: (_: any, record: any, idx: number) => (
+              <Checkbox
+                checked={!!record.isThung}
+                onChange={(e) => {
+                  const newRows = [...rows];
+                  newRows[idx].isThung = e.target.checked;
+                  setRows(newRows);
+                  onDataChange?.(newRows);
+                  onTransfer?.(record.key, newRows[idx], e.target.checked);
+                }}
+              />
+            ),
+          },
+        ]
+      : []),
+    ...(rowTransferEnabled
+      ? [
+          {
+            title: "Chuyển",
+            key: "row-transfer",
+            width: 180,
+            render: (_: any, record: any) => (
+              <Space>
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => onRowTransferAll?.(record.key, record)}
+                  disabled={isRowTransferable ? !isRowTransferable(record) : false}
+                >
+                  Chuyển hết
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => onRowTransferPartial?.(record.key, record)}
+                  disabled={isRowTransferable ? !isRowTransferable(record) : false}
+                >
+                  Chuyển 1 phần
+                </Button>
+              </Space>
+            ),
+          },
+        ]
+      : []),
     // Thêm cột thao tác nếu showDeleteButton = true
     ...(showDeleteButton
       ? [
@@ -195,7 +264,7 @@ export default function CustomFormTable({
           <Spin size="large" tip="Đang tải dữ liệu từ API..." />
         </div>
       ) : (
-        <>
+        <> 
           <Table
             bordered
             pagination={false}
@@ -203,6 +272,19 @@ export default function CustomFormTable({
             columns={tableColumns}
             dataSource={rows}
             style={{ marginTop: 20 }}
+            rowSelection={
+              selectionEnabled
+                ? {
+                    selectedRowKeys: selectedRowKeys as any,
+                    onChange: (keys, selected) => {
+                      onSelectionChange?.(keys as any, selected as any);
+                    },
+                    getCheckboxProps: (record: any) => ({
+                      disabled: isRowSelectable ? !isRowSelectable(record) : false,
+                    }),
+                  }
+                : undefined
+            }
           />
           {showAddButton && editable && (
             <Button onClick={handleAddRow} type="dashed" className="my-2">

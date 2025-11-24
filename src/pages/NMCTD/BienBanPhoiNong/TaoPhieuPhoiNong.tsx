@@ -1,5 +1,5 @@
 import CTD_BB_Phoinong from "../../../utils/BM_config/CTD_BB_Phoinong.json";
-import { Button, Card, Form, Input, Typography, message } from "antd";
+import { Button, Card, Form, Input, Typography, message, Modal, InputNumber, Table } from "antd";
 import CustomFormTable from "../../../components/CustomFormTable";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
@@ -19,6 +19,10 @@ const TaoPhieuPhoiNong = () => {
   const [tableData, setTableData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
+  const [thungData, setThungData] = useState<any[]>([]);
+  const [partialOpen, setPartialOpen] = useState(false);
+  const [partialValues, setPartialValues] = useState<Record<string, { loaiI?: number; loaiIIBm?: number; loaiIITp?: number; loaiIII?: number }>>({});
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Array<string | number>>([]);
   // Theo dõi thay đổi trên các field chính
   const ngaySX = Form.useWatch("NgaySX", form);
   const ca = Form.useWatch("ca", form);
@@ -154,7 +158,10 @@ const TaoPhieuPhoiNong = () => {
           form.setFieldsValue(formValues);
 
           if (formValues.table1) {
-            setTableData(formValues.table1); //bảng dữ liệu 1
+            setTableData(formValues.table1);
+          }
+          if ((formValues as any).thungData) {
+            setThungData((formValues as any).thungData);
           }
 
           message.success("Đã tải dữ liệu phiếu!");
@@ -211,6 +218,7 @@ const TaoPhieuPhoiNong = () => {
         xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
         idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
         table1: tableData,
+        thungData: thungData,
         pheDuyet: pheDuyetFlow,
       };
       // Kiểm tra có IDPhiếu hay không
@@ -310,6 +318,20 @@ const TaoPhieuPhoiNong = () => {
                 minRows={1}
                 editable={(layout as any).editable !== false} // Default true nếu không có config
                 loading={loading}
+                selectionEnabled={true}
+                selectedRowKeys={selectedRowKeys}
+                onSelectionChange={(keys) => setSelectedRowKeys(keys)}
+                isRowSelectable={(row) => {
+                  const hasMe = !!row.me;
+                  const hasMac = !!row.mac;
+                  const hasQtyWeightRow =
+                    Number(row.soLuong || 0) > 0 && Number(row.khoiLuong || row.tongKhoi || 0) > 0;
+                  const hasAnyTypePair =
+                    (Number(row.loaiI_TP || 0) > 0 && Number(row.loaiI_BM || 0) > 0) ||
+                    (Number(row.loaiII_TP || 0) > 0 && Number(row.loaiII_BM || 0) > 0) ||
+                    (Number(row.loaiIII_TP || 0) > 0 && Number(row.loaiIII_BM || 0) > 0);
+                  return hasMe && hasMac && (hasQtyWeightRow || hasAnyTypePair);
+                }}
                 // onRefresh={() => {
                 //   const tableLayout = config.layout.find(
                 //     (l) => l.sectionType === "table"
@@ -322,6 +344,230 @@ const TaoPhieuPhoiNong = () => {
             )}
           </div>
         ))}
+        <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+          <Button
+            onClick={() => {
+              if (!selectedRowKeys || selectedRowKeys.length === 0) {
+                message.warning("Vui lòng chọn ít nhất một dòng");
+                return;
+              }
+              const selectedRows = tableData.filter((r) => selectedRowKeys.includes(r.key));
+              const invalid = selectedRows.find((row) => {
+                const hasMe = !!row.me;
+                const hasMac = !!row.mac;
+                const hasQtyWeightRow =
+                  Number(row.soLuong || 0) > 0 && Number(row.khoiLuong || row.tongKhoi || 0) > 0;
+                const hasAnyTypePair =
+                  (Number(row.loaiI_TP || 0) > 0 && Number(row.loaiI_BM || 0) > 0) ||
+                  (Number(row.loaiII_TP || 0) > 0 && Number(row.loaiII_BM || 0) > 0) ||
+                  (Number(row.loaiIII_TP || 0) > 0 && Number(row.loaiIII_BM || 0) > 0);
+                return !(hasMe && hasMac && (hasQtyWeightRow || hasAnyTypePair));
+              });
+              if (invalid) {
+                message.warning("Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng");
+                return;
+              }
+              setThungData((prev) => [
+                ...prev,
+                ...selectedRows.map((r) => ({ ...r, isThung: true, chuyenHet: true })),
+              ]);
+              setTableData((prev) => prev.filter((r) => !selectedRowKeys.includes(r.key)));
+              setSelectedRowKeys([]);
+              message.success("Đã chuyển hết các dòng đã chọn");
+            }}
+            type="primary"
+          >
+            Chuyển hết
+          </Button>
+          <Button
+            onClick={() => {
+              if (!selectedRowKeys || selectedRowKeys.length === 0) {
+                message.warning("Vui lòng chọn ít nhất một dòng");
+                return;
+              }
+              const selectedRows = tableData.filter((r) => selectedRowKeys.includes(r.key));
+              const invalid = selectedRows.find((row) => {
+                const hasMe = !!row.me;
+                const hasMac = !!row.mac;
+                const hasQtyWeightRow =
+                  Number(row.soLuong || 0) > 0 && Number(row.khoiLuong || row.tongKhoi || 0) > 0;
+                const hasAnyTypePair =
+                  (Number(row.loaiI_TP || 0) > 0 && Number(row.loaiI_BM || 0) > 0) ||
+                  (Number(row.loaiII_TP || 0) > 0 && Number(row.loaiII_BM || 0) > 0) ||
+                  (Number(row.loaiIII_TP || 0) > 0 && Number(row.loaiIII_BM || 0) > 0);
+                return !(hasMe && hasMac && (hasQtyWeightRow || hasAnyTypePair));
+              });
+              if (invalid) {
+                message.warning("Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng");
+                return;
+              }
+              const initVals: Record<string, { loaiI?: number; loaiIIBm?: number; loaiIITp?: number; loaiIII?: number }> = {};
+              selectedRowKeys.forEach((k) => (initVals[String(k)] = {}));
+              setPartialValues(initVals);
+              setPartialOpen(true);
+            }}
+          >
+            Chuyển một phần
+          </Button>
+        </div>
+        
+
+        <Modal
+          open={partialOpen}
+          title="Chuyển một phần"
+          width={1150}
+          destroyOnClose
+          onCancel={() => setPartialOpen(false)}
+          onOk={() => {
+            const selectedRows = tableData.filter((r) => selectedRowKeys.includes(r.key));
+            for (const row of selectedRows) {
+              const v = partialValues[String(row.key)] || {};
+              const sum = (v.loaiI || 0) + (v.loaiIIBm || 0) + (v.loaiIITp || 0) + (v.loaiIII || 0);
+              const total = Number(row.soLuong || 0);
+              if (sum <= 0) {
+                message.error("Số thanh chuyển phải lớn hơn 0");
+                return;
+              }
+              if (total && sum > total) {
+                message.error("Tổng số thanh chuyển vượt quá số lượng hiện có");
+                return;
+              }
+            }
+            setThungData((prev) => [
+              ...prev,
+              ...selectedRows.map((row) => {
+                const v = partialValues[String(row.key)] || {};
+                const sum = (v.loaiI || 0) + (v.loaiIIBm || 0) + (v.loaiIITp || 0) + (v.loaiIII || 0);
+                return {
+                  ...row,
+                  isThung: true,
+                  chuyenHet: false,
+                  chuyenMotPhan: {
+                    loaiI: v.loaiI || 0,
+                    loaiIIBm: v.loaiIIBm || 0,
+                    loaiIITp: v.loaiIITp || 0,
+                    loaiIII: v.loaiIII || 0,
+                    tongChuyen: sum,
+                  },
+                };
+              }),
+            ]);
+            setTableData((prev) =>
+              prev.map((row) => {
+                if (!selectedRowKeys.includes(row.key)) return row;
+                const v = partialValues[String(row.key)] || {};
+                const sum = (v.loaiI || 0) + (v.loaiIIBm || 0) + (v.loaiIITp || 0) + (v.loaiIII || 0);
+                const total = Number(row.soLuong || 0);
+                const remaining = total ? Math.max(total - sum, 0) : total;
+                return { ...row, soLuong: remaining };
+              })
+            );
+            setPartialOpen(false);
+            setSelectedRowKeys([]);
+            message.success("Đã chuyển một phần các dòng đã chọn");
+          }}
+        >
+          <div>
+            <Table
+              size="small"
+              pagination={false}
+              bordered
+              style={{ width: "100%", marginTop: 8 }}
+              rowKey="key"
+              dataSource={tableData
+                .filter((r) => selectedRowKeys.includes(r.key))
+                .map((r) => ({ ...r, key: r.key }))}
+              columns={[
+                { title: "Mẻ", dataIndex: "me", width: 120 },
+                { title: "Mác", dataIndex: "mac", width: 120 },
+                { title: "Kích thước", dataIndex: "kichThuoc", width: 160 },
+                {
+                  title: "Loại 1 ST",
+                  width: 120,
+                  render: (_: any, record: any) => (
+                    <InputNumber
+                      min={0}
+                      style={{ width: "100%" }}
+                      value={partialValues[String(record.key)]?.loaiI || 0}
+                      onChange={(val) =>
+                        setPartialValues((p) => ({
+                          ...p,
+                          [String(record.key)]: { ...p[String(record.key)], loaiI: Number(val) || 0 },
+                        }))
+                      }
+                    />
+                  ),
+                },
+                {
+                  title: "Loại 2 BM ST",
+                  width: 120,
+                  render: (_: any, record: any) => (
+                    <InputNumber
+                      min={0}
+                      style={{ width: "100%" }}
+                      value={partialValues[String(record.key)]?.loaiIIBm || 0}
+                      onChange={(val) =>
+                        setPartialValues((p) => ({
+                          ...p,
+                          [String(record.key)]: { ...p[String(record.key)], loaiIIBm: Number(val) || 0 },
+                        }))
+                      }
+                    />
+                  ),
+                },
+                {
+                  title: "Loại 2 TP ST",
+                  width: 120,
+                  render: (_: any, record: any) => (
+                    <InputNumber
+                      min={0}
+                      style={{ width: "100%" }}
+                      value={partialValues[String(record.key)]?.loaiIITp || 0}
+                      onChange={(val) =>
+                        setPartialValues((p) => ({
+                          ...p,
+                          [String(record.key)]: { ...p[String(record.key)], loaiIITp: Number(val) || 0 },
+                        }))
+                      }
+                    />
+                  ),
+                },
+                {
+                  title: "Loại 3 ST",
+                  width: 120,
+                  render: (_: any, record: any) => (
+                    <InputNumber
+                      min={0}
+                      style={{ width: "100%" }}
+                      value={partialValues[String(record.key)]?.loaiIII || 0}
+                      onChange={(val) =>
+                        setPartialValues((p) => ({
+                          ...p,
+                          [String(record.key)]: { ...p[String(record.key)], loaiIII: Number(val) || 0 },
+                        }))
+                      }
+                    />
+                  ),
+                },
+                {
+                  title: "Tổng số thanh",
+                  width: 120,
+                  align: "center",
+                  render: (_: any, record: any) => (
+                    <Typography.Text type="danger">
+                      {(
+                        (partialValues[String(record.key)]?.loaiI || 0) +
+                        (partialValues[String(record.key)]?.loaiIIBm || 0) +
+                        (partialValues[String(record.key)]?.loaiIITp || 0) +
+                        (partialValues[String(record.key)]?.loaiIII || 0)
+                      )}
+                    </Typography.Text>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        </Modal>
 
         {/* FOOTER - ghi chú */}
         {/* <div style={{ marginTop: 24 }}>
