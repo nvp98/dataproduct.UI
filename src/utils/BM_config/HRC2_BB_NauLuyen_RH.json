@@ -13,6 +13,16 @@
 
   "headerFields": [
     {
+      "label": "Khu vực",
+      "type": "select",
+      "key": "scope",
+      "required": true,
+      "options": [
+        { "label": "Khu vực 1", "value": 1 },
+        { "label": "Khu vực 2", "value": 2 }
+      ]
+    },
+    {
       "label": "Ca",
       "type": "select",
       "key": "ca",
@@ -36,52 +46,32 @@
         "params": { "ngaySX": "@ngaySX", "ca": "@ca" }
       },
       "columns": [
-        { "title": "Mẻ nấu số", "dataIndex": "me", "width": 100 },
-        { "title": "Mác thép", "dataIndex": "macthep", "width": 100 },
+        { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 150 ,"editable": false},
+        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false},
         {
           "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
-          "dataIndex": "klThepLong", "width": 80
+          "dataIndex": "klThepLong", "width": 100,"editable": false
         },
         {
-          "title": "Chất hợp kim hóa",
-          "children": [
-            { "title": "FeSi (Kg)", "dataIndex": "feSi", "width": 60   },
-            { "title": "FeMn (Kg)", "dataIndex": "feMn", "width": 60 },
-            { "title": "SiMn (Kg)", "dataIndex": "siMn", "width": 60 },
-            { "title": "Than (Kg)", "dataIndex": "than", "width": 60 },
-            { "title": "FeCr (Kg)", "dataIndex": "feCr", "width": 60 },
-            { "title": "FeV (Kg)", "dataIndex": "feV", "width": 60 },
-            { "title": "Niken (Kg)", "dataIndex": "niken", "width": 60 },
-            { "title": "FeP (Kg)", "dataIndex": "feP", "width": 60 },
-            { "title": "Đồng (Kg)", "dataIndex": "cu", "width": 60 },
-            { "title": "Khác", "dataIndex": "hopKimKhac", "width": 60 }
-          ]
+          "title": "Chất hợp kim hóa", "dataIndex": "KL"
         },
         {
-          "title": "Phụ gia và chất khử oxy",
-          "children": [
-            { "title": "Huỳnh thạch (Kg)", "dataIndex": "huynhThach", "width": 60 },
-            { "title": "Nhôm thỏi (Kg)", "dataIndex": "nhomThoi", "width": 60 },
-            { "title": "Vôi (Kg)", "dataIndex": "voi", "width": 60 },
-            { "title": "Dolomite (Kg)", "dataIndex": "dolomite", "width": 60 },
-            { "title": "Quaczít (Kg)", "dataIndex": "quaczit", "width": 60 },
-            { "title": "Dây FeCa (m)", "dataIndex": "dayFeCa", "width": 60 },
-            { "title": "Dây CaSi (m)", "dataIndex": "dayCaSi", "width": 60 },
-            { "title": "Dây Ca (m)", "dataIndex": "dayCa", "width": 60 },
-            { "title": "Khác", "dataIndex": "phuGiaKhac", "width": 60 }
-          ]
+          "title": "Phụ gia và chất khử oxy", "dataIndex": "PG"
+        },
+        {
+          "title": "Khác", "dataIndex": "others"
         },
         {
           "title": "Khí (m³)",
           "children": [
-            { "title": "Argon", "dataIndex": "argon", "width": 60 },
-            { "title": "Nito", "dataIndex": "nito", "width": 60 },
-            { "title": "Oxi", "dataIndex": "oxi", "width": 60 }
+            { "title": "Argon", "dataIndex": "ar_RH", "width": 100 },
+            { "title": "Nito", "dataIndex": "n2", "width": 100 },
+            { "title": "Oxi", "dataIndex": "o2", "width": 100 }
           ]
         },
-        { "title": "Que lấy mẫu (Cái)", "dataIndex": "queLayMau", "width": 80 },
-        { "title": "Que đo nhiệt (Cái)", "dataIndex": "queDoNhiet", "width": 80 },
-        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 80 }
+        { "title": "Que lấy mẫu (Cái)", "dataIndex": "queLayMau", "width": 100 },
+        { "title": "Que đo nhiệt (Cái)", "dataIndex": "queDoNhiet", "width": 100 },
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 120 }
       ]
     }
   ],
@@ -155,18 +145,18 @@
     {
       "label": "Tổ trưởng",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_HRC2", 
+      "key": "toTruong_HRC2", 
       "maphongBan": "NM.HRC2",
-      "capduyet": 2,
+      "capduyet": 1,
       "isChon": true,
       "required": true
     },
     {
       "label": "Người lập",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_HRC2",
+      "key": "nguoiLap_HRC2",
       "maphongBan": "NM.HRC2",
-      "capduyet": 1,
+      "capduyet": 0,
       "isChon": true,
       "required": true
     }

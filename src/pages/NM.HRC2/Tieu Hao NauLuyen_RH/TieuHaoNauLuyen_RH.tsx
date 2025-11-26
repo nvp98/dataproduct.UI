@@ -59,7 +59,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       if (type === "viecdentoi") {
         const res = await PhieuApi.getData({
           MaBM: config.code,
-          NguoiDuyetID: userObj.id,
+          // NguoiDuyetID: userObj.id,
           isCheckDuyet: 1,
           page,
           pageSize,
@@ -69,7 +69,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       } else {
         const res = await PhieuApi.getData({
           MaBM: config.code,
-          NguoiTaoID: userObj.id,
+          // NguoiTaoID: userObj.id,
           page,
           pageSize,
           ...filters,
@@ -114,9 +114,13 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
     // fetchData(1, pagination.pageSize, filterObj);
   };
   const statusConfig: Record<string, { color: string; text: string }> = {
-    0: { color: "purple", text: "Chờ xử lý" },
-    1: { color: "pink", text: "Đang xử lý" },
-    2: { color: "green", text: "Hoàn tất" },
+    0: { color: "purple", text: "Đang lưu" },
+    1: { color: "pink", text: "Đã gửi" },
+    2: { color: "blue", text: "Hoàn thành" },
+    3: { color: "tomato", text: "Đã thu hồi" },
+    4: { color: "yellow", text: "Không xác nhận" },
+    5: { color: "green", text: "Chốt" },
+    6: { color: "gray", text: "Đang phê duyệt" },
   };
 
   // Xử lý khi xóa bộ lọc

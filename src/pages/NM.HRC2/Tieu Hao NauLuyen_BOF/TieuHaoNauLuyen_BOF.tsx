@@ -1,4 +1,4 @@
-import HRC2_BBGN_PhoiTam from "../../../utils/BM_config/HRC2_BBGN_PhoiTam.json";
+import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
 import {
   Button,
   Card,
@@ -16,9 +16,9 @@ import {
   Tag,
 } from "antd";
 // import PdfMakeExample from "../../components/PdfMakeExample";
+// import CTD_BB_Phoinong from "../../../utils/BM_config/CTD_BB_Phoinong.json";
 import {
   DeleteTwoTone,
-  EditTwoTone,
   EyeOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -29,8 +29,8 @@ import { useNavigate } from "react-router-dom";
 import { PhieuApi } from "../../../services/PhieuApi";
 // Dữ liệu mẫu
 
-const BienBanGiaoNhanPhoiTam = () => {
-  const config = HRC2_BBGN_PhoiTam;
+const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
+  const config = HRC2_BB_NauLuyen_BOF;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
@@ -56,14 +56,27 @@ const BienBanGiaoNhanPhoiTam = () => {
   const fetchData = async (page = 1, pageSize = 10, filters = {}) => {
     setLoading(true);
     try {
-      const res = await PhieuApi.getData({
-        MaBM: config.code,
-        NguoiTaoID: userObj.id,
-        page,
-        pageSize,
-        ...filters,
-      });
-      setData(res as any);
+      if (type === "viecdentoi") {
+        const res = await PhieuApi.getData({
+          MaBM: config.code,
+          // NguoiDuyetID: userObj.id,
+          isCheckDuyet: 1,
+          page,
+          pageSize,
+          ...filters,
+        });
+        setData(res as any);
+      } else {
+        const res = await PhieuApi.getData({
+          MaBM: config.code,
+          // NguoiTaoID: userObj.id,
+          page,
+          pageSize,
+          ...filters,
+        });
+        setData(res as any);
+      }
+
       // setPagination({
       //   current: page,
       //   pageSize: pageSize,
@@ -101,9 +114,13 @@ const BienBanGiaoNhanPhoiTam = () => {
     // fetchData(1, pagination.pageSize, filterObj);
   };
   const statusConfig: Record<string, { color: string; text: string }> = {
-    0: { color: "purple", text: "Chờ xử lý" },
-    1: { color: "pink", text: "Đang xử lý" },
-    2: { color: "green", text: "Hoàn tất" },
+    0: { color: "purple", text: "Đang lưu" },
+    1: { color: "pink", text: "Đã gửi" },
+    2: { color: "blue", text: "Hoàn thành" },
+    3: { color: "tomato", text: "Đã thu hồi" },
+    4: { color: "yellow", text: "Không xác nhận" },
+    5: { color: "green", text: "Chốt" },
+    6: { color: "gray", text: "Đang phê duyệt" },
   };
 
   // Xử lý khi xóa bộ lọc
@@ -122,11 +139,11 @@ const BienBanGiaoNhanPhoiTam = () => {
       message.success("Đã xóa ticket!");
     }, 500);
   };
-  const handleEdit = (record: any) => {
-    console.log("Edit record:", record);
-    setEditModal({ open: true, record });
-    editForm.setFieldsValue(record);
-  };
+  // const handleEdit = (record: any) => {
+  //   console.log("Edit record:", record);
+  //   setEditModal({ open: true, record });
+  //   editForm.setFieldsValue(record);
+  // };
 
   const handleEditFinish = (values: any) => {
     setData((prev) =>
@@ -147,11 +164,20 @@ const BienBanGiaoNhanPhoiTam = () => {
       render: (text: string, record: any) => (
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
-          onClick={() =>
-            navigate("/form-bbgnphoitam", {
-              state: { idphieu: record.idphieu },
-            })
-          }
+          onClick={() => {
+            if (type === "viecdentoi") {
+              return navigate("/chitiettieuhaonauluyen_bof", {
+                state: {
+                  idphieu: record.idphieu,
+                  pheduyet: record?.pheDuyet?.[0] ?? null,
+                },
+              });
+            } else {
+              return navigate("/taophieutieuhaonauluyen_bof", {
+                state: { idphieu: record.idphieu },
+              });
+            }
+          }}
         >
           {text}
         </b>
@@ -160,8 +186,8 @@ const BienBanGiaoNhanPhoiTam = () => {
     },
     {
       title: "Quy trình",
-      dataIndex: "quyTrinh",
-      key: "quyTrinh",
+      dataIndex: "maBm",
+      key: "maBm",
       width: 220,
       ellipsis: true,
     },
@@ -174,8 +200,8 @@ const BienBanGiaoNhanPhoiTam = () => {
     },
     {
       title: "Xưởng sản xuất",
-      dataIndex: "xuong",
-      key: "xuong",
+      dataIndex: "xuongId",
+      key: "xuongId",
       width: 220,
       ellipsis: true,
     },
@@ -189,8 +215,8 @@ const BienBanGiaoNhanPhoiTam = () => {
     },
     {
       title: "Người tạo",
-      dataIndex: "nguoiTao",
-      key: "nguoiTao",
+      dataIndex: "nguoiTaoId",
+      key: "nguoiTaoId",
       // width: 220,
       ellipsis: true,
     },
@@ -204,8 +230,8 @@ const BienBanGiaoNhanPhoiTam = () => {
     },
     {
       title: "Trạng thái",
-      dataIndex: "ticketStatus",
-      key: "ticketStatus",
+      dataIndex: "tinhTrang",
+      key: "tinhTrang",
       width: 110,
       render: (status: string) => (
         <Tag color={statusConfig[status]?.color || "default"}>
@@ -249,7 +275,7 @@ const BienBanGiaoNhanPhoiTam = () => {
             type="text"
             icon={<EyeOutlined twoToneColor="#1890ff" />}
             onClick={() =>
-              navigate("/form-bbgnphoitam", {
+              navigate("/chitiettieuhaonauluyen_bof", {
                 state: { idphieu: record.idphieu },
               })
             }
@@ -287,15 +313,17 @@ const BienBanGiaoNhanPhoiTam = () => {
           <Col>
             <Button onClick={handleClearFilter}>Xóa bộ lọc</Button>
           </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => navigate("/form-bbgnphoitam")}
-            >
-              Tạo phiếu mới
-            </Button>
-          </Col>
+          {!type && (
+            <Col>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => navigate("/taophieutieuhaonauluyen_bof")}
+              >
+                Tạo phiếu mới
+              </Button>
+            </Col>
+          )}
         </Row>
       </Card>
       <Card>
@@ -407,4 +435,4 @@ const BienBanGiaoNhanPhoiTam = () => {
   );
 };
 
-export default BienBanGiaoNhanPhoiTam;
+export default TieuHaoNauLuyen_BOF;

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   Descriptions,
@@ -6,7 +7,6 @@ import {
   Typography,
   Row,
   Col,
-  Divider,
   message,
   Space,
   Button,
@@ -21,6 +21,14 @@ import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { PheDuyetApi } from "../../../services/PheDuyetApi";
 
 const { Title, Text } = Typography;
+
+type DynamicColumnMeta = {
+  dataIndex: string;
+  width?: number;
+  label: string;
+};
+
+type DynamicColumnsMap = Record<string, DynamicColumnMeta[]>;
 
 const ChiTietTieuHaoNauLuyen_LF = () => {
   const location = useLocation();
@@ -49,14 +57,14 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
         const res = await PhieuApi.getDetail(idphieu);
 
         setData(res);
-      } catch (err) {
-        console.error("Lỗi tải dữ liệu phiếu:", err);
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu phiếu:", error);
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, []);
+  }, [idphieu, pheduyet]);
 
   //   if (!data) return null;
 
@@ -68,7 +76,41 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
     (section: any) =>
       section.sectionType === "table" && section.key === "table1"
   );
-  const columns = tableSection?.columns || [];
+  const tableColumns = useMemo(() => {
+    const sourceColumns = (tableSection?.columns || []) as any[];
+    const dynamicColumnsMap =
+      (formData?.table1DynamicColumns as DynamicColumnsMap | undefined) || {};
+
+    const mapped = sourceColumns.map((col) => {
+      const key = col.dataIndex || col.key;
+      const dynamicChildren =
+        key && dynamicColumnsMap[key] ? dynamicColumnsMap[key] : undefined;
+      if (dynamicChildren && dynamicChildren.length > 0) {
+        return {
+          ...col,
+          children: dynamicChildren.map((child) => ({
+            title: child.label,
+            dataIndex: child.dataIndex,
+            width: child.width,
+          })),
+        };
+      }
+      return col;
+    });
+
+    if (dynamicColumnsMap.adjust && dynamicColumnsMap.adjust.length > 0) {
+      mapped.push({
+        title: "Điều chỉnh số liệu",
+        children: dynamicColumnsMap.adjust.map((child) => ({
+          title: child.label,
+          dataIndex: child.dataIndex,
+          width: child.width,
+        })),
+      });
+    }
+
+    return mapped;
+  }, [tableSection, formData?.table1DynamicColumns]);
 
   const tableSection2 = config.layout2.find(
     (section: any) =>
@@ -92,7 +134,8 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       );
       setOpen(false);
       setGhiChu("");
-    } catch (err) {
+    } catch (error) {
+      console.error("Lỗi khi gửi phê duyệt:", error);
       message.error("Lỗi khi gửi phê duyệt, vui lòng thử lại!");
     } finally {
       setLoading(false);
@@ -241,7 +284,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
 
         <Table
           bordered
-          columns={columns}
+          columns={tableColumns}
           dataSource={tableData?.map((r: any, i: number) => ({
             key: i,
             stt: i + 1,
@@ -249,6 +292,8 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           }))}
           pagination={false}
           size="small"
+          scroll={{ x: "max-content" }}
+          sticky={{ offsetHeader: 0 }}
         />
 <Table
           bordered

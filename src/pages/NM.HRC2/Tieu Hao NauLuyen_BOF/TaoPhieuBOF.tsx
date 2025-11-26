@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import HRC2_BB_NauLuyen_RH from "../../../utils/BM_config/HRC2_BB_NauLuyen_RH.json";
+import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
 import { FilterOutlined, LinkOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -19,20 +19,16 @@ import type { HeaderKey } from "../../../models/HeaderKeyModel";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 
-const DEFAULT_EXCLUDED_KEYS = ["meThoi", "macThep","queLayMau","queDoNhiet", "ghiChu", "stt", "STT"];
-
-const TaoPhieuTieuHaoNauLuyen_RH = () => {
+const TaoPhieuTieuHaoNauLuyen_BOF = () => {
   const location = useLocation();
   const { idphieu } = location.state || {};
   const hasExistingPhieu = Boolean(idphieu);
-
-  const config = HRC2_BB_NauLuyen_RH;
+  const config = HRC2_BB_NauLuyen_BOF;
   const [form] = Form.useForm();
 
   const [tableData, setTableData] = useState<HRCTableRow[]>([]);
   const [table2Data, setTable2Data] = useState<HRCTableRow[]>([]);
   const [phuGiaColumns, setPhuGiaColumns] = useState<HRCChildColumn[]>([]); // Phụ liệu loại PG (Phụ gia và chất khử oxy)
-  const [chatHopKimColumns, setChatHopKimColumns] = useState<HRCChildColumn[]>([]); // Phụ liệu loại KL (Chất hợp kim hóa)
   const [khacColumns, setKhacColumns] = useState<HRCChildColumn[]>([]); // Phụ liệu chưa mapped → render vào "Khác"
   const [adjustColumnMetas, setAdjustColumnMetas] = useState<AdjustColumnMeta[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,6 +36,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
   const [mappingModalVisible, setMappingModalVisible] = useState(false);
   const [mappingRecord, setMappingRecord] = useState<HeaderMappingRecord | null>(null);
   const [showAdjustColumns, setShowAdjustColumns] = useState(false);
+  // State để lưu thông tin phiếu cho action buttons
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
     nguoiTaoId?: number | null;
@@ -55,6 +52,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
   }, []);
+
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
   const isSignatureReadonly = [
     TrangThaiPhieuConst.HoanThanh,
@@ -114,11 +112,6 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     },
     [updateAdjustColumnMeta]
   );
-
-  const getUserInfo = useCallback(() => {
-    const stored = localStorage.getItem("userinfo");
-    return stored ? JSON.parse(stored) : {};
-  }, []);
 
   const removeAdjustColumn = useCallback(
     (columnKey: string) => {
@@ -195,13 +188,14 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     }
     return adjustColumnMetas.map((meta) => ({
       title: (
-          <div style={{ width: "100%" }}>
+        <div style={{ width: "100%" }}>
             <Button
               type="text"
               size="small"
               danger
               icon={<DeleteOutlined />}
               onClick={() => removeAdjustColumn(meta.key)}
+              disabled={isFormLocked}
               style={{
                 padding: "4px",
                 minWidth: "auto",
@@ -216,6 +210,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
               placeholder="Chọn phụ liệu"
               onChange={(val) => handleAdjustValueChange(meta.key, val)}
               onSelectOption={(option) => handleAdjustOptionSelect(meta.key, option)}
+              disabled={isFormLocked}
               style={{ width: "100%" }}
             />
             
@@ -227,26 +222,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       variant: "adjust",
       metaLabel: meta.headerKeyLabel ?? "Chưa chọn phụ liệu",
     }));
-  }, [adjustColumnMetas, handleAdjustValueChange, handleAdjustOptionSelect, removeAdjustColumn]);
-
-  const restoreDynamicColumns = useCallback(
-    (map?: Record<string, DynamicColumnMeta[]>) => {
-      if (!map) return;
-      const restored = hrc2TableService.restoreDynamicGroups(
-        map,
-        renderDynamicColumnTitle
-      );
-      setPhuGiaColumns(restored.PG ?? []);
-      setChatHopKimColumns(restored.KL ?? []);
-      setKhacColumns(restored.others ?? []);
-      if (map.adjust) {
-        setAdjustColumnMetas(hrc2TableService.adjustMetaFromDynamic(map.adjust));
-      } else {
-        setAdjustColumnMetas([]);
-      }
-    },
-    [renderDynamicColumnTitle]
-  );
+  }, [adjustColumnMetas, handleAdjustValueChange, handleAdjustOptionSelect, removeAdjustColumn, isFormLocked]);
 
   const fetchPhuLieus = useCallback(async (params: { NgaySX?: string | null; Ca?: number | null; LoaiBM?: string | null; Scope?: number | null }) => {
     try {
@@ -262,15 +238,15 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
         {
           NgaySX: params.NgaySX,
           Ca: params.Ca,
-          LoaiBM: "RH",
+          LoaiBM: "BOF",
           Scope: params.Scope,
         },
         {
           onOpenMappingModal: openMappingModalWithRecord,
           baseColumns,
+          mergeMappedPhuLieus: true,
         }
       );
-      
       // Kiểm tra nếu không có dữ liệu (bao gồm trường hợp chỉ có item "row-empty")
       const isEmpty = !result.tableData || 
         result.tableData.length === 0 || 
@@ -279,16 +255,25 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       if (isEmpty) {
         message.info("Không có dữ liệu phù hợp với điều kiện lọc.");
         setPhuGiaColumns([]);
-        setChatHopKimColumns([]);
         setKhacColumns([]);
         setTableData([]);
         return;
       }
 
       // Set columns và table data
-      setPhuGiaColumns(result.phuGiaColumns);
-      setChatHopKimColumns(result.chatHopKimColumns);
-      setKhacColumns(result.khacColumns);
+      const readonlyPhuGia = (result.phuGiaColumns ?? []).map((col) => ({
+        ...col,
+        editable: false,
+      }));
+      const readonlyKhac = (result.khacColumns ?? []).map((col) => ({
+        ...col,
+        editable: false,
+      }));
+
+      setPhuGiaColumns(readonlyPhuGia);
+      setKhacColumns(readonlyKhac);
+
+      // Merge dữ liệu mới từ server với dữ liệu đang nhập theo meThoi
       setTableData((prev) =>
         hrc2TableService.mergeServerRows(result.tableData || [], prev)
       );
@@ -308,7 +293,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       await fetchPhuLieus({
         NgaySX: dayjs(ngaySX).format("YYYY-MM-DD"),
         Ca: ca,
-        LoaiBM: "RH",
+        LoaiBM: "BOF",
         Scope: scope,
       });
     }
@@ -330,23 +315,14 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     return hrc2TableService.buildColumnsWithAdjust({
       baseColumns,
       slotColumns: {
-        PG: phuGiaColumns,
-        KL: chatHopKimColumns,
+        BOF_PhuGia: phuGiaColumns,
         others: khacColumns,
       },
-      excludedAdjustKeys: DEFAULT_EXCLUDED_KEYS,
       showAdjustColumns,
       manualAdjustColumns: adjustChildColumns,
       generateAdjustColumnsFromBase: false,
     });
-  }, [
-    config.layout,
-    phuGiaColumns,
-    chatHopKimColumns,
-    khacColumns,
-    showAdjustColumns,
-    adjustChildColumns,
-  ]);
+  }, [config.layout, phuGiaColumns, khacColumns, showAdjustColumns, adjustChildColumns]);
 
   /** Hàm xử lý khi bấm nút Filter */
   const handleFilter = useCallback(() => {
@@ -357,7 +333,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     fetchPhuLieus({
       NgaySX: dayjs(ngaySX).format("YYYY-MM-DD"),
       Ca: ca,
-      LoaiBM: "RH",
+      LoaiBM: "BOF",
       Scope: scope,
     });
   }, [ngaySX, ca, scope, fetchPhuLieus]);
@@ -366,15 +342,21 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
   const initData = useCallback(async () => {
     try {
       setLoading(true);
-      const idPhieu = idphieu || "";
+      // Gọi API lấy phiếu theo số phiếu
+      const idPhieu = idphieu || ""; // Lấy từ state nếu có
       if (idPhieu) {
         const res = await PhieuApi.getDetail(idPhieu);
 
         if (res) {
           setSoPhieu((res as any)?.soPhieu);
+          // data.Data là phần JSON đã parse (form động)
           const data = (res as any)?.jsonData || {};
-
+          
+          // Map pheDuyet vào form fields (giống như TaoPhieuPhoiNong.tsx)
+          // Ưu tiên map từ jsonData.pheDuyet (có maKyDuyet), nếu không có thì map từ res.pheDuyet (chỉ có capDuyet)
           const signatureFields: Record<string, any> = {};
+          
+          // Map từ jsonData.pheDuyet (có maKyDuyet) - đây là dữ liệu mới nhất đã được lưu
           const pheDuyetFromJson = data.pheDuyet || [];
           if (pheDuyetFromJson.length > 0) {
             pheDuyetFromJson.forEach((pd: any) => {
@@ -383,6 +365,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
               }
             });
           } else {
+            // Fallback: map từ res.pheDuyet theo capDuyet (nếu jsonData không có pheDuyet)
             const pheDuyetFromApi = (res as any)?.pheDuyet || [];
             pheDuyetFromApi.forEach((pd: any) => {
               const signature = config.signatures.find(
@@ -393,39 +376,47 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
               }
             });
           }
-
+          
+          // Chuyển chuỗi -> dayjs
           const formValues = {
             ...data,
-            ...signatureFields,
+            ...signatureFields, // Merge signature fields vào formValues (override nếu jsonData cũng có)
             idphieu: (res as any)?.idphieu || "",
             NgaySX: data.NgaySX ? dayjs(data.NgaySX, "YYYY-MM-DD") : null,
           };
           form.setFieldsValue(formValues);
 
           if (formValues.table1) {
+            // Đảm bảo các dòng có flag IsNM
+            // Dòng từ server không có IsNM -> mặc định là true (từ NM)
+            // Dòng có IsNM = false -> giữ nguyên (thêm tay)
             const processedTable1 = (formValues.table1 as HRCTableRow[]).map((row) => ({
               ...row,
-              IsNM: row.IsNM !== undefined ? row.IsNM : true,
+              IsNM: row.IsNM !== undefined ? row.IsNM : true, // Mặc định là true nếu không có
             }));
             setTableData(processedTable1);
-          } else {
-            setTableData([]);
           }
 
-          if (formValues.table2) {
-            const processedTable2 = (formValues.table2 as HRCTableRow[]).map((row) => ({
-              ...row,
-              IsNM: row.IsNM !== undefined ? row.IsNM : true,
-            }));
-            setTable2Data(processedTable2);
-          }
-
+          // Khôi phục cấu hình cột động (nếu có) để hiển thị đúng phụ liệu đã lưu
           if (formValues.table1DynamicColumns) {
-            restoreDynamicColumns(
-              formValues.table1DynamicColumns as Record<string, DynamicColumnMeta[]>
+            const dyn = formValues.table1DynamicColumns as Record<
+              string,
+              DynamicColumnMeta[]
+            >;
+            const restored = hrc2TableService.restoreDynamicGroups(
+              dyn,
+              renderDynamicColumnTitle
             );
+            setPhuGiaColumns(restored.BOF_PhuGia ?? []);
+            setKhacColumns(restored.others ?? []);
+            if (dyn.adjust) {
+              setAdjustColumnMetas(hrc2TableService.adjustMetaFromDynamic(dyn.adjust));
+            } else {
+              setAdjustColumnMetas([]);
+            }
           }
 
+          // Lưu thông tin phiếu cho action buttons
           setPhieuInfo({
             tinhTrang: (res as any)?.tinhTrang ?? 0,
             nguoiTaoId: (res as any)?.nguoiTaoId ?? null,
@@ -436,8 +427,6 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
 
           message.success("Đã tải dữ liệu phiếu!");
         }
-      } else {
-        setPhieuInfo({});
       }
     } catch (err: any) {
       console.error("Lỗi khởi tạo dữ liệu:", err);
@@ -445,17 +434,24 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     } finally {
       setLoading(false);
     }
-  }, [form, idphieu, restoreDynamicColumns, config.signatures]);
+  }, [form, idphieu, renderDynamicColumnTitle, config.signatures]);
 
   /** Gọi khi load lần đầu */
   useEffect(() => {
     initData();
   }, [initData]);
 
+  // Helper để lấy userInfo
+  const getUserInfo = useCallback(() => {
+    const stored = localStorage.getItem("userinfo");
+    return stored ? JSON.parse(stored) : {};
+  }, []);
+
+  // Function để lấy formData mới nhất (được gọi mỗi khi click button)
   const getFormData = useCallback(async () => {
     const userInfo = getUserInfo();
     const formData = await form.validateFields();
-
+    
     const pheDuyetFlow = config.signatures
       .filter((s) => s.isChon)
       .map((s) => ({
@@ -465,7 +461,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
         tinhTrang: 0,
         ghiChu: "",
       }));
-
+    
     const hasCreator = config.signatures.find(
       (x) => x.isChon === false && x.capduyet === 1
     );
@@ -480,17 +476,21 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     }
 
     const dynamicColumnMap = hrc2TableService.buildDynamicColumnMap({
-      PG: phuGiaColumns,
-      KL: chatHopKimColumns,
+      BOF_PhuGia: phuGiaColumns,
       others: khacColumns,
     });
     dynamicColumnMap.adjust = hrc2TableService.adjustMetaToDynamic(adjustColumnMetas);
 
+    // Đảm bảo các dòng có flag IsNM được gửi lên
+    // Dòng từ NM: IsNM = true (hoặc undefined, mặc định là true)
+    // Dòng thêm tay: IsNM = false
     const processedTable1 = tableData.map((row) => {
       const processedRow = { ...row };
+      // Nếu không có flag IsNM, mặc định là true (dòng từ NM)
       if (processedRow.IsNM === undefined) {
         processedRow.IsNM = true;
       }
+      // Xóa flag _isNewRow trước khi gửi lên
       delete processedRow._isNewRow;
       return processedRow;
     });
@@ -522,13 +522,13 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     config.signatures,
     config.code,
     phuGiaColumns,
-    chatHopKimColumns,
     khacColumns,
     adjustColumnMetas,
     tableData,
     table2Data,
   ]);
 
+  // Render action buttons từ PhieuActionService
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
     const filteredPheDuyet = (phieuInfo.pheDuyet ?? []).filter(
@@ -553,9 +553,15 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     });
 
     if (buttons.length === 0) return null;
-
+    
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [getUserInfo, idphieu, phieuInfo, getFormData, initData]);
+  }, [
+    getUserInfo,
+    idphieu,
+    phieuInfo,
+    getFormData,
+    initData,
+  ]);
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -568,22 +574,6 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
           marginBottom: 12,
         }}
       >
-        {/* Logo + tên công ty */}
-        {/* <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <img
-            src="https://report.hoaphatdungquat.vn/img/logoHP.png"
-            alt="logo"
-            style={{ height: "auto", width: 150 }}
-          />
-          {config.headerInfo && (
-            <>
-              <Typography.Text strong>
-                {config.headerInfo.subCompany}
-              </Typography.Text>
-              <Typography.Text>{config.headerInfo.company}</Typography.Text>
-            </>
-          )}
-        </div> */}
 
         {/* Tiêu đề trung tâm */}
         <div style={{ flex: 1, textAlign: "center" }}>
@@ -622,7 +612,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
               key={f.key || idx}
               field={f}
               idx={idx}
-              disabled={hasExistingPhieu}
+              disabled={hasExistingPhieu }
             />
           ))}
         </div>
@@ -632,7 +622,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
             type="primary"
             icon={<FilterOutlined />}
             onClick={handleFilter}
-            disabled={isFormLocked}
+            disabled={isFormLocked }
             loading={loading}
           >
             Làm mới dữ liệu
@@ -643,7 +633,11 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
           >
             {showAdjustColumns ? "Ẩn" : "Hiện"} điều chỉnh số liệu
           </Button>
-          <Button icon={<PlusOutlined />} onClick={addAdjustColumn} disabled={isFormLocked}>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={addAdjustColumn}
+            disabled={isFormLocked}
+          >
             Thêm cột điều chỉnh
           </Button>
         </div>
@@ -651,6 +645,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
         {config.layout.map((layout, idx) => (
           <div key={idx}>
             {layout.sectionType === "table" && layout.key === "table1" ? (
+              <>
               <CustomTableHRC
                 isHasExistingPhieu={hasExistingPhieu}
                 columns={table1Columns}
@@ -667,6 +662,10 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
                 stickyColumnKeys={["meThoi", "macThep"]}
                 scrollX="1500px"
               />
+              <div style={{ fontWeight: 600, marginTop: 12 }}>
+                Phần điều chỉnh số liệu nằm ở cuối bảng (scroll ngang → cột "Điều chỉnh số liệu").
+              </div>
+              </>
             ) : (
               layout.sectionType === "table" && (
                 <CustomFormTable
@@ -674,10 +673,10 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
                   initialData={tableData}
                   onDataChange={(rows) => setTableData(rows as HRCTableRow[])}
                   addRowButtonText="+ Thêm dòng"
-                showAddButton={!isFormLocked}
-                showDeleteButton={!isFormLocked}
+                  showAddButton={!isFormLocked}
+                  showDeleteButton={!isFormLocked}
                   minRows={1}
-                editable={!isFormLocked && (layout as any).editable !== false}
+                  editable={!isFormLocked && (layout as any).editable !== false}
                   loading={loading}
                 />
               )
@@ -739,7 +738,9 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
                 </div>
               );
             })}
+          
         </div>
+
       </Form>
       <div
         style={{
@@ -763,4 +764,4 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
   );
 };
 
-export default TaoPhieuTieuHaoNauLuyen_RH;
+export default TaoPhieuTieuHaoNauLuyen_BOF;

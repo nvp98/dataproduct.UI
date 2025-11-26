@@ -36,6 +36,10 @@ import BienBanGiaoNhanPhoiTam from "../pages/NM.HRC2/BienBanGiaoNhanPhoiTam/Bien
 import TaoBienBanGiaoNhanPhoiTam from "../pages/NM.HRC2/BienBanGiaoNhanPhoiTam/TaoBienBanGiaoNhanPhoiTam";
 import DLNMHRC2LuyenThep from "../pages/KhoDuLieu/NM.HRC2/DLNMHRC2LuyenThep";
 import DLNMHRC2ChiTiet from "../pages/KhoDuLieu/NM.HRC2/DLNMHRC2ChiTiet";
+import HeaderMapping from "../pages/KhoDuLieu/NM.HRC2/HeaderMapping";
+import TieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/TieuHaoNauLuyen_BOF";
+import TaoPhieuTieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/TaoPhieuBOF";
+import ChiTietTieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/ChiTietBOF";
 export const routes = [
   {
     path: "/",
@@ -242,6 +246,36 @@ export const routes = [
         ),
       },
       {
+        path: "tieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_BOF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieutieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuTieuHaoNauLuyen_BOF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitiettieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoNauLuyen_BOF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "tieuhaonauluyen_lf",
         element: (
           <RequireAuth>
@@ -337,6 +371,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoBienBanGiaoNhanPhoiTam />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "header-mapping",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <HeaderMapping />
             </RequireRole>
           </RequireAuth>
         ),

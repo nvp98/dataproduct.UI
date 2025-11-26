@@ -4,6 +4,7 @@ import {
   Col,
   DatePicker,
   Form,
+  Input,
   Popconfirm,
   Row,
   Select,
@@ -63,7 +64,7 @@ const DLNMHRC2LuyenThep = () => {
   const handleLoaiBMChange = (value: string | null) => {
     if (value && LOAI_BM_SCOPE_MAPPING[value]) {
       const scopes = LOAI_BM_SCOPE_MAPPING[value];
-      setScopeOptions(scopes.map(scope => ({ label: `Khu vực ${scope}`, value: scope })));
+      setScopeOptions(scopes.map(scope => ({ label: `${value === 'BOF' ? 'Lò' : 'Khu vực'} ${scope}`, value: scope })));
       // Reset Scope khi đổi Loại BM
       searchForm.setFieldsValue({ Scope: null });
       // Cập nhật filters
@@ -96,7 +97,9 @@ const DLNMHRC2LuyenThep = () => {
       if (searchFilters.Scope) {
         params.Scope = searchFilters.Scope;
       }
-
+      if (searchFilters.searchText) {
+        params.searchText = searchFilters.searchText;
+      }
       const res: any = await dlnmHRC2Api.search(params);
       
       // Hỗ trợ cả camelCase và PascalCase từ backend
@@ -132,6 +135,7 @@ const DLNMHRC2LuyenThep = () => {
       Ca: values.Ca || null,
       LoaiBM: values.LoaiBM || null,
       Scope: values.Scope || null,
+      searchText: values.searchText || null,
     };
     setFilters(newFilters);
     fetchData(1, pagination.pageSize, newFilters);
@@ -146,6 +150,7 @@ const DLNMHRC2LuyenThep = () => {
       Ca: null,
       LoaiBM: null,
       Scope: null,
+      searchText: null,
     };
     setFilters(clearedFilters);
     fetchData(1, pagination.pageSize, clearedFilters);
@@ -332,6 +337,11 @@ const DLNMHRC2LuyenThep = () => {
                   options={scopeOptions}
                   disabled={scopeOptions.length === 0}
                 />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item name="searchText" label="Tìm kiếm">
+                <Input placeholder="Nhập từ khóa tìm kiếm..." allowClear type="string" />
               </Form.Item>
             </Col>
             <Col>

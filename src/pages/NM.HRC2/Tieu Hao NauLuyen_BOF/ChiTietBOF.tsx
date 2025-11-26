@@ -16,7 +16,7 @@ import {
 import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
 import { PhieuApi } from "../../../services/PhieuApi";
-import HRC2_BB_NauLuyen_RH from "../../../utils/BM_config/HRC2_BB_NauLuyen_RH.json";
+import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { PheDuyetApi } from "../../../services/PheDuyetApi";
 
@@ -30,12 +30,12 @@ type DynamicColumnMeta = {
 
 type DynamicColumnsMap = Record<string, DynamicColumnMeta[]>;
 
-const ChiTietTieuHaoNauLuyen_LF = () => {
+const ChiTietTieuHaoNauLuyen_BOF = () => {
   const location = useLocation();
   const { idphieu } = location.state || {};
   const { pheduyet } = location.state || {};
 
-  const config = HRC2_BB_NauLuyen_RH;
+  const config = HRC2_BB_NauLuyen_BOF;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -71,7 +71,6 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
   const formData = data?.jsonData || {};
   const tableData = formData?.table1 || [];
   const table2Data = formData?.table2 || [];
-
   // cấu hình bảng hiển thị
   const tableSection = config.layout.find(
     (section: any) =>
@@ -119,7 +118,6 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       section.sectionType === "table" && section.key === "table2"
   );
   const columns2 = tableSection2?.columns || [];
-
   // xử lý phiếu
   const handleSubmit = async () => {
     if (!action) return;
@@ -298,7 +296,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           scroll={{ x: "max-content" }}
           sticky={{ offsetHeader: 0 }}
         />
-        <Table
+<Table
           bordered
           columns={columns2}
           dataSource={table2Data?.map((r: any, i: number) => ({
@@ -337,4 +335,4 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
   );
 };
 
-export default ChiTietTieuHaoNauLuyen_LF;
+export default ChiTietTieuHaoNauLuyen_BOF;
