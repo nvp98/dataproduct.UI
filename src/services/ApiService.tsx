@@ -1,5 +1,4 @@
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 
 const apiService = axios.create({
   baseURL: import.meta.env.VITE_API_URL, // thay đổi url api
@@ -18,11 +17,10 @@ apiService.interceptors.request.use((config) => {
 apiService.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const navigate = useNavigate();
     if (error.response?.status === 401) {
       // Ví dụ: xóa token + redirect login
       localStorage.removeItem("token");
-      navigate("/login", { replace: true });
+      window.location.href = "/login";
 
       return Promise.reject({
         message: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",

@@ -6,13 +6,18 @@ interface CustomChonNguoiKyProps {
   maphongBan?: string; // "NM.CTD" | "P.QLCL" | "NM.HRC1"
   value?: any;
   onChange?: (value: any) => void;
+  disabled?: boolean;
+  isReadOnly?: boolean;
 }
 
 export default function CustomChonNguoiKy({
   maphongBan,
   value,
   onChange,
+  disabled = false,
+  isReadOnly = false,
 }: CustomChonNguoiKyProps) {
+  const isDisabled = disabled || isReadOnly;
   const [options, setOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -48,10 +53,11 @@ export default function CustomChonNguoiKy({
       loading={loading}
       showSearch
       allowClear
+      disabled={disabled}
       filterOption={(input, option) =>
         (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
       }
-      style={{ width: "100%" }}
+      style={{ width: "300px" }}
     />
   );
 }

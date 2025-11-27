@@ -7,4 +7,10 @@ export const PhieuApi = {
 
   getDetail: (id: string) => apiService.get(`/api/Phieus/${id}`),
   putData: (id: string, data: any) => apiService.put(`/api/Phieus/${id}`, data),
+  
+  deleteData: (id: string) => apiService.delete(`/api/Phieus/${id}`),
+  
+  clone: (id: string, data: any) => apiService.post(`/api/Phieus/${id}/clone`, data),
+  
+  changeStatus: (id: string, status: number) => apiService.put(`/api/Phieus/${id}/status`, { status }),
 };

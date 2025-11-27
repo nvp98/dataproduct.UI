@@ -1,0 +1,78 @@
+{
+    "code": "HRC2_BBGN_PhoiTam",
+    "title": "BIÊN BẢN GIAO NHẬN PHÔI TẤM",
+    "headerInfo": {
+      "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+      "subCompany": "HÒA PHÁT GANG THÉP"
+    },
+    "isoInfo": {
+      "code": "BM.40/QT.05.15",
+      "effectiveDate": "01/04/2025",
+      "revision": "01"
+    },
+  
+    "headerFields": [
+      {
+        "label": "Ca",
+        "type": "select",
+        "key": "ca",
+        "required": true,
+        "options": [
+          { "label": "Ca ngày", "value": 1 },
+          { "label": "Ca đêm", "value": 2 }
+        ]
+      },
+      { "label": "Ngày sản xuất", "type": "date", "key": "NgaySX", "required": true }
+    ],
+  
+    "layout": [
+      {
+        "sectionType": "table",
+        "title": "Chi tiết giao nhận phôi tấm",
+        "key": "table1",
+        "columns": [
+          { "title": "Mã vật tư", "dataIndex": "maVatTu" },
+          { "title": "Mác phôi", "dataIndex": "macPhoi" },
+          { "title": "Số mẻ", "dataIndex": "soMe" },
+          { "title": "ID", "dataIndex": "id" },
+          { "title": "Khối lượng (kg)", "dataIndex": "khoiLuong" },
+          { "title": "Ghi chú", "dataIndex": "ghiChu" }
+        ]
+      }
+    ],
+  
+    "footerNotes": [
+      ""
+    ],
+  
+    "signatures": [
+      {
+        "label": "BP.K",
+        "type": "selectNguoiKy",
+        "key": "nguoiKy_Giao",
+        "maphongBan": "BP.K",
+        "capduyet": 1,
+        "isChon": true,
+        "required": true
+      },
+      {
+        "label": "P.QLCL",
+        "type": "selectNguoiKy",
+        "key": "nguoiKy_Giao",
+        "maphongBan": "P.QLCL",
+        "capduyet": 1,
+        "isChon": true,
+        "required": true
+      },
+      {
+        "label": "NM.HRC2",
+        "type": "selectNguoiKy",
+        "key": "nguoiKy_Nhan",
+        "maphongBan": "NM.HRC2",
+        "capduyet": 1,
+        "isChon": true,
+        "required": true
+      }
+    ]
+  }
+  

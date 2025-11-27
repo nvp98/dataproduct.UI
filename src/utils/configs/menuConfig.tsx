@@ -52,7 +52,28 @@ export const menuConfig = [
           // { key: "6", label: "Option 6" },
         ],
       },
-      // { key: "sub1-2", label: "Option 4" },
+      {
+        key: "sub1-3",
+        label: "NM.HRC2",
+        children: [
+          {
+            key: "sub1-1.3",
+            label: (
+              <Tooltip title="HRC2 - Dữ liệu luyện thép">
+                <NavLink to="/dlnmhrc2luyenthep">HRC2 - Dữ liệu luyện thép</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub1-1.4",
+            label: (
+              <Tooltip title="HRC2 - Header Mapping">
+                <NavLink to="/header-mapping">HRC2 - Header Mapping</NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
     ],
   },
   {
@@ -99,7 +120,16 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
-          // { key: "6", label: "Option 6" },
+          {
+            key: "sub2-3-1",
+            label: (
+              <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
+                <NavLink to="/tieuhaolothoi">
+                  BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -166,6 +196,52 @@ export const menuConfig = [
           // { key: "6", label: "Option 6" },
         ],
       },
+      {
+        key: "sub2-6",
+        label: "NM.HRC2",
+        children: [
+          {
+            key: "sub2-6-1",
+            label: (
+              <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
+                <NavLink to="/tieuhaonauluyen_bof">
+                BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-6-2",
+            label: (
+              <Tooltip title="BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
+                <NavLink to="/tieuhaonauluyen_lf">
+                BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-6-3",
+            label: (
+              <Tooltip title="BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)">
+                <NavLink to="/tieuhaonauluyen_rh">
+                BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-6-4",
+            label: (
+              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+                <NavLink to="/bbgnphoitam">
+                BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
     ],
   },
   {
@@ -222,6 +298,52 @@ export const menuConfig = [
           //   ),
           // },
           // { key: "6", label: "Option 6" },
+        ],
+      },
+      {
+        key: "sub4-5",
+        label: "NM.HRC2",
+        children: [
+          {
+            key: "sub4-5-1",
+            label: (
+              <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
+                <NavLink to="/tieuhaonauluyen_bof">
+                BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-5-2",
+            label: (
+              <Tooltip title="BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
+                <NavLink to="/tieuhaonauluyen_lf">
+                BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-5-3",
+            label: (
+              <Tooltip title="BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)">
+                <NavLink to="/tieuhaonauluyen_rh">
+                BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-5-4",
+            label: (
+              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+                <NavLink to="/bbgnphoitam">
+                BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],

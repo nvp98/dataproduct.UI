@@ -20,11 +20,26 @@ import TaoPhieuPhoiNguoi from "../pages/NMCTD/BienBanPhoiNguoi/TaoPhieuPhoiNguoi
 import NhatKyQuangTH from "../pages/NM.NL/NhatKyQuangTH/NhatKyQuangTH";
 import TaoPhieuNhatKyQuang from "../pages/NM.NL/NhatKyQuangTH/TaoNhatKyQuangTH";
 import BienBanThepLong from "../pages/NM.HRC1/BienBanThepLong/BienBanThepLong";
+import TieuHaoLoThoi from "../pages/NM.HRC1/TieuHaoLoThoi/TieuHaoLoThoi";
+import TaoTieuHaoLoThoi from "../pages/NM.HRC1/TieuHaoLoThoi/TaoTieuHaoLoThoi";
 import TaoPhieuThepLong from "../pages/NM.HRC1/BienBanThepLong/TaoBienBanThepLong";
 import ChiTietPhieuPhoiNong from "../pages/NMCTD/BienBanPhoiNong/ChiTietPhieuPhoiNong";
 import SanLuongPhoi from "../pages/KhoDuLieu/NM.CTD/SanLuongPhoi";
 import BKNguyenLieu from "../pages/KhoDuLieu/NM.NL/BKNguyenLieu";
-
+  import TieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/TieuHaoNauLuyen_LF";
+  import ChiTietTieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/ChiTietLF";
+  import TaoPhieuTieuHaoNauLuyen_LF from "../pages/NM.HRC2/Tieu Hao NauLuyen_LF/TaoPhieuLF";
+  import TieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/TieuHaoNauLuyen_RH";
+  import TaoPhieuTieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/TaoPhieuRH";
+  import ChiTietTieuHaoNauLuyen_RH from "../pages/NM.HRC2/Tieu Hao NauLuyen_RH/ChiTietRH";
+import BienBanGiaoNhanPhoiTam from "../pages/NM.HRC2/BienBanGiaoNhanPhoiTam/BienBanGiaoNhanPhoiTam";
+import TaoBienBanGiaoNhanPhoiTam from "../pages/NM.HRC2/BienBanGiaoNhanPhoiTam/TaoBienBanGiaoNhanPhoiTam";
+import DLNMHRC2LuyenThep from "../pages/KhoDuLieu/NM.HRC2/DLNMHRC2LuyenThep";
+import DLNMHRC2ChiTiet from "../pages/KhoDuLieu/NM.HRC2/DLNMHRC2ChiTiet";
+import HeaderMapping from "../pages/KhoDuLieu/NM.HRC2/HeaderMapping";
+import TieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/TieuHaoNauLuyen_BOF";
+import TaoPhieuTieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/TaoPhieuBOF";
+import ChiTietTieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/ChiTietBOF";
 export const routes = [
   {
     path: "/",
@@ -206,6 +221,166 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoPhieuThepLong />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "dlnmhrc2luyenthep",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <DLNMHRC2LuyenThep />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "dlnmhrc2chitiet",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <DLNMHRC2ChiTiet />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "tieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_BOF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieutieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuTieuHaoNauLuyen_BOF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitiettieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoNauLuyen_BOF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "tieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_LF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieutieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuTieuHaoNauLuyen_LF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitiettieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoNauLuyen_LF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "tieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_RH />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieutieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuTieuHaoNauLuyen_RH />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitiettieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoNauLuyen_RH />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "tieuhaolothoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoLoThoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taotieuhaolothoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoTieuHaoLoThoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "bbgnphoitam",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanGiaoNhanPhoiTam />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "form-bbgnphoitam",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoBienBanGiaoNhanPhoiTam />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "header-mapping",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <HeaderMapping />
             </RequireRole>
           </RequireAuth>
         ),

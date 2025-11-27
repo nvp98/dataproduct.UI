@@ -6,16 +6,17 @@ interface CustomFormTableProps {
   columns: Array<{
     title: string;
     dataIndex?: string;
+    isLabel?: boolean; // Xác định cột này là cột label
     width?: number | string;
     fixed?: "left" | "right";
     children?: Array<{
       title: string;
       dataIndex: string | number;
-      width?: number | string;
     }>;
   }>;
   initialData?: any[];
   onDataChange?: (data: any[]) => void;
+  className?: string;
   addRowButtonText?: string;
   showAddButton?: boolean;
   showDeleteButton?: boolean;
@@ -44,6 +45,7 @@ export default function CustomFormTable({
   columns,
   initialData = [{ key: 1 }],
   onDataChange,
+  className = "",
   addRowButtonText = "+ Thêm dòng",
   showAddButton = true,
   showDeleteButton = true,
@@ -171,6 +173,20 @@ export default function CustomFormTable({
           ),
         };
       } else {
+        // Check if this is a label column
+        if (col.isLabel) {
+          return {
+            title: col.title,
+            dataIndex: col.dataIndex,
+            width: col.width,
+            render: (_: any, record: any) => (
+              <div style={{ paddingLeft: 8 }}>
+                {record[col.dataIndex || ""]}
+              </div>
+            ),
+          };
+        }
+
         // Cột bình thường
         return {
           title: col.title,
@@ -210,7 +226,12 @@ export default function CustomFormTable({
             width: 160,
             render: (_: any, record: any) => {
               const t = record.tinhTrang;
-              const text = t === 1 ? "Đã chuyển hết" : t === 2 ? "Đã chuyển 1 phần" : "Chưa chuyển";
+              const text =
+                t === 1
+                  ? "Đã chuyển hết"
+                  : t === 2
+                  ? "Đã chuyển 1 phần"
+                  : "Chưa chuyển";
               const color = t === 1 ? "green" : t === 2 ? "orange" : "default";
               return <Tag color={color}>{text}</Tag>;
             },
@@ -266,6 +287,7 @@ export default function CustomFormTable({
           <Table
             bordered
             pagination={false}
+            className={className}
             size="small"
             columns={tableColumns}
             dataSource={rows}
