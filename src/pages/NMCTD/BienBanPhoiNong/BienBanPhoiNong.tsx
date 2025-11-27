@@ -73,7 +73,14 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           pageSize,
           ...filters,
         });
-        setData(res as any);
+        const sorted = Array.isArray(res)
+          ? [...(res as any)].sort((a, b) => {
+              const vb = dayjs(b?.ngayTao || b?.ngaySX).valueOf();
+              const va = dayjs(a?.ngayTao || a?.ngaySX).valueOf();
+              return vb - va;
+            })
+          : (res as any);
+        setData(sorted);
       } else {
         const res = await PhieuApi.getData({
           MaBM: config.code,
@@ -82,7 +89,14 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           pageSize,
           ...filters,
         });
-        setData(res as any);
+        const sorted = Array.isArray(res)
+          ? [...(res as any)].sort((a, b) => {
+              const vb = dayjs(b?.ngayTao || b?.ngaySX).valueOf();
+              const va = dayjs(a?.ngayTao || a?.ngaySX).valueOf();
+              return vb - va;
+            })
+          : (res as any);
+        setData(sorted);
       }
 
       // setPagination({
@@ -229,8 +243,13 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       dataIndex: "ngayTao",
       key: "ngayTao",
       width: 140,
-      render: (value: string) =>
-        value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "-",
+      render: (value: string) => value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "-",
+      sorter: (a: any, b: any) => {
+        const va = dayjs(a?.ngayTao).valueOf();
+        const vb = dayjs(b?.ngayTao).valueOf();
+        return va - vb;
+      },
+      defaultSortOrder: "descend" as const,
     },
     {
       title: "Trạng thái",

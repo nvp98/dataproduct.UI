@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
-import { Table, Button, Input, Popconfirm, Space, Spin, Checkbox } from "antd";
+import { Table, Button, Input, Popconfirm, Space, Spin, Tag } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 
 interface CustomFormTableProps {
   columns: Array<{
     title: string;
     dataIndex?: string;
+    width?: number | string;
+    fixed?: "left" | "right";
     children?: Array<{
       title: string;
       dataIndex: string | number;
+      width?: number | string;
     }>;
   }>;
   initialData?: any[];
@@ -21,17 +24,20 @@ interface CustomFormTableProps {
   // Parent control
   loading?: boolean; // Loading state từ parent
   onRefresh?: () => void; // Callback để refresh data từ parent
-  transferEnabled?: boolean;
-  transferTitle?: string;
-  onTransfer?: (rowKey: string | number, row: any, checked: boolean) => void;
   selectionEnabled?: boolean;
   selectedRowKeys?: Array<string | number>;
   onSelectionChange?: (keys: Array<string | number>, rows: any[]) => void;
   isRowSelectable?: (row: any) => boolean;
-  rowTransferEnabled?: boolean;
-  onRowTransferAll?: (rowKey: string | number, row: any) => void;
-  onRowTransferPartial?: (rowKey: string | number, row: any) => void;
-  isRowTransferable?: (row: any) => boolean;
+  showStatus?: boolean;
+  readonlyFields?: string[];
+  scrollY?: number;
+  stickyHeader?: boolean;
+  onCellChange?: (
+    rowIndex: number,
+    dataIndex: string,
+    value: any,
+    row: any
+  ) => void;
 }
 
 export default function CustomFormTable({
@@ -45,17 +51,16 @@ export default function CustomFormTable({
   editable = true,
   loading = false,
   onRefresh,
-  transferEnabled = false,
-  transferTitle = "Chuyển thùng",
-  onTransfer,
+
   selectionEnabled = false,
   selectedRowKeys,
   onSelectionChange,
   isRowSelectable,
-  rowTransferEnabled = false,
-  onRowTransferAll,
-  onRowTransferPartial,
-  isRowTransferable,
+  showStatus = false,
+  readonlyFields = [],
+  scrollY,
+  stickyHeader = false,
+  onCellChange,
 }: CustomFormTableProps) {
   const [rows, setRows] = useState(initialData);
 
@@ -119,6 +124,7 @@ export default function CustomFormTable({
     newData[rowIndex][dataIndex] = value;
     setRows(newData);
     onDataChange?.(newData);
+    onCellChange?.(rowIndex, dataIndex, value, newData[rowIndex]);
   };
 
   // Sinh cột động từ config
@@ -128,27 +134,39 @@ export default function CustomFormTable({
         // Merge header: cột cha có con
         return {
           title: col.title,
+          width: col.width,
+          fixed: col.fixed,
           children: col.children.map(
             (child: {
               title: string | undefined;
               dataIndex: string | number;
+              width?: number | string;
             }) => ({
               title: child.title,
               dataIndex: child.dataIndex,
-              render: (_: any, record: any, idx: number) => (
-                <Input
-                  placeholder={child.title}
-                  value={record[child.dataIndex] || ""}
-                  onChange={(e) => {
-                    handleCellChange(
-                      e.target.value,
-                      idx,
-                      child.dataIndex as string
-                    );
-                  }}
-                  disabled={!editable}
-                />
-              ),
+              width: child.width,
+              render: (_: any, record: any, idx: number) =>
+                readonlyFields.includes(String(child.dataIndex)) ? (
+                  <Input
+                    placeholder={child.title}
+                    value={record[child.dataIndex] ?? ""}
+                    readOnly
+                    style={{ backgroundColor: "#fffbe6" }}
+                  />
+                ) : (
+                  <Input
+                    placeholder={child.title}
+                    value={record[child.dataIndex] ?? ""}
+                    onChange={(e) => {
+                      handleCellChange(
+                        e.target.value,
+                        idx,
+                        child.dataIndex as string
+                      );
+                    }}
+                    disabled={!editable}
+                  />
+                ),
             })
           ),
         };
@@ -157,65 +175,45 @@ export default function CustomFormTable({
         return {
           title: col.title,
           dataIndex: col.dataIndex,
-          render: (_: any, record: any, idx: number) => (
-            <Input
-              placeholder={col.title}
-              value={record[col.dataIndex || ""] || ""}
-              onChange={(e) => {
-                handleCellChange(e.target.value, idx, col.dataIndex as string);
-              }}
-              disabled={!editable}
-            />
-          ),
+          width: col.width,
+          fixed: col.fixed,
+          render: (_: any, record: any, idx: number) =>
+            readonlyFields.includes(String(col.dataIndex)) ? (
+              <Input
+                placeholder={col.title}
+                value={record[col.dataIndex || ""] ?? ""}
+                readOnly
+                style={{ backgroundColor: "#fffbe6" }}
+              />
+            ) : (
+              <Input
+                placeholder={col.title}
+                value={record[col.dataIndex ?? ""] ?? ""}
+                onChange={(e) => {
+                  handleCellChange(
+                    e.target.value,
+                    idx,
+                    col.dataIndex as string
+                  );
+                }}
+                disabled={!editable}
+              />
+            ),
         };
       }
     }),
-    ...(transferEnabled
+    ...(showStatus
       ? [
           {
-            title: transferTitle,
-            key: "transfer",
-            width: 120,
-            render: (_: any, record: any, idx: number) => (
-              <Checkbox
-                checked={!!record.isThung}
-                onChange={(e) => {
-                  const newRows = [...rows];
-                  newRows[idx].isThung = e.target.checked;
-                  setRows(newRows);
-                  onDataChange?.(newRows);
-                  onTransfer?.(record.key, newRows[idx], e.target.checked);
-                }}
-              />
-            ),
-          },
-        ]
-      : []),
-    ...(rowTransferEnabled
-      ? [
-          {
-            title: "Chuyển",
-            key: "row-transfer",
-            width: 180,
-            render: (_: any, record: any) => (
-              <Space>
-                <Button
-                  size="small"
-                  type="primary"
-                  onClick={() => onRowTransferAll?.(record.key, record)}
-                  disabled={isRowTransferable ? !isRowTransferable(record) : false}
-                >
-                  Chuyển hết
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => onRowTransferPartial?.(record.key, record)}
-                  disabled={isRowTransferable ? !isRowTransferable(record) : false}
-                >
-                  Chuyển 1 phần
-                </Button>
-              </Space>
-            ),
+            title: "Tình trạng",
+            key: "status",
+            width: 160,
+            render: (_: any, record: any) => {
+              const t = record.tinhTrang;
+              const text = t === 1 ? "Đã chuyển hết" : t === 2 ? "Đã chuyển 1 phần" : "Chưa chuyển";
+              const color = t === 1 ? "green" : t === 2 ? "orange" : "default";
+              return <Tag color={color}>{text}</Tag>;
+            },
           },
         ]
       : []),
@@ -264,7 +262,7 @@ export default function CustomFormTable({
           <Spin size="large" tip="Đang tải dữ liệu từ API..." />
         </div>
       ) : (
-        <> 
+        <>
           <Table
             bordered
             pagination={false}
@@ -272,6 +270,8 @@ export default function CustomFormTable({
             columns={tableColumns}
             dataSource={rows}
             style={{ marginTop: 20 }}
+            scroll={{ x: "max-content", y: scrollY }}
+            sticky={stickyHeader}
             rowSelection={
               selectionEnabled
                 ? {
@@ -280,7 +280,9 @@ export default function CustomFormTable({
                       onSelectionChange?.(keys as any, selected as any);
                     },
                     getCheckboxProps: (record: any) => ({
-                      disabled: isRowSelectable ? !isRowSelectable(record) : false,
+                      disabled: isRowSelectable
+                        ? !isRowSelectable(record)
+                        : false,
                     }),
                   }
                 : undefined

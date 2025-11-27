@@ -12,6 +12,7 @@ import {
   Button,
   Modal,
   Input,
+  Tooltip,
 } from "antd";
 import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
@@ -28,6 +29,8 @@ const ChiTietPhieuPhoiNong = () => {
   const { pheduyet } = location.state || {};
 
   const config = CTD_BB_Phoinong;
+  const stored = localStorage.getItem("userinfo");
+  const currentUserId = stored ? JSON.parse(stored).iD_TaiKhoan : null;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -62,7 +65,6 @@ const ChiTietPhieuPhoiNong = () => {
 
   const formData = data?.jsonData || {};
   const tableData = formData?.table1 || [];
-  console.log("jjj", formData);
   // cấu hình bảng hiển thị
   const tableSection = config.layout.find(
     (section: any) =>
@@ -74,8 +76,8 @@ const ChiTietPhieuPhoiNong = () => {
     if (!action) return;
     try {
       setLoading(true);
-      await PheDuyetApi.putData(pheduyet?.id, {
-        ...pheduyet,
+      await PheDuyetApi.putData(datapheduyet?.id, {
+        ...datapheduyet,
         tinhTrang: action === "approve" ? 1 : 2,
         ghiChu: ghiChu,
       });
@@ -84,6 +86,11 @@ const ChiTietPhieuPhoiNong = () => {
           ? "Xác nhận phiếu thành công!"
           : "Đã từ chối phiếu!"
       );
+      setDataPheDuyet((prev: any) => ({
+        ...prev,
+        tinhTrang: action === "approve" ? 1 : 2,
+        ghiChu,
+      }));
       setOpen(false);
       setGhiChu("");
     } catch (err) {
@@ -102,23 +109,40 @@ const ChiTietPhieuPhoiNong = () => {
     <>
       <div style={{ textAlign: "right" }}>
         <Space>
-          {datapheduyet && datapheduyet?.tinhTrang === 0 && (
+          {true && (
             <>
-              <Button
-                type="primary"
-                icon={<CheckOutlined />}
-                onClick={() => openModal("approve")}
-              >
-                Xác nhận
-              </Button>
+              <Tooltip title="Xác nhận phê duyệt">
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  onClick={() => openModal("approve")}
+                  disabled={loading}
+                  style={{
+                    backgroundColor: "#52c41a",
+                    borderColor: "#52c41a",
+                    color: "#fff",
+                  }}
+                >
+                  Xác nhận
+                </Button>
+              </Tooltip>
               {/* Nút Từ chối phiếu */}
-              <Button
-                danger
-                icon={<CloseOutlined />}
-                onClick={() => openModal("reject")}
-              >
-                Từ chối
-              </Button>
+              <Tooltip title="Từ chối phiếu">
+                <Button
+                  type="primary"
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={() => openModal("reject")}
+                  disabled={loading}
+                  style={{
+                    backgroundColor: "#ff4d4f",
+                    borderColor: "#ff4d4f",
+                    color: "#fff",
+                  }}
+                >
+                  Từ chối
+                </Button>
+              </Tooltip>
             </>
           )}
 

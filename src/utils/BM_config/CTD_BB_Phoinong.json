@@ -45,6 +45,8 @@
         { "title": "Mẻ", "dataIndex": "me" },
         { "title": "Mác", "dataIndex": "mac"},
         { "title": "Kích thước", "dataIndex": "kichThuoc"},
+        { "title": "Đúc", "dataIndex": "duc"},
+        { "title": "NMC", "dataIndex": "nmc"},
         {
           "title": "Loại I",
           "children": [
@@ -66,8 +68,10 @@
             { "title": "Khối lượng (tấn)", "dataIndex": "loaiIII_BM" }
           ]
         },
+        { "title": "Tổng số thanh", "dataIndex": "tongSoThanh" },
         { "title": "Tổng khối lượng", "dataIndex": "tongKhoi" },
-        { "title": "Ghi chú", "dataIndex": "ghiChu" }
+        { "title": "ST Chưa chuyển", "dataIndex": "stChuaChuyen" },
+        { "title": "ST BKM", "dataIndex": "stBKM" }
       ]
     }
   ],
