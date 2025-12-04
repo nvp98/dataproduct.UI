@@ -1,3 +1,4 @@
+import type { SearchPhieuRequest } from "../models/Phieu";
 import apiService from "./ApiService";
 
 export const PhieuApi = {
@@ -13,4 +14,6 @@ export const PhieuApi = {
   clone: (id: string, data: any) => apiService.post(`/api/Phieus/${id}/clone`, data),
   
   changeStatus: (id: string, status: number) => apiService.put(`/api/Phieus/${id}/status`, { status }),
+  
+  search: (payload: SearchPhieuRequest ) => apiService.post("/api/Phieus/search", payload),
 };

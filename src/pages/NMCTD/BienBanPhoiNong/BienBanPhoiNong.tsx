@@ -84,7 +84,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       } else {
         const res = await PhieuApi.getData({
           MaBM: config.code,
-          NguoiTaoID: userObj.id,
+          // NguoiTaoID: userObj.id,
           page,
           pageSize,
           ...filters,

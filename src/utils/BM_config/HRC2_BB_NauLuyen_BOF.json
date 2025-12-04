@@ -127,8 +127,7 @@
       "columns": [
         {
           "title": "",
-          "dataIndex": "materialName",
-          "isLabel": true
+          "dataIndex": "materialName"
         },
         {
           "title": "Tồn đầu kíp",
@@ -143,56 +142,7 @@
           "dataIndex": "tonCuoiKip"
         }
       ],
-      "initialData": [
-        {
-          "key": "1",
-          "materialName": "Lượng Vôi"
-        },
-        {
-          "key": "2",
-          "materialName": "Lượng Dolomite"
-        },
-        {
-          "key": "3",
-          "materialName": "Lượng Quặng"
-        },
-        {
-          "key": "4",
-          "materialName": "Lượng FeSi"
-        },
-        {
-          "key": "5",
-          "materialName": "Lượng SiMn"
-        },
-        {
-          "key": "6",
-          "materialName": "Lượng FeMn"
-        },
-        {
-          "key": "7",
-          "materialName": "Lượng LDSF"
-        },
-        {
-          "key": "8",
-          "materialName": "Lượng Than"
-        },
-        {
-          "key": "9",
-          "materialName": "Lượng Al"
-        },
-        {
-          "key": "10",
-          "materialName": "Lượng Chất tăng cacbon"
-        },
-        {
-          "key": "11",
-          "materialName": "Lượng HC-FeMn75"
-        },
-        {
-          "key": "12",
-          "materialName": "Nguyên liệu khác:"
-        }
-      ]
+      "initialData": []
     }
   ],
 
