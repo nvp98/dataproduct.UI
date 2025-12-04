@@ -191,9 +191,6 @@ const HeaderMappingModal = ({
             defaultLabel={record?.headerKeyName || undefined}
           />
         </Form.Item>
-        <Form.Item label="Tên nguồn dữ liệu" name="tenNguonDuLieu">
-          <Input placeholder="Nhập tên nguồn dữ liệu" />
-        </Form.Item>
       </Form>
     </Modal>
   );

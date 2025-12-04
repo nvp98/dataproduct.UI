@@ -4,6 +4,7 @@ import {
   Col,
   Form,
   Input,
+  InputNumber,
   Modal,
   Popconfirm,
   Row,
@@ -18,7 +19,7 @@ import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutli
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { headerKeyApi } from "../../../services/HeaderKeyApi";
-import type { HeaderKey, HeaderKeyPayload } from "../../../models/HeaderKeyModel";
+import type { HeaderKey, HeaderKeyPayload, HeaderMapping } from "../../../models/HeaderKeyModel";
 
 type FilterState = {
   searchKey?: string;
@@ -95,8 +96,7 @@ const HeaderMapping = () => {
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
     const appliedFilters: FilterState = {
-      searchKey: values.searchKey?.trim() || undefined,
-      LoaiPhieu: values.LoaiPhieu?.trim() || undefined,
+      searchKey: values.searchKey?.trim() || undefined
     };
     fetchData(1, pagination.pageSize, appliedFilters);
   };
@@ -121,6 +121,7 @@ const HeaderMapping = () => {
       mota: record.mota,
       isActive: record.isActive,
       keyGuid: record.keyGuid,
+      thuTu: record.thuTu,
     });
     setModalVisible(true);
   };
@@ -139,6 +140,7 @@ const HeaderMapping = () => {
         loaiPhieu: values.loaiPhieu?.trim() || null,
         mota: values.mota?.trim() || null,
         isActive: values.isActive ?? true,
+        thuTu: values.thuTu ?? null,
       };
       if (editingRecord?.keyGuid) {
         payload.keyGuid = editingRecord.keyGuid;
@@ -185,26 +187,29 @@ const HeaderMapping = () => {
         title: "Tên hiển thị",
         dataIndex: "tenHienThi",
         key: "tenHienThi",
+        width: 160,
+        ellipsis: true,
         render: (value: string) => value || "-",
       },
       {
-        title: "Key GUID",
-        dataIndex: "keyGuid",
-        key: "keyGuid",
-        ellipsis: true,
+        title: "Phụ liệu NM",
+        dataIndex: "headerMappings",
+        key: "headerMappings",
+        width: 250,
+        render: (value: HeaderMapping[]) => value.map(item => item.tenNguonDuLieu).join("; "),
+      },
+      {
+        title: "Thứ tự",
+        dataIndex: "thuTu",
+        key: "thuTu",
+        width: 60,
+        render: (value: number) => value || "-",
       },
       {
         title: "Loại phiếu",
         dataIndex: "loaiPhieu",
         key: "loaiPhieu",
-        width: 160,
-        render: (value: string) => value || "-",
-      },
-      {
-        title: "Mô tả",
-        dataIndex: "mota",
-        key: "mota",
-        ellipsis: true,
+        width: 100,
         render: (value: string) => value || "-",
       },
       {
@@ -273,12 +278,7 @@ const HeaderMapping = () => {
                 <Input placeholder="Tên hiển thị..." allowClear />
               </Form.Item>
             </Col>
-            <Col xs={24} md={8}>
-              <Form.Item label="Loại phiếu" name="LoaiPhieu">
-                <Input placeholder="Nhập loại phiếu" allowClear />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={8} style={{ display: "flex", alignItems: "flex-end" }}>
+            <Col xs={24} md={8} style={{ display: "flex" }}>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                   Lọc
@@ -338,8 +338,17 @@ const HeaderMapping = () => {
           <Form.Item name="mota" label="Mô tả">
             <Input.TextArea rows={3} placeholder="Ghi chú thêm (không bắt buộc)" />
           </Form.Item>
-          <Form.Item name="keyGuid" label="Key GUID">
-            <Input disabled placeholder="Tự động sinh sau khi lưu" />
+          <Form.Item
+            name="thuTu"
+            label="Thứ tự"
+            tooltip="Số thứ tự để sắp xếp các phụ liệu khi hiển thị"
+          >
+            <InputNumber
+              min={0}
+              type="number"
+              placeholder="Nhập số thứ tự"
+              style={{ width: "100%" }}
+            />
           </Form.Item>
           <Form.Item
             name="isActive"

@@ -296,17 +296,20 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
           scroll={{ x: "max-content" }}
           sticky={{ offsetHeader: 0 }}
         />
-<Table
-          bordered
-          columns={columns2}
-          dataSource={table2Data?.map((r: any, i: number) => ({
-            key: i,
-            stt: i + 1,
-            ...r,
-          }))}
-          pagination={false}
-          size="small"
+        {table2Data && table2Data.length > 0 && (
+          <Table
+            bordered
+            style={{ marginTop: 16 }}
+            columns={columns2}
+            dataSource={table2Data?.map((r: any, i: number) => ({
+              key: i,
+              stt: i + 1,
+              ...r,
+            }))}
+            pagination={false}
+            size="small"
         />
+        )}
         {/* Khu vực ký duyệt */}
         <Row
           justify="space-around"

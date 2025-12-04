@@ -1,3 +1,4 @@
+import type { ChuyenMeThoiRequest } from "../models/DLMN_HRC2Model";
 import apiService from "./ApiService";
 
 export const dlnmHRC2Api = {
@@ -6,6 +7,7 @@ export const dlnmHRC2Api = {
   getByReportNo: (reportNo: number) => apiService.get(`/api/DLNMHRC2/report/${reportNo}`),
   getAll: (params?: any) => apiService.get("/api/DLNMHRC2", { params }),
   filter: (payload?: any) => apiService.post("/api/DLNMHRC2/filter",  payload ),
-  chuyenMeThoi: (meThoi: string) => apiService.post("/api/DLNMHRC2/chuyen-me-thoi", { meThoi }),
+  chuyenMeThoi: (payload: ChuyenMeThoiRequest) => apiService.post("/api/DLNMHRC2/chuyen-me-thoi", payload ),
+  deleteRowByKey: (rowKey: number) => apiService.delete(`/api/DLNMHRC2/${rowKey}`),
 };
 
