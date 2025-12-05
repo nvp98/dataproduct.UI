@@ -199,10 +199,8 @@ const TaoTieuHaoLoThoi = () => {
         await PhieuApi.putData(values.idphieu, payload);
         message.success("Cập nhật phiếu thành công!");
       } else {
-        // Gửi POST API
-        //const res = await PhieuApi.postData(payload);
-
-        // Nếu thành công
+        const res = await PhieuApi.postData(payload);
+        form.setFieldsValue({ idphieu: (res as any)?.idphieu });
         message.success(`Tạo phiếu thành công: ${(res as any)?.soPhieu || ""}`);
       }
     } catch (error) {

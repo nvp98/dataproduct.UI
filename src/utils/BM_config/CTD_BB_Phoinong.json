@@ -50,22 +50,22 @@
         {
           "title": "Loại I",
           "children": [
-            { "title": "Số thanh", "dataIndex": "loaiI_TP" },
-            { "title": "Khối lượng (tấn)", "dataIndex": "loaiI_BM" }
+            { "title": "Số thanh", "dataIndex": "ST_LoaiI" },
+            { "title": "Khối lượng (tấn)", "dataIndex": "KL_LoaiI" }
           ]
         },
         {
           "title": "Loại II",
           "children": [
-            { "title": "Số thanh", "dataIndex": "loaiII_TP" },
-            { "title": "Khối lượng (tấn)", "dataIndex": "loaiII_BM" }
+            { "title": "Số thanh", "dataIndex": "ST_LoaiII" },
+            { "title": "Khối lượng (tấn)", "dataIndex": "KL_LoaiII" }
           ]
         },
         {
           "title": "Loại III",
           "children": [
-            { "title": "Số thanh", "dataIndex": "loaiIII_TP" },
-            { "title": "Khối lượng (tấn)", "dataIndex": "loaiIII_BM" }
+            { "title": "Số thanh", "dataIndex": "ST_LoaiIII" },
+            { "title": "Khối lượng (tấn)", "dataIndex": "KL_LoaiIII" }
           ]
         },
         { "title": "Tổng số thanh", "dataIndex": "tongSoThanh" },
@@ -83,8 +83,8 @@
   ],
 
   "signatures": [
-    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_CTD" ,"maphongBan":"NM.CTD","capduyet":1,"isChon":false},
-    { "label": "P.QLCL","type":"selectNguoiKy", "key": "nguoiKy_QLCL","maphongBan":"P.QLCL","capduyet":2,"isChon":true,"required": true },
-    { "label": "NM.HRC1","type":"selectNguoiKy", "key": "nguoiKy_NMHRC1","maphongBan":"NM.HRC1","capduyet":3,"isChon":true,"required": true }
+    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_CTD" ,"maphongBan":"NM.CTD","capduyet":0,"isChon":false},
+    { "label": "P.QLCL","type":"selectNguoiKy", "key": "nguoiKy_QLCL","maphongBan":"P.QLCL","capduyet":1,"isChon":true,"required": true },
+    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_NMHRC1","maphongBan":"NM.CTD","capduyet":2,"isChon":true,"required": true }
   ]
 }

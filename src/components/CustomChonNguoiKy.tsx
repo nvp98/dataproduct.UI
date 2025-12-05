@@ -15,9 +15,8 @@ export default function CustomChonNguoiKy({
   value,
   onChange,
   disabled = false,
-  isReadOnly = false,
 }: CustomChonNguoiKyProps) {
-  const isDisabled = disabled || isReadOnly;
+  // const isDisabled = disabled || isReadOnly;
   const [options, setOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 

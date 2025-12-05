@@ -30,9 +30,9 @@ import {
 } from "@ant-design/icons";
 import { CtdPhoiNongApi } from "../../../services/CtdPhoiNongApi";
 
-const TaoPhieuPhoiNong = () => {
+const XuLyPhieuPhoiNong = () => {
   const location = useLocation();
-  const { idphieu, thongtinphieu, type, userInfo } = location.state || {};
+  const { idphieu, thongtinphieu } = location.state || {};
   // console.log(thongtinphieu);
   const config = CTD_BB_Phoinong;
   const [form] = Form.useForm();
@@ -64,7 +64,6 @@ const TaoPhieuPhoiNong = () => {
   const [filterMe, setFilterMe] = useState("");
   const [filteredChuyenData, setFilteredChuyenData] = useState<any[]>([]);
   const [selectedProcessedKeys, setSelectedProcessedKeys] = useState<Key[]>([]);
-  const isViecDenToi = String(type || "") === "viecdentoi";
 
   // Theo dõi thay đổi trên các field chính
   const ngaySX = Form.useWatch("NgaySX", form);
@@ -516,14 +515,14 @@ const TaoPhieuPhoiNong = () => {
       }));
       const payload = {
         ...values,
-        // NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
-        // maBm: config.code,
-        // nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
-        // xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
-        // idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
+        NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
+        maBm: config.code,
+        nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
+        xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
+        idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
         table1: normalizedTable,
         chuyenData: normalizedThung,
-        // pheDuyet: pheDuyetFlow,
+        pheDuyet: pheDuyetFlow,
       };
       if (values.idphieu) {
         await PhieuApi.putData(values.idphieu, payload);
@@ -895,311 +894,303 @@ const TaoPhieuPhoiNong = () => {
         <Form.Item name="idphieu" hidden>
           <Input type="hidden" />
         </Form.Item>
-        {!isViecDenToi && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 8,
-              marginBottom: 12,
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            marginBottom: 12,
+          }}
+        >
+          <Button
+            onClick={async () => {
+              fetchTableData({
+                NgaySX: ngaySX ? dayjs(ngaySX).format("YYYY-MM-DD") : null,
+                Ca: ca,
+                LoaiPhoi: 1, // Phoi nong
+                MayDuc: thongtinphieu?.mayDuc,
+              });
             }}
+            style={{
+              backgroundColor: "#13c2c2",
+              borderColor: "#13c2c2",
+              color: "#fff",
+            }}
+            icon={<ReloadOutlined />}
           >
-            <Button
-              onClick={async () => {
-                fetchTableData({
-                  NgaySX: ngaySX ? dayjs(ngaySX).format("YYYY-MM-DD") : null,
-                  Ca: ca,
-                  LoaiPhoi: 1, // Phoi nong
-                  MayDuc: thongtinphieu?.mayDuc,
-                });
-              }}
-              style={{
-                backgroundColor: "#13c2c2",
-                borderColor: "#13c2c2",
-                color: "#fff",
-              }}
-              icon={<ReloadOutlined />}
-            >
-              Làm mới
-            </Button>
-            <Button
-              onClick={async () => {
-                // Kiểm tra đã chọn Ngày và Ca trong vùng filter chưa
-                if (!filterNgay || !filterCa) {
-                  message.warning(
-                    "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển' trước khi chuyển!"
-                  );
-                  return;
-                }
-
-                if (!selectedRowKeys || selectedRowKeys.length === 0) {
-                  message.warning("Vui lòng chọn ít nhất một dòng");
-                  return;
-                }
-                const selectedRows = tableData.filter((r) =>
-                  selectedRowKeys.includes(r.key)
+            Làm mới
+          </Button>
+          <Button
+            onClick={async () => {
+              // Kiểm tra đã chọn Ngày và Ca trong vùng filter chưa
+              if (!filterNgay || !filterCa) {
+                message.warning(
+                  "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển' trước khi chuyển!"
                 );
-                const invalid = selectedRows.find((row) => {
-                  const hasMe = !!row.me;
-                  const hasMac = !!row.mac;
-                  const hasQtyWeightRow =
-                    Number(row.soLuong || 0) > 0 &&
-                    Number(row.khoiLuong || row.tongKhoi || 0) > 0;
-                  const hasAnyTypePair =
-                    (Number(row.ST_LoaiI || 0) > 0 &&
-                      Number(row.KL_LoaiI || 0) > 0) ||
-                    (Number(row.ST_LoaiII || 0) > 0 &&
-                      Number(row.KL_LoaiII || 0) > 0) ||
-                    (Number(row.ST_LoaiIII || 0) > 0 &&
-                      Number(row.KL_LoaiIII || 0) > 0);
-                  return !(
-                    hasMe &&
-                    hasMac &&
-                    (hasQtyWeightRow || hasAnyTypePair)
-                  );
-                });
-                if (invalid) {
-                  message.warning(
-                    "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng"
-                  );
-                  return;
-                }
-                // const nextThung = [
-                //   ...chuyenData,
-                //   ...selectedRows.map((r) => ({
-                //     ...r,
-                //     isThung: true,
-                //     chuyenHet: true,
-                //     tongSoThanh: Number(r.ST_LoaiI || 0),
-                //     stChuaChuyen: 0,
-                //     stBKM: r.stBKM,
-                //     ngaySX: form.getFieldValue("NgaySX")
-                //       ? form.getFieldValue("NgaySX").format("YYYY-MM-DD")
-                //       : null,
-                //     ca: form.getFieldValue("ca") || null,
-                //   })),
-                // ];
-                const nextTable = tableData.map((row) => {
-                  if (!selectedRowKeys.includes(row.key)) return row;
-                  // const tong = Number(row.stDaChuyen || 0);
-                  return {
-                    ...row,
-                    tongSoThanh: row.stBKM,
-                    stChuaChuyen: 0,
-                    stBKM: row.stBKM,
-                    // tinhTrang: 1,
-                  };
-                });
-                // setChuyenData(nextThung);
-                setTableData(nextTable);
-                setSelectedRowKeys([]);
-                message.success("Đã chuyển hết các dòng đã chọn");
-                // await saveAfterTransfer(nextTable, nextThung);
-                const fullSums: Record<string, number> = {};
-                selectedRows.forEach((r) => {
-                  fullSums[String(r.key)] = Number(r.ST_LoaiI || 0);
-                });
-                await postBulkTransfers(selectedRows, { sums: fullSums });
-                const stUpdatePayload = selectedRows.map((r) => ({
-                  id: Number(r.idBkPhoiThep || 0),
-                  sT_DaChuyen: Number(fullSums[String(r.key)] || 0),
-                }));
-                if (stUpdatePayload.length > 0)
-                  await phoiGiaoNhanApi.stDaChuyenBulk(stUpdatePayload);
-                await reloadChuyenData();
-              }}
-              type="primary"
-              style={{
-                backgroundColor: "#52c41a",
-                borderColor: "#52c41a",
-                color: "#fff",
-              }}
-              icon={<CheckCircleOutlined />}
-            >
-              Chuyển hết
-            </Button>
-            <Button
-              onClick={() => {
-                // Kiểm tra đã chọn Ngày và Ca trong vùng filter chưa
-                if (!filterNgay || !filterCa) {
-                  message.warning(
-                    "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển' trước khi chuyển!"
-                  );
-                  return;
-                }
+                return;
+              }
 
-                if (!selectedRowKeys || selectedRowKeys.length === 0) {
-                  message.warning("Vui lòng chọn ít nhất một dòng");
-                  return;
-                }
-                const selectedRows = tableData.filter((r) =>
-                  selectedRowKeys.includes(r.key)
+              if (!selectedRowKeys || selectedRowKeys.length === 0) {
+                message.warning("Vui lòng chọn ít nhất một dòng");
+                return;
+              }
+              const selectedRows = tableData.filter((r) =>
+                selectedRowKeys.includes(r.key)
+              );
+              const invalid = selectedRows.find((row) => {
+                const hasMe = !!row.me;
+                const hasMac = !!row.mac;
+                const hasQtyWeightRow =
+                  Number(row.soLuong || 0) > 0 &&
+                  Number(row.khoiLuong || row.tongKhoi || 0) > 0;
+                const hasAnyTypePair =
+                  (Number(row.ST_LoaiI || 0) > 0 &&
+                    Number(row.KL_LoaiI || 0) > 0) ||
+                  (Number(row.ST_LoaiII || 0) > 0 &&
+                    Number(row.KL_LoaiII || 0) > 0) ||
+                  (Number(row.ST_LoaiIII || 0) > 0 &&
+                    Number(row.KL_LoaiIII || 0) > 0);
+                return !(
+                  hasMe &&
+                  hasMac &&
+                  (hasQtyWeightRow || hasAnyTypePair)
                 );
-                const invalid = selectedRows.find((row) => {
-                  const hasMe = !!row.me;
-                  const hasMac = !!row.mac;
-                  const hasQtyWeightRow =
-                    Number(row.soLuong || 0) > 0 &&
-                    Number(row.khoiLuong || row.tongKhoi || 0) > 0;
-                  const hasAnyTypePair =
-                    (Number(row.ST_LoaiI || 0) > 0 &&
-                      Number(row.KL_LoaiI || 0) > 0) ||
-                    (Number(row.ST_LoaiII || 0) > 0 &&
-                      Number(row.KL_LoaiII || 0) > 0) ||
-                    (Number(row.ST_LoaiIII || 0) > 0 &&
-                      Number(row.KL_LoaiIII || 0) > 0);
-                  return !(
-                    hasMe &&
-                    hasMac &&
-                    (hasQtyWeightRow || hasAnyTypePair)
-                  );
-                });
-                if (invalid) {
-                  message.warning(
-                    "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng"
-                  );
-                  return;
+              });
+              if (invalid) {
+                message.warning(
+                  "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng"
+                );
+                return;
+              }
+              // const nextThung = [
+              //   ...chuyenData,
+              //   ...selectedRows.map((r) => ({
+              //     ...r,
+              //     isThung: true,
+              //     chuyenHet: true,
+              //     tongSoThanh: Number(r.ST_LoaiI || 0),
+              //     stChuaChuyen: 0,
+              //     stBKM: r.stBKM,
+              //     ngaySX: form.getFieldValue("NgaySX")
+              //       ? form.getFieldValue("NgaySX").format("YYYY-MM-DD")
+              //       : null,
+              //     ca: form.getFieldValue("ca") || null,
+              //   })),
+              // ];
+              const nextTable = tableData.map((row) => {
+                if (!selectedRowKeys.includes(row.key)) return row;
+                // const tong = Number(row.stDaChuyen || 0);
+                return {
+                  ...row,
+                  tongSoThanh: row.stBKM,
+                  stChuaChuyen: 0,
+                  stBKM: row.stBKM,
+                  // tinhTrang: 1,
+                };
+              });
+              // setChuyenData(nextThung);
+              setTableData(nextTable);
+              setSelectedRowKeys([]);
+              message.success("Đã chuyển hết các dòng đã chọn");
+              // await saveAfterTransfer(nextTable, nextThung);
+              const fullSums: Record<string, number> = {};
+              selectedRows.forEach((r) => {
+                fullSums[String(r.key)] = Number(r.ST_LoaiI || 0);
+              });
+              await postBulkTransfers(selectedRows, { sums: fullSums });
+              const stUpdatePayload = selectedRows.map((r) => ({
+                id: Number(r.idBkPhoiThep || 0),
+                sT_DaChuyen: Number(fullSums[String(r.key)] || 0),
+              }));
+              if (stUpdatePayload.length > 0)
+                await phoiGiaoNhanApi.stDaChuyenBulk(stUpdatePayload);
+              await reloadChuyenData();
+            }}
+            type="primary"
+            style={{
+              backgroundColor: "#52c41a",
+              borderColor: "#52c41a",
+              color: "#fff",
+            }}
+            icon={<CheckCircleOutlined />}
+          >
+            Chuyển hết
+          </Button>
+          <Button
+            onClick={() => {
+              // Kiểm tra đã chọn Ngày và Ca trong vùng filter chưa
+              if (!filterNgay || !filterCa) {
+                message.warning(
+                  "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển' trước khi chuyển!"
+                );
+                return;
+              }
+
+              if (!selectedRowKeys || selectedRowKeys.length === 0) {
+                message.warning("Vui lòng chọn ít nhất một dòng");
+                return;
+              }
+              const selectedRows = tableData.filter((r) =>
+                selectedRowKeys.includes(r.key)
+              );
+              const invalid = selectedRows.find((row) => {
+                const hasMe = !!row.me;
+                const hasMac = !!row.mac;
+                const hasQtyWeightRow =
+                  Number(row.soLuong || 0) > 0 &&
+                  Number(row.khoiLuong || row.tongKhoi || 0) > 0;
+                const hasAnyTypePair =
+                  (Number(row.ST_LoaiI || 0) > 0 &&
+                    Number(row.KL_LoaiI || 0) > 0) ||
+                  (Number(row.ST_LoaiII || 0) > 0 &&
+                    Number(row.KL_LoaiII || 0) > 0) ||
+                  (Number(row.ST_LoaiIII || 0) > 0 &&
+                    Number(row.KL_LoaiIII || 0) > 0);
+                return !(
+                  hasMe &&
+                  hasMac &&
+                  (hasQtyWeightRow || hasAnyTypePair)
+                );
+              });
+              if (invalid) {
+                message.warning(
+                  "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng"
+                );
+                return;
+              }
+              const initVals: Record<
+                string,
+                {
+                  loaiI?: number;
+                  loaiIIBm?: number;
+                  loaiIITp?: number;
+                  loaiIII?: number;
+                  chuyenST?: number;
                 }
-                const initVals: Record<
-                  string,
-                  {
-                    loaiI?: number;
-                    loaiIIBm?: number;
-                    loaiIITp?: number;
-                    loaiIII?: number;
-                    chuyenST?: number;
-                  }
-                > = {};
-                selectedRowKeys.forEach((k) => (initVals[String(k)] = {}));
-                setPartialValues(initVals);
-                setPartialOpen(true);
-              }}
-              style={{
-                backgroundColor: "#fa8c16",
-                borderColor: "#fa8c16",
-                color: "#fff",
-              }}
-              icon={<ArrowRightOutlined />}
-            >
-              Chuyển một phần
-            </Button>
-          </div>
-        )}
+              > = {};
+              selectedRowKeys.forEach((k) => (initVals[String(k)] = {}));
+              setPartialValues(initVals);
+              setPartialOpen(true);
+            }}
+            style={{
+              backgroundColor: "#fa8c16",
+              borderColor: "#fa8c16",
+              color: "#fff",
+            }}
+            icon={<ArrowRightOutlined />}
+          >
+            Chuyển một phần
+          </Button>
+        </div>
         {/* HEADER - các trường nhập đầu */}
-        {!isViecDenToi && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 12,
-            }}
-          >
-            {config.headerFields.map((f, idx) => {
-              if (f.key === "mayduc") return null; // bỏ UI máy đúc
-              return <CustomFormItem key={f.key || idx} field={f} idx={idx} />;
-            })}
-          </div>
-        )}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 12,
+          }}
+        >
+          {config.headerFields.map((f, idx) => {
+            if (f.key === "mayduc") return null; // bỏ UI máy đúc
+            return <CustomFormItem key={f.key || idx} field={f} idx={idx} />;
+          })}
+        </div>
         {/* TABLE - danh sách phôi */}
-        {!isViecDenToi &&
-          config.layout.map((layout, idx) => (
-            <div key={idx}>
-              {layout.sectionType === "table" && (
-                <CustomFormTable
-                  columns={enhanceColumns(layout.columns || [])}
-                  initialData={tableData}
-                  onDataChange={setTableData}
-                  addRowButtonText="+ Thêm dòng"
-                  showAddButton={false}
-                  showDeleteButton={false}
-                  minRows={1}
-                  editable={false}
-                  loading={loading}
-                  selectionEnabled={true}
-                  selectedRowKeys={selectedRowKeys}
-                  onSelectionChange={(keys) => setSelectedRowKeys(keys)}
-                  // isRowSelectable={(row) => {
-                  //   const hasMe = !!row.me;
-                  //   const hasMac = !!row.mac;
-                  //   const hasQtyWeightRow =
-                  //     Number(row.soLuong || 0) > 0 &&
-                  //     Number(row.khoiLuong || row.tongKhoi || 0) > 0;
-                  //   const hasAnyTypePair =
-                  //     (Number(row.ST_LoaiI || 0) > 0 &&
-                  //       Number(row.KL_LoaiI || 0) > 0) ||
-                  //     (Number(row.ST_LoaiII || 0) > 0 &&
-                  //       Number(row.KL_LoaiII || 0) > 0) ||
-                  //     (Number(row.ST_LoaiIII || 0) > 0 &&
-                  //       Number(row.KL_LoaiIII || 0) > 0);
-                  //   return hasMe && hasMac && (hasQtyWeightRow || hasAnyTypePair);
-                  // }}
-                  showStatus={true}
-                  stickyHeader={true}
-                  scrollY={460}
-                  readonlyFields={getReadonlyFields(layout.columns || [])}
-                  onCellChange={async (rowIndex, dataIndex, value) => {
-                    if (dataIndex !== "me") return;
-                    const mayDucVal = form.getFieldValue("mayduc");
-                    if (!value) return;
-                    try {
-                      setLoading(true);
-                      const params: any = { Me: value };
-                      if (mayDucVal) params.MayDuc = mayDucVal;
-                      const res = await phoiGiaoNhanApi.getData(params);
-                      const mapped = mapApiToTable(res as any);
-                      const newRow =
-                        mapped && mapped.length > 0 ? mapped[0] : undefined;
-                      if (!newRow) {
-                        message.info("Không tìm thấy dữ liệu BKMIS cho mẻ này");
-                      }
-                      setTableData((prev) => {
-                        const next = [...prev];
-                        const current = next[rowIndex] || {};
-                        next[rowIndex] = {
-                          ...current,
-                          me: value,
-                          mac: newRow?.mac ?? current.mac ?? "",
-                          kichThuoc:
-                            newRow?.kichThuoc ?? current.kichThuoc ?? "",
-                          idBkPhoiThep:
-                            newRow?.idBkPhoiThep ?? current.idBkPhoiThep ?? 0,
-                          ST_LoaiI: newRow?.ST_LoaiI ?? current.ST_LoaiI ?? 0,
-                          KL_LoaiI: newRow?.KL_LoaiI ?? current.KL_LoaiI ?? 0,
-                          ST_LoaiII:
-                            newRow?.ST_LoaiII ?? current.ST_LoaiII ?? 0,
-                          KL_LoaiII:
-                            newRow?.KL_LoaiII ?? current.KL_LoaiII ?? 0,
-                          ST_LoaiIII:
-                            newRow?.ST_LoaiIII ?? current.ST_LoaiIII ?? 0,
-                          KL_LoaiIII:
-                            newRow?.KL_LoaiIII ?? current.KL_LoaiIII ?? 0,
-                          tongKhoi: newRow?.tongKhoi ?? current.tongKhoi ?? 0,
-                          stBKM: Number(
-                            (newRow?.ST_LoaiI ?? 0) +
-                              (newRow?.ST_LoaiII ?? 0) +
-                              (newRow?.ST_LoaiIII ?? 0)
-                          ),
-                        };
-                        return next;
-                      });
-                    } catch (e) {
-                      message.error("Không thể tra cứu mẻ từ BKMIS");
-                    } finally {
-                      setLoading(false);
+        {config.layout.map((layout, idx) => (
+          <div key={idx}>
+            {layout.sectionType === "table" && (
+              <CustomFormTable
+                columns={enhanceColumns(layout.columns || [])}
+                initialData={tableData}
+                onDataChange={setTableData}
+                addRowButtonText="+ Thêm dòng"
+                showAddButton={false}
+                showDeleteButton={false}
+                minRows={1}
+                editable={false}
+                loading={loading}
+                selectionEnabled={true}
+                selectedRowKeys={selectedRowKeys}
+                onSelectionChange={(keys) => setSelectedRowKeys(keys)}
+                // isRowSelectable={(row) => {
+                //   const hasMe = !!row.me;
+                //   const hasMac = !!row.mac;
+                //   const hasQtyWeightRow =
+                //     Number(row.soLuong || 0) > 0 &&
+                //     Number(row.khoiLuong || row.tongKhoi || 0) > 0;
+                //   const hasAnyTypePair =
+                //     (Number(row.ST_LoaiI || 0) > 0 &&
+                //       Number(row.KL_LoaiI || 0) > 0) ||
+                //     (Number(row.ST_LoaiII || 0) > 0 &&
+                //       Number(row.KL_LoaiII || 0) > 0) ||
+                //     (Number(row.ST_LoaiIII || 0) > 0 &&
+                //       Number(row.KL_LoaiIII || 0) > 0);
+                //   return hasMe && hasMac && (hasQtyWeightRow || hasAnyTypePair);
+                // }}
+                showStatus={true}
+                stickyHeader={true}
+                scrollY={460}
+                readonlyFields={getReadonlyFields(layout.columns || [])}
+                onCellChange={async (rowIndex, dataIndex, value) => {
+                  if (dataIndex !== "me") return;
+                  const mayDucVal = form.getFieldValue("mayduc");
+                  if (!value) return;
+                  try {
+                    setLoading(true);
+                    const params: any = { Me: value };
+                    if (mayDucVal) params.MayDuc = mayDucVal;
+                    const res = await phoiGiaoNhanApi.getData(params);
+                    const mapped = mapApiToTable(res as any);
+                    const newRow =
+                      mapped && mapped.length > 0 ? mapped[0] : undefined;
+                    if (!newRow) {
+                      message.info("Không tìm thấy dữ liệu BKMIS cho mẻ này");
                     }
-                  }}
-                  // onRefresh={() => {
-                  //   const tableLayout = config.layout.find(
-                  //     (l) => l.sectionType === "table"
-                  //   );
-                  //   if (tableLayout) {
-                  //     fetchTableData(tableLayout);
-                  //   }
-                  // }}
-                />
-              )}
-            </div>
-          ))}
+                    setTableData((prev) => {
+                      const next = [...prev];
+                      const current = next[rowIndex] || {};
+                      next[rowIndex] = {
+                        ...current,
+                        me: value,
+                        mac: newRow?.mac ?? current.mac ?? "",
+                        kichThuoc: newRow?.kichThuoc ?? current.kichThuoc ?? "",
+                        idBkPhoiThep:
+                          newRow?.idBkPhoiThep ?? current.idBkPhoiThep ?? 0,
+                        ST_LoaiI: newRow?.ST_LoaiI ?? current.ST_LoaiI ?? 0,
+                        KL_LoaiI: newRow?.KL_LoaiI ?? current.KL_LoaiI ?? 0,
+                        ST_LoaiII: newRow?.ST_LoaiII ?? current.ST_LoaiII ?? 0,
+                        KL_LoaiII: newRow?.KL_LoaiII ?? current.KL_LoaiII ?? 0,
+                        ST_LoaiIII:
+                          newRow?.ST_LoaiIII ?? current.ST_LoaiIII ?? 0,
+                        KL_LoaiIII:
+                          newRow?.KL_LoaiIII ?? current.KL_LoaiIII ?? 0,
+                        tongKhoi: newRow?.tongKhoi ?? current.tongKhoi ?? 0,
+                        stBKM: Number(
+                          (newRow?.ST_LoaiI ?? 0) +
+                            (newRow?.ST_LoaiII ?? 0) +
+                            (newRow?.ST_LoaiIII ?? 0)
+                        ),
+                      };
+                      return next;
+                    });
+                  } catch (e) {
+                    message.error("Không thể tra cứu mẻ từ BKMIS");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                // onRefresh={() => {
+                //   const tableLayout = config.layout.find(
+                //     (l) => l.sectionType === "table"
+                //   );
+                //   if (tableLayout) {
+                //     fetchTableData(tableLayout);
+                //   }
+                // }}
+              />
+            )}
+          </div>
+        ))}
 
         {/* TABLE - danh sách đã chuyển */}
         <div style={{ marginTop: 32 }}>
@@ -1292,158 +1283,119 @@ const TaoPhieuPhoiNong = () => {
             >
               Xóa filter
             </Button> */}
-            {userInfo?.tenNgan == "P.QLCL" && type === "viecdentoi" && (
-              <Button
-                onClick={async () => {
-                  if (
-                    !selectedProcessedKeys ||
-                    selectedProcessedKeys.length === 0
-                  ) {
-                    message.warning(
-                      "Vui lòng chọn ít nhất một dòng để QLCL xác nhận"
-                    );
+            <Button
+              onClick={async () => {
+                if (
+                  !selectedProcessedKeys ||
+                  selectedProcessedKeys.length === 0
+                ) {
+                  message.warning(
+                    "Vui lòng chọn ít nhất một dòng để QLCL xác nhận"
+                  );
+                  return;
+                }
+                try {
+                  setLoadingChuyen(true);
+                  const source =
+                    filteredChuyenData.length > 0
+                      ? filteredChuyenData
+                      : chuyenData;
+                  const idsPayload = source
+                    .filter((r: any) => selectedProcessedKeys.includes(r.key))
+                    .map((r: any) => ({
+                      id: Number(r.id || 0),
+                      tinhTrangQLCL: 1,
+                    }));
+                  if (idsPayload.length === 0) {
+                    message.warning("Không có dòng hợp lệ để QLCL xác nhận");
+                    setLoadingChuyen(false);
                     return;
                   }
-                  try {
-                    setLoadingChuyen(true);
-                    const source =
-                      filteredChuyenData.length > 0
-                        ? filteredChuyenData
-                        : chuyenData;
-                    const idsPayload = source
-                      .filter((r: any) => selectedProcessedKeys.includes(r.key))
-                      .map((r: any) => ({
-                        id: Number(r.id || 0),
-                        tinhTrangQLCL: 1,
-                      }));
-                    if (idsPayload.length === 0) {
-                      message.warning("Không có dòng hợp lệ để QLCL xác nhận");
-                      setLoadingChuyen(false);
-                      return;
-                    }
-                    await CtdPhoiNongApi.updateStatus(idsPayload);
-                    const next = source.map((r: any) =>
-                      selectedProcessedKeys.includes(r.key)
-                        ? { ...r, tinhTrangQLCL: 1 }
-                        : r
-                    );
-                    if (filteredChuyenData.length > 0) {
-                      setFilteredChuyenData(next);
-                    } else {
-                      setChuyenData(next);
-                    }
-                    setSelectedProcessedKeys([]);
-                    await saveAfterTransfer(tableData, next);
-                    message.success("QLCL đã xác nhận các dòng đã chọn");
-                  } catch (e) {
-                    message.error(
-                      "Không thể cập nhật trạng thái xác nhận QLCL"
-                    );
-                  } finally {
-                    setLoadingChuyen(false);
+                  await CtdPhoiNongApi.updateStatus(idsPayload);
+                  const next = source.map((r: any) =>
+                    selectedProcessedKeys.includes(r.key)
+                      ? { ...r, tinhTrangQLCL: 1 }
+                      : r
+                  );
+                  if (filteredChuyenData.length > 0) {
+                    setFilteredChuyenData(next);
+                  } else {
+                    setChuyenData(next);
                   }
-                }}
-                type="primary"
-                style={{ backgroundColor: "#13c2c2", borderColor: "#13c2c2" }}
-              >
-                Xác nhận QLCL
-              </Button>
-            )}
-            {userInfo?.tenNgan == "NM.CTD" && type === "viecdentoi" && (
-              <Button
-                onClick={async () => {
-                  if (
-                    !selectedProcessedKeys ||
-                    selectedProcessedKeys.length === 0
-                  ) {
-                    message.warning(
-                      "Vui lòng chọn ít nhất một dòng để xác nhận"
-                    );
+                  setSelectedProcessedKeys([]);
+                  message.success("QLCL đã xác nhận các dòng đã chọn");
+                } catch (e) {
+                  message.error("Không thể cập nhật trạng thái xác nhận QLCL");
+                } finally {
+                  setLoadingChuyen(false);
+                }
+              }}
+              type="primary"
+              style={{ backgroundColor: "#13c2c2", borderColor: "#13c2c2" }}
+            >
+              Xác nhận QLCL
+            </Button>
+            <Button
+              onClick={async () => {
+                if (
+                  !selectedProcessedKeys ||
+                  selectedProcessedKeys.length === 0
+                ) {
+                  message.warning("Vui lòng chọn ít nhất một dòng để xác nhận");
+                  return;
+                }
+                try {
+                  setLoadingChuyen(true);
+                  const source =
+                    filteredChuyenData.length > 0
+                      ? filteredChuyenData
+                      : chuyenData;
+                  const idsPayload = source
+                    .filter((r: any) => selectedProcessedKeys.includes(r.key))
+                    .map((r: any) => ({
+                      id: Number(r.id || 0),
+                      tinhTrangCTD: 1,
+                    }));
+                  if (idsPayload.length === 0) {
+                    message.warning("Không có dòng hợp lệ để xác nhận");
+                    setLoadingChuyen(false);
                     return;
                   }
-                  try {
-                    setLoadingChuyen(true);
-                    const source =
-                      filteredChuyenData.length > 0
-                        ? filteredChuyenData
-                        : chuyenData;
-                    const idsPayload = source
-                      .filter((r: any) => selectedProcessedKeys.includes(r.key))
-                      .map((r: any) => ({
-                        id: Number(r.id || 0),
-                        tinhTrangCTD: 1,
-                      }));
-                    if (idsPayload.length === 0) {
-                      message.warning("Không có dòng hợp lệ để xác nhận");
-                      setLoadingChuyen(false);
-                      return;
-                    }
-                    await CtdPhoiNongApi.updateStatus(idsPayload);
-                    const next = source.map((r: any) =>
-                      selectedProcessedKeys.includes(r.key)
-                        ? { ...r, tinhTrangCTD: 1, tinhTrang: 1 }
-                        : r
-                    );
-                    if (filteredChuyenData.length > 0) {
-                      setFilteredChuyenData(next);
-                    } else {
-                      setChuyenData(next);
-                    }
-                    setSelectedProcessedKeys([]);
-                    await saveAfterTransfer(tableData, next);
-                    message.success("Đã xác nhận các dòng đã chọn");
-                  } catch (e) {
-                    message.error("Không thể cập nhật trạng thái xác nhận CTD");
-                  } finally {
-                    setLoadingChuyen(false);
+                  await CtdPhoiNongApi.updateStatus(idsPayload);
+                  const next = source.map((r: any) =>
+                    selectedProcessedKeys.includes(r.key)
+                      ? { ...r, tinhTrangCTD: 1, tinhTrang: 1 }
+                      : r
+                  );
+                  if (filteredChuyenData.length > 0) {
+                    setFilteredChuyenData(next);
+                  } else {
+                    setChuyenData(next);
                   }
-                }}
-                type="primary"
-                style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
-              >
-                Xác nhận
-              </Button>
-            )}
-            {userInfo?.tenNgan == "P.KH" && type === "viecdentoi" && (
-              <Button
-                onClick={async () => {
-                  try {
-                    setLoadingChuyen(true);
-                    await PhieuApi.changeStatus_extended(
-                      thongtinphieu.idphieu,
-                      {
-                        status: 2,
-                        isLock: 0,
-                        isDelete: 0,
-                      }
-                    );
-                    message.success("Đã chốt phiếu");
-                  } catch (e) {
-                    message.error("Có lỗi xảy ra không thể chốt phiếu!");
-                  } finally {
-                    setLoadingChuyen(false);
-                  }
-                }}
-                type="primary"
-                style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
-              >
-                Chốt phiếu
-              </Button>
-            )}
-
-            {!isViecDenToi && (
-              <Button
-                onClick={handleRecall}
-                danger
-                type="primary"
-                style={{
-                  backgroundColor: "#ff4d4f",
-                  borderColor: "#ff4d4f",
-                }}
-              >
-                Thu hồi
-              </Button>
-            )}
+                  setSelectedProcessedKeys([]);
+                  message.success("Đã xác nhận các dòng đã chọn");
+                } catch (e) {
+                  message.error("Không thể cập nhật trạng thái xác nhận CTD");
+                } finally {
+                  setLoadingChuyen(false);
+                }
+              }}
+              type="primary"
+              style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
+            >
+              Xác nhận
+            </Button>
+            <Button
+              onClick={handleRecall}
+              danger
+              type="primary"
+              style={{
+                backgroundColor: "#ff4d4f",
+                borderColor: "#ff4d4f",
+              }}
+            >
+              Thu hồi
+            </Button>
           </div>
           <div style={{ overflowX: "auto" }}>
             <Table
@@ -1455,9 +1407,9 @@ const TaoPhieuPhoiNong = () => {
               rowSelection={{
                 selectedRowKeys: selectedProcessedKeys,
                 onChange: (keys: Key[]) => setSelectedProcessedKeys(keys),
-                // getCheckboxProps: (record: any) => ({
-                //   disabled: Number(record.tinhTrang || 0) == 1,
-                // }),
+                getCheckboxProps: (record: any) => ({
+                  disabled: Number(record.tinhTrang || 0) == 1,
+                }),
               }}
               dataSource={chuyenData}
               scroll={{ x: 1200 }}
@@ -1800,66 +1752,62 @@ const TaoPhieuPhoiNong = () => {
         </div> */}
 
         {/* SIGNATURES - ký tên */}
-        {!isViecDenToi && (
-          <div
-            style={{
-              marginTop: 40,
-              display: "flex",
-              justifyContent: "space-around",
-              textAlign: "center",
-            }}
-          >
-            {config.signatures
-              .filter((x) => x.isChon)
-              ?.map((sig, i) => (
-                <div key={i}>
-                  <CustomFormItem key={sig.key || i} field={sig} idx={i} />
-                </div>
-              ))}
-            {config.signatures
-              .filter((x) => x.capduyet == 1)
-              .map((sig, i) => (
-                <Form.Item name={sig.key || i} hidden>
-                  <Input type="hidden" />
-                </Form.Item>
-              ))}
-          </div>
-        )}
+        <div
+          style={{
+            marginTop: 40,
+            display: "flex",
+            justifyContent: "space-around",
+            textAlign: "center",
+          }}
+        >
+          {config.signatures
+            .filter((x) => x.isChon)
+            ?.map((sig, i) => (
+              <div key={i}>
+                <CustomFormItem key={sig.key || i} field={sig} idx={i} />
+              </div>
+            ))}
+          {config.signatures
+            .filter((x) => x.capduyet == 1)
+            .map((sig, i) => (
+              <Form.Item name={sig.key || i} hidden>
+                <Input type="hidden" />
+              </Form.Item>
+            ))}
+        </div>
 
-        {!isViecDenToi && (
-          <div
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 32,
+            display: "flex",
+            gap: 12,
+            justifyContent: "center",
+          }}
+        >
+          <Button
+            onClick={handleSaveOnly}
+            icon={<SaveOutlined />}
             style={{
-              textAlign: "center",
-              marginTop: 32,
-              display: "flex",
-              gap: 12,
-              justifyContent: "center",
+              backgroundColor: "#faad14",
+              borderColor: "#faad14",
+              color: "#fff",
             }}
           >
-            <Button
-              onClick={handleSaveOnly}
-              icon={<SaveOutlined />}
-              style={{
-                backgroundColor: "#faad14",
-                borderColor: "#faad14",
-                color: "#fff",
-              }}
-            >
-              Lưu
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={<SendOutlined />}
-              style={{ backgroundColor: "#1890ff", borderColor: "#1890ff" }}
-            >
-              Gửi trình ký
-            </Button>
-          </div>
-        )}
+            Lưu
+          </Button>
+          <Button
+            type="primary"
+            htmlType="submit"
+            icon={<SendOutlined />}
+            style={{ backgroundColor: "#1890ff", borderColor: "#1890ff" }}
+          >
+            Gửi trình ký
+          </Button>
+        </div>
       </Form>
     </Card>
   );
 };
 
-export default TaoPhieuPhoiNong;
+export default XuLyPhieuPhoiNong;

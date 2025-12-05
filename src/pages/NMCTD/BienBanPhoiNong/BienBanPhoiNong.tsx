@@ -60,15 +60,18 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
 
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
+  const userInfoStr = localStorage.getItem("userinfo");
+  const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
 
   const fetchData = async (page = 1, pageSize = 10, filters = {}) => {
     setLoading(true);
     try {
       if (type === "viecdentoi") {
+        console.log("sssss");
         const res = await PhieuApi.getData({
           MaBM: config.code,
-          NguoiDuyetID: userObj.id,
-          isCheckDuyet: 1,
+          NguoiDuyetID: userInfoObj.tenNgan !== "P.KH" ? userObj.id : "",
+          // isCheckDuyet: 1,
           page,
           pageSize,
           ...filters,
@@ -84,7 +87,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       } else {
         const res = await PhieuApi.getData({
           MaBM: config.code,
-          NguoiTaoID: userObj.id,
+          // NguoiTaoID: userObj.id,
           page,
           pageSize,
           ...filters,
@@ -184,15 +187,29 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
             if (type === "viecdentoi") {
-              return navigate(`/chitietphieuphoinong/${record.idphieu}`, {
+              // return navigate(`/chitietphieuphoinong/${record.idphieu}`, {
+              //   state: {
+              //     idphieu: record.idphieu,
+              //     pheduyet: record?.pheDuyet?.[0] ?? null,
+              //     thongtinphieu: record,
+              //   },
+              // });
+              return navigate("/taophieuphoinong", {
                 state: {
                   idphieu: record.idphieu,
-                  pheduyet: record?.pheDuyet?.[0] ?? null,
+                  thongtinphieu: record,
+                  type: "viecdentoi",
+                  userInfo: userInfoObj,
                 },
               });
             } else {
               return navigate("/taophieuphoinong", {
-                state: { idphieu: record.idphieu },
+                state: {
+                  idphieu: record.idphieu,
+                  thongtinphieu: record,
+                  type: "tao",
+                  userInfo: userInfoObj,
+                },
               });
             }
           }}
@@ -243,7 +260,8 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       dataIndex: "ngayTao",
       key: "ngayTao",
       width: 140,
-      render: (value: string) => value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "-",
+      render: (value: string) =>
+        value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "-",
       sorter: (a: any, b: any) => {
         const va = dayjs(a?.ngayTao).valueOf();
         const vb = dayjs(b?.ngayTao).valueOf();

@@ -16,13 +16,7 @@ import {
   Tag,
 } from "antd";
 // import PdfMakeExample from "../../components/PdfMakeExample";
-import {
-  DeleteTwoTone,
-  EditTwoTone,
-  EyeOutlined,
-  PlusOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { DeleteTwoTone, EyeOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
@@ -122,11 +116,7 @@ const BienBanGiaoNhanPhoiTam = () => {
       message.success("Đã xóa ticket!");
     }, 500);
   };
-  const handleEdit = (record: any) => {
-    console.log("Edit record:", record);
-    setEditModal({ open: true, record });
-    editForm.setFieldsValue(record);
-  };
+  
 
   const handleEditFinish = (values: any) => {
     setData((prev) =>

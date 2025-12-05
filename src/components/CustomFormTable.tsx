@@ -66,6 +66,20 @@ export default function CustomFormTable({
 }: CustomFormTableProps) {
   const [rows, setRows] = useState(initialData);
 
+  const getCellStyle = (
+    dataIndex: string | number,
+    value: any,
+    readonly?: boolean
+  ) => {
+    const style: any = {};
+    if (readonly || !editable) style.backgroundColor = "#fffbe6";
+    if (String(dataIndex) === "stChuaChuyen" && Number(value) > 0) {
+      style.backgroundColor = "#fff1f0";
+      style.borderColor = "#ff4d4f";
+    }
+    return style;
+  };
+
   // Sync với initialData khi có thay đổi
   useEffect(() => {
     setRows(initialData || []);
@@ -153,7 +167,11 @@ export default function CustomFormTable({
                     placeholder={child.title}
                     value={record[child.dataIndex] ?? ""}
                     readOnly
-                    style={{ backgroundColor: "#fffbe6" }}
+                    style={getCellStyle(
+                      child.dataIndex,
+                      record[child.dataIndex],
+                      true
+                    )}
                   />
                 ) : (
                   <Input
@@ -167,6 +185,11 @@ export default function CustomFormTable({
                       );
                     }}
                     disabled={!editable}
+                    style={getCellStyle(
+                      child.dataIndex,
+                      record[child.dataIndex],
+                      false
+                    )}
                   />
                 ),
             })
@@ -180,7 +203,12 @@ export default function CustomFormTable({
             dataIndex: col.dataIndex,
             width: col.width,
             render: (_: any, record: any) => (
-              <div style={{ paddingLeft: 8 }}>
+              <div
+                style={{
+                  paddingLeft: 8,
+                  backgroundColor: !editable ? "#fffbe6" : undefined,
+                }}
+              >
                 {record[col.dataIndex || ""]}
               </div>
             ),
@@ -199,7 +227,11 @@ export default function CustomFormTable({
                 placeholder={col.title}
                 value={record[col.dataIndex || ""] ?? ""}
                 readOnly
-                style={{ backgroundColor: "#fffbe6" }}
+                style={getCellStyle(
+                  col.dataIndex as string,
+                  record[col.dataIndex || ""],
+                  true
+                )}
               />
             ) : (
               <Input
@@ -213,6 +245,11 @@ export default function CustomFormTable({
                   );
                 }}
                 disabled={!editable}
+                style={getCellStyle(
+                  col.dataIndex as string,
+                  record[col.dataIndex ?? ""],
+                  false
+                )}
               />
             ),
         };

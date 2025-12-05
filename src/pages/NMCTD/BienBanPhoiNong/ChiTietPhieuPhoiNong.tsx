@@ -109,7 +109,7 @@ const ChiTietPhieuPhoiNong = () => {
     <>
       <div style={{ textAlign: "right" }}>
         <Space>
-          {true && (
+          {datapheduyet && datapheduyet?.tinhTrang === 0 && datapheduyet?.nguoiDuyetId === currentUserId && (
             <>
               <Tooltip title="Xác nhận phê duyệt">
                 <Button
