@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
-import { Table, Input, Button, Space, Spin, message, Tooltip } from "antd";
+import { Table, Input, Button, Space, Spin, message, Tooltip, Popconfirm } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { ArrowRightOutlined, DeleteOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ArrowRightOutlined} from "@ant-design/icons";
 import type { HeaderMappingRecord } from "./HeaderMapping";
 import { dlnmHRC2Api } from "../services/DLNMHRC2Api";
+import type { ChuyenMeThoiRequest } from "../models/DLMN_HRC2Model";
+import dayjs from "dayjs";
 
 type MappingPayload = HeaderMappingRecord;
 
@@ -21,6 +23,7 @@ export interface HRCChildColumn {
   mappingPayload?: MappingPayload | null;
   variant?: "source" | "adjust" | "default";
   headerKeyId?: number | null;
+  thuTu?: number | null; // Thứ tự để sắp xếp
 }
 
 export interface HRCParentColumn {
@@ -40,6 +43,7 @@ export interface HRCParentColumn {
 export interface HRCTableRow {
   key: string | number;
   IsNM?: boolean; // Flag để đánh dấu dòng từ NM (true) hay thêm tay (false)
+  id?: number; // ID bản ghi DLNM_HRC2 (nếu có)
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -55,13 +59,22 @@ interface CustomTableHRCProps {
   minRows?: number;
   editable?: boolean;
   loading?: boolean;
-  onRefresh?: () => void;
+  // onRefresh?: () => void; // hiện tại không dùng
   scrollX?: number | string;
   scrollY?: number;
   stickyHeaders?: boolean;
   stickyFirstColumn?: boolean;
   stickyColumnKeys?: string[];
+  maBm?: string;
+  ngaySX?: Date;
+  ca?: number;
+  scope?: number;
 }
+
+const CHUYEN_TOI_CA = {
+  CATRUOC: 1,
+  CASAU: 2,
+};
 
 const getAllFieldKeys = (cols: HRCParentColumn[]): string[] => {
   const keys: string[] = [];
@@ -92,14 +105,19 @@ const CustomTableHRC = ({
   minRows = 1,
   editable = true,
   loading = false,
-  onRefresh,
+  // onRefresh,
   scrollX = "max-content",
   scrollY,
   stickyHeaders = true,
   stickyFirstColumn = false,
   stickyColumnKeys = [],
+  maBm = "",
+  ngaySX = new Date(),
+  ca = 0,
+  scope = 0,
 }: CustomTableHRCProps) => {
   const [rows, setRows] = useState<HRCTableRow[]>(initialData as HRCTableRow[]);
+  const rowsRef = useRef<HRCTableRow[]>(rows);
 
   // Tính toán chiều cao cho 10 dòng dữ liệu
   // Row height (size="small"): ~32px, Header: ~40px
@@ -112,6 +130,31 @@ const CustomTableHRC = ({
     }
   }, [initialData]);
 
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
+  // Helper: emit thay đổi ra ngoài (được gọi từ các event handler / onBlur)
+  const emitDataChange = useCallback(
+    (data: HRCTableRow[]) => {
+      if (!onDataChange) return;
+      onDataChange(data);
+    },
+    [onDataChange]
+  );
+
+  // Sắp xếp: các dòng từ NM (IsNM !== false) ở trên, dòng nhập tay (IsNM === false) xuống dưới
+  const sortedRows = useMemo(() => {
+    const cloned = [...rows];
+    cloned.sort((a, b) => {
+      const aManual = a.IsNM === false;
+      const bManual = b.IsNM === false;
+      if (aManual === bManual) return 0;
+      // Dòng nhập tay (IsNM === false) xếp sau
+      return aManual ? 1 : -1;
+    });
+    return cloned;
+  }, [rows]);
   const handleAddRow = () => {
     const fieldKeys = getAllFieldKeys(columns);
     const newRow: HRCTableRow = { 
@@ -123,34 +166,77 @@ const CustomTableHRC = ({
     });
     const newRows = [...rows, newRow];
     setRows(newRows);
-    onDataChange?.(newRows);
+    emitDataChange(newRows);
   };
 
-  const handleDeleteRow = (key: string | number) => {
-    if (rows.length <= minRows) return;
-    const newRows = rows.filter((row) => row.key !== key);
-    setRows(newRows);
-    onDataChange?.(newRows);
-  };
+  // const handleDeleteRow = (key: string | number) => {
+  //   if (rows.length <= minRows) return;
+  //   const newRows = rows.filter((row) => row.key !== key);
+  //   setRows(newRows);
+  //   onDataChange?.(newRows);
+  // };
 
-  const handleChuyenMeThoi = async (meThoi: string) => {
+  const handleChuyenMeThoi = async (chuyenToiCa: number, meThoi: string) => {
     if (!meThoi) return;
     try {
-      const response = await dlnmHRC2Api.chuyenMeThoi(meThoi);
-      if (response.status === 200) {
-        message.success("Chuyển mã thời gian thành công");
+      const payload : ChuyenMeThoiRequest = {
+        MaBM: maBm,
+        NgaySX: dayjs(ngaySX).format("YYYY-MM-DD"),
+        Ca: ca,
+        Scope: scope,
+        ChuyenToiCa: chuyenToiCa,
+        MeThoi: meThoi,
+      };
+      const response = await dlnmHRC2Api.chuyenMeThoi(payload);
+      if(response.data.message){
+        message.success(response.data.message);
+        // Sau khi chuyển mẻ thành công, xóa luôn dòng tương ứng trong bảng
+        const newRows = rows.filter((row) => row.meThoi !== meThoi);
+        setRows(newRows);
+        emitDataChange(newRows);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
-      message.error("Chuyển mã thời gian thất bại");
+      const errMsg =
+        typeof error === "object" &&
+        error !== null &&
+        "data" in error &&
+        (error as { data?: { message?: string } }).data?.message
+          ? (error as { data?: { message?: string } }).data!.message!
+          : "Có lỗi xảy ra khi chuyển mẻ";
+      message.error(errMsg);
     }
   };
 
-  const handleCellChange = (value: string, rowIndex: number, dataIndex: string) => {
-    const newData = [...rows];
-    newData[rowIndex][dataIndex] = value;
-    setRows(newData);
-    onDataChange?.(newData);
+  const handleDeleteRow = async (record: HRCTableRow) => {
+    if (rows.length <= minRows) return;
+
+    const id = record.id;
+    if (typeof id === "number") {
+      try {
+        await dlnmHRC2Api.deleteRowByKey(id);
+        message.success("Xóa dòng thành công");
+      } catch (error) {
+        console.error("Delete row error:", error);
+        message.error("Không thể xóa dòng trên server");
+        return;
+      }
+    }
+
+    setRows((prev) => {
+      const newRows = prev.filter((row) => row.key !== record.key);
+      emitDataChange(newRows);
+      return newRows;
+    });
+  };
+
+  const handleCellChange = (value: string, rowKey: string | number, dataIndex: string) => {
+    setRows((prev) => {
+      const newData = prev.map((row) =>
+        row.key === rowKey ? { ...row, [dataIndex]: value } : row
+      );
+      return newData;
+    });
   };
 
   const stickyKeysSet = useMemo(() => new Set(stickyColumnKeys), [stickyColumnKeys]);
@@ -189,7 +275,7 @@ const CustomTableHRC = ({
               dataIndex: child.dataIndex,
               width: child.width,
               fixed: childSticky ? ("left" as const) : undefined,
-              render: (_: unknown, record: HRCTableRow, idx: number) => {
+              render: (_: unknown, record: HRCTableRow) => {
                 const isManualRow = record.IsNM === false;
                 const canEditThisCell =
                   editable && (isManualRow || isColumnEditable);
@@ -197,8 +283,9 @@ const CustomTableHRC = ({
                 const displayValue = cellValue !== undefined && cellValue !== null 
                   ? String(cellValue) 
                   : "";
-                const manualRowStyle = isManualRow
-                  ? { backgroundColor: "#fffbe6" }
+                // Ô không cho phép chỉnh sửa → highlight màu xám nhạt
+                const readonlyStyle = !canEditThisCell
+                  ? { backgroundColor: "#f5f5f5" }
                   : {};
                 
                 return (
@@ -210,20 +297,20 @@ const CustomTableHRC = ({
                     value={displayValue}
                     onChange={
                       canEditThisCell
-                        ? (e) => handleCellChange(e.target.value, idx, child.dataIndex)
+                        ? (e) => handleCellChange(e.target.value, record.key, child.dataIndex)
+                        : undefined
+                    }
+                    onBlur={
+                      canEditThisCell
+                        ? () => emitDataChange(rowsRef.current)
                         : undefined
                     }
                     disabled={!editable}
                     readOnly={!canEditThisCell}
                     style={{
-                      ...(child.variant === "source"
-                        ? { backgroundColor: "#f5f5f5" }
-                        : {}),
-                      ...(child.variant === "adjust"
-                        ? { backgroundColor: "#fffbe6" }
-                        : {}),
+                      ...readonlyStyle,
+                      // Cột chưa được móc nối (highlight) luôn ưu tiên nền đỏ nhạt
                       ...(child.highlight ? { backgroundColor: "#fff1f0" } : {}),
-                      ...manualRowStyle,
                       ...(!canEditThisCell ? { cursor: "not-allowed" } : {}),
                     }}
                   />
@@ -242,12 +329,14 @@ const CustomTableHRC = ({
           width: col.width,
           fixed: baseFixed,
           render: (_: unknown, record: HRCTableRow) => {
-            const isManualRow = record.IsNM === false;
-            const manualRowStyle = isManualRow
-              ? { backgroundColor: "#fffbe6" }
-              : {};
             return (
-              <div style={{ paddingLeft: 8, ...manualRowStyle }}>
+              <div
+                style={{
+                  paddingLeft: 8,
+                  // Cột label luôn không chỉnh sửa → highlight xám nhạt
+                  backgroundColor: "#f5f5f5",
+                }}
+              >
                 {record[col.dataIndex || ""]}
               </div>
             );
@@ -262,7 +351,7 @@ const CustomTableHRC = ({
         dataIndex: col.dataIndex,
         width: col.width,
         fixed: baseFixed,
-        render: (_: unknown, record: HRCTableRow, idx: number) => {
+        render: (_: unknown, record: HRCTableRow) => {
           const isManualRow = record.IsNM === false;
           const canEditThisCell =
             editable && (isManualRow || isColumnEditable);
@@ -271,8 +360,8 @@ const CustomTableHRC = ({
             cellValue !== undefined && cellValue !== null
               ? String(cellValue)
               : "";
-          const manualRowStyle = isManualRow
-            ? { backgroundColor: "#fffbe6" }
+          const readonlyStyle = !canEditThisCell
+            ? { backgroundColor: "#f5f5f5" }
             : {};
           
           return (
@@ -281,20 +370,24 @@ const CustomTableHRC = ({
               value={displayValue}
               onChange={
                 canEditThisCell && col.dataIndex
-                  ? (e) => handleCellChange(e.target.value, idx, col.dataIndex as string)
+                  ? (e) => handleCellChange(
+                      e.target.value,
+                      record.key,
+                      col.dataIndex as string
+                    )
+                  : undefined
+              }
+              onBlur={
+                canEditThisCell
+                  ? () => emitDataChange(rowsRef.current)
                   : undefined
               }
               disabled={!editable}
               readOnly={!canEditThisCell}
               style={{
+                ...readonlyStyle,
+                // Cột chưa được móc nối (highlight) luôn ưu tiên nền đỏ nhạt
                 ...(col.highlight ? { backgroundColor: "#fff1f0" } : {}),
-                ...(col.variant === "source"
-                  ? { backgroundColor: "#f5f5f5" }
-                  : {}),
-                ...(col.variant === "adjust"
-                  ? { backgroundColor: "#fffbe6" }
-                  : {}),
-              ...manualRowStyle,
                 ...(!canEditThisCell ? { cursor: "not-allowed" } : {}),
               }}
             />
@@ -307,29 +400,75 @@ const CustomTableHRC = ({
           {
             title: "Thao tác",
             key: "action",
-            width: 80,
+            width: 140,
             render: (_: unknown, record: HRCTableRow) => (
               <Space>
-                <Button
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  size="small"
-                  onClick={() => handleDeleteRow(record.key)}
-                  disabled={rows.length <= minRows}
-                />
-                
                 {isHasExistingPhieu ? (
-                  <Tooltip title="Chuyển mẻ sang ca sau">
-                    <Button
-                    type="text"
-                      icon={<ArrowRightOutlined />}
-                      size="small"
-                      onClick={() => handleChuyenMeThoi(record.meThoi as string)}
-                      disabled={rows.length <= minRows}
-                    />
-                  </Tooltip>
+                  <div className="flex gap-2">
+                    <Tooltip title="Chuyển mẻ sang ca trước">
+                      <Popconfirm
+                        title="Xác nhận chuyển mẻ"
+                        description={`Bạn có chắc muốn chuyển mẻ ${record.meThoi} sang ca TRƯỚC không?`}
+                        okText="Đồng ý"
+                        cancelText="Hủy"
+                        onConfirm={() =>
+                          handleChuyenMeThoi(
+                            CHUYEN_TOI_CA.CATRUOC,
+                            record.meThoi as string
+                          )
+                        }
+                      >
+                        <Button
+                          type="text"
+                          icon={<ArrowLeftOutlined />}
+                          size="small"
+                          disabled={rows.length <= minRows}
+                        />
+                      </Popconfirm>
+                    </Tooltip>
+                    <Tooltip title="Chuyển mẻ sang ca sau">
+                      <Popconfirm
+                        title="Xác nhận chuyển mẻ"
+                        description={`Bạn có chắc muốn chuyển mẻ ${record.meThoi} sang ca SAU không?`}
+                        okText="Đồng ý"
+                        cancelText="Hủy"
+                        onConfirm={() =>
+                          handleChuyenMeThoi(
+                            CHUYEN_TOI_CA.CASAU,
+                            record.meThoi as string
+                          )
+                        }
+                      >
+                        <Button
+                          type="text"
+                          icon={<ArrowRightOutlined />}
+                          size="small"
+                          disabled={rows.length <= minRows}
+                        />
+                      </Popconfirm>
+                    </Tooltip>
+                  </div>
                 ) : null}
+                {record.IsNM === false && (
+                  <Popconfirm
+                    title="Xác nhận xóa dòng"
+                    description={`Bạn có chắc muốn xóa dòng mẻ ${record.meThoi || ""}?`}
+                    okText="Đồng ý"
+                    cancelText="Hủy"
+                    onConfirm={() => handleDeleteRow(record)}
+                  >
+                    <Tooltip title="Xóa dòng nhập tay">
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        disabled={rows.length <= minRows}
+                      >
+                        Xóa
+                      </Button>
+                    </Tooltip>
+                  </Popconfirm>
+                )}
               </Space>
             ),
           },
@@ -358,21 +497,28 @@ const CustomTableHRC = ({
             className={className}
             size="small"
             columns={tableColumns}
-            dataSource={rows}
+            dataSource={sortedRows}
             style={{ marginTop: 20 }}
             scroll={{ x: scrollX, y: defaultScrollY }}
             sticky={stickyHeaders ? { offsetHeader: 0 } : undefined}
+            // Highlight cả dòng cho dữ liệu nhập tay (IsNM === false)
+            onRow={(record) => ({
+              style:
+                record.IsNM === false
+                  ? { backgroundColor: "#fffbe6" } // vàng nhạt
+                  : {},
+            })}
           />
           {showAddButton && editable && (
             <Button onClick={handleAddRow} type="dashed" className="my-2">
               {addRowButtonText}
             </Button>
           )}
-          {onRefresh && (
+          {/* {onRefresh && (
             <Button onClick={onRefresh} style={{ marginLeft: 8 }} loading={loading}>
               Tải lại dữ liệu
             </Button>
-          )}
+          )} */}
         </>
       )}
     </div>

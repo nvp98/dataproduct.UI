@@ -163,7 +163,8 @@ export const hrc2TableService = {
   mergeServerRows(
     serverRows: HRCTableRow[] = [],
     previousRows: HRCTableRow[] = [],
-    keyField = "meThoi"
+    keyField = "meThoi",
+    preserveFields?: string[]
   ): HRCTableRow[] {
     if (!previousRows.length) {
       return serverRows;
@@ -177,6 +178,10 @@ export const hrc2TableService = {
       }
     });
 
+    const preserveSet = preserveFields && preserveFields.length
+      ? new Set(preserveFields)
+      : null;
+
     return serverRows.map((serverRow) => {
       const keyValue = serverRow[keyField] as string | number | undefined;
       if (keyValue === undefined || keyValue === null) {
@@ -188,7 +193,9 @@ export const hrc2TableService = {
       }
       const merged: HRCTableRow = { ...serverRow };
       Object.keys(prevRow).forEach((field) => {
-        if (field.endsWith("_adjust")) {
+        const shouldPreserve =
+          preserveSet !== null ? preserveSet.has(field) : field.endsWith("_adjust");
+        if (shouldPreserve) {
           merged[field] = prevRow[field];
         }
       });

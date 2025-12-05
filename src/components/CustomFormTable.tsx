@@ -39,6 +39,7 @@ interface CustomFormTableProps {
     value: any,
     row: any
   ) => void;
+  compactWhenEmpty?: boolean; // Nếu true, khi không có dòng sẽ không chiếm nhiều chiều cao
 }
 
 export default function CustomFormTable({
@@ -63,6 +64,7 @@ export default function CustomFormTable({
   scrollY,
   stickyHeader = false,
   onCellChange,
+  compactWhenEmpty = false,
 }: CustomFormTableProps) {
   const [rows, setRows] = useState(initialData);
 
@@ -321,32 +323,34 @@ export default function CustomFormTable({
         </div>
       ) : (
         <>
-          <Table
-            bordered
-            pagination={false}
-            className={className}
-            size="small"
-            columns={tableColumns}
-            dataSource={rows}
-            style={{ marginTop: 20 }}
-            scroll={{ x: "max-content", y: scrollY }}
-            sticky={stickyHeader}
-            rowSelection={
-              selectionEnabled
-                ? {
-                    selectedRowKeys: selectedRowKeys as any,
-                    onChange: (keys, selected) => {
-                      onSelectionChange?.(keys as any, selected as any);
-                    },
-                    getCheckboxProps: (record: any) => ({
-                      disabled: isRowSelectable
-                        ? !isRowSelectable(record)
-                        : false,
-                    }),
-                  }
-                : undefined
-            }
-          />
+          {!(compactWhenEmpty && (!rows || rows.length === 0)) && (
+            <Table
+              bordered
+              pagination={false}
+              className={className}
+              size="small"
+              columns={tableColumns}
+              dataSource={rows}
+              style={{ marginTop: 12 }}
+              scroll={{ x: "max-content", y: scrollY }}
+              sticky={stickyHeader}
+              rowSelection={
+                selectionEnabled
+                  ? {
+                      selectedRowKeys: selectedRowKeys as any,
+                      onChange: (keys, selected) => {
+                        onSelectionChange?.(keys as any, selected as any);
+                      },
+                      getCheckboxProps: (record: any) => ({
+                        disabled: isRowSelectable
+                          ? !isRowSelectable(record)
+                          : false,
+                      }),
+                    }
+                  : undefined
+              }
+            />
+          )}
           {showAddButton && editable && (
             <Button onClick={handleAddRow} type="dashed" className="my-2">
               {addRowButtonText}

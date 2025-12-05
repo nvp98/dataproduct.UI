@@ -27,11 +27,12 @@ export type HRC2DetailRow = {
   idHeaderKey: number | null;
   mappingId?: number | null;
   loaiPhuLieu?: string | null; // Loại phụ liệu: "PG" hoặc "KL"
+  thuTu?: number | null; // Thứ tự để sắp xếp
 };
 
 export type HRC2RawData = Record<string, unknown>;
 
-export const pickValue = <T,>(source: HRC2RawData, keys: string[]): T | null => {
+export const pickValue = <T>(source: HRC2RawData, keys: string[]): T | null => {
   for (const key of keys) {
     const value = source[key];
     if (value !== undefined && value !== null) {
@@ -46,6 +47,8 @@ export interface DLNM_HRC2MainData extends HRC2MainData {
   reportNo: number | null;
   ngaySx: string | null;
   ngay: string | null;
+  isNM?: boolean | null;
+  isChuyenCa?: boolean | null;
 }
 
 export type HeaderKeyResponse = HRC2DetailRow;
@@ -69,9 +72,11 @@ type RawHRC2GroupedResponse = {
 };
 
 // Helper function để normalize dữ liệu từ API response
-export const normalizeHRC2GroupedResponse = (raw: RawHRC2GroupedResponse | HRC2RawData): HRC2GroupedByReportNoModel => {
+export const normalizeHRC2GroupedResponse = (
+  raw: RawHRC2GroupedResponse | HRC2RawData
+): HRC2GroupedByReportNoModel => {
   const normalizePhuLieu = (item: HRC2RawData): HeaderKeyResponse => {
-    const getValue = <T,>(...keys: string[]): T | null => {
+    const getValue = <T>(...keys: string[]): T | null => {
       for (const key of keys) {
         const val = item[key];
         if (val !== undefined && val !== null) {
@@ -85,20 +90,33 @@ export const normalizeHRC2GroupedResponse = (raw: RawHRC2GroupedResponse | HRC2R
       idPhuLieu: getValue<number>("iD_PhuLieu", "idPhuLieu", "ID_PhuLieu"),
       tenPhuLieu: getValue<string>("tenPhuLieu", "TenPhuLieu"),
       klPhuGia: getValue<number>("klPhuGia", "KLPhuGia"),
-      klPhuGiaTotal: getValue<number>("klPhuGiaTotal", "KLPhuGiaTotal") ?? getValue<number>("klPhuGia", "KLPhuGia"),
+      klPhuGiaTotal:
+        getValue<number>("klPhuGiaTotal", "KLPhuGiaTotal") ??
+        getValue<number>("klPhuGia", "KLPhuGia"),
       keyGuid: getValue<string>("keyGuid", "KeyGuid"),
       tenHienThi: getValue<string>("tenHienThi", "TenHienThi"),
       tenNguonDuLieu: getValue<string>("tenNguonDuLieu", "TenNguonDuLieu"),
-      idHeaderKey: getValue<number>("iD_HeaderKey", "idHeaderKey", "ID_HeaderKey"),
+      idHeaderKey: getValue<number>(
+        "iD_HeaderKey",
+        "idHeaderKey",
+        "ID_HeaderKey"
+      ),
       mappingId: getValue<number>("mappingId", "MappingId"),
-      loaiPhuLieu: getValue<string>("loaiPhuLieu", "LoaiPhuLieu", "loaiPhuLieu"),
+      loaiPhuLieu: getValue<string>(
+        "loaiPhuLieu",
+        "LoaiPhuLieu",
+        "loaiPhuLieu"
+      ),
+      thuTu: getValue<number>("thuTu", "ThuTu"),
     };
   };
 
-  const normalizeData = (rawData: HRC2RawData | null | undefined): DLNM_HRC2MainData | null => {
+  const normalizeData = (
+    rawData: HRC2RawData | null | undefined
+  ): DLNM_HRC2MainData | null => {
     if (!rawData) return null;
-    
-    const getValue = <T,>(...keys: string[]): T | null => {
+
+    const getValue = <T>(...keys: string[]): T | null => {
       for (const key of keys) {
         const val = rawData[key];
         if (val !== undefined && val !== null) {
@@ -123,16 +141,35 @@ export const normalizeHRC2GroupedResponse = (raw: RawHRC2GroupedResponse | HRC2R
       n2: getValue<number>("n2", "N2"),
       ar_BOF: getValue<number>("aR_BOF", "ar_BOF", "AR_BOF"),
       ar_LF: getValue<number>("aR_LF", "ar_LF", "AR_LF"),
-      klGangLong: getValue<number>("klGangLong", "KLGangLong"),
+      klGangLong: getValue<number>(
+        "klGangLongCCT",
+        "KLGangLongCCT",
+        // "klGangLong",
+        // "KLGangLong"
+      ), // Ưu tiên lấy từ klGangLongCCT, fallback về klGangLong
       klThepPhe: getValue<number>("klThepPhe", "KLThepPhe"),
+      isNM: getValue<boolean>("isNM", "IsNM"),
+      isChuyenCa: getValue<boolean>("isChuyenCa", "IsChuyenCa"),
     };
   };
 
   const rawObj = raw as RawHRC2GroupedResponse;
   return {
     data: normalizeData(rawObj.data ?? null),
-    mappedPhulieus: Array.isArray(rawObj.mappedPhulieus) ? rawObj.mappedPhulieus.map(normalizePhuLieu) : [],
-    unmappedPhulieus: Array.isArray(rawObj.unmappedPhulieus) ? rawObj.unmappedPhulieus.map(normalizePhuLieu) : [],
+    mappedPhulieus: Array.isArray(rawObj.mappedPhulieus)
+      ? rawObj.mappedPhulieus.map(normalizePhuLieu)
+      : [],
+    unmappedPhulieus: Array.isArray(rawObj.unmappedPhulieus)
+      ? rawObj.unmappedPhulieus.map(normalizePhuLieu)
+      : [],
   };
 };
 
+export interface ChuyenMeThoiRequest {
+  MaBM: string;
+  NgaySX: string;
+  Ca: number;
+  Scope: number;
+  ChuyenToiCa: number;
+  MeThoi: string;
+}

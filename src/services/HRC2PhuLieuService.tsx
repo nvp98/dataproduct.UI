@@ -104,6 +104,23 @@ export const hrc2PhuLieuService = {
       return loai === "kl" || loai === "chất hợp kim hóa";
     });
 
+    // Sắp xếp phụ liệu theo thuTu (thứ tự tăng dần, null/undefined ở cuối)
+    const sortByThuTu = (a: HeaderKeyResponse, b: HeaderKeyResponse): number => {
+      const thuTuA = a.thuTu ?? Number.MAX_SAFE_INTEGER;
+      const thuTuB = b.thuTu ?? Number.MAX_SAFE_INTEGER;
+      if (thuTuA !== thuTuB) {
+        return thuTuA - thuTuB;
+      }
+      // Nếu cùng thuTu, sắp xếp theo tên
+      const tenA = a.tenHienThi || a.tenNguonDuLieu || a.tenPhuLieu || "";
+      const tenB = b.tenHienThi || b.tenNguonDuLieu || b.tenPhuLieu || "";
+      return tenA.localeCompare(tenB);
+    };
+
+    // Sắp xếp các mảng phụ liệu
+    const sortedPhuGiaPhuLieus = [...phuGiaPhuLieus].sort(sortByThuTu);
+    const sortedChatHopKimPhuLieus = [...chatHopKimPhuLieus].sort(sortByThuTu);
+
     // Tạo columns cho phụ liệu loại PG (Phụ gia và chất khử oxy)
     const buildMappingPayload = (phuLieu: HeaderKeyResponse): MappingPayload => ({
       idPhuLieu: phuLieu.idPhuLieu ?? null,
@@ -134,7 +151,7 @@ export const hrc2PhuLieuService = {
 
     const allowMappingButtons = !!onOpenMappingModal;
 
-    const phuGiaColumns: HRCChildColumn[] = phuGiaPhuLieus.map(phuLieu => {
+    const phuGiaColumns: HRCChildColumn[] = sortedPhuGiaPhuLieus.map(phuLieu => {
       const label = phuLieu.tenHienThi || phuLieu.tenNguonDuLieu || phuLieu.tenPhuLieu || "";
       const payload = buildMappingPayload(phuLieu);
       return {
@@ -146,10 +163,12 @@ export const hrc2PhuLieuService = {
         allowMapping: allowMappingButtons,
         mappingPayload: payload,
         variant: "source",
+        headerKeyId: phuLieu.idHeaderKey ?? null,
+        thuTu: phuLieu.thuTu ?? null,
       };
     });
 
-    const chatHopKimColumns: HRCChildColumn[] = chatHopKimPhuLieus.map(phuLieu => {
+    const chatHopKimColumns: HRCChildColumn[] = sortedChatHopKimPhuLieus.map(phuLieu => {
       const label = phuLieu.tenHienThi || phuLieu.tenNguonDuLieu || phuLieu.tenPhuLieu || "";
       const payload = buildMappingPayload(phuLieu);
       return {
@@ -161,10 +180,19 @@ export const hrc2PhuLieuService = {
         allowMapping: allowMappingButtons,
         mappingPayload: payload,
         variant: "source",
+        headerKeyId: phuLieu.idHeaderKey ?? null,
+        thuTu: phuLieu.thuTu ?? null,
       };
     });
 
-    const khacColumns: HRCChildColumn[] = unmappedPhuLieus.map(phuLieu => {
+    // Sắp xếp unmapped phụ liệu theo tên (vì không có thuTu)
+    const sortedUnmappedPhuLieus = [...unmappedPhuLieus].sort((a, b) => {
+      const tenA = a.tenNguonDuLieu || a.tenPhuLieu || `PL-${a.idPhuLieu}` || "";
+      const tenB = b.tenNguonDuLieu || b.tenPhuLieu || `PL-${b.idPhuLieu}` || "";
+      return tenA.localeCompare(tenB);
+    });
+
+    const khacColumns: HRCChildColumn[] = sortedUnmappedPhuLieus.map(phuLieu => {
       const groupKey = (phuLieu.tenNguonDuLieu || phuLieu.tenPhuLieu || `PL-${phuLieu.idPhuLieu}`)?.trim() || `PL-${phuLieu.idPhuLieu}`;
       const label = phuLieu.tenNguonDuLieu || phuLieu.tenPhuLieu || groupKey;
       const payload = buildMappingPayload(phuLieu);
@@ -199,6 +227,8 @@ export const hrc2PhuLieuService = {
     const tableData: HRCTableRow[] = data.map((item, index) => {
       const row: HRCTableRow = {
         key: `row-${item.data?.reportNo || index}`,
+        IsNM: item.data?.isNM ?? true,
+        id: item.data?.id ?? undefined,
       };
 
       // Map các cột cơ bản từ config
@@ -309,12 +339,26 @@ export const hrc2PhuLieuService = {
       tableData.push({ key: "row-empty" });
     }
 
+    // Khi merge, cần sắp xếp lại toàn bộ theo ThuTu để đảm bảo thứ tự đúng
+    const mergedColumns = mergeMappedPhuLieus
+      ? [...phuGiaColumns, ...chatHopKimColumns].sort((a, b) => {
+          // Lấy thuTu từ column metadata (đã lưu khi tạo column)
+          const thuTuA = a.thuTu ?? Number.MAX_SAFE_INTEGER;
+          const thuTuB = b.thuTu ?? Number.MAX_SAFE_INTEGER;
+          if (thuTuA !== thuTuB) {
+            return thuTuA - thuTuB;
+          }
+          // Nếu cùng thuTu, sắp xếp theo tên
+          const labelA = a.metaLabel || "";
+          const labelB = b.metaLabel || "";
+          return labelA.localeCompare(labelB);
+        })
+      : phuGiaColumns;
+
     return {
       mappedPhuLieus,
       unmappedPhuLieus,
-      phuGiaColumns: mergeMappedPhuLieus
-        ? [...phuGiaColumns, ...chatHopKimColumns]
-        : phuGiaColumns,
+      phuGiaColumns: mergedColumns,
       chatHopKimColumns: mergeMappedPhuLieus ? [] : chatHopKimColumns,
       khacColumns,
       tableData,

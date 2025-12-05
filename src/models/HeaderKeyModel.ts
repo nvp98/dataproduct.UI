@@ -6,6 +6,7 @@ export interface HeaderKey {
   loaiPhieu?: string | null;
   isActive: boolean;
   ngayTao?: string | null;
+  thuTu?: number | null;
 }
 
 export interface HeaderKeyPayload {
@@ -14,6 +15,7 @@ export interface HeaderKeyPayload {
   mota?: string | null;
   loaiPhieu?: string | null;
   isActive: boolean;
+  thuTu?: number | null;
 }
 
 export interface HeaderKeySearchResponse {
@@ -23,3 +25,8 @@ export interface HeaderKeySearchResponse {
   pageSize: number;
 }
 
+export interface HeaderMapping {
+  id: number;
+  idPhuLieu: number;
+  tenNguonDuLieu: string;
+}

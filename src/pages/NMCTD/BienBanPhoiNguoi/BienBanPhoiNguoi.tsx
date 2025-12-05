@@ -66,7 +66,7 @@ const BienBanPhoiNguoi = () => {
     try {
       const res = await PhieuApi.getData({
         MaBM: "CTD_BB_Phoinguoi",
-        NguoiTaoID: userObj.id,
+        // NguoiTaoID: userObj.id,
         page,
         pageSize,
         ...filters,

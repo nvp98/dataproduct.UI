@@ -50,16 +50,16 @@
         { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false },
         { 
           "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
-          "dataIndex": "klThepLong", "width": 100, "editable": false
+          "dataIndex": "klThepLong", "width": 100
         },
         {
-          "title": "Chất hợp kim hóa", "dataIndex": "KL"
+          "title": "Chất hợp kim hóa", "dataIndex": "KL", "editable": false
         },
         {
-          "title": "Phụ gia và chất khử oxy", "dataIndex": "PG"
+          "title": "Phụ gia và chất khử oxy", "dataIndex": "PG", "editable": false
         },
         {
-          "title": "Khác", "dataIndex": "others"
+          "title": "Khác", "dataIndex": "others", "editable": false
         },
         {
           "title": "Khí",
@@ -80,8 +80,7 @@
       "columns": [
         {
           "title": "",
-          "dataIndex": "materialName",
-          "isLabel": true
+          "dataIndex": "materialName"
         },
         {
           "title": "Tồn đầu kíp",
@@ -96,44 +95,7 @@
           "dataIndex": "tonCuoiKip"
         }
       ],
-      "initialData": [
-        {
-          "key": "1",
-          "materialName": "Tồn trên silo"
-        },
-        {
-          "key": "2",
-          "materialName": "Lượng SiMn (kg)"
-        },
-        {
-          "key": "3",
-          "materialName": "Lượng FeSi (kg)"
-        },
-        {
-          "key": "4",
-          "materialName": "Lượng vôi (kg)"
-        },
-        {
-          "key": "5",
-          "materialName": "Lượng than (kg)"
-        },
-        {
-          "key": "6",
-          "materialName": "Lượng FeMn (kg)"
-        },
-        {
-          "key": "7",
-          "materialName": "Lượng Huỳnh thạch (kg)"
-        },
-        {
-          "key": "8",
-          "materialName": "Lượng Nhôm (kg)"
-        },
-        {
-          "key": "9",
-          "materialName": "Khác"
-        }
-      ]
+      "initialData": []
     }
   ],
 
