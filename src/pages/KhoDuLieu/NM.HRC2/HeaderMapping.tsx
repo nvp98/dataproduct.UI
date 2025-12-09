@@ -19,7 +19,7 @@ import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutli
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { headerKeyApi } from "../../../services/HeaderKeyApi";
-import type { HeaderKey, HeaderKeyPayload, HeaderMapping } from "../../../models/HeaderKeyModel";
+import type { HeaderKey, HeaderKeyPayload, HeaderMappingType } from "../../../models/HeaderKeyModel";
 
 type FilterState = {
   searchKey?: string;
@@ -196,7 +196,7 @@ const HeaderMapping = () => {
         dataIndex: "headerMappings",
         key: "headerMappings",
         width: 250,
-        render: (value: HeaderMapping[]) => value.map(item => item.tenNguonDuLieu).join("; "),
+        render: (value: HeaderMappingType[]) => value.map(item => item.tenNguonDuLieu).join("; "),
       },
       {
         title: "Thứ tự",
