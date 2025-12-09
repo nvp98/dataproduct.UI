@@ -69,6 +69,7 @@ interface CustomTableHRCProps {
   ngaySX?: Date;
   ca?: number;
   scope?: number;
+  bieuMau?: string;
 }
 
 const CHUYEN_TOI_CA = {
@@ -115,6 +116,7 @@ const CustomTableHRC = ({
   ngaySX = new Date(),
   ca = 0,
   scope = 0,
+  bieuMau = "",
 }: CustomTableHRCProps) => {
   const [rows, setRows] = useState<HRCTableRow[]>(initialData as HRCTableRow[]);
   const rowsRef = useRef<HRCTableRow[]>(rows);
@@ -186,6 +188,7 @@ const CustomTableHRC = ({
         Scope: scope,
         ChuyenToiCa: chuyenToiCa,
         MeThoi: meThoi,
+        BieuMau: bieuMau,
       };
       const response = await dlnmHRC2Api.chuyenMeThoi(payload);
       if(response.data.message){
@@ -398,7 +401,7 @@ const CustomTableHRC = ({
     ...(showDeleteButton
       ? [
           {
-            title: "Thao tác",
+            title: "Chuyển / Xóa mẻ",
             key: "action",
             width: 140,
             render: (_: unknown, record: HRCTableRow) => (

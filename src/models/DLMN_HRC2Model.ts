@@ -172,4 +172,5 @@ export interface ChuyenMeThoiRequest {
   Scope: number;
   ChuyenToiCa: number;
   MeThoi: string;
+  BieuMau: string;
 }

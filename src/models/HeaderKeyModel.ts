@@ -25,7 +25,7 @@ export interface HeaderKeySearchResponse {
   pageSize: number;
 }
 
-export interface HeaderMapping {
+export interface HeaderMappingType {
   id: number;
   idPhuLieu: number;
   tenNguonDuLieu: string;
