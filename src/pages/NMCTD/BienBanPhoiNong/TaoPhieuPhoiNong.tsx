@@ -65,6 +65,7 @@ const TaoPhieuPhoiNong = () => {
   const [filteredChuyenData, setFilteredChuyenData] = useState<any[]>([]);
   const [selectedProcessedKeys, setSelectedProcessedKeys] = useState<Key[]>([]);
   const isViecDenToi = String(type || "") === "viecdentoi";
+  
 
   // Theo dõi thay đổi trên các field chính
   const ngaySX = Form.useWatch("NgaySX", form);

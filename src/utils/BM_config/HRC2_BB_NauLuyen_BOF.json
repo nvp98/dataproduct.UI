@@ -94,7 +94,7 @@
           "editable": false
         },
         {
-          "title": "Khác", "dataIndex": "others"
+          "title": "Khác", "dataIndex": "others" , "width": 100
         },
         {
           "title": "Nhiên liệu (m3)",

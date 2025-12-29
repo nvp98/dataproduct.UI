@@ -331,8 +331,8 @@ const XuLyPhieuPhoiNong = () => {
       if (tablePhoiNong && tablePhoiNong.dataSource.url !== "") {
         const res = await phoiGiaoNhanApi.getData(params);
         const apiRows = mapApiToTable(res as any) ?? [];
-        const readonlyKeys = getReadonlyFields(tablePhoiNong.columns || []);
-        setTableData((prev) => {
+        // const readonlyKeys = getReadonlyFields(tablePhoiNong.columns || []);
+        setTableData(() => {
           // const prevKeys = new Set(
           //   (prev || []).map(
           //     (r: any) => `${String(r.me || "")}|${String(r.mac || "")}`
@@ -480,78 +480,78 @@ const XuLyPhieuPhoiNong = () => {
    * - Build luồng phê duyệt: thêm người tạo (cấp 1) nếu có cấu hình
    * - POST/PUT dữ liệu phiếu tùy theo có `idphieu`
    */
-  const saveAfterTransfer = async (nextTable: any[], nextThung: any[]) => {
-    try {
-      const stored = localStorage.getItem("userinfo");
-      const values = form.getFieldsValue();
-      const pheDuyetFlow = config.signatures
-        .filter((s) => s.isChon)
-        .map((s) => ({
-          capDuyet: s.capduyet,
-          maKyDuyet: s.key,
-          nguoiDuyetId: form.getFieldValue(s.key),
-          tinhTrang: 0,
-          ghiChu: "",
-        }));
-      const hasCreator = config.signatures.find(
-        (x) => x.isChon === false && x.capduyet === 1
-      );
-      if (hasCreator) {
-        pheDuyetFlow.unshift({
-          capDuyet: 1,
-          maKyDuyet: hasCreator?.key || "",
-          nguoiDuyetId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
-          tinhTrang: 1,
-          ghiChu: "Người tạo phiếu",
-        });
-      }
-      const normalizedTable = (nextTable || []).map((r: any) => ({
-        ...r,
-        stBKM: Number(r.stBKM || 0),
-      }));
-      const normalizedThung = (nextThung || []).map((r: any) => ({
-        ...r,
-        stBKM: Number(r.stBKM || 0),
-      }));
-      const payload = {
-        ...values,
-        NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
-        maBm: config.code,
-        nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
-        xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
-        idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
-        table1: normalizedTable,
-        chuyenData: normalizedThung,
-        pheDuyet: pheDuyetFlow,
-      };
-      if (values.idphieu) {
-        await PhieuApi.putData(values.idphieu, payload);
-        message.success("Đã lưu cập nhật sau khi chuyển");
-      }
-      // else {
-      //   const res = await PhieuApi.postData(payload);
-      //   form.setFieldsValue({ idphieu: (res as any)?.idphieu });
-      //   setSoPhieu((res as any)?.soPhieu || "");
-      //   message.success(
-      //     `Đã tạo phiếu và lưu dữ liệu chuyển: ${(res as any)?.soPhieu || ""}`
-      //   );
-      // }
-      // if (values.idphieu) {
-      //   await PhieuApi.putData(values.idphieu, payload);
-      //   message.success("Đã lưu cập nhật sau khi chuyển hết");
-      // } else {
-      //   const res = await PhieuApi.postData(payload);
-      //   form.setFieldsValue({ idphieu: (res as any)?.idphieu });
-      //   setSoPhieu((res as any)?.soPhieu || "");
-      //   message.success(
-      //     `Đã tạo phiếu và lưu chuyển hết: ${(res as any)?.soPhieu || ""}`
-      //   );
-      // }
-    } catch (e) {
-      console.error(e);
-      message.error("Không thể lưu dữ liệu sau khi chuyển hết");
-    }
-  };
+  // const saveAfterTransfer = async (nextTable: any[], nextThung: any[]) => {
+  //   try {
+  //     const stored = localStorage.getItem("userinfo");
+  //     const values = form.getFieldsValue();
+  //     const pheDuyetFlow = config.signatures
+  //       .filter((s) => s.isChon)
+  //       .map((s) => ({
+  //         capDuyet: s.capduyet,
+  //         maKyDuyet: s.key,
+  //         nguoiDuyetId: form.getFieldValue(s.key),
+  //         tinhTrang: 0,
+  //         ghiChu: "",
+  //       }));
+  //     const hasCreator = config.signatures.find(
+  //       (x) => x.isChon === false && x.capduyet === 1
+  //     );
+  //     if (hasCreator) {
+  //       pheDuyetFlow.unshift({
+  //         capDuyet: 1,
+  //         maKyDuyet: hasCreator?.key || "",
+  //         nguoiDuyetId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
+  //         tinhTrang: 1,
+  //         ghiChu: "Người tạo phiếu",
+  //       });
+  //     }
+  //     const normalizedTable = (nextTable || []).map((r: any) => ({
+  //       ...r,
+  //       stBKM: Number(r.stBKM || 0),
+  //     }));
+  //     const normalizedThung = (nextThung || []).map((r: any) => ({
+  //       ...r,
+  //       stBKM: Number(r.stBKM || 0),
+  //     }));
+  //     const payload = {
+  //       ...values,
+  //       NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
+  //       maBm: config.code,
+  //       nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
+  //       xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
+  //       idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
+  //       table1: normalizedTable,
+  //       chuyenData: normalizedThung,
+  //       pheDuyet: pheDuyetFlow,
+  //     };
+  //     if (values.idphieu) {
+  //       await PhieuApi.putData(values.idphieu, payload);
+  //       message.success("Đã lưu cập nhật sau khi chuyển");
+  //     }
+  //     // else {
+  //     //   const res = await PhieuApi.postData(payload);
+  //     //   form.setFieldsValue({ idphieu: (res as any)?.idphieu });
+  //     //   setSoPhieu((res as any)?.soPhieu || "");
+  //     //   message.success(
+  //     //     `Đã tạo phiếu và lưu dữ liệu chuyển: ${(res as any)?.soPhieu || ""}`
+  //     //   );
+  //     // }
+  //     // if (values.idphieu) {
+  //     //   await PhieuApi.putData(values.idphieu, payload);
+  //     //   message.success("Đã lưu cập nhật sau khi chuyển hết");
+  //     // } else {
+  //     //   const res = await PhieuApi.postData(payload);
+  //     //   form.setFieldsValue({ idphieu: (res as any)?.idphieu });
+  //     //   setSoPhieu((res as any)?.soPhieu || "");
+  //     //   message.success(
+  //     //     `Đã tạo phiếu và lưu chuyển hết: ${(res as any)?.soPhieu || ""}`
+  //     //   );
+  //     // }
+  //   } catch (e) {
+  //     console.error(e);
+  //     message.error("Không thể lưu dữ liệu sau khi chuyển hết");
+  //   }
+  // };
 
   /**
    * Lấy danh sách field readonly từ cấu hình cột

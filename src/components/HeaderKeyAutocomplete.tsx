@@ -68,13 +68,13 @@ const HeaderKeyAutocomplete = ({
     async (searchKey?: string) => {
       setFetching(true);
       try {
-        const res = await headerKeyApi.search({
+        const res: any = await headerKeyApi.searchAutocomplete({
           searchKey,
           LoaiPhieu: loaiPhieu,
           pageSize: 20,
         });
         const items =
-          res.data?.map((item) => ({
+          res.data?.map((item: any) => ({
             ...item,
             value: item.id,
             label: buildOptionLabel(item),

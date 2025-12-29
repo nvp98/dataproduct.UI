@@ -60,7 +60,7 @@
           "title": "Phụ gia và chất khử oxy", "dataIndex": "PG", "editable": false
         },
         {
-          "title": "Khác", "dataIndex": "others", "editable": false
+          "title": "Khác", "dataIndex": "others", "editable": false, "width": 100
         },
         {
           "title": "Khí",

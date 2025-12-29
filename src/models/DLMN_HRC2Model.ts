@@ -49,6 +49,7 @@ export interface DLNM_HRC2MainData extends HRC2MainData {
   ngay: string | null;
   isNM?: boolean | null;
   isChuyenCa?: boolean | null;
+  isTrungMeThoi?: boolean | null;
 }
 
 export type HeaderKeyResponse = HRC2DetailRow;
@@ -150,6 +151,7 @@ export const normalizeHRC2GroupedResponse = (
       klThepPhe: getValue<number>("klThepPhe", "KLThepPhe"),
       isNM: getValue<boolean>("isNM", "IsNM"),
       isChuyenCa: getValue<boolean>("isChuyenCa", "IsChuyenCa"),
+      isTrungMeThoi: getValue<boolean>("isTrungMeThoi", "IsTrungMeThoi"),
     };
   };
 
@@ -173,4 +175,9 @@ export interface ChuyenMeThoiRequest {
   ChuyenToiCa: number;
   MeThoi: string;
   BieuMau: string;
+}
+
+export interface FilterSTD_NXTRequest {
+  NgaySX: string;
+  Ca: number;
 }

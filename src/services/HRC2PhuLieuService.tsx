@@ -229,6 +229,7 @@ export const hrc2PhuLieuService = {
         key: `row-${item.data?.reportNo || index}`,
         IsNM: item.data?.isNM ?? true,
         id: item.data?.id ?? undefined,
+        isTrungMeThoi: item.data?.isTrungMeThoi ?? false,
       };
 
       // Map các cột cơ bản từ config

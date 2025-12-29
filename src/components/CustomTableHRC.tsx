@@ -44,6 +44,7 @@ export interface HRCTableRow {
   key: string | number;
   IsNM?: boolean; // Flag để đánh dấu dòng từ NM (true) hay thêm tay (false)
   id?: number; // ID bản ghi DLNM_HRC2 (nếu có)
+  isTrungMeThoi?: boolean; // Flag để đánh dấu mẻ thổi bị trùng
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -290,7 +291,9 @@ const CustomTableHRC = ({
                 const readonlyStyle = !canEditThisCell
                   ? { backgroundColor: "#f5f5f5" }
                   : {};
-                
+                // Highlight ô mẻ thổi nếu bị trùng
+                const isMeThoiColumn = child.dataIndex === "meThoi";
+                const isTrungMeThoi = record.isTrungMeThoi === true;
                 return (
                   <Input
                     placeholder={
@@ -312,8 +315,10 @@ const CustomTableHRC = ({
                     readOnly={!canEditThisCell}
                     style={{
                       ...readonlyStyle,
-                      // Cột chưa được móc nối (highlight) luôn ưu tiên nền đỏ nhạt
-                      ...(child.highlight ? { backgroundColor: "#fff1f0" } : {}),
+                      // Highlight mẻ thổi trùng (ưu tiên cao nhất)
+                      ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
+                      // Cột chưa được móc nối (highlight) - chỉ khi không phải mẻ thổi trùng
+                      ...(!(isMeThoiColumn && isTrungMeThoi) && child.highlight ? { backgroundColor: "#fff1f0" } : {}),
                       ...(!canEditThisCell ? { cursor: "not-allowed" } : {}),
                     }}
                   />
@@ -366,6 +371,9 @@ const CustomTableHRC = ({
           const readonlyStyle = !canEditThisCell
             ? { backgroundColor: "#f5f5f5" }
             : {};
+          // Highlight ô mẻ thổi nếu bị trùng
+          const isMeThoiColumn = col.dataIndex === "meThoi";
+          const isTrungMeThoi = record.isTrungMeThoi === true;
           
           return (
             <Input
@@ -389,8 +397,10 @@ const CustomTableHRC = ({
               readOnly={!canEditThisCell}
               style={{
                 ...readonlyStyle,
-                // Cột chưa được móc nối (highlight) luôn ưu tiên nền đỏ nhạt
-                ...(col.highlight ? { backgroundColor: "#fff1f0" } : {}),
+                // Highlight mẻ thổi trùng (ưu tiên cao nhất)
+                ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
+                // Cột chưa được móc nối (highlight) - chỉ khi không phải mẻ thổi trùng
+                ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight ? { backgroundColor: "#fff1f0" } : {}),
                 ...(!canEditThisCell ? { cursor: "not-allowed" } : {}),
               }}
             />

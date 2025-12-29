@@ -1,9 +1,9 @@
 import apiService from "./ApiService";
-import type { HeaderKey, HeaderKeyPayload, HeaderKeySearchResponse } from "../models/HeaderKeyModel";
+import type { HeaderKey, HeaderKeyMapping, HeaderKeyPayload, HeaderKeySearchResponse } from "../models/HeaderKeyModel";
 
 type RawHeaderKeySearchResponse = {
-  data?: HeaderKey[];
-  Data?: HeaderKey[];
+  data?: HeaderKeyMapping[];
+  Data?: HeaderKeyMapping[];
   totalRecords?: number;
   TotalRecords?: number;
   page?: number;
@@ -22,7 +22,7 @@ const normalizeSearchResponse = (
   const pageSize = res?.pageSize ?? res?.PageSize ?? fallback.pageSize;
 
   return {
-    data,
+    data: data as HeaderKeyMapping[],
     totalRecords,
     page,
     pageSize,
@@ -32,6 +32,11 @@ const normalizeSearchResponse = (
 type HeaderKeySearchParams = {
   searchKey?: string;
   LoaiPhieu?: string;
+  TrangThai?: string; // DangDung | ChuaMocNoi | Ngung
+  IsUsedNXT?: boolean;
+  FromDate?: string; // ISO string
+  ToDate?: string; // ISO string
+  SortThuTu?: string; // asc | desc
   page?: number;
   pageSize?: number;
 };
@@ -50,5 +55,14 @@ export const headerKeyApi = {
   create: (payload: HeaderKeyPayload) => apiService.post("/api/HeaderKey", payload),
   update: (id: number, payload: HeaderKeyPayload) => apiService.put(`/api/HeaderKey/${id}`, payload),
   delete: (id: number) => apiService.delete(`/api/HeaderKey/${id}`),
+
+  async searchAutocomplete(params: HeaderKeySearchParams = {}): Promise<HeaderKeySearchResponse> {
+    const fallback = {
+      page: typeof params.page === "number" ? params.page : 1,
+      pageSize: typeof params.pageSize === "number" ? params.pageSize : 10,
+    };
+    const res = await apiService.get("/api/HeaderKey/search-autocomplete", { params });
+    return normalizeSearchResponse(res, fallback);
+  },
 };
 

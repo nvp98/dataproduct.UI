@@ -24,10 +24,25 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
   const renderField = () => {
     switch (field.type) {
       case "datetime":
-        return <DatePicker showTime format="DD/MM/YYYY" disabled={isDisabled} />;
+        return (
+          <DatePicker
+            showTime
+            format="DD/MM/YYYY"
+            disabled={isDisabled}
+            style={{ width: "100%" }}
+            size="middle"
+          />
+        );
 
       case "date":
-        return <DatePicker format="DD/MM/YYYY" disabled={isDisabled} />;
+        return (
+          <DatePicker
+            format="DD/MM/YYYY"
+            disabled={isDisabled}
+            style={{ width: "100%" }}
+            size="middle"
+          />
+        );
 
       case "select":
         return (
@@ -35,7 +50,8 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
             placeholder={field.placeholder || "Chọn..."}
             allowClear
             disabled={isDisabled}
-            // style={{ width: "100%" }}
+            style={{ width: "100%" }}
+            size="middle"
           >
             {field.options?.map((opt: any) => (
               <Select.Option key={opt.value} value={opt.value}>

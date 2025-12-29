@@ -201,11 +201,19 @@ export const menuConfig = [
         label: "NM.HRC2",
         children: [
           {
+            key: "sub2-6-0",
+            label: (
+              <Tooltip title="STD - Nhập xuất tồn">
+                <NavLink to="/std_nhapxuatton">STD - Nhập xuất tồn</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
             key: "sub2-6-1",
             label: (
-              <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
+              <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi BOF)">
                 <NavLink to="/tieuhaonauluyen_bof">
-                BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
+                BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi BOF)
                 </NavLink>
               </Tooltip>
             ),
