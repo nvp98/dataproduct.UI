@@ -314,7 +314,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
       );
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);
-      message.error("Không thể tải danh sách phụ liệu");
+      message.error("Không thể tải danh sách dữ liệu nhà máy");
     } finally {
       setLoading(false);
     }
@@ -571,6 +571,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
       ...formData,
       NgaySX: formData.NgaySX ? formData.NgaySX.format("YYYY-MM-DD") : null,
       maBm: config.code,
+      prefix: config.prefix,
       // nguoiTaoId: userInfo.iD_TaiKhoan ?? null,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
@@ -720,6 +721,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
                 ngaySX={ngaySX}
                 ca={ca}
                 scope={scope}
+                bieuMau={"BOF"}
                 isHasExistingPhieu={hasExistingPhieu}
                 columns={table1Columns}
                 initialData={tableData}

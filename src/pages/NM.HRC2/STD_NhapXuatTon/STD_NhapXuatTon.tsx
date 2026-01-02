@@ -1,15 +1,15 @@
-import HRC2_BB_NauLuyen_LF from "../../../utils/BM_config/HRC2_BB_NauLuyen_LF.json";
+import HRC2_STD_NXT from "../../../utils/BM_config/HRC2_STD_NXT.json";
 import { Button, Card, Space, Table, Tag } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
-import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { useMemo } from "react";
+import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 
-const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
-  const config = HRC2_BB_NauLuyen_LF;
+const STD_NhapXuatTon = ({ type }: { type?: string }) => {
+  const config = HRC2_STD_NXT;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
@@ -56,14 +56,14 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
             if (type === "viecdentoi") {
-              return navigate("/chitiettieuhaonauluyen_lf", {
+              return navigate("/chi_tiet_std", {
                 state: {
                   idphieu: record.idphieu,
                   pheduyet: record?.pheDuyet?.[0] ?? null,
                 },
               });
             } else {
-              return navigate("/taophieutieuhaonauluyen_lf", {
+              return navigate("/tao_std", {
                 state: { idphieu: record.idphieu },
               });
             }
@@ -78,21 +78,11 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       title: "Quy trình",
       dataIndex: "maBm",
       key: "maBm",
-      width: 220,
+      width: 320,
       ellipsis: true,
     },
     {
-      title: "Lò",
-      dataIndex: "scope",
-      key: "scope",
-      width: 220,
-      ellipsis: true,
-      render: (value: number) => {
-        return value === 6 ? "Lò thổi 6" : "Lò thổi 7";
-      },
-    },
-    {
-      title: "Ngày lập",
+      title: "Ngày lập phiếu",
       dataIndex: "ngaySX",
       key: "ngaySX",
       width: 190,
@@ -103,7 +93,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       title: "Ca",
       dataIndex: "ca",
       key: "ca",
-      width: 130, 
+      width: 150,
       ellipsis: true,
       render: (value: number) => {
         return value === 1 ? "Ca Ngày" : "Ca Đêm";
@@ -113,14 +103,15 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       title: "Người tạo",
       dataIndex: "nguoiTaoId",
       key: "nguoiTaoId",
-      width: 270,
+      width: 270,  
       ellipsis: true,
     },
+   
     {
       title: "Trạng thái",
       dataIndex: "tinhTrang",
       key: "tinhTrang",
-      width: 150,
+      width: 250,
       render: (status: string) => (
         <Tag color={statusConfig[status]?.color || "default"}>
           {statusConfig[status]?.text || status}
@@ -145,7 +136,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
             type="text"
             icon={<EyeOutlined twoToneColor="#1890ff" />}
             onClick={() =>
-              navigate("/chitiettieuhaonauluyen_lf", {
+              navigate("/chitiettieuhaonauluyen_bof", {
                 state: { idphieu: record.idphieu },
               })
             }
@@ -158,47 +149,25 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   const filterFieldsConfig: FilterFieldConfig[] = [
     {
       key: "soPhieu",
-      label: "Số phiếu",
+      label: "Tìm kiếm theo số phiếu",
       type: "text",
-      placeholder: "Số phiếu...",
+      placeholder: "Nhập số phiếu...",
     },
     {
       key: "ngaySX",
-      label: "Ngày sản xuất",
+      label: "Tìm kiếm theo ngày sản xuất",
       type: "dateRange",
-      placeholder: "Khoảng ngày",
+      placeholder: "Nhập khoảng ngày",
     },
     {
       key: "ca",
-      label: "Ca",
+      label: "Tìm kiếm theo ca",
       type: "select",
       options: [
         { label: "Ca ngày (1)", value: 1 },
         { label: "Ca đêm (2)", value: 2 },
       ],
-    },
-    {
-      key: "scope",
-      label: "Lò",
-      type: "select",
-      options: [
-        { label: "Lò thổi 6", value: 6 },
-      ],
-    },
-    // {
-    //   key: "tinhTrang",
-    //   label: "Trạng thái",
-    //   type: "select",
-    //   options: [
-    //     { label: "Đang lưu", value: 0 },
-    //     { label: "Đã gửi", value: 1 },
-    //     { label: "Hoàn thành", value: 2 },
-    //     { label: "Đã thu hồi", value: 3 },
-    //     { label: "Không xác nhận", value: 4 },
-    //     { label: "Chốt", value: 5 },
-    //     { label: "Đang phê duyệt", value: 6 },
-    //   ],
-    // },
+    }
   ];
 
   return (
@@ -211,9 +180,9 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         mergeFilters={{ usercode: userObj?.maNV || "" }}
         showCreateButton={true}
         onCreateClick={() => {
-          navigate("/taophieutieuhaonauluyen_lf");
+          navigate("/tao_std");
         }}
-        createButtonText="Tạo phiếu mới"
+        createButtonText="Tạo sổ mới"
       />
       <Card>
         <Table<TableRecord>
@@ -246,4 +215,4 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   );
 };
 
-export default TieuHaoNauLuyen_LF;
+export default STD_NhapXuatTon;

@@ -40,6 +40,9 @@ import HeaderMapping from "../pages/KhoDuLieu/NM.HRC2/HeaderMapping";
 import TieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/TieuHaoNauLuyen_BOF";
 import TaoPhieuTieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/TaoPhieuBOF";
 import ChiTietTieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/ChiTietBOF";
+import STD_NhapXuatTon from "../pages/NM.HRC2/STD_NhapXuatTon/STD_NhapXuatTon";
+import Tao_STD from "../pages/NM.HRC2/STD_NhapXuatTon/Tao_STD";
+import ChiTiet_STD from "../pages/NM.HRC2/STD_NhapXuatTon/ChiTiet_STD";
 import ChiTietPhieuPhoiNguoi from "../pages/NMCTD/BienBanPhoiNguoi/ChiTietPhieuPhoiNguoi";
 export const routes = [
   {
@@ -392,6 +395,36 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <HeaderMapping />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "std_nhapxuatton",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <STD_NhapXuatTon />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "tao_std",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <Tao_STD />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chi_tiet_std",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTiet_STD />
             </RequireRole>
           </RequireAuth>
         ),

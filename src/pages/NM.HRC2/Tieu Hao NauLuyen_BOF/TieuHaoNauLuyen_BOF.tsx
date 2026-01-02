@@ -82,16 +82,6 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
       ellipsis: true,
     },
     {
-      title: "Ca",
-      dataIndex: "ca",
-      key: "ca",
-      width: 150,
-      ellipsis: true,
-      render: (value: number) => {
-        return value === 1 ? "Ca Ngày" : "Ca Đêm";
-      },
-    },
-    {
       title: "Lò thổi",
       dataIndex: "scope",
       key: "scope",
@@ -108,6 +98,16 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
       width: 190,
       render: (value: string) =>
         value ? dayjs(value).format("DD/MM/YYYY") : "-",
+    },
+    {
+      title: "Ca",
+      dataIndex: "ca",
+      key: "ca",
+      width: 130,
+      ellipsis: true,
+      render: (value: number) => {
+        return value === 1 ? "Ca Ngày" : "Ca Đêm";
+      },
     },
     {
       title: "Người tạo",
@@ -211,6 +211,11 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        showCreateButton={true}
+        onCreateClick={() => {
+          navigate("/taophieutieuhaonauluyen_bof");
+        }}
+        createButtonText="Tạo phiếu mới"
       />
       <Card>
         <Table<TableRecord>

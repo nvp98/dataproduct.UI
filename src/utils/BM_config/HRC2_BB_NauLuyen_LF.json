@@ -1,5 +1,6 @@
 {
   "code": "HRC2_BB_NauLuyen_LF",
+  "prefix": "BBTL_LF",
   "title": "BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
   "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
@@ -59,7 +60,7 @@
           "title": "Phụ gia và chất khử oxy", "dataIndex": "PG", "editable": false
         },
         {
-          "title": "Khác", "dataIndex": "others", "editable": false
+          "title": "Khác", "dataIndex": "others", "editable": false, "width": 100
         },
         {
           "title": "Khí",

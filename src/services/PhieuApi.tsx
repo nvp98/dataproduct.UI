@@ -23,4 +23,7 @@ export const PhieuApi = {
 
   search: (payload: SearchPhieuRequest) =>
     apiService.post("/api/Phieus/search", payload),
+
+  initializePhieu: (id: string) =>
+    apiService.post(`/api/Phieus/${id}/initialize`),
 };
