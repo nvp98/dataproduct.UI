@@ -29,9 +29,9 @@ import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
 import { headerKeyApi } from "../../../services/HeaderKeyApi";
 import type {
- 
   HeaderKeyPayload,
-  HeaderKeyMappingType,
+  HeaderKeyMapping,
+  HeaderMappingType,
 } from "../../../models/HeaderKeyModel";
 import HeaderMappingModal from "../../../components/HeaderMapping";
 import type { HeaderMappingRecord } from "../../../components/HeaderMapping";
@@ -74,14 +74,17 @@ const HeaderMapping = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [data, setData] = useState<HeaderKeyMapping[]>([]);
   const [mappingOpen, setMappingOpen] = useState(false);
-  const [mappingRecord, setMappingRecord] = useState<HeaderMappingRecord | null>(null);
+  const [mappingRecord, setMappingRecord] =
+    useState<HeaderMappingRecord | null>(null);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
   const [filters, setFilters] = useState<FilterState>({});
-  const [editingRecord, setEditingRecord] = useState<HeaderKeyMapping | null>(null);
+  const [editingRecord, setEditingRecord] = useState<HeaderKeyMapping | null>(
+    null
+  );
 
   const fetchData = async (
     page = pagination.current,
@@ -119,15 +122,20 @@ const HeaderMapping = () => {
     const values = searchForm.getFieldsValue();
     const range = values.dateRange as [unknown, unknown] | undefined;
     const fromDate =
-      Array.isArray(range) && range[0] ? dayjs(range[0] as string).format("YYYY-MM-DD") : undefined;
+      Array.isArray(range) && range[0]
+        ? dayjs(range[0] as string).format("YYYY-MM-DD")
+        : undefined;
     const toDate =
-      Array.isArray(range) && range[1] ? dayjs(range[1] as string).format("YYYY-MM-DD") : undefined;
+      Array.isArray(range) && range[1]
+        ? dayjs(range[1] as string).format("YYYY-MM-DD")
+        : undefined;
 
     const appliedFilters: FilterState = {
-      searchKey: values.searchKey?.trim() || undefined,,
+      searchKey: values.searchKey?.trim() || undefined,
       LoaiPhieu: values.LoaiPhieu || undefined,
       TrangThai: values.TrangThai || undefined,
-      IsUsedNXT: typeof values.IsUsedNXT === "boolean" ? values.IsUsedNXT : undefined,
+      IsUsedNXT:
+        typeof values.IsUsedNXT === "boolean" ? values.IsUsedNXT : undefined,
       FromDate: fromDate,
       ToDate: toDate,
       SortThuTu: values.SortThuTu || undefined,
@@ -188,7 +196,7 @@ const HeaderMapping = () => {
           message.error("Không tìm thấy ID Header Key để cập nhật");
           return;
         }
-       
+
         await headerKeyApi.update(headerKeyId, payload); // editingRecord.id là ID_HeaderKey
         message.success("Cập nhật Header Key thành công");
       } else {
@@ -258,7 +266,9 @@ const HeaderMapping = () => {
         key: "tenPhuLieu",
         width: 160,
         sorter: (a: HeaderKeyMapping, b: HeaderKeyMapping) =>
-          (a.tenPhuLieu || a.tenNguonDuLieu || "").localeCompare(b.tenPhuLieu || b.tenNguonDuLieu || ""),
+          (a.tenPhuLieu || a.tenNguonDuLieu || "").localeCompare(
+            b.tenPhuLieu || b.tenNguonDuLieu || ""
+          ),
         render: (_: unknown, record: HeaderKeyMapping) =>
           record.tenPhuLieu || record.tenNguonDuLieu || "-",
       },
@@ -319,7 +329,8 @@ const HeaderMapping = () => {
           }
 
           // Fallback (trường hợp isActive null/undefined): giữ theo logic "móc nối"
-          if (hasPhuLieu && hasHeaderKey) return <Tag color="green">Đang dùng</Tag>;
+          if (hasPhuLieu && hasHeaderKey)
+            return <Tag color="green">Đang dùng</Tag>;
           return <Tag color="orange">Chưa móc nối</Tag>;
         },
       },
@@ -405,7 +416,10 @@ const HeaderMapping = () => {
           <Row gutter={16}>
             <Col xs={24} md={8}>
               <Form.Item label="Tìm kiếm" name="searchKey">
-                <Input placeholder="Tên phụ liệu NM / Header key..." allowClear />
+                <Input
+                  placeholder="Tên phụ liệu NM / Header key..."
+                  allowClear
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
@@ -435,7 +449,10 @@ const HeaderMapping = () => {
             </Col>
             <Col xs={24} md={8}>
               <Form.Item label="Khoảng ngày" name="dateRange">
-                <DatePicker.RangePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+                <DatePicker.RangePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={8} style={{ display: "flex" }}>
@@ -461,7 +478,13 @@ const HeaderMapping = () => {
           columns={columns}
           dataSource={data}
           loading={loading}
-          onChange={(pager: TablePaginationConfig, _tableFilters, sorter: SorterResult<HeaderKeyMapping> | SorterResult<HeaderKeyMapping>[]) => {
+          onChange={(
+            pager: TablePaginationConfig,
+            _tableFilters,
+            sorter:
+              | SorterResult<HeaderKeyMapping>
+              | SorterResult<HeaderKeyMapping>[]
+          ) => {
             const nextPage = pager?.current ?? 1;
             const nextPageSize = pager?.pageSize ?? pagination.pageSize;
 
@@ -479,7 +502,12 @@ const HeaderMapping = () => {
             if (record.iD_PhuLieu) return `PL_${record.iD_PhuLieu}`;
             if (record.iD_HeaderKey) return `HK_${record.iD_HeaderKey}`;
             // fallback
-            return `ROW_${record.tenPhuLieu || record.tenNguonDuLieu || record.tenHienThi || "UNKNOWN"}`;
+            return `ROW_${
+              record.tenPhuLieu ||
+              record.tenNguonDuLieu ||
+              record.tenHienThi ||
+              "UNKNOWN"
+            }`;
           }}
           pagination={{
             current: pagination.current,
