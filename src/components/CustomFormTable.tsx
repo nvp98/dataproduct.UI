@@ -40,6 +40,7 @@ interface CustomFormTableProps {
     row: any
   ) => void;
   compactWhenEmpty?: boolean; // Nếu true, khi không có dòng sẽ không chiếm nhiều chiều cao
+  summary?: (data: readonly any[]) => React.ReactNode;
 }
 
 export default function CustomFormTable({
@@ -65,6 +66,7 @@ export default function CustomFormTable({
   stickyHeader = false,
   onCellChange,
   compactWhenEmpty = false,
+  summary,
 }: CustomFormTableProps) {
   const [rows, setRows] = useState(initialData);
 
@@ -334,6 +336,7 @@ export default function CustomFormTable({
               style={{ marginTop: 12 }}
               scroll={{ x: "max-content", y: scrollY }}
               sticky={stickyHeader}
+              summary={summary}
               rowSelection={
                 selectionEnabled
                   ? {

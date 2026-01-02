@@ -1,5 +1,6 @@
 {
   "code": "CTD_BB_Phoinong",
+  "prefix": "BBPN",
   "title": "BIÊN BẢN GIAO NHẬN PHÔI NÓNG",
   "headerInfo": {
     "company": "HÒA PHÁT DUNG QUẤT",
@@ -46,7 +47,7 @@
         { "title": "Mác", "dataIndex": "mac"},
         { "title": "Kích thước", "dataIndex": "kichThuoc"},
         { "title": "Đúc", "dataIndex": "duc"},
-        { "title": "NMC", "dataIndex": "nmc"},
+        { "title": "Xưởng Cán", "dataIndex": "vanChuyen" },
         {
           "title": "Loại I",
           "children": [

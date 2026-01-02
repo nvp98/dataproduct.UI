@@ -210,6 +210,8 @@ const TaoPhieuPhoiNguoi = () => {
         ...values,
         NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
         maBm: config.code,
+        prefix: (config as any).prefix || "",
+        scope: stored ? JSON.parse(stored).iD_PhanXuong : null,
         nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
         xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
         idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
@@ -295,7 +297,12 @@ const TaoPhieuPhoiNguoi = () => {
           }}
         >
           {config.headerFields.map((f, idx) => (
-            <CustomFormItem key={f.key || idx} field={f} idx={idx} />
+            <CustomFormItem
+              key={f.key || idx}
+              field={f}
+              idx={idx}
+              readOnly={false}
+            />
           ))}
         </div>
         {/* TABLE - danh sách phôi */}

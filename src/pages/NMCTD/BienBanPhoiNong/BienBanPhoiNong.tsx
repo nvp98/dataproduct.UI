@@ -1,180 +1,56 @@
-// import { useSelector, useDispatch } from "react-redux";
-// import type { RootState } from "../../store";
-// import EditableTable from '../../components/CustomTable';
-// import DynamicForm from "../../components/DynamicForm";
-// import type { JSONSchema7 } from "json-schema";
-// import DynamicBM from "../../components/DynamicForm";
-
-// import CTD_BB_Phoinguoi from "../../utils/BM_config/CTD_BB_Phoinguoi.json";
-// import CTD_BB_Phoinong from "../../utils/BM_config/CTD_BB_Phoinong.json";
-import {
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Form,
-  Input,
-  message,
-  Modal,
-  Popconfirm,
-  Row,
-  Select,
-  Space,
-  Table,
-  Tag,
-} from "antd";
+import { Button, Card, Space, Table, Tag } from "antd";
 // import PdfMakeExample from "../../components/PdfMakeExample";
 import CTD_BB_Phoinong from "../../../utils/BM_config/CTD_BB_Phoinong.json";
-import {
-  DeleteTwoTone,
-  EyeOutlined,
-  PlusOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
-import { useEffect, useState } from "react";
+import { EyeOutlined } from "@ant-design/icons";
+import { useMemo } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
-import { PhieuApi } from "../../../services/PhieuApi";
+// import { PhieuApi } from "../../../services/PhieuApi";
+import PhieuFilterCard, {
+  type FilterFieldConfig,
+} from "../../../components/PhieuFilterCard";
+import type { SearchPhieuResponseModel } from "../../../models/Phieu";
+import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 // Dữ liệu mẫu
 
 const BienBanPhoiNong = ({ type }: { type?: string }) => {
   const config = CTD_BB_Phoinong;
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any[]>([]);
-  // const [filters, setFilters] = useState<any>({});
-  const [pagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
-  const [editModal, setEditModal] = useState<{ open: boolean; record?: any }>({
-    open: false,
-    record: undefined,
-  });
-  const [editForm] = Form.useForm();
-  // const editEditorRef = useRef<any>(null); // Ref for TinyMCE editor
-
-  // Thêm state cho bộ lọc ngày
-  const [dateRange, setDateRange] = useState<any>(null);
-
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
   const userInfoStr = localStorage.getItem("userinfo");
   const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
 
-  const fetchData = async (page = 1, pageSize = 10, filters = {}) => {
-    setLoading(true);
-    try {
-      if (type === "viecdentoi") {
-        console.log("sssss");
-        const res = await PhieuApi.getData({
-          MaBM: config.code,
-          NguoiDuyetID: userInfoObj.tenNgan !== "P.KH" ? userObj.id : "",
-          // isCheckDuyet: 1,
-          page,
-          pageSize,
-          ...filters,
-        });
-        const sorted = Array.isArray(res)
-          ? [...(res as any)].sort((a, b) => {
-              const vb = dayjs(b?.ngayTao || b?.ngaySX).valueOf();
-              const va = dayjs(a?.ngayTao || a?.ngaySX).valueOf();
-              return vb - va;
-            })
-          : (res as any);
-        setData(sorted);
-      } else {
-        const res = await PhieuApi.getData({
-          MaBM: config.code,
-          // NguoiTaoID: userObj.id,
-          page,
-          pageSize,
-          ...filters,
-        });
-        const sorted = Array.isArray(res)
-          ? [...(res as any)].sort((a, b) => {
-              const vb = dayjs(b?.ngayTao || b?.ngaySX).valueOf();
-              const va = dayjs(a?.ngayTao || a?.ngaySX).valueOf();
-              return vb - va;
-            })
-          : (res as any);
-        setData(sorted);
-      }
+  const fixedFilters = useMemo(
+    () => ({ usercode: userObj?.maNV || "" }),
+    [userObj?.maNV]
+  );
 
-      // setPagination({
-      //   current: page,
-      //   pageSize: pageSize,
-      //   total: res.totalRecords,
-      // });
-      // setFilters(filters); // lưu filter hiện tại
-    } catch (err) {
-      console.error("Error fetch tickets:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    // fetchData(pagination.current, pagination.pageSize, {
-    //   usercode: userObj?.maNV || "",
-    // });
-    fetchData();
-    // setData(mockData);
-    // setPagination({
-    //   current: 1,
-    //   pageSize: 10,
-    //   total: mockData.length,
-    // });
-  }, []);
+  const {
+    data,
+    loading,
+    pagination,
+    handleFilter,
+    handleClearFilter,
+    onPageChange,
+  } = usePhieuSearchList({
+    maBm: config.code as string,
+    fixedFilters,
+  });
 
-  // Xử lý khi nhấn nút Lọc
-  const handleFilter = () => {
-    const filterObj: any = {
-      usercode: userObj?.maNV || "",
-    };
-    if (dateRange && dateRange.length === 2) {
-      filterObj.fromDate = dateRange[0].format("YYYY-MM-DD");
-      filterObj.toDate = dateRange[1].format("YYYY-MM-DD");
-    }
-    // fetchData(1, pagination.pageSize, filterObj);
-  };
   const statusConfig: Record<string, { color: string; text: string }> = {
-    0: { color: "purple", text: "Chờ xử lý" },
-    1: { color: "pink", text: "Đang xử lý" },
-    2: { color: "green", text: "Hoàn tất" },
+    0: { color: "purple", text: "Đang lưu" },
+    1: { color: "pink", text: "Đã gửi" },
+    2: { color: "blue", text: "Hoàn thành" },
+    3: { color: "tomato", text: "Đã thu hồi" },
+    4: { color: "yellow", text: "Không xác nhận" },
+    5: { color: "green", text: "Chốt" },
+    6: { color: "gray", text: "Đang phê duyệt" },
   };
 
-  // Xử lý khi xóa bộ lọc
-  const handleClearFilter = () => {
-    setDateRange(null);
-    // fetchData(1, pagination.pageSize, {
-    //   usercode: userObj?.maNV || "",
-    // });
-  };
-
-  const handleDelete = (key: string) => {
-    setLoading(true);
-    setTimeout(() => {
-      setData((prev) => prev.filter((item) => item.key !== key));
-      setLoading(false);
-      message.success("Đã xóa ticket!");
-    }, 500);
-  };
-  // const handleEdit = (record: any) => {
-  //   console.log("Edit record:", record);
-  //   setEditModal({ open: true, record });
-  //   editForm.setFieldsValue(record);
-  // };
-
-  const handleEditFinish = (values: any) => {
-    setData((prev) =>
-      prev.map((item) =>
-        item.key === editModal.record.key ? { ...item, ...values } : item
-      )
-    );
-    setEditModal({ open: false, record: undefined });
-    console.log("Edited values:", values);
-    message.success("Đã cập nhật ticket!");
+  type TableRecord = SearchPhieuResponseModel & {
+    pheDuyet?: Array<Record<string, unknown>>;
+    [key: string]: unknown;
   };
 
   const columns = [
@@ -233,15 +109,15 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       width: 220,
       ellipsis: true,
     },
+    // {
+    //   title: "Xưởng sản xuất",
+    //   dataIndex: "xuongId",
+    //   key: "xuongId",
+    //   width: 220,
+    //   ellipsis: true,
+    // },
     {
-      title: "Xưởng sản xuất",
-      dataIndex: "xuongId",
-      key: "xuongId",
-      width: 220,
-      ellipsis: true,
-    },
-    {
-      title: "Ngày lập",
+      title: "Ngày sản xuất",
       dataIndex: "ngaySX",
       key: "ngaySX",
       width: 140,
@@ -301,7 +177,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       width: 90,
       render: (_: any, record: any) => (
         <Space>
-          <Popconfirm
+          {/* <Popconfirm
             title="Bạn có chắc chắn muốn xóa ticket này?"
             okText="Xóa"
             cancelText="Hủy"
@@ -311,7 +187,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
               type="text"
               icon={<DeleteTwoTone twoToneColor="#ff4d4f" />}
             />
-          </Popconfirm>
+          </Popconfirm> */}
           <Button
             type="text"
             icon={<EyeOutlined twoToneColor="#1890ff" />}
@@ -326,51 +202,86 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     },
   ];
 
+  // Config cho các filter fields theo model phiếu
+  const filterFieldsConfig: FilterFieldConfig[] = [
+    {
+      key: "soPhieu",
+      label: "Số phiếu",
+      type: "text",
+      placeholder: "Số phiếu...",
+    },
+    {
+      key: "ngaySX",
+      label: "Ngày sản xuất",
+      type: "dateRange",
+      placeholder: "Khoảng ngày",
+    },
+    {
+      key: "ca",
+      label: "Ca",
+      type: "select",
+      placeholder: "Chọn ca",
+      options: [
+        { label: "Ca ngày (1)", value: 1 },
+        { label: "Ca đêm (2)", value: 2 },
+      ],
+    },
+    // {
+    //   key: "tinhTrang",
+    //   label: "Trạng thái",
+    //   type: "select",
+    //   placeholder: "Chọn trạng thái",
+    //   options: [
+    //     { label: "Đang lưu", value: 0 },
+    //     { label: "Đã gửi", value: 1 },
+    //     { label: "Hoàn thành", value: 2 },
+    //     { label: "Đã thu hồi", value: 3 },
+    //     { label: "Không xác nhận", value: 4 },
+    //     { label: "Chốt", value: 5 },
+    //     { label: "Đang phê duyệt", value: 6 },
+    //   ],
+    // },
+  ];
+
+  const uniqueData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+
+    // sort trước: mới → cũ
+    const sorted = [...data].sort((a: any, b: any) => {
+      const tb = dayjs(b.ngaySX).valueOf();
+      const ta = dayjs(a.ngaySX).valueOf();
+      return tb - ta;
+    });
+
+    // lọc trùng NgaySX + ca
+    const map = new Map<string, any>();
+    if (type !== "viecdentoi") {
+      sorted.forEach((item: any) => {
+        const key = `${item.ngaySX}_${item.ca}`;
+        if (!map.has(key)) {
+          map.set(key, item); // giữ bản ghi đầu tiên (mới nhất)
+        }
+      });
+
+      return Array.from(map.values());
+    } else {
+      return sorted;
+    }
+  }, [data]);
+
   return (
     <div>
-      <Card style={{ marginBottom: 16 }} title={config.title}>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
-            <Input placeholder="Số phiếu..." allowClear />
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <DatePicker.RangePicker
-              style={{ width: "100%" }}
-              format="DD/MM/YYYY"
-              placeholder={["Từ ngày", "Đến ngày"]}
-              value={dateRange}
-              onChange={setDateRange}
-            />
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              onClick={handleFilter}
-            >
-              Lọc
-            </Button>
-          </Col>
-          <Col>
-            <Button onClick={handleClearFilter}>Xóa bộ lọc</Button>
-          </Col>
-          {!type && (
-            <Col>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => navigate("/taophieuphoinong")}
-              >
-                Tạo phiếu mới
-              </Button>
-            </Col>
-          )}
-        </Row>
-      </Card>
+      <PhieuFilterCard
+        title={config.title}
+        onFilter={handleFilter}
+        onClearFilter={handleClearFilter}
+        filterFields={filterFieldsConfig}
+        mergeFilters={{ usercode: userObj?.maNV || "" }}
+      />
       <Card>
-        <Table
+        <Table<TableRecord>
           columns={columns}
-          dataSource={data}
+          dataSource={uniqueData as TableRecord[]}
           loading={loading}
           // pagination={{
           //   total: data.length,
@@ -384,7 +295,11 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
             current: pagination.current,
             pageSize: pagination.pageSize,
             total: pagination.total,
-            // onChange: (page, pageSize) => fetchData(page, pageSize, filters), // phân trang
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} phiếu`,
+            onChange: onPageChange,
           }}
           scroll={{ x: 1100 }}
           summary={() => (
@@ -398,80 +313,6 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           )}
         />
       </Card>
-      <Modal
-        title={
-          editModal.record
-            ? `Chỉnh sửa: ${editModal.record.soPhieu}`
-            : "Chỉnh sửa"
-        }
-        open={editModal.open}
-        onCancel={() => setEditModal({ open: false, record: undefined })}
-        footer={null}
-        destroyOnClose
-      >
-        <Form layout="vertical" form={editForm} onFinish={handleEditFinish}>
-          <Form.Item
-            name="soPhieu"
-            label="Số phiếu"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="Nhập số phiếu" />
-          </Form.Item>
-          <Form.Item
-            name="quyTrinh"
-            label="Quy trình"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="Nhập quy trình" />
-          </Form.Item>
-          <Form.Item name="kip" label="Kíp" rules={[{ required: true }]}>
-            <Input placeholder="Nhập kíp" />
-          </Form.Item>
-          <Form.Item
-            name="xuong"
-            label="Xưởng sản xuất"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="Nhập xưởng" />
-          </Form.Item>
-          <Form.Item
-            name="nguoiTao"
-            label="Người tạo"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="Nhập người tạo" />
-          </Form.Item>
-          <Form.Item name="ngaytao" label="Ngày tạo">
-            <DatePicker showTime style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item
-            name="ticketStatus"
-            label="Trạng thái"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={[
-                { value: "0", label: "Chờ xử lý" },
-                { value: "1", label: "Đang xử lý" },
-                { value: "2", label: "Hoàn tất" },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea rows={3} placeholder="Nhập ghi chú" />
-          </Form.Item>
-          <Space style={{ display: "flex", justifyContent: "end" }}>
-            <Button
-              onClick={() => setEditModal({ open: false, record: undefined })}
-            >
-              Hủy
-            </Button>
-            <Button type="primary" htmlType="submit">
-              Lưu
-            </Button>
-          </Space>
-        </Form>
-      </Modal>
     </div>
   );
 };

@@ -17,24 +17,36 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
   idx,
   disabled,
   readOnly = false,
-  initialValue,
+  // initialValue,
 }) => {
   const isDisabled = disabled ?? field.disabled ?? false;
 
   const renderField = () => {
     switch (field.type) {
       case "datetime":
-        return <DatePicker showTime format="DD/MM/YYYY" disabled={isDisabled} />;
+        return (
+          <DatePicker showTime format="DD/MM/YYYY" disabled={isDisabled} />
+        );
 
       case "date":
-        return <DatePicker format="DD/MM/YYYY" disabled={isDisabled} />;
+        return (
+          <DatePicker
+            format="DD/MM/YYYY"
+            allowClear={!readOnly}
+            // open={!readOnly}
+            open={readOnly ? false : undefined}
+            inputReadOnly={readOnly}
+          />
+        );
 
       case "select":
         return (
           <Select
             placeholder={field.placeholder || "Chọn..."}
-            allowClear
-            disabled={isDisabled}
+            allowClear={!readOnly}
+            open={readOnly ? false : undefined}
+            // open={!readOnly}
+            // disabled={isDisabled && !readOnly}
             // style={{ width: "100%" }}
           >
             {field.options?.map((opt: any) => (
@@ -71,7 +83,9 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
         );
 
       default:
-        return <Input placeholder={field.placeholder || ""} disabled={isDisabled} />;
+        return (
+          <Input placeholder={field.placeholder || ""} disabled={isDisabled} />
+        );
     }
   };
 
@@ -88,7 +102,7 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
       name={field.key}
       label={field.label}
       className={readOnly ? "readonly-field" : undefined}
-      initialValue={initialValue ?? field.initialValue}
+      // initialValue={initialValue ?? field.initialValue}
       // initialValue={initialValue}
       rules={[
         ...(field.rules || []),
@@ -99,7 +113,7 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
     >
       <>
         {renderField()}
-        {readOnly && <div className="readonly-overlay" />}
+        {/* {readOnly && <div className="readonly-overlay" />} */}
       </>
     </Form.Item>
   );

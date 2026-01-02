@@ -11,6 +11,9 @@ import {
   Table,
   DatePicker,
   Select,
+  Row,
+  Col,
+  Space,
 } from "antd";
 import CustomFormTable from "../../../components/CustomFormTable";
 import dayjs from "dayjs";
@@ -25,8 +28,6 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   ArrowRightOutlined,
-  SaveOutlined,
-  SendOutlined,
 } from "@ant-design/icons";
 import { CtdPhoiNongApi } from "../../../services/CtdPhoiNongApi";
 
@@ -51,13 +52,16 @@ const TaoPhieuPhoiNong = () => {
         loaiIITp?: number;
         loaiIII?: number;
         chuyenST?: number;
+        ST_ChuyenI?: number;
+        ST_ChuyenII?: number;
+        ST_ChuyenIII?: number;
       }
     >
   >({});
   const [selectedRowKeys, setSelectedRowKeys] = useState<
     Array<string | number>
   >([]);
-  const [loadingChuyen, setLoadingChuyen] = useState(false);
+  const [, setLoadingChuyen] = useState(false);
   const [filterXuong, setFilterXuong] = useState("");
   const [filterNgay, setFilterNgay] = useState(dayjs());
   const [filterCa, setFilterCa] = useState("");
@@ -69,58 +73,6 @@ const TaoPhieuPhoiNong = () => {
   // Theo dõi thay đổi trên các field chính
   const ngaySX = Form.useWatch("NgaySX", form);
   const ca = Form.useWatch("ca", form);
-  // Máy đúc gán cố định theo phiếu, không theo dõi chọn UI
-
-  useEffect(() => {
-    const ng = thongtinphieu?.ngaySX
-      ? dayjs(thongtinphieu.ngaySX, "YYYY-MM-DD")
-      : ngaySX || null;
-    setFilterNgay(ng);
-    const caVal = thongtinphieu?.ca ?? ca;
-    setFilterCa(caVal ? String(caVal) : "");
-  }, [ngaySX, ca, thongtinphieu]);
-
-  // useEffect(() => {
-  //   if (filterNgay && filterCa) {
-  //     handleFilterChuyenData();
-  //   }
-  // }, [filterNgay, filterCa]);
-
-  // Lấy tất cả field keys từ columns
-  // const getAllFieldKeys = (columns: any[]): string[] => {
-  //   const keys: string[] = [];
-  //   columns.forEach((col) => {
-  //     if (col.dataIndex) {
-  //       keys.push(col.dataIndex);
-  //     }
-  //     if (col.children) {
-  //       col.children.forEach((child: any) => {
-  //         if (child.dataIndex) {
-  //           keys.push(child.dataIndex);
-  //         }
-  //       });
-  //     }
-  //   });
-  //   return keys;
-  // };
-
-  // Khởi tạo dữ liệu bảng với cấu trúc đúng
-  // const getInitialTableData = () => {
-  //   const tableLayout = config.layout.find((l) => l.sectionType === "table");
-  //   if (!tableLayout) return [{ key: uuidv4() }];
-
-  //   const fieldKeys = getAllFieldKeys(tableLayout.columns);
-
-  //   return [
-  //     {
-  //       key: 1,
-  //       ...fieldKeys.reduce((acc, key) => {
-  //         acc[key] = "";
-  //         return acc;
-  //       }, {} as any),
-  //     },
-  //   ];
-  // };
 
   /**
    * Map dữ liệu API BKMIS sang hàng bảng phôi nóng
@@ -148,6 +100,7 @@ const TaoPhieuPhoiNong = () => {
           ghiChu: "",
           stChuaChuyen: 0,
           stDaChuyen: 0,
+          donTrongPhoi: 0,
         },
       ];
     }
@@ -172,7 +125,7 @@ const TaoPhieuPhoiNong = () => {
         me: item.me ?? "",
         mac: item.mac ?? "",
         duc: item.mayDuc ?? "",
-        nmc: "NMC" + (item.mayDuc ?? ""),
+        vanChuyen: item.vanChuyen,
         kichThuoc: item.kichThuoc ?? "",
         idBkPhoiThep: item.idBkPhoiThep ?? item.IdBkPhoiThep ?? item.id ?? 0,
         ST_LoaiI,
@@ -188,6 +141,7 @@ const TaoPhieuPhoiNong = () => {
         stBKM: tongSoThanhBKM,
         tinhTrang: tinhtrang,
         ghiChu: item.GhiChu ?? "",
+        donTrongPhoi: Number(item.donTrongPhoi || 0),
       };
     });
   };
@@ -213,16 +167,24 @@ const TaoPhieuPhoiNong = () => {
         ? form.getFieldValue("NgaySX").format("YYYY-MM-DD")
         : null);
     const sum =
-      opts?.sum != null
-        ? Number(opts.sum)
-        : row.tongSoThanh
-        ? Number(row.tongSoThanh)
-        : Number(row.ST_LoaiI || row.loaiI_TP || 0);
-    const loai1St = Number(row.ST_LoaiI || row.loaiI_TP || 0);
-    const loai1Kl = Number(row.KL_LoaiI || row.loaiI_BM || 0);
-    const kgPer1 = loai1St > 0 ? loai1Kl / loai1St : 0;
+      Number(row.ST_LoaiI || 0) +
+      Number(row.ST_LoaiII || 0) +
+      Number(row.ST_LoaiIII || 0);
+    // const loai1St = Number(row.ST_LoaiI || row.loaiI_TP || 0);
+    // const loai1Kl = Number(row.KL_LoaiI || row.loaiI_BM || 0);
+    // const kgPer1 = loai1St > 0 ? loai1Kl / loai1St : 0;
     const khoiLuongChuyenLoai1 =
-      sum > 0 ? Number((kgPer1 * sum).toFixed(3)) : 0;
+      Number(row.ST_LoaiI || 0) > 0
+        ? Number((row.ST_LoaiI * row.donTrongPhoi).toFixed(2))
+        : 0;
+    const khoiLuongChuyenLoai2 =
+      Number(row.ST_LoaiII || 0) > 0
+        ? Number((row.ST_LoaiII * row.donTrongPhoi).toFixed(2))
+        : 0;
+    const khoiLuongChuyenLoai3 =
+      Number(row.ST_LoaiIII || 0) > 0
+        ? Number((row.ST_LoaiIII * row.donTrongPhoi).toFixed(2))
+        : 0;
     const caKipText = caVal === 1 ? "Ngày" : caVal === 2 ? "Đêm" : "";
     return {
       id: 0,
@@ -234,14 +196,15 @@ const TaoPhieuPhoiNong = () => {
       mac: String(row.mac || ""),
       kichThuoc: String(row.kichThuoc || ""),
       nmCan: Number(row.duc || 0),
-      soThanhLoai1: sum, // chuyển theo Loại 1
+      soThanhLoai1: Number(row.ST_LoaiI || 0), // chuyển theo Loại 1
       khoiLuongLoai1: khoiLuongChuyenLoai1,
       soThanhLoai2: Number(row.ST_LoaiII || row.loaiII_TP || 0),
-      khoiLuongLoai2: Number(row.KL_LoaiII || row.loaiII_BM || 0),
+      khoiLuongLoai2: khoiLuongChuyenLoai2,
       soThanhLoai3: Number(row.ST_LoaiIII || row.loaiIII_TP || 0),
-      khoiLuongLoai3: Number(row.KL_LoaiIII || row.loaiIII_BM || 0),
+      khoiLuongLoai3: khoiLuongChuyenLoai3,
       tongSt: sum,
-      tongKl: sum > 0 ? khoiLuongChuyenLoai1 : Number(row.tongKhoi || 0),
+      tongKl:
+        khoiLuongChuyenLoai1 + khoiLuongChuyenLoai2 + khoiLuongChuyenLoai3,
       caKip: caKipText,
       idBkPhoiThep: row.idBkPhoiThep || 0,
       tinhTrang: 0,
@@ -265,14 +228,14 @@ const TaoPhieuPhoiNong = () => {
     }
   ) => {
     try {
-      console.log("rows", rows);
       const payload = rows.map((r) =>
         mapRowToCtdPhoiNong(r, {
           sum: opts?.sums ? Number(opts.sums[String(r.key)] || 0) : undefined,
-          ngaySx: thongtinphieu?.ngaySX || null,
-          ca: thongtinphieu?.ca || null,
+          ngaySx: filterNgay?.format("YYYY-MM-DD") ?? null,
+          ca: filterCa ?? null,
         })
       );
+      console.log("➡️ Payload gửi sang CtdPhoiNong/bulk: rows", rows);
       await CtdPhoiNongApi.bulk(payload); // đẩy dữ liệu vào API CtdPhoiNong/bulk
     } catch (e) {
       message.error("Không thể gửi dữ liệu chuyển sang API CtdPhoiNong");
@@ -292,7 +255,7 @@ const TaoPhieuPhoiNong = () => {
       mac: item.mac ?? "",
       kichThuoc: item.kichThuoc ?? "",
       duc: item.nmCan ?? 0,
-      nmc: "NMC" + (item.nmCan ?? ""),
+      vanChuyen: item.vanChuyen ?? "",
       idBkPhoiThep: item.idBkPhoiThep ?? 0,
       ST_LoaiI: item.soThanhLoai1 ?? 0,
       KL_LoaiI: item.khoiLuongLoai1 ?? 0,
@@ -332,38 +295,13 @@ const TaoPhieuPhoiNong = () => {
       if (tablePhoiNong && tablePhoiNong.dataSource.url !== "") {
         const res = await phoiGiaoNhanApi.getData(params);
         const apiRows = mapApiToTable(res as any) ?? [];
-        const readonlyKeys = getReadonlyFields(tablePhoiNong.columns || []);
-        setTableData((prev) => {
-          // const prevKeys = new Set(
-          //   (prev || []).map(
-          //     (r: any) => `${String(r.me || "")}|${String(r.mac || "")}`
-          //   )
-          // );
-          // const result: any[] = [];
-          // for (const prevRow of prev || []) {
-          //   const match = apiRows.find(
-          //     (r: any) =>
-          //       String(r.me || "") === String(prevRow.me || "") &&
-          //       String(r.mac || "") === String(prevRow.mac || "")
-          //   );
-          //   if (match) {
-          //     const merged: any = { ...prevRow };
-          //     readonlyKeys.forEach((key) => {
-          //       (merged as any)[key] = (match as any)[key];
-          //     });
-          //     result.push(merged);
-          //   } else {
-          //     result.push(prevRow);
-          //   }
-          // }
-          // for (const apiRow of apiRows) {
-          //   const k = `${String(apiRow.me || "")}|${String(apiRow.mac || "")}`;
-          //   if (!prevKeys.has(k)) {
-          //     result.push(apiRow);
-          //   }
-          // }
-          // console.log("➡️ Dữ liệu API:", apiRows);
-          return apiRows;
+        // const readonlyKeys = getReadonlyFields(tablePhoiNong.columns || []);
+        setTableData(() => {
+          // return apiRows;
+          return apiRows.map((row: any) => ({
+            ...row,
+            vanChuyen: mapXuogCan(row.vanChuyen),
+          }));
         });
       }
     } catch (err: any) {
@@ -404,25 +342,45 @@ const TaoPhieuPhoiNong = () => {
           setSoPhieu((res as any)?.soPhieu);
           console.log("✅ Dữ liệu phiếu:", res);
           // data.Data là phần JSON đã parse (form động)
-          const data = (res as any)?.jsonData || {};
+          const data = (res as any)?.jsonData || {}; //
           // Chuyển chuỗi -> dayjs
+
           const formValues = {
             ...data,
             idphieu: (res as any)?.idphieu || "",
-            NgaySX: data.NgaySX ? dayjs(data.NgaySX, "YYYY-MM-DD") : null,
+            NgaySX: (res as any)?.ngaySX
+              ? dayjs((res as any)?.ngaySX, "YYYY-MM-DD")
+              : null,
+            ca: (res as any)?.ca || null,
+            mayDuc: (res as any)?.mayDuc || null,
           };
-          // console.log("➡️ Form values:", formValues);
+
           form.setFieldsValue(formValues);
+          if (isViecDenToi) {
+            // setFilterNgay(formValues.NgaySX || null);
+            setFilterCa(formValues.ca ? String(formValues.ca) : "");
+            setFilterXuong(formValues.mayDuc || 0);
+          }
           setFilterNgay(formValues.NgaySX || null);
-          setFilterCa(formValues.ca ? String(formValues.ca) : "");
+          // setFilterCa(formValues.ca ? String(formValues.ca) : "");
 
           if (formValues.table1) {
             // dữ liệu này chỉ để tham khảo
             // setTableData(formValues.table1);
           }
-          if ((formValues as any).chuyenData) {
-            setChuyenData((formValues as any).chuyenData);
+          // load bảng dữ liệu dưới khi ở trạng thái xử lý
+          if (isViecDenToi) {
+            handleFilterChuyenData({
+              NgaySX: formValues.NgaySX
+                ? formValues.NgaySX.format("YYYY-MM-DD")
+                : null,
+              Ca: formValues.ca,
+              Xuong: formValues.mayDuc,
+            });
           }
+          // if ((formValues as any).chuyenData) {
+          //   setChuyenData((formValues as any).chuyenData);
+          // }
 
           message.success("Đã tải dữ liệu phiếu!");
         }
@@ -445,13 +403,24 @@ const TaoPhieuPhoiNong = () => {
    *   ngược lại width 110
    * - Giữ nguyên cấu hình các cột khác
    */
+  const mapXuogCan = (value?: string) => {
+    if (!value) return value;
+    if (!value.startsWith("NMC")) return value;
+
+    const so = value.replace("NMC", "");
+    return so ? `Cán ${so}` : "Cán";
+  };
   const enhanceColumns = (cols: any[]) => {
     return (cols || []).map((c: any) => {
       if (c.title === "Mẻ") return { ...c, width: 120, fixed: "left" };
-      if (c.title === "Mác") return { ...c, width: 140, fixed: "left" };
+      if (c.title === "Mác") return { ...c, width: 90, fixed: "left" };
       if (c.title === "Kích thước") return { ...c, width: 160 };
       if (c.title === "Đúc") return { ...c, width: 90 };
-      if (c.title === "NMC") return { ...c, width: 90 };
+      if (c.dataIndex == "vanChuyen")
+        return {
+          ...c,
+          width: 90,
+        };
       if (c.children && Array.isArray(c.children)) {
         return {
           ...c,
@@ -516,11 +485,11 @@ const TaoPhieuPhoiNong = () => {
       }));
       const payload = {
         ...values,
-        // NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
-        // maBm: config.code,
-        // nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
-        // xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
-        // idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
+        NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
+        maBm: config.code,
+        nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
+        xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
+        idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
         table1: normalizedTable,
         chuyenData: normalizedThung,
         // pheDuyet: pheDuyetFlow,
@@ -565,7 +534,7 @@ const TaoPhieuPhoiNong = () => {
       "mac",
       "kichThuoc",
       "duc",
-      "nmc",
+      "vanChuyen",
       "ST_LoaiI",
       "KL_LoaiI",
       "ST_LoaiII",
@@ -573,6 +542,9 @@ const TaoPhieuPhoiNong = () => {
       "ST_LoaiIII",
       "KL_LoaiIII",
       "tongKhoi",
+      // "tongSoThanh",
+      "stChuaChuyen",
+      "stBKM",
     ];
     const keys: string[] = [];
     (cols || []).forEach((c: any) => {
@@ -597,7 +569,7 @@ const TaoPhieuPhoiNong = () => {
    * - Gọi API CtdPhoiNong, map về dạng bảng
    * - Reset danh sách đã lọc
    */
-  const handleFilterChuyenData = async () => {
+  const handleFilterChuyenData = async (paramsInit: any) => {
     try {
       // setLoadingChuyen(true);
       setChuyenData([]);
@@ -607,7 +579,33 @@ const TaoPhieuPhoiNong = () => {
         message.warning("Chưa có ID phiếu để tải danh sách phôi đã chuyển");
         return;
       }
-      const res = await CtdPhoiNongApi.getByPhieu(idVal);
+      // const params = {
+      //   NgaySX: filterNgay ? filterNgay.format("YYYY-MM-DD") : null,
+      //   Ca: filterCa ? Number(filterCa) : null,
+      //   Xuong: filterXuong ? filterXuong : null,
+      //   Me: filterMe ? filterMe : null,
+      // };
+      const rawParams = {
+        NgaySX:
+          paramsInit?.NgaySX ??
+          (filterNgay ? filterNgay.format("YYYY-MM-DD") : undefined),
+        Ca: paramsInit?.Ca ?? filterCa,
+        Xuong: paramsInit?.Xuong ?? filterXuong,
+        Me: filterMe?.trim(),
+      };
+      const params = Object.fromEntries(
+        Object.entries(rawParams).filter(
+          ([_, v]) => v !== undefined && v !== null && v !== ""
+        )
+      );
+      // const params = {
+      //   NgaySX: paramsInit?.NgaySX ?? filterNgay.format("YYYY-MM-DD"),
+      //   Ca: paramsInit?.Ca ?? filterCa,
+      //   Xuong: paramsInit?.Xuong ?? filterXuong,
+      //   Me: filterMe ? filterMe : null,
+      // };
+
+      const res = await CtdPhoiNongApi.getData(params);
       const rows = mapCtdPhoiNongToRows(res as any);
       setChuyenData(rows);
       setFilteredChuyenData([]);
@@ -627,7 +625,11 @@ const TaoPhieuPhoiNong = () => {
       const idVal = thongtinphieu?.idphieu;
       let res: any;
       if (idVal) {
-        res = await CtdPhoiNongApi.getByPhieu(idVal);
+        const params = {
+          NgaySX: filterNgay ? filterNgay.format("YYYY-MM-DD") : null,
+          Ca: filterCa ? Number(filterCa) : null,
+        };
+        res = await CtdPhoiNongApi.getData(params);
       }
       const rows = mapCtdPhoiNongToRows(res as any);
       setChuyenData(rows);
@@ -669,7 +671,7 @@ const TaoPhieuPhoiNong = () => {
               : 0
           ),
         }));
-      console.log("stUpdatePayload", stUpdatePayload);
+      // console.log("stUpdatePayload", stUpdatePayload);
       if (stUpdatePayload.length > 0) {
         await phoiGiaoNhanApi.stThuHoiBulk(stUpdatePayload);
       }
@@ -694,7 +696,7 @@ const TaoPhieuPhoiNong = () => {
           : null,
         Ca: form.getFieldValue("ca") || ca,
         LoaiPhoi: 1,
-        MayDuc: thongtinphieu?.mayDuc,
+        // MayDuc: thongtinphieu?.mayDuc,
       });
       message.success("Đã thu hồi và cập nhật dữ liệu");
     } catch (e) {
@@ -795,52 +797,332 @@ const TaoPhieuPhoiNong = () => {
       message.error("Không thể tạo phiếu! Vui lòng thử lại.");
     }
   };
+  // Lưu phiếu nhưng không gửi trình ký
+  // const handleSaveOnly = async () => {
+  //   try {
+  //     const stored = localStorage.getItem("userinfo");
+  //     const values = form.getFieldsValue();
+  //     const normalizedTable = (tableData || []).map((r: any) => ({
+  //       ...r,
+  //       stBKM: Number(r.stBKM || 0),
+  //     }));
+  //     const normalizedThung = (chuyenData || []).map((r: any) => ({
+  //       ...r,
+  //       stBKM: Number(r.stBKM || 0),
+  //     }));
+  //     const payload = {
+  //       ...values,
+  //       NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
+  //       maBm: config.code,
+  //       nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
+  //       xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
+  //       idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
+  //       table1: normalizedTable,
+  //       chuyenData: normalizedThung,
+  //     };
+  //     if (values.idphieu) {
+  //       await PhieuApi.putData(values.idphieu, payload);
+  //       await PhieuApi.changeStatus_extended(values.idphieu, {
+  //         status: 0,
+  //         isLock: 0,
+  //         isDelete: 0,
+  //       });
+  //       message.success("Đã lưu phiếu (chưa gửi trình ký)");
+  //     } else {
+  //       const res = await PhieuApi.postData(payload);
+  //       const newId = (res as any)?.idphieu;
+  //       if (newId) form.setFieldsValue({ idphieu: newId });
+  //       setSoPhieu((res as any)?.soPhieu || "");
+  //       await PhieuApi.changeStatus_extended(newId, {
+  //         status: 0,
+  //         isLock: 0,
+  //         isDelete: 0,
+  //       });
+  //       message.success(`Đã lưu phiếu: ${(res as any)?.soPhieu || ""}`);
+  //     }
+  //   } catch (e) {
+  //     message.error("Không thể lưu phiếu");
+  //   }
+  // };
 
-  const handleSaveOnly = async () => {
-    try {
-      const stored = localStorage.getItem("userinfo");
-      const values = form.getFieldsValue();
-      const normalizedTable = (tableData || []).map((r: any) => ({
-        ...r,
-        stBKM: Number(r.stBKM || 0),
-      }));
-      const normalizedThung = (chuyenData || []).map((r: any) => ({
-        ...r,
-        stBKM: Number(r.stBKM || 0),
-      }));
-      const payload = {
-        ...values,
-        NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
-        maBm: config.code,
-        nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
-        xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
-        idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
-        table1: normalizedTable,
-        chuyenData: normalizedThung,
-      };
-      if (values.idphieu) {
-        await PhieuApi.putData(values.idphieu, payload);
-        await PhieuApi.changeStatus_extended(values.idphieu, {
-          status: 0,
-          isLock: 0,
-          isDelete: 0,
-        });
-        message.success("Đã lưu phiếu (chưa gửi trình ký)");
-      } else {
-        const res = await PhieuApi.postData(payload);
-        const newId = (res as any)?.idphieu;
-        if (newId) form.setFieldsValue({ idphieu: newId });
-        setSoPhieu((res as any)?.soPhieu || "");
-        await PhieuApi.changeStatus_extended(newId, {
-          status: 0,
-          isLock: 0,
-          isDelete: 0,
-        });
-        message.success(`Đã lưu phiếu: ${(res as any)?.soPhieu || ""}`);
-      }
-    } catch (e) {
-      message.error("Không thể lưu phiếu");
+  const getSelectedRowsOrWarn = () => {
+    if (!filterNgay || !filterCa) {
+      message.warning(
+        "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển'"
+      );
+      return null;
     }
+
+    if (!selectedRowKeys || selectedRowKeys.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một dòng");
+      return null;
+    }
+
+    const rows = tableData.filter((r) => selectedRowKeys.includes(r.key));
+
+    const invalid = rows.find((row) => {
+      const hasMe = !!row.me;
+      const hasMac = !!row.mac;
+      const hasAnyTypePair =
+        (Number(row.ST_LoaiI || 0) > 0 && Number(row.KL_LoaiI || 0) > 0) ||
+        (Number(row.ST_LoaiII || 0) > 0 && Number(row.KL_LoaiII || 0) > 0) ||
+        (Number(row.ST_LoaiIII || 0) > 0 && Number(row.KL_LoaiIII || 0) > 0);
+
+      return !(hasMe && hasMac && hasAnyTypePair);
+    });
+
+    if (invalid) {
+      message.warning(
+        "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng"
+      );
+      return null;
+    }
+
+    return rows;
+  };
+  // Chuyển hết các dòng đã chọn
+  const handleTransferAll = async () => {
+    const selectedRows = getSelectedRowsOrWarn();
+    if (!selectedRows) return;
+
+    //CHECK TRÙNG MẺ
+    const trungMe = checkDaChuyenMeTrongNgayCa(selectedRows);
+    if (trungMe) {
+      message.warning(
+        `Mẻ ${trungMe.me} đã được chuyển phôi trong ngày ${filterNgay.format(
+          "DD/MM/YYYY"
+        )} ca ${filterCa === "1" ? "Ngày" : "Đêm"}`
+      );
+      return;
+    }
+
+    // 1. Tính số thanh chuyển = toàn bộ Loại I
+    const sums: Record<string, number> = {};
+    selectedRows.forEach((r) => {
+      sums[String(r.key)] = Number(r.ST_LoaiI || 0);
+    });
+    // 1Tính số thanh THỰC CHUYỂN (clamp theo tồn)
+    const transferRows = selectedRows.map((r) => {
+      const soChuyen = Math.min(
+        Number(r.ST_LoaiI || 0),
+        Number(r.stChuaChuyen || 0)
+      );
+
+      sums[String(r.key)] = soChuyen;
+
+      return {
+        ...r,
+        ST_LoaiI: soChuyen,
+      };
+    });
+
+    // 2. Update bảng trên (BKMIS)
+    const nextTable = tableData.map((row) => {
+      if (!selectedRowKeys.includes(row.key)) return row;
+
+      return {
+        ...row,
+        tongSoThanh: Number(row.ST_LoaiI || 0),
+        stChuaChuyen: 0,
+        tinhTrang: 1, // đã chuyển hết
+      };
+    });
+
+    setTableData(nextTable);
+    setSelectedRowKeys([]);
+    console.log("➡️ selectedRows for CTD:", selectedRows);
+    // 3. Gửi CTD
+    await postBulkTransfers(transferRows, { sums });
+
+    // 4. Update BK MIS
+    const stUpdatePayload = selectedRows.map((r) => ({
+      id: Number(r.idBkPhoiThep || 0),
+      sT_DaChuyen: sums[String(r.key)],
+    }));
+
+    if (stUpdatePayload.length > 0) {
+      await phoiGiaoNhanApi.stDaChuyenBulk(stUpdatePayload);
+    }
+
+    // 5. Reload danh sách đã chuyển
+    await reloadChuyenData();
+
+    message.success("Đã chuyển hết các dòng đã chọn");
+  };
+
+  const openPartialTransferModal = () => {
+    const selectedRows = getSelectedRowsOrWarn();
+    if (!selectedRows) return;
+
+    //CHECK TRÙNG MẺ
+    const trungMe = checkDaChuyenMeTrongNgayCa(selectedRows);
+    if (trungMe) {
+      message.warning(
+        `Mẻ ${
+          trungMe.me
+        } đã được NM.CTD hoặc P.QLCL xác nhận trong ngày ${filterNgay.format(
+          "DD/MM/YYYY"
+        )} ca ${filterCa === "1" ? "Ngày" : "Đêm"}`
+      );
+      return;
+    }
+
+    const initVals: Record<string, any> = {};
+    selectedRowKeys.forEach((k) => (initVals[String(k)] = {}));
+
+    setPartialValues(initVals);
+    setPartialOpen(true);
+  };
+  // Chuyển một phần các dòng đã chọn
+  const handleConfirmPartialTransfer = async () => {
+    const selectedRows = tableData.filter((r) =>
+      selectedRowKeys.includes(r.key)
+    );
+    const updatedSelectedRows = selectedRows.map((r) => {
+      const v = partialValues[String(r.key)] || {};
+
+      return {
+        ...r,
+        ST_LoaiI: Number(v.ST_ChuyenI || 0),
+        ST_LoaiII: Number(v.ST_ChuyenII || 0),
+        ST_LoaiIII: Number(v.ST_ChuyenIII || 0),
+        tongSt:
+          Number(v.ST_ChuyenI || 0) +
+          Number(v.ST_ChuyenII || 0) +
+          Number(v.ST_ChuyenIII || 0),
+      };
+    });
+    // 1. Validate
+    for (const row of updatedSelectedRows) {
+      if (row.tongSt <= 0) {
+        message.error("Số thanh chuyển phải lớn hơn 0");
+        return;
+      }
+
+      // if (row.tongSt > Number(row.ST_LoaiI || 0)) {
+      //   message.error("Số thanh chuyển vượt quá số thanh hiện có");
+      //   return;
+      // }
+    }
+
+    // 2. Build sums
+    const sums: Record<string, number> = {};
+    const ST_LoaiI: Record<string, number> = {};
+    const ST_LoaiII: Record<string, number> = {};
+    const ST_LoaiIII: Record<string, number> = {};
+    selectedRows.forEach((r) => {
+      const v = partialValues[String(r.key)] || {};
+      ST_LoaiI[String(r.key)] = v.ST_ChuyenI || 0;
+      ST_LoaiII[String(r.key)] = v.ST_ChuyenII || 0;
+      ST_LoaiIII[String(r.key)] = v.ST_ChuyenIII || 0;
+      sums[String(r.key)] =
+        Number(v.ST_ChuyenI || 0) +
+        Number(v.ST_ChuyenII || 0) +
+        Number(v.ST_ChuyenIII || 0);
+    });
+    // console.log("➡️ updatedSelectedRows:", updatedSelectedRows);
+    // 3. Update bảng trên
+    // const nextTable = tableData.map((row) => {
+    //   if (!selectedRowKeys.includes(row.key)) return row;
+
+    //   const sum = sums[String(row.key)];
+    //   const totalRowST =
+    //     Number(row.ST_LoaiI || 0) +
+    //     Number(row.ST_LoaiII || 0) +
+    //     Number(row.ST_LoaiIII || 0);
+
+    //   return {
+    //     ...row,
+    //     tongSoThanh: sum,
+    //     stChuaChuyen: Math.max(totalRowST - sum, 0),
+    //     tinhTrang: 2, // chuyển một phần
+    //   };
+    // });
+
+    // setTableData(nextTable);
+    setPartialOpen(false);
+    setSelectedRowKeys([]);
+    console.log("➡️ updatedSelectedRows for CTD:", updatedSelectedRows);
+    // 4. Gửi CTD
+    await postBulkTransfers(updatedSelectedRows);
+
+    // 5. Update BK
+    const stUpdatePayload = updatedSelectedRows.map((r) => ({
+      id: Number(r.idBkPhoiThep || 0),
+      sT_DaChuyen: r.tongSt,
+    }));
+    console.log("stUpdatePayload", stUpdatePayload);
+    if (stUpdatePayload.length > 0) {
+      await phoiGiaoNhanApi.stDaChuyenBulk(stUpdatePayload);
+    }
+
+    await reloadChuyenData();
+    fetchTableData({
+      NgaySX: ngaySX ? dayjs(ngaySX).format("YYYY-MM-DD") : null,
+      Ca: ca,
+      LoaiPhoi: 1, // Phoi nong
+      // MayDuc: thongtinphieu?.mayDuc,
+    });
+
+    message.success("Đã chuyển một phần các dòng đã chọn");
+  };
+
+  const checkDaChuyenMeTrongNgayCa = (rows: any[]) => {
+    if (!filterNgay || !filterCa) return null;
+
+    const ngay = filterNgay.format("YYYY-MM-DD");
+    const caVal = Number(filterCa);
+    // tập mẻ đã được CTD hoặc QLCL xác nhận
+    // 1️⃣ Tập mẻ đã được xác nhận trong danh sách đã chuyển
+    const meDaXacNhan = new Set<string>(
+      (chuyenData || [])
+        .filter((item: any) => {
+          return (
+            item.ngaySX === ngay &&
+            Number(item.ca) === caVal &&
+            String(item.me || "").trim() !== "" &&
+            (Number(item.tinhTrangCTD || 0) === 1 ||
+              Number(item.tinhTrangQLCL || 0) === 1 ||
+              item.ctdXacNhan === true ||
+              item.qlclXacNhan === true)
+          );
+        })
+        .map((item: any) => String(item.me).trim())
+    );
+
+    // tìm mẻ bị trùng
+    const trungMe = rows.find((r) =>
+      meDaXacNhan.has(String(r.me || "").trim())
+    );
+
+    return trungMe || null;
+  };
+
+  // Hàm tính tổng dùng chung
+  const calcSummary = (rows: any[]) => {
+    return rows.reduce(
+      (acc, r) => {
+        acc.ST1 += Number(r.ST_LoaiI || 0);
+        acc.ST2 += Number(r.ST_LoaiII || 0);
+        acc.ST3 += Number(r.ST_LoaiIII || 0);
+
+        acc.KL1 += Number(r.KL_LoaiI || 0);
+        acc.KL2 += Number(r.KL_LoaiII || 0);
+        acc.KL3 += Number(r.KL_LoaiIII || 0);
+        acc.TongKL += Number(r.tongKhoi || 0);
+
+        return acc;
+      },
+      {
+        ST1: 0,
+        ST2: 0,
+        ST3: 0,
+        KL1: 0,
+        KL2: 0,
+        KL3: 0,
+        TongKL: 0,
+      }
+    );
   };
 
   return (
@@ -906,11 +1188,12 @@ const TaoPhieuPhoiNong = () => {
           >
             <Button
               onClick={async () => {
+                // console.log("➡️ Reloading table data...", ngaySX);
                 fetchTableData({
                   NgaySX: ngaySX ? dayjs(ngaySX).format("YYYY-MM-DD") : null,
                   Ca: ca,
                   LoaiPhoi: 1, // Phoi nong
-                  MayDuc: thongtinphieu?.mayDuc,
+                  // MayDuc: thongtinphieu?.mayDuc,
                 });
               }}
               style={{
@@ -923,91 +1206,7 @@ const TaoPhieuPhoiNong = () => {
               Làm mới
             </Button>
             <Button
-              onClick={async () => {
-                // Kiểm tra đã chọn Ngày và Ca trong vùng filter chưa
-                if (!filterNgay || !filterCa) {
-                  message.warning(
-                    "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển' trước khi chuyển!"
-                  );
-                  return;
-                }
-
-                if (!selectedRowKeys || selectedRowKeys.length === 0) {
-                  message.warning("Vui lòng chọn ít nhất một dòng");
-                  return;
-                }
-                const selectedRows = tableData.filter((r) =>
-                  selectedRowKeys.includes(r.key)
-                );
-                const invalid = selectedRows.find((row) => {
-                  const hasMe = !!row.me;
-                  const hasMac = !!row.mac;
-                  const hasQtyWeightRow =
-                    Number(row.soLuong || 0) > 0 &&
-                    Number(row.khoiLuong || row.tongKhoi || 0) > 0;
-                  const hasAnyTypePair =
-                    (Number(row.ST_LoaiI || 0) > 0 &&
-                      Number(row.KL_LoaiI || 0) > 0) ||
-                    (Number(row.ST_LoaiII || 0) > 0 &&
-                      Number(row.KL_LoaiII || 0) > 0) ||
-                    (Number(row.ST_LoaiIII || 0) > 0 &&
-                      Number(row.KL_LoaiIII || 0) > 0);
-                  return !(
-                    hasMe &&
-                    hasMac &&
-                    (hasQtyWeightRow || hasAnyTypePair)
-                  );
-                });
-                if (invalid) {
-                  message.warning(
-                    "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng"
-                  );
-                  return;
-                }
-                // const nextThung = [
-                //   ...chuyenData,
-                //   ...selectedRows.map((r) => ({
-                //     ...r,
-                //     isThung: true,
-                //     chuyenHet: true,
-                //     tongSoThanh: Number(r.ST_LoaiI || 0),
-                //     stChuaChuyen: 0,
-                //     stBKM: r.stBKM,
-                //     ngaySX: form.getFieldValue("NgaySX")
-                //       ? form.getFieldValue("NgaySX").format("YYYY-MM-DD")
-                //       : null,
-                //     ca: form.getFieldValue("ca") || null,
-                //   })),
-                // ];
-                const nextTable = tableData.map((row) => {
-                  if (!selectedRowKeys.includes(row.key)) return row;
-                  // const tong = Number(row.stDaChuyen || 0);
-                  return {
-                    ...row,
-                    tongSoThanh: row.stBKM,
-                    stChuaChuyen: 0,
-                    stBKM: row.stBKM,
-                    // tinhTrang: 1,
-                  };
-                });
-                // setChuyenData(nextThung);
-                setTableData(nextTable);
-                setSelectedRowKeys([]);
-                message.success("Đã chuyển hết các dòng đã chọn");
-                // await saveAfterTransfer(nextTable, nextThung);
-                const fullSums: Record<string, number> = {};
-                selectedRows.forEach((r) => {
-                  fullSums[String(r.key)] = Number(r.ST_LoaiI || 0);
-                });
-                await postBulkTransfers(selectedRows, { sums: fullSums });
-                const stUpdatePayload = selectedRows.map((r) => ({
-                  id: Number(r.idBkPhoiThep || 0),
-                  sT_DaChuyen: Number(fullSums[String(r.key)] || 0),
-                }));
-                if (stUpdatePayload.length > 0)
-                  await phoiGiaoNhanApi.stDaChuyenBulk(stUpdatePayload);
-                await reloadChuyenData();
-              }}
+              onClick={handleTransferAll}
               type="primary"
               style={{
                 backgroundColor: "#52c41a",
@@ -1019,66 +1218,7 @@ const TaoPhieuPhoiNong = () => {
               Chuyển hết
             </Button>
             <Button
-              onClick={() => {
-                // Kiểm tra đã chọn Ngày và Ca trong vùng filter chưa
-                if (!filterNgay || !filterCa) {
-                  message.warning(
-                    "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển' trước khi chuyển!"
-                  );
-                  return;
-                }
-
-                if (!selectedRowKeys || selectedRowKeys.length === 0) {
-                  message.warning("Vui lòng chọn ít nhất một dòng");
-                  return;
-                }
-                const selectedRows = tableData.filter((r) =>
-                  selectedRowKeys.includes(r.key)
-                );
-                const invalid = selectedRows.find((row) => {
-                  const hasMe = !!row.me;
-                  const hasMac = !!row.mac;
-                  const hasQtyWeightRow =
-                    Number(row.soLuong || 0) > 0 &&
-                    Number(row.khoiLuong || row.tongKhoi || 0) > 0;
-                  const hasAnyTypePair =
-                    (Number(row.ST_LoaiI || 0) > 0 &&
-                      Number(row.KL_LoaiI || 0) > 0) ||
-                    (Number(row.ST_LoaiII || 0) > 0 &&
-                      Number(row.KL_LoaiII || 0) > 0) ||
-                    (Number(row.ST_LoaiIII || 0) > 0 &&
-                      Number(row.KL_LoaiIII || 0) > 0);
-                  return !(
-                    hasMe &&
-                    hasMac &&
-                    (hasQtyWeightRow || hasAnyTypePair)
-                  );
-                });
-                if (invalid) {
-                  message.warning(
-                    "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng"
-                  );
-                  return;
-                }
-                const initVals: Record<
-                  string,
-                  {
-                    loaiI?: number;
-                    loaiIIBm?: number;
-                    loaiIITp?: number;
-                    loaiIII?: number;
-                    chuyenST?: number;
-                  }
-                > = {};
-                selectedRowKeys.forEach((k) => (initVals[String(k)] = {}));
-                setPartialValues(initVals);
-                setPartialOpen(true);
-              }}
-              style={{
-                backgroundColor: "#fa8c16",
-                borderColor: "#fa8c16",
-                color: "#fff",
-              }}
+              onClick={openPartialTransferModal}
               icon={<ArrowRightOutlined />}
             >
               Chuyển một phần
@@ -1091,112 +1231,96 @@ const TaoPhieuPhoiNong = () => {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 12,
+              gap: 24,
             }}
           >
             {config.headerFields.map((f, idx) => {
               if (f.key === "mayduc") return null; // bỏ UI máy đúc
-              return <CustomFormItem key={f.key || idx} field={f} idx={idx} />;
+              return (
+                <CustomFormItem
+                  key={f.key || idx}
+                  field={f}
+                  idx={idx}
+                  readOnly={true}
+                />
+              );
             })}
           </div>
         )}
+
         {/* TABLE - danh sách phôi */}
         {!isViecDenToi &&
           config.layout.map((layout, idx) => (
             <div key={idx}>
               {layout.sectionType === "table" && (
-                <CustomFormTable
-                  columns={enhanceColumns(layout.columns || [])}
-                  initialData={tableData}
-                  onDataChange={setTableData}
-                  addRowButtonText="+ Thêm dòng"
-                  showAddButton={false}
-                  showDeleteButton={false}
-                  minRows={1}
-                  editable={false}
-                  loading={loading}
-                  selectionEnabled={true}
-                  selectedRowKeys={selectedRowKeys}
-                  onSelectionChange={(keys) => setSelectedRowKeys(keys)}
-                  // isRowSelectable={(row) => {
-                  //   const hasMe = !!row.me;
-                  //   const hasMac = !!row.mac;
-                  //   const hasQtyWeightRow =
-                  //     Number(row.soLuong || 0) > 0 &&
-                  //     Number(row.khoiLuong || row.tongKhoi || 0) > 0;
-                  //   const hasAnyTypePair =
-                  //     (Number(row.ST_LoaiI || 0) > 0 &&
-                  //       Number(row.KL_LoaiI || 0) > 0) ||
-                  //     (Number(row.ST_LoaiII || 0) > 0 &&
-                  //       Number(row.KL_LoaiII || 0) > 0) ||
-                  //     (Number(row.ST_LoaiIII || 0) > 0 &&
-                  //       Number(row.KL_LoaiIII || 0) > 0);
-                  //   return hasMe && hasMac && (hasQtyWeightRow || hasAnyTypePair);
-                  // }}
-                  showStatus={true}
-                  stickyHeader={true}
-                  scrollY={460}
-                  readonlyFields={getReadonlyFields(layout.columns || [])}
-                  onCellChange={async (rowIndex, dataIndex, value) => {
-                    if (dataIndex !== "me") return;
-                    const mayDucVal = form.getFieldValue("mayduc");
-                    if (!value) return;
-                    try {
-                      setLoading(true);
-                      const params: any = { Me: value };
-                      if (mayDucVal) params.MayDuc = mayDucVal;
-                      const res = await phoiGiaoNhanApi.getData(params);
-                      const mapped = mapApiToTable(res as any);
-                      const newRow =
-                        mapped && mapped.length > 0 ? mapped[0] : undefined;
-                      if (!newRow) {
-                        message.info("Không tìm thấy dữ liệu BKMIS cho mẻ này");
-                      }
-                      setTableData((prev) => {
-                        const next = [...prev];
-                        const current = next[rowIndex] || {};
-                        next[rowIndex] = {
-                          ...current,
-                          me: value,
-                          mac: newRow?.mac ?? current.mac ?? "",
-                          kichThuoc:
-                            newRow?.kichThuoc ?? current.kichThuoc ?? "",
-                          idBkPhoiThep:
-                            newRow?.idBkPhoiThep ?? current.idBkPhoiThep ?? 0,
-                          ST_LoaiI: newRow?.ST_LoaiI ?? current.ST_LoaiI ?? 0,
-                          KL_LoaiI: newRow?.KL_LoaiI ?? current.KL_LoaiI ?? 0,
-                          ST_LoaiII:
-                            newRow?.ST_LoaiII ?? current.ST_LoaiII ?? 0,
-                          KL_LoaiII:
-                            newRow?.KL_LoaiII ?? current.KL_LoaiII ?? 0,
-                          ST_LoaiIII:
-                            newRow?.ST_LoaiIII ?? current.ST_LoaiIII ?? 0,
-                          KL_LoaiIII:
-                            newRow?.KL_LoaiIII ?? current.KL_LoaiIII ?? 0,
-                          tongKhoi: newRow?.tongKhoi ?? current.tongKhoi ?? 0,
-                          stBKM: Number(
-                            (newRow?.ST_LoaiI ?? 0) +
-                              (newRow?.ST_LoaiII ?? 0) +
-                              (newRow?.ST_LoaiIII ?? 0)
-                          ),
-                        };
-                        return next;
-                      });
-                    } catch (e) {
-                      message.error("Không thể tra cứu mẻ từ BKMIS");
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  // onRefresh={() => {
-                  //   const tableLayout = config.layout.find(
-                  //     (l) => l.sectionType === "table"
-                  //   );
-                  //   if (tableLayout) {
-                  //     fetchTableData(tableLayout);
-                  //   }
-                  // }}
-                />
+                <>
+                  <CustomFormTable
+                    columns={enhanceColumns(layout.columns || [])}
+                    initialData={tableData}
+                    onDataChange={setTableData}
+                    addRowButtonText="+ Thêm dòng"
+                    showAddButton={false}
+                    showDeleteButton={false}
+                    minRows={1}
+                    editable={false}
+                    loading={loading}
+                    selectionEnabled={true}
+                    selectedRowKeys={selectedRowKeys}
+                    onSelectionChange={(keys) => setSelectedRowKeys(keys)}
+                    isRowSelectable={(row) => Number(row.stChuaChuyen || 0) > 0}
+                    showStatus={true}
+                    stickyHeader={true}
+                    scrollY={460}
+                    readonlyFields={getReadonlyFields(layout.columns || [])}
+                    summary={() => {
+                      const s = calcSummary(tableData);
+                      return (
+                        <Table.Summary>
+                          <Table.Summary.Row>
+                            <Table.Summary.Cell
+                              index={1}
+                              colSpan={6}
+                              align="center"
+                            >
+                              <b>Tổng cộng</b>
+                            </Table.Summary.Cell>
+                            {/* Loại 1 */}
+                            <Table.Summary.Cell index={2} align="center">
+                              <b>{s.ST1}</b>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={3} align="right">
+                              <b>{(s.KL1 ?? 0).toLocaleString("vi-VN")}</b>
+                            </Table.Summary.Cell>
+
+                            {/* Loại 2 */}
+                            <Table.Summary.Cell index={4} align="center">
+                              <b>{s.ST2}</b>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={5} align="right">
+                              <b>{(s.KL2 ?? 0).toLocaleString("vi-VN")}</b>
+                            </Table.Summary.Cell>
+
+                            {/* Loại 3 */}
+                            <Table.Summary.Cell index={6} align="center">
+                              <b>{s.ST3}</b>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={7} align="right">
+                              <b>{(s.KL3 ?? 0).toLocaleString("vi-VN")}</b>
+                            </Table.Summary.Cell>
+
+                            {/* Tổng */}
+                            <Table.Summary.Cell index={8} align="center">
+                              <b>{s.ST}</b>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={9} align="right">
+                              <b>{(s.TongKL ?? 0).toLocaleString("vi-VN")}</b>
+                            </Table.Summary.Cell>
+                          </Table.Summary.Row>
+                        </Table.Summary>
+                      );
+                    }}
+                  />
+                </>
               )}
             </div>
           ))}
@@ -1218,51 +1342,339 @@ const TaoPhieuPhoiNong = () => {
               borderRadius: "4px",
             }}
           >
-            <div>
+            {/* <div>
               <label style={{ fontSize: 12, fontWeight: "bold" }}>Xưởng</label>
-              <Input
-                placeholder="Xưởng"
-                value={filterXuong}
-                onChange={(e) => setFilterXuong(e.target.value)}
-                size="small"
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: "bold" }}>Ngày</label>
-              <DatePicker
-                style={{ width: "100%" }}
-                value={filterNgay}
-                onChange={(date) => setFilterNgay(date)}
-                format="YYYY-MM-DD"
-                size="small"
-                disabled
-              />
-            </div>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: "bold" }}>Ca</div>
               <Select
-                style={{ width: "100%" }}
-                placeholder="Chọn Ca"
-                value={filterCa}
-                onChange={(value) => setFilterCa(value)}
+                placeholder="Chọn xưởng cán"
+                value={filterXuong || undefined}
+                onChange={(value) => setFilterXuong(value)}
                 size="small"
-                allowClear={false}
-                disabled
+                allowClear
+                style={{ width: "100%" }}
                 options={[
-                  { label: "Ngày", value: "1" },
-                  { label: "Đêm", value: "2" },
+                  { label: "Xưởng cán 1", value: "1" },
+                  { label: "Xưởng cán 2", value: "2" },
+                  { label: "Xưởng cán 3", value: "3" },
                 ]}
               />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: "bold" }}>Mẻ</label>
-              <Input
-                placeholder="Mẻ"
-                value={filterMe}
-                onChange={(e) => setFilterMe(e.target.value)}
-                size="small"
-              />
-            </div>
+            </div> */}
+            <Row gutter={12} align="bottom">
+              {/* Xưởng */}
+              <Col style={{ width: 140 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+                  Xưởng
+                </div>
+                <Select
+                  placeholder="Chọn xưởng cán"
+                  value={filterXuong || undefined}
+                  onChange={setFilterXuong}
+                  size="small"
+                  style={{ width: "100%" }}
+                  allowClear={!isViecDenToi}
+                  open={isViecDenToi ? false : undefined}
+                  options={[
+                    { label: "Xưởng cán 1", value: "1" },
+                    { label: "Xưởng cán 2", value: "2" },
+                    { label: "Xưởng cán 3", value: "3" },
+                  ]}
+                />
+              </Col>
+
+              {/* Ngày */}
+              <Col style={{ width: 140 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+                  Ngày
+                </div>
+                <DatePicker
+                  style={{ width: "100%" }}
+                  value={filterNgay}
+                  onChange={setFilterNgay}
+                  format="YYYY-MM-DD"
+                  size="small"
+                  open={isViecDenToi ? false : undefined}
+                  inputReadOnly={isViecDenToi}
+                  allowClear={!isViecDenToi}
+                />
+              </Col>
+
+              {/* Ca */}
+              <Col style={{ width: 120 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+                  Ca
+                </div>
+                <Select
+                  style={{ width: "100%" }}
+                  placeholder="Chọn Ca"
+                  value={filterCa}
+                  onChange={setFilterCa}
+                  size="small"
+                  allowClear={!isViecDenToi}
+                  open={isViecDenToi ? false : undefined}
+                  options={[
+                    { label: "Ngày", value: "1" },
+                    { label: "Đêm", value: "2" },
+                  ]}
+                />
+              </Col>
+
+              {/* Mẻ */}
+              <Col style={{ width: 200 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+                  Mẻ
+                </div>
+                <Input
+                  placeholder="Mẻ"
+                  value={filterMe}
+                  onChange={(e) => setFilterMe(e.target.value)}
+                  size="small"
+                />
+              </Col>
+              {/* ===== RIGHT: ACTION BUTTONS ===== */}
+              <Col>
+                <Space size={8}>
+                  <Button
+                    onClick={handleFilterChuyenData}
+                    type="primary"
+                    size="small"
+                    style={{
+                      backgroundColor: "#1890ff",
+                      borderColor: "#1890ff",
+                    }}
+                  >
+                    Tìm kiếm
+                  </Button>
+                  {/* <Button
+              onClick={handleResetFilter}
+              style={{
+                backgroundColor: "#f0f0f0",
+                borderColor: "#d9d9d9",
+              }}
+            >
+              Xóa filter
+            </Button> */}
+                  {userInfo?.tenNgan == "P.QLCL" && type === "viecdentoi" && (
+                    <Button
+                      size="small"
+                      onClick={async () => {
+                        if (
+                          !selectedProcessedKeys ||
+                          selectedProcessedKeys.length === 0
+                        ) {
+                          message.warning(
+                            "Vui lòng chọn ít nhất một dòng để QLCL xác nhận"
+                          );
+                          return;
+                        }
+                        try {
+                          setLoadingChuyen(true);
+                          const source =
+                            filteredChuyenData.length > 0
+                              ? filteredChuyenData
+                              : chuyenData;
+                          const idsPayload = source
+                            .filter((r: any) =>
+                              selectedProcessedKeys.includes(r.key)
+                            )
+                            .map((r: any) => ({
+                              id: Number(r.id || 0),
+                              tinhTrangQLCL: 1,
+                            }));
+                          if (idsPayload.length === 0) {
+                            message.warning(
+                              "Không có dòng hợp lệ để QLCL xác nhận"
+                            );
+                            setLoadingChuyen(false);
+                            return;
+                          }
+                          await CtdPhoiNongApi.updateStatus(idsPayload);
+                          const next = source.map((r: any) =>
+                            selectedProcessedKeys.includes(r.key)
+                              ? { ...r, tinhTrangQLCL: 1 }
+                              : r
+                          );
+                          if (filteredChuyenData.length > 0) {
+                            setFilteredChuyenData(next);
+                          } else {
+                            setChuyenData(next);
+                          }
+                          setSelectedProcessedKeys([]);
+                          await saveAfterTransfer(tableData, next);
+                          message.success("QLCL đã xác nhận các dòng đã chọn");
+                        } catch (e) {
+                          message.error(
+                            "Không thể cập nhật trạng thái xác nhận QLCL"
+                          );
+                        } finally {
+                          setLoadingChuyen(false);
+                        }
+                      }}
+                      type="primary"
+                      style={{
+                        backgroundColor: "#13c2c2",
+                        borderColor: "#13c2c2",
+                      }}
+                    >
+                      Xác nhận QLCL
+                    </Button>
+                  )}
+                  {userInfo?.tenNgan == "NM.CTD" && type === "viecdentoi" && (
+                    <Button
+                      size="small"
+                      onClick={async () => {
+                        if (
+                          !selectedProcessedKeys ||
+                          selectedProcessedKeys.length === 0
+                        ) {
+                          message.warning(
+                            "Vui lòng chọn ít nhất một dòng để xác nhận"
+                          );
+                          return;
+                        }
+                        try {
+                          setLoadingChuyen(true);
+                          const source =
+                            filteredChuyenData.length > 0
+                              ? filteredChuyenData
+                              : chuyenData;
+                          const idsPayload = source
+                            .filter((r: any) =>
+                              selectedProcessedKeys.includes(r.key)
+                            )
+                            .map((r: any) => ({
+                              id: Number(r.id || 0),
+                              tinhTrangCTD: 1,
+                            }));
+                          if (idsPayload.length === 0) {
+                            message.warning("Không có dòng hợp lệ để xác nhận");
+                            setLoadingChuyen(false);
+                            return;
+                          }
+                          await CtdPhoiNongApi.updateStatus(idsPayload);
+                          const next = source.map((r: any) =>
+                            selectedProcessedKeys.includes(r.key)
+                              ? { ...r, tinhTrangCTD: 1, tinhTrang: 1 }
+                              : r
+                          );
+                          if (filteredChuyenData.length > 0) {
+                            setFilteredChuyenData(next);
+                          } else {
+                            setChuyenData(next);
+                          }
+                          setSelectedProcessedKeys([]);
+                          await saveAfterTransfer(tableData, next);
+                          message.success("Đã xác nhận các dòng đã chọn");
+                        } catch (e) {
+                          message.error(
+                            "Không thể cập nhật trạng thái xác nhận CTD"
+                          );
+                        } finally {
+                          setLoadingChuyen(false);
+                        }
+                      }}
+                      type="primary"
+                      style={{
+                        backgroundColor: "#52c41a",
+                        borderColor: "#52c41a",
+                      }}
+                    >
+                      Xác nhận
+                    </Button>
+                  )}
+                  {userInfo?.tenNgan == "P.KH" && type === "viecdentoi" && (
+                    <Button
+                      size="small"
+                      onClick={async () => {
+                        try {
+                          setLoadingChuyen(true);
+                          const source =
+                            filteredChuyenData.length > 0
+                              ? filteredChuyenData
+                              : chuyenData;
+                          const allDaXacNhan = source.every(
+                            (r: any) =>
+                              Number(r.tinhTrangCTD || 0) === 1 &&
+                              Number(r.tinhTrangQLCL || 0) === 1
+                          );
+                          if (!allDaXacNhan) {
+                            message.warning(
+                              "Tất cả dòng phải được CTD và QLCL xác nhận trước khi chốt"
+                            );
+                            setLoadingChuyen(false);
+                            return;
+                          }
+                          // const hasChuaXacNhan = source.some(
+                          //   (r: any) =>
+                          //     selectedProcessedKeys.includes(r.key) &&
+                          //     (Number(r.tinhTrangCTD || 0) === 0 ||
+                          //       Number(r.tinhTrangQLCL || 0) === 0)
+                          // );
+
+                          // if (hasChuaXacNhan) {
+                          //   message.warning(
+                          //     "Dữ liệu chưa được CTD/QLCL xác nhận"
+                          //   );
+                          //   setLoadingChuyen(false);
+                          //   return;
+                          // }
+                          await PhieuApi.changeStatus_extended(
+                            thongtinphieu.idphieu,
+                            {
+                              status: 5,
+                              isLock: 0,
+                              isDelete: 0,
+                            }
+                          );
+                          // Cập nhật lại trạng thái chốt ở các dòng
+                          var params = {
+                            NgaySX: filterNgay
+                              ? filterNgay.format("YYYY-MM-DD")
+                              : null,
+                            Ca: filterCa ? Number(filterCa) : null,
+                            Xuong: filterXuong || null,
+                          };
+                          await CtdPhoiNongApi.updateStatusChot(params);
+                          message.success("Đã chốt phiếu");
+                        } catch (e) {
+                          message.error("Có lỗi xảy ra không thể chốt phiếu!");
+                        } finally {
+                          setLoadingChuyen(false);
+                        }
+                      }}
+                      type="primary"
+                      style={{
+                        backgroundColor: "#52c41a",
+                        borderColor: "#52c41a",
+                      }}
+                    >
+                      Chốt phiếu
+                    </Button>
+                  )}
+
+                  {!isViecDenToi && (
+                    <Button
+                      size="small"
+                      onClick={handleRecall}
+                      danger
+                      type="primary"
+                      style={{
+                        backgroundColor: "#ff4d4f",
+                        borderColor: "#ff4d4f",
+                      }}
+                    >
+                      Thu hồi
+                    </Button>
+                  )}
+                </Space>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "flex-end",
+                    paddingBottom: 2,
+                  }}
+                ></div>
+              </Col>
+            </Row>
           </div>
           {/* Action buttons */}
           <div
@@ -1272,179 +1684,7 @@ const TaoPhieuPhoiNong = () => {
               marginBottom: 16,
               justifyContent: "flex-end",
             }}
-          >
-            <Button
-              onClick={handleFilterChuyenData}
-              type="primary"
-              style={{
-                backgroundColor: "#1890ff",
-                borderColor: "#1890ff",
-              }}
-            >
-              Tìm kiếm
-            </Button>
-            {/* <Button
-              onClick={handleResetFilter}
-              style={{
-                backgroundColor: "#f0f0f0",
-                borderColor: "#d9d9d9",
-              }}
-            >
-              Xóa filter
-            </Button> */}
-            {userInfo?.tenNgan == "P.QLCL" && type === "viecdentoi" && (
-              <Button
-                onClick={async () => {
-                  if (
-                    !selectedProcessedKeys ||
-                    selectedProcessedKeys.length === 0
-                  ) {
-                    message.warning(
-                      "Vui lòng chọn ít nhất một dòng để QLCL xác nhận"
-                    );
-                    return;
-                  }
-                  try {
-                    setLoadingChuyen(true);
-                    const source =
-                      filteredChuyenData.length > 0
-                        ? filteredChuyenData
-                        : chuyenData;
-                    const idsPayload = source
-                      .filter((r: any) => selectedProcessedKeys.includes(r.key))
-                      .map((r: any) => ({
-                        id: Number(r.id || 0),
-                        tinhTrangQLCL: 1,
-                      }));
-                    if (idsPayload.length === 0) {
-                      message.warning("Không có dòng hợp lệ để QLCL xác nhận");
-                      setLoadingChuyen(false);
-                      return;
-                    }
-                    await CtdPhoiNongApi.updateStatus(idsPayload);
-                    const next = source.map((r: any) =>
-                      selectedProcessedKeys.includes(r.key)
-                        ? { ...r, tinhTrangQLCL: 1 }
-                        : r
-                    );
-                    if (filteredChuyenData.length > 0) {
-                      setFilteredChuyenData(next);
-                    } else {
-                      setChuyenData(next);
-                    }
-                    setSelectedProcessedKeys([]);
-                    await saveAfterTransfer(tableData, next);
-                    message.success("QLCL đã xác nhận các dòng đã chọn");
-                  } catch (e) {
-                    message.error(
-                      "Không thể cập nhật trạng thái xác nhận QLCL"
-                    );
-                  } finally {
-                    setLoadingChuyen(false);
-                  }
-                }}
-                type="primary"
-                style={{ backgroundColor: "#13c2c2", borderColor: "#13c2c2" }}
-              >
-                Xác nhận QLCL
-              </Button>
-            )}
-            {userInfo?.tenNgan == "NM.CTD" && type === "viecdentoi" && (
-              <Button
-                onClick={async () => {
-                  if (
-                    !selectedProcessedKeys ||
-                    selectedProcessedKeys.length === 0
-                  ) {
-                    message.warning(
-                      "Vui lòng chọn ít nhất một dòng để xác nhận"
-                    );
-                    return;
-                  }
-                  try {
-                    setLoadingChuyen(true);
-                    const source =
-                      filteredChuyenData.length > 0
-                        ? filteredChuyenData
-                        : chuyenData;
-                    const idsPayload = source
-                      .filter((r: any) => selectedProcessedKeys.includes(r.key))
-                      .map((r: any) => ({
-                        id: Number(r.id || 0),
-                        tinhTrangCTD: 1,
-                      }));
-                    if (idsPayload.length === 0) {
-                      message.warning("Không có dòng hợp lệ để xác nhận");
-                      setLoadingChuyen(false);
-                      return;
-                    }
-                    await CtdPhoiNongApi.updateStatus(idsPayload);
-                    const next = source.map((r: any) =>
-                      selectedProcessedKeys.includes(r.key)
-                        ? { ...r, tinhTrangCTD: 1, tinhTrang: 1 }
-                        : r
-                    );
-                    if (filteredChuyenData.length > 0) {
-                      setFilteredChuyenData(next);
-                    } else {
-                      setChuyenData(next);
-                    }
-                    setSelectedProcessedKeys([]);
-                    await saveAfterTransfer(tableData, next);
-                    message.success("Đã xác nhận các dòng đã chọn");
-                  } catch (e) {
-                    message.error("Không thể cập nhật trạng thái xác nhận CTD");
-                  } finally {
-                    setLoadingChuyen(false);
-                  }
-                }}
-                type="primary"
-                style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
-              >
-                Xác nhận
-              </Button>
-            )}
-            {userInfo?.tenNgan == "P.KH" && type === "viecdentoi" && (
-              <Button
-                onClick={async () => {
-                  try {
-                    setLoadingChuyen(true);
-                    await PhieuApi.changeStatus_extended(
-                      thongtinphieu.idphieu,
-                      {
-                        status: 2,
-                        isLock: 0,
-                        isDelete: 0,
-                      }
-                    );
-                    message.success("Đã chốt phiếu");
-                  } catch (e) {
-                    message.error("Có lỗi xảy ra không thể chốt phiếu!");
-                  } finally {
-                    setLoadingChuyen(false);
-                  }
-                }}
-                type="primary"
-                style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
-              >
-                Chốt phiếu
-              </Button>
-            )}
-
-            {!isViecDenToi && (
-              <Button
-                onClick={handleRecall}
-                danger
-                type="primary"
-                style={{
-                  backgroundColor: "#ff4d4f",
-                  borderColor: "#ff4d4f",
-                }}
-              >
-                Thu hồi
-              </Button>
-            )}
-          </div>
+          ></div>
           <div style={{ overflowX: "auto" }}>
             <Table
               size="small"
@@ -1455,6 +1695,13 @@ const TaoPhieuPhoiNong = () => {
               rowSelection={{
                 selectedRowKeys: selectedProcessedKeys,
                 onChange: (keys: Key[]) => setSelectedProcessedKeys(keys),
+                getCheckboxProps: (record: any) => ({
+                  disabled:
+                    (!isViecDenToi &&
+                      (Number(record.tinhTrangCTD || 0) === 1 ||
+                        Number(record.tinhTrangQLCL || 0) === 1)) ||
+                    userInfo?.tenNgan == "P.KH",
+                }),
                 // getCheckboxProps: (record: any) => ({
                 //   disabled: Number(record.tinhTrang || 0) == 1,
                 // }),
@@ -1510,31 +1757,68 @@ const TaoPhieuPhoiNong = () => {
                     );
                   },
                 },
+                {
+                  title: "Tình trạng",
+                  dataIndex: "tinhTrang",
+                  width: 130,
+                  render: (val: any) => {
+                    const isDone = Number(val || 0) === 1;
+                    const style = isDone
+                      ? {
+                          backgroundColor: "#52c41a",
+                          borderColor: "#52c41a",
+                          color: "#fff",
+                        }
+                      : {
+                          backgroundColor: "#d9d9d9",
+                          borderColor: "#d9d9d9",
+                          color: "#333",
+                        };
+                    return (
+                      <Button size="small" disabled style={style}>
+                        {isDone ? "Đã chốt" : "Chưa xử lý"}
+                      </Button>
+                    );
+                  },
+                },
+                { title: "Ngày SX", dataIndex: "ngaySX", width: 160 },
+                {
+                  title: "Ca",
+                  dataIndex: "ca",
+                  width: 110,
+                  render: (val: any) => (val === 1 ? "Ngày" : "Đêm"),
+                },
                 { title: "Mẻ", dataIndex: "me", width: 120 },
                 { title: "Mác", dataIndex: "mac", width: 140 },
                 { title: "Kích thước", dataIndex: "kichThuoc", width: 160 },
                 { title: "Đúc", dataIndex: "duc", width: 90 },
-                { title: "NMC", dataIndex: "nmc", width: 90 },
+                {
+                  title: "NMC",
+                  dataIndex: "vanChuyen",
+                  width: 90,
+                  render: (val: any) =>
+                    val ? `Cán ${val.replace("NMC", "")}` : "",
+                },
                 {
                   title: "Loại 1",
                   children: [
                     {
                       title: "ST",
                       dataIndex: "ST_LoaiI",
+                      align: "center",
                       width: 90,
-                      render: (val: any) => (
-                        <Typography.Text type={val > 0 ? "success" : undefined}>
-                          {val}
-                        </Typography.Text>
-                      ),
+                      render: (val: any) => (val ? val : ""),
                     },
                     {
                       title: "KL",
+                      align: "center",
                       dataIndex: "KL_LoaiI",
                       width: 110,
-                      render: (val: any) => (
-                        <Typography.Text type="danger">{val}</Typography.Text>
-                      ),
+                      render: (val: any) =>
+                        // <Typography.Text type="danger">{val}</Typography.Text>
+                        val !== null && val !== undefined
+                          ? Number(val).toLocaleString("vi-VN")
+                          : "",
                     },
                   ],
                 },
@@ -1543,15 +1827,20 @@ const TaoPhieuPhoiNong = () => {
                   children: [
                     {
                       title: "ST",
+                      align: "center",
                       dataIndex: "ST_LoaiII",
                       width: 90,
-                      render: (val: any) => (val ? val : "?"),
+                      render: (val: any) => (val ? val : ""),
                     },
                     {
                       title: "KL",
+                      align: "center",
                       dataIndex: "KL_LoaiII",
                       width: 110,
-                      render: (val: any) => (val ? val : "?"),
+                      render: (val: any) =>
+                        val !== null && val !== undefined
+                          ? Number(val).toLocaleString("vi-VN")
+                          : "",
                     },
                   ],
                 },
@@ -1560,15 +1849,20 @@ const TaoPhieuPhoiNong = () => {
                   children: [
                     {
                       title: "ST",
+                      align: "center",
                       dataIndex: "ST_LoaiIII",
                       width: 90,
-                      render: (val: any) => (val ? val : "?"),
+                      render: (val: any) => (val ? val : ""),
                     },
                     {
                       title: "KL",
+                      align: "center",
                       dataIndex: "KL_LoaiIII",
                       width: 110,
-                      render: (val: any) => (val ? val : "?"),
+                      render: (val: any) =>
+                        val !== null && val !== undefined
+                          ? Number(val).toLocaleString("vi-VN")
+                          : "",
                     },
                   ],
                 },
@@ -1586,9 +1880,12 @@ const TaoPhieuPhoiNong = () => {
                   dataIndex: "tongKhoi",
                   width: 140,
                   align: "center",
-                  render: (val: any) => (
-                    <Typography.Text type="danger">{val}</Typography.Text>
-                  ),
+                  render: (val: any) =>
+                    // <Typography.Text type="danger">{val}</Typography.Text>
+
+                    val !== null && val !== undefined
+                      ? Number(val).toLocaleString("vi-VN")
+                      : "",
                 },
                 {
                   title: "Ghi chú",
@@ -1597,6 +1894,52 @@ const TaoPhieuPhoiNong = () => {
                   render: (val: any) => val || "-",
                 },
               ]}
+              summary={() => {
+                const s = calcSummary(chuyenData);
+                return (
+                  <Table.Summary>
+                    <Table.Summary.Row>
+                      <Table.Summary.Cell index={1} colSpan={10} align="center">
+                        <b>Tổng cộng</b>
+                      </Table.Summary.Cell>
+                      {/* Loại 1 */}
+                      <Table.Summary.Cell index={2} align="center">
+                        <b>{s.ST1}</b>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={3} align="center">
+                        <b>{(s.KL1 ?? 0).toLocaleString("vi-VN")}</b>
+                      </Table.Summary.Cell>
+
+                      {/* Loại 2 */}
+                      <Table.Summary.Cell index={4} align="center">
+                        <b>{s.ST2}</b>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={5} align="center">
+                        <b>{(s.KL2 ?? 0).toLocaleString("vi-VN")}</b>
+                      </Table.Summary.Cell>
+
+                      {/* Loại 3 */}
+                      <Table.Summary.Cell index={6} align="center">
+                        <b>{s.ST3}</b>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={7} align="center">
+                        <b>{(s.KL3 ?? 0).toLocaleString("vi-VN")}</b>
+                      </Table.Summary.Cell>
+
+                      {/* Tổng */}
+                      <Table.Summary.Cell index={8} align="center">
+                        <b>{s.ST}</b>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={9} align="center">
+                        <b>{(s.TongKL ?? 0).toLocaleString("vi-VN")}</b>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={10} align="center">
+                        {" "}
+                      </Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                );
+              }}
             />
           </div>
         </div>
@@ -1607,104 +1950,61 @@ const TaoPhieuPhoiNong = () => {
           width={1150}
           destroyOnClose
           onCancel={() => setPartialOpen(false)}
-          onOk={async () => {
-            const selectedRows = tableData.filter((r) =>
-              selectedRowKeys.includes(r.key)
-            );
-            for (const row of selectedRows) {
-              const v = partialValues[String(row.key)] || {};
-              const sum = Number(v.chuyenST || 0);
-              const total = Number(row.soLuong || 0);
-              if (sum <= 0) {
-                message.error("Số thanh chuyển phải lớn hơn 0");
-                return;
-              }
-              const stLoai1 = Number(row.ST_LoaiI || 0);
-              if (sum > stLoai1) {
-                message.error("Số thanh chuyển vượt quá số thanh hiện có");
-                return;
-              }
-              if (total && sum > total) {
-                message.error("Tổng số thanh chuyển vượt quá số lượng hiện có");
-                return;
-              }
-            }
-            const nextThung = [
-              ...chuyenData,
-              ...selectedRows.map((row) => {
-                const v = partialValues[String(row.key)] || {};
-                const sum = Number(v.chuyenST || 0);
-                const totalRowST =
-                  Number(row.ST_LoaiI || 0) +
-                  Number(row.ST_LoaiII || 0) +
-                  Number(row.ST_LoaiIII || 0);
-                const stChuaChuyen = Math.max(totalRowST - sum, 0);
-                return {
-                  ...row,
-                  isThung: true,
-                  chuyenHet: false,
-                  tinhTrang: 2,
-                  tongSoThanh: sum,
-                  stChuaChuyen,
-                  stBKM:
-                    Number(row.ST_LoaiI || 0) +
-                    Number(row.ST_LoaiII || 0) +
-                    Number(row.ST_LoaiIII || 0),
-                  ngaySX: form.getFieldValue("NgaySX")
-                    ? form.getFieldValue("NgaySX").format("YYYY-MM-DD")
-                    : null,
-                  ca: form.getFieldValue("ca") || null,
-                  chuyenMotPhan: {
-                    tongChuyen: sum,
-                  },
-                };
-              }),
-            ];
-            const sums: Record<string, number> = {};
-            selectedRows.forEach((r) => {
-              const v = partialValues[String(r.key)] || {};
-              sums[String(r.key)] = Number(v.chuyenST || 0);
-            });
-            const nextTable = tableData.map((row) => {
-              if (!selectedRowKeys.includes(row.key)) return row;
-              const v = partialValues[String(row.key)] || {};
-              const sum = Number(v.chuyenST || 0);
-              const total = Number(row.soLuong || 0);
-              const remaining = total ? Math.max(total - sum, 0) : total;
-              const totalRowST =
-                Number(row.ST_LoaiI || 0) +
-                Number(row.ST_LoaiII || 0) +
-                Number(row.ST_LoaiIII || 0);
-              const stChuaChuyen = Math.max(totalRowST - sum, 0);
-              return {
-                ...row,
-                soLuong: remaining,
-                tinhTrang: 2,
-                stChuaChuyen,
-                tongSoThanh: sum,
-                stBKM:
-                  Number(row.ST_LoaiI || 0) +
-                  Number(row.ST_LoaiII || 0) +
-                  Number(row.ST_LoaiIII || 0),
-              };
-            });
-            setChuyenData(nextThung);
-            setTableData(nextTable);
-            setPartialOpen(false);
-            setSelectedRowKeys([]);
-            message.success("Đã chuyển một phần các dòng đã chọn");
-            // await saveAfterTransfer(nextTable, nextThung);
-            await postBulkTransfers(selectedRows, { sums });
-            const stUpdatePayload2 = selectedRows.map((r) => ({
-              id: Number(r.idBkPhoiThep || 0),
-              sT_DaChuyen: Number(sums[String(r.key)] || 0),
-            }));
-            if (stUpdatePayload2.length > 0)
-              await phoiGiaoNhanApi.stDaChuyenBulk(stUpdatePayload2);
-            await reloadChuyenData();
-          }}
+          onOk={handleConfirmPartialTransfer}
         >
           <div>
+            <div>Thông tin</div>
+            <Table
+              size="small"
+              pagination={false}
+              bordered
+              rowKey="key"
+              style={{ marginBottom: 16 }}
+              dataSource={tableData
+                .filter((r) => selectedRowKeys.includes(r.key))
+                .map((r) => ({ ...r, key: r.key }))}
+              columns={[
+                {
+                  title: "Mẻ",
+                  dataIndex: "me",
+                  width: 120,
+                },
+                {
+                  title: "Mác",
+                  dataIndex: "mac",
+                  width: 120,
+                },
+                {
+                  title: "Kích thước",
+                  dataIndex: "kichThuoc",
+                  width: 160,
+                },
+                {
+                  title: "Loại 1",
+                  align: "center",
+                  render: (_, r) => r.ST_LoaiI || 0,
+                },
+                {
+                  title: "Loại 2",
+                  align: "center",
+                  render: (_, r) => r.ST_LoaiII || 0,
+                },
+                {
+                  title: "Loại 3",
+                  align: "center",
+                  render: (_, r) => r.ST_LoaiIII || 0,
+                },
+                {
+                  title: "Tổng số thanh",
+                  align: "center",
+                  render: (_, r) =>
+                    Number(r.ST_LoaiI || 0) +
+                    Number(r.ST_LoaiII || 0) +
+                    Number(r.ST_LoaiIII || 0),
+                },
+              ]}
+            />
+            <div>Nhập số thanh chuyển:</div>
             <Table
               size="small"
               pagination={false}
@@ -1724,8 +2024,23 @@ const TaoPhieuPhoiNong = () => {
                   render: (_: any, record: any) => (
                     <InputNumber
                       style={{ width: "100%" }}
-                      value={Number(record.ST_LoaiI || 0)}
-                      readOnly
+                      // value={Number(record.ST_LoaiI || 0)}
+                      // readOnly
+                      readOnly={
+                        Number(record.ST_LoaiI || 0) === 0 ? true : false
+                      }
+                      min={0}
+                      max={record.stChuaChuyen}
+                      onChange={(val) => {
+                        const max = Number(record.stChuaChuyen || 0);
+                        setPartialValues((p) => ({
+                          ...p,
+                          [String(record.key)]: {
+                            ...p[String(record.key)],
+                            ST_ChuyenI: Math.min(Number(val) || 0, max),
+                          },
+                        }));
+                      }}
                     />
                   ),
                 },
@@ -1735,8 +2050,22 @@ const TaoPhieuPhoiNong = () => {
                   render: (_: any, record: any) => (
                     <InputNumber
                       style={{ width: "100%" }}
-                      value={Number(record.ST_LoaiII || 0)}
-                      readOnly
+                      // value={Number(record.ST_LoaiII || 0)}
+                      // readOnly
+                      readOnly={
+                        Number(record.ST_LoaiII || 0) === 0 ? true : false
+                      }
+                      min={0}
+                      max={record.stChuaChuyen}
+                      onChange={(val) =>
+                        setPartialValues((p) => ({
+                          ...p,
+                          [String(record.key)]: {
+                            ...p[String(record.key)],
+                            ST_ChuyenII: Number(val) || 0,
+                          },
+                        }))
+                      }
                     />
                   ),
                 },
@@ -1746,32 +2075,45 @@ const TaoPhieuPhoiNong = () => {
                   render: (_: any, record: any) => (
                     <InputNumber
                       style={{ width: "100%" }}
-                      value={Number(record.ST_LoaiIII || 0)}
-                      readOnly
-                    />
-                  ),
-                },
-                {
-                  title: "Số thanh chuyển",
-                  width: 160,
-                  render: (_: any, record: any) => (
-                    <InputNumber
+                      // value={Number(record.ST_LoaiIII || 0)}
+                      readOnly={
+                        Number(record.ST_LoaiIII || 0) === 0 ? true : false
+                      }
                       min={0}
-                      max={Number(record.ST_LoaiI || 0)}
-                      style={{ width: "100%" }}
-                      value={partialValues[String(record.key)]?.chuyenST || 0}
+                      max={record.stChuaChuyen}
                       onChange={(val) =>
                         setPartialValues((p) => ({
                           ...p,
                           [String(record.key)]: {
                             ...p[String(record.key)],
-                            chuyenST: Number(val) || 0,
+                            ST_ChuyenIII: Number(val) || 0,
                           },
                         }))
                       }
                     />
                   ),
                 },
+                // {
+                //   title: "Số thanh chuyển",
+                //   width: 160,
+                //   render: (_: any, record: any) => (
+                //     <InputNumber
+                //       min={0}
+                //       max={Number(record.ST_LoaiI || 0)}
+                //       style={{ width: "100%" }}
+                //       value={partialValues[String(record.key)]?.chuyenST || 0}
+                //       onChange={(val) =>
+                //         setPartialValues((p) => ({
+                //           ...p,
+                //           [String(record.key)]: {
+                //             ...p[String(record.key)],
+                //             chuyenST: Number(val) || 0,
+                //           },
+                //         }))
+                //       }
+                //     />
+                //   ),
+                // },
                 {
                   title: "Tổng số thanh",
                   width: 140,
@@ -1781,6 +2123,26 @@ const TaoPhieuPhoiNong = () => {
                       {Number(record.ST_LoaiI || 0) +
                         Number(record.ST_LoaiII || 0) +
                         Number(record.ST_LoaiIII || 0)}
+                    </Typography.Text>
+                  ),
+                },
+                {
+                  title: "Số thanh đã chuyển",
+                  width: 140,
+                  align: "center",
+                  render: (_: any, record: any) => (
+                    <Typography.Text type="danger">
+                      {Number(record.stDaChuyen || 0)}
+                    </Typography.Text>
+                  ),
+                },
+                {
+                  title: "Số thanh còn lại",
+                  width: 140,
+                  align: "center",
+                  render: (_: any, record: any) => (
+                    <Typography.Text type="danger">
+                      {Number(record.stChuaChuyen || 0)}
                     </Typography.Text>
                   ),
                 },
@@ -1800,7 +2162,7 @@ const TaoPhieuPhoiNong = () => {
         </div> */}
 
         {/* SIGNATURES - ký tên */}
-        {!isViecDenToi && (
+        {/* {!isViecDenToi && (
           <div
             style={{
               marginTop: 40,
@@ -1824,9 +2186,9 @@ const TaoPhieuPhoiNong = () => {
                 </Form.Item>
               ))}
           </div>
-        )}
+        )} */}
 
-        {!isViecDenToi && (
+        {/* {!isViecDenToi && (
           <div
             style={{
               textAlign: "center",
@@ -1856,7 +2218,7 @@ const TaoPhieuPhoiNong = () => {
               Gửi trình ký
             </Button>
           </div>
-        )}
+        )} */}
       </Form>
     </Card>
   );

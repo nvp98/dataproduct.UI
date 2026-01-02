@@ -8,5 +8,7 @@ export const CtdPhoiNongApi = {
   updateStatus: (
     data: Array<{ id: number; tinhTrangCTD?: number; tinhTrangQLCL?: number }>
   ) => apiService.put("/api/CtdPhoiNong/update-status", data),
+  updateStatusChot: (param?: any) =>
+    apiService.put("/api/CtdPhoiNong/update-chot", param),
   delete: (id: number) => apiService.delete(`/api/CtdPhoiNong/${id}`),
 };

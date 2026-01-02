@@ -15,11 +15,21 @@ import {
   Tag,
   message,
 } from "antd";
-import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { headerKeyApi } from "../../../services/HeaderKeyApi";
-import type { HeaderKey, HeaderKeyPayload, HeaderMapping } from "../../../models/HeaderKeyModel";
+import type {
+  HeaderKey,
+  HeaderKeyPayload,
+  HeaderMappingType,
+} from "../../../models/HeaderKeyModel";
 
 type FilterState = {
   searchKey?: string;
@@ -96,7 +106,7 @@ const HeaderMapping = () => {
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
     const appliedFilters: FilterState = {
-      searchKey: values.searchKey?.trim() || undefined
+      searchKey: values.searchKey?.trim() || undefined,
     };
     fetchData(1, pagination.pageSize, appliedFilters);
   };
@@ -156,7 +166,11 @@ const HeaderMapping = () => {
       handleModalCancel();
       fetchData(editingRecord ? pagination.current : 1, pagination.pageSize);
     } catch (error: unknown) {
-      if (typeof error === "object" && error !== null && "errorFields" in error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "errorFields" in error
+      ) {
         return;
       }
       console.error("Failed to save header key:", error);
@@ -196,7 +210,8 @@ const HeaderMapping = () => {
         dataIndex: "headerMappings",
         key: "headerMappings",
         width: 250,
-        render: (value: HeaderMapping[]) => value.map(item => item.tenNguonDuLieu).join("; "),
+        render: (value: HeaderMappingType[]) =>
+          value.map((item) => item.tenNguonDuLieu).join("; "),
       },
       {
         title: "Thứ tự",
@@ -218,7 +233,11 @@ const HeaderMapping = () => {
         key: "isActive",
         width: 140,
         render: (value: boolean) =>
-          value ? <Tag color="green">Đang dùng</Tag> : <Tag color="red">Ngưng</Tag>,
+          value ? (
+            <Tag color="green">Đang dùng</Tag>
+          ) : (
+            <Tag color="red">Ngưng</Tag>
+          ),
       },
       {
         title: "Ngày tạo",
@@ -265,7 +284,11 @@ const HeaderMapping = () => {
       <Card
         title="Quản lý Header Key"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={openCreateModal}
+          >
             Thêm Header Key
           </Button>
         }
@@ -280,7 +303,11 @@ const HeaderMapping = () => {
             </Col>
             <Col xs={24} md={8} style={{ display: "flex" }}>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  onClick={handleSearch}
+                >
                   Lọc
                 </Button>
                 <Button icon={<ReloadOutlined />} onClick={handleReset}>
@@ -304,7 +331,8 @@ const HeaderMapping = () => {
             total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} bản ghi`,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} bản ghi`,
             onChange: (page, pageSize) => fetchData(page, pageSize),
           }}
         />
@@ -336,7 +364,10 @@ const HeaderMapping = () => {
             </Select>
           </Form.Item>
           <Form.Item name="mota" label="Mô tả">
-            <Input.TextArea rows={3} placeholder="Ghi chú thêm (không bắt buộc)" />
+            <Input.TextArea
+              rows={3}
+              placeholder="Ghi chú thêm (không bắt buộc)"
+            />
           </Form.Item>
           <Form.Item
             name="thuTu"

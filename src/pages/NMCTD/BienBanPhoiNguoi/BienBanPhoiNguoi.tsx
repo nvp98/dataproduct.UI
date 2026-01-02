@@ -156,8 +156,8 @@ const BienBanPhoiNguoi = () => {
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() =>
-            navigate("/taophieuphoinguoi", {
-              state: { idphieu: record.idphieu },
+            navigate("/chitietphieuphoinguoi", {
+              state: { idphieu: record.idphieu, pheduyet: record.pheDuyet },
             })
           }
         >

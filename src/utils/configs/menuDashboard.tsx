@@ -23,6 +23,14 @@ export const MenuDataDashboard = [
         code: "tieuhaolothoi",
         title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
       },
+      {
+        code: "bienbanphoinong",
+        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (GIAO PHÔI)",
+      },
+      {
+        code: "bienbanphoinguoi",
+        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      },
     ],
   },
   {
@@ -50,13 +58,13 @@ export const MenuDataDashboard = [
     color: "#722ed1",
     items: [
       {
-        code: "bienbanphoinong",
-        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG",
+        code: "viecdentoi/bienbanphoinong",
+        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (NHẬN PHÔI)",
       },
-      {
-        code: "bienbanphoinguoi",
-        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-      },
+      // {
+      //   code: "bienbanphoinguoi",
+      //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      // },
     ],
   },
   {
@@ -78,7 +86,7 @@ export const MenuDataDashboard = [
       },
     ],
   },
-  
+
   // {
   //   category: "Quản lý thiết bị",
   //   icon: "equipment",

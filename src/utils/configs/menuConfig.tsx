@@ -60,7 +60,9 @@ export const menuConfig = [
             key: "sub1-1.3",
             label: (
               <Tooltip title="HRC2 - Dữ liệu luyện thép">
-                <NavLink to="/dlnmhrc2luyenthep">HRC2 - Dữ liệu luyện thép</NavLink>
+                <NavLink to="/dlnmhrc2luyenthep">
+                  HRC2 - Dữ liệu luyện thép
+                </NavLink>
               </Tooltip>
             ),
           },
@@ -140,7 +142,7 @@ export const menuConfig = [
             key: "6",
             label: (
               <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
-                <NavLink to="/bienbanphoinong">
+                <NavLink to="bienbanphoinong">
                   BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)
                 </NavLink>
               </Tooltip>
@@ -205,7 +207,7 @@ export const menuConfig = [
             label: (
               <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
                 <NavLink to="/tieuhaonauluyen_bof">
-                BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
+                  BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
                 </NavLink>
               </Tooltip>
             ),
@@ -215,7 +217,7 @@ export const menuConfig = [
             label: (
               <Tooltip title="BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
                 <NavLink to="/tieuhaonauluyen_lf">
-                BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)
+                  BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)
                 </NavLink>
               </Tooltip>
             ),
@@ -225,7 +227,7 @@ export const menuConfig = [
             label: (
               <Tooltip title="BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)">
                 <NavLink to="/tieuhaonauluyen_rh">
-                BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
+                  BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
                 </NavLink>
               </Tooltip>
             ),
@@ -235,7 +237,7 @@ export const menuConfig = [
             label: (
               <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/bbgnphoitam">
-                BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),
@@ -287,16 +289,16 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
-          // {
-          //   key: "10",
-          //   label: (
-          //     <Tooltip title="BM.07/QT.05.10 (Biên bản giao nhận phôi nguội)">
-          //       <NavLink to="/bienbanphoinguoi">
-          //         BM.06/QT.05.10 (Biên bản giao nhận phôi nguội)
-          //       </NavLink>
-          //     </Tooltip>
-          //   ),
-          // },
+          {
+            key: "10",
+            label: (
+              <Tooltip title="BM.07/QT.05.10 (Biên bản giao nhận phôi nguội)">
+                <NavLink to="/bienbanphoinguoi">
+                  BM.06/QT.05.10 (Biên bản giao nhận phôi nguội)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
           // { key: "6", label: "Option 6" },
         ],
       },
@@ -309,7 +311,7 @@ export const menuConfig = [
             label: (
               <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
                 <NavLink to="/tieuhaonauluyen_bof">
-                BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
+                  BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
                 </NavLink>
               </Tooltip>
             ),
@@ -319,7 +321,7 @@ export const menuConfig = [
             label: (
               <Tooltip title="BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
                 <NavLink to="/tieuhaonauluyen_lf">
-                BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)
+                  BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)
                 </NavLink>
               </Tooltip>
             ),
@@ -329,7 +331,7 @@ export const menuConfig = [
             label: (
               <Tooltip title="BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)">
                 <NavLink to="/tieuhaonauluyen_rh">
-                BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
+                  BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
                 </NavLink>
               </Tooltip>
             ),
@@ -339,7 +341,7 @@ export const menuConfig = [
             label: (
               <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/bbgnphoitam">
-                BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),
@@ -349,62 +351,32 @@ export const menuConfig = [
     ],
   },
   {
-    key: "sub4",
+    key: "sub5",
     label: "Xử lý phiếu",
     icon: <ProfileOutlined />,
-    // children: [
-    //   // { key: "3", label: <NavLink to="/dashboard">Tạo yêu cầu</NavLink> },
-    //   // { key: "4", label: "Option 4" },
-    //   {
-    //     key: "sub4-2",
-    //     label: "NM.NL",
-    //     children: [
-    //       {
-    //         key: "sub4-2-1",
-    //         label: <NavLink to="/dashboard">BM.06/QT.05.10</NavLink>,
-    //       },
-    //       // { key: "6", label: "Option 6" },
-    //     ],
-    //   },
-    //   {
-    //     key: "sub4-3",
-    //     label: "NM.HRC2",
-    //     children: [
-    //       {
-    //         key: "5",
-    //         label: <NavLink to="/dashboard">BM.06/QT.05.10</NavLink>,
-    //       },
-    //       // { key: "6", label: "Option 6" },
-    //     ],
-    //   },
-    //   {
-    //     key: "sub4-4",
-    //     label: "NM.CTD",
-    //     children: [
-    //       {
-    //         key: "9",
-    //         label: (
-    //           <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
-    //             <NavLink to="/chitietphieuphoinong">
-    //               BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)
-    //             </NavLink>
-    //           </Tooltip>
-    //         ),
-    //       },
-    //       {
-    //         key: "10",
-    //         label: (
-    //           <Tooltip title="BM.07/QT.05.10 (Biên bản giao nhận phôi nguội)">
-    //             <NavLink to="/bienbanphoinguoi">
-    //               BM.06/QT.05.10 (Biên bản giao nhận phôi nguội)
-    //             </NavLink>
-    //           </Tooltip>
-    //         ),
-    //       },
-    //       // { key: "6", label: "Option 6" },
-    //     ],
-    //   },
-    // ],
+    children: [
+      // { key: "3", label: <NavLink to="/dashboard">Tạo yêu cầu</NavLink> },
+      // { key: "4", label: "Option 4" },
+
+      {
+        key: "sub5-1",
+        label: "NM.CTD",
+        children: [
+          {
+            key: "9",
+            label: (
+              <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
+                <NavLink to="/viecdentoi/bienbanphoinong">
+                  BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+
+          // { key: "6", label: "Option 6" },
+        ],
+      },
+    ],
   },
   // {
   //   key: "4",
