@@ -6,6 +6,8 @@ import {
   AppstoreAddOutlined,
   DeliveredProcedureOutlined,
   ProfileOutlined,
+  SettingOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { Tooltip } from "antd";
 import { NavLink } from "react-router-dom";
@@ -15,16 +17,17 @@ export const menuConfig = [
     key: "1",
     icon: <UserOutlined />,
     label: <NavLink to="/">Trang chủ</NavLink>,
-    roles: ["admin"], // chỉ admin mới thấy
+    // roles: ["admin"], // chỉ admin mới thấy
   },
   {
     key: "sub1",
     label: "Kho dữ liệu",
+    roles: ["admin", "PKH"],
     icon: <AppstoreOutlined />,
     children: [
       {
         key: "sub1-1",
-        label: "NM.CTD",
+        label: "NM.HRC1",
         children: [
           {
             key: "sub1-1.1",
@@ -79,10 +82,10 @@ export const menuConfig = [
     ],
   },
   {
-    key: "2",
+    key: "taoyeucau",
     icon: <UploadOutlined />,
     label: <NavLink to="/taoyeucau">Tạo yêu cầu</NavLink>,
-    roles: ["admin"], // chỉ admin mới thấy
+    // roles: ["admin"], // chỉ admin mới thấy
   },
   {
     key: "sub2",
@@ -362,6 +365,7 @@ export const menuConfig = [
     key: "sub5",
     label: "Xử lý phiếu",
     icon: <ProfileOutlined />,
+    roles: ["PKH", "admin"], // chỉ P.KH mới xử lý phiếu
     children: [
       // { key: "3", label: <NavLink to="/dashboard">Tạo yêu cầu</NavLink> },
       // { key: "4", label: "Option 4" },
@@ -392,6 +396,23 @@ export const menuConfig = [
   //   label: <NavLink to="/reports">Báo cáo</NavLink>,
   //   roles: ["admin"], // chỉ admin mới thấy
   // },
+  {
+    key: "sub-admin",
+    label: "Quản trị",
+    icon: <SettingOutlined />,
+    roles: ["admin"],
+    children: [
+      {
+        key: "admin-1",
+        icon: <SafetyCertificateOutlined />,
+        label: (
+          <Tooltip title="Phân quyền xử lý biểu mẫu theo khu vực">
+            <NavLink to="/phanquyenbieumau">Phân quyền biểu mẫu</NavLink>
+          </Tooltip>
+        ),
+      },
+    ],
+  },
   // {
   //   key: "5",
   //   icon: <UploadOutlined />,

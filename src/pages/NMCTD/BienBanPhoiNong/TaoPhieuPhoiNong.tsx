@@ -28,8 +28,11 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   ArrowRightOutlined,
+  DownloadOutlined,
+  FilePdfOutlined,
 } from "@ant-design/icons";
 import { CtdPhoiNongApi } from "../../../services/CtdPhoiNongApi";
+import { getFileNameFromContentDisposition } from "../../../utils/helpers";
 
 const TaoPhieuPhoiNong = () => {
   const location = useLocation();
@@ -69,7 +72,6 @@ const TaoPhieuPhoiNong = () => {
   const [filteredChuyenData, setFilteredChuyenData] = useState<any[]>([]);
   const [selectedProcessedKeys, setSelectedProcessedKeys] = useState<Key[]>([]);
   const isViecDenToi = String(type || "") === "viecdentoi";
-  
 
   // Theo dõi thay đổi trên các field chính
   const ngaySX = Form.useWatch("NgaySX", form);
@@ -846,6 +848,16 @@ const TaoPhieuPhoiNong = () => {
   //   }
   // };
 
+  const checkMaBP = (userInfo: any) => {
+    if (!userInfo) return false;
+
+    const tenNgan = (userInfo.tenNgan || userInfo.TenNgan || "")
+      .trim()
+      .toUpperCase();
+
+    return tenNgan;
+  };
+
   const getSelectedRowsOrWarn = () => {
     if (!filterNgay || !filterCa) {
       message.warning(
@@ -1126,15 +1138,124 @@ const TaoPhieuPhoiNong = () => {
     );
   };
 
+  // const handleExportExcel = async () => {
+  //   // Cập nhật lại trạng thái chốt ở các dòng
+  //   var params = {
+  //     NgaySX: filterNgay ? filterNgay.format("YYYY-MM-DD") : null,
+  //     Ca: filterCa ? Number(filterCa) : null,
+  //     Xuong: filterXuong || null,
+  //   };
+  //   await CtdPhoiNongApi.exportExcel(params);
+  // };
+
+  const handleExportExcel = async () => {
+    try {
+      // Cập nhật lại trạng thái chốt ở các dòng
+      var params = {
+        NgaySX: filterNgay ? filterNgay.format("YYYY-MM-DD") : null,
+        Ca: filterCa ? Number(filterCa) : null,
+        Xuong: filterXuong || null,
+      };
+      const response = await CtdPhoiNongApi.exportExcel(params);
+
+      const blob = new Blob([response as any], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      console.log("blob", blob);
+      console.log("response", response.headers);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `BM.06-QT.05.11_Bien_ban_giao_nhan_phoi_nong_${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export Excel failed:", error);
+      message.error("Xuất file thất bại!");
+    }
+  };
+
+  const handleExportExcelPKH = async () => {
+    try {
+      // Cập nhật lại trạng thái chốt ở các dòng
+      var params = {
+        NgaySX: filterNgay ? filterNgay.format("YYYY-MM-DD") : null,
+        Ca: filterCa ? Number(filterCa) : null,
+        Xuong: filterXuong || null,
+      };
+      const response = await CtdPhoiNongApi.exportExcelPKH(params);
+
+      const blob = new Blob([response as any], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      console.log("blob", blob);
+      console.log("response", response.headers);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `TongHop_Bien_ban_giao_nhan_phoi_nong_${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export Excel failed:", error);
+      message.error("Xuất file thất bại!");
+    }
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      // Cập nhật lại trạng thái chốt ở các dòng
+      var params = {
+        NgaySX: filterNgay ? filterNgay.format("YYYY-MM-DD") : null,
+        Ca: filterCa ? Number(filterCa) : null,
+        Xuong: filterXuong || null,
+      };
+      const response = await CtdPhoiNongApi.exportPdf(params);
+
+      const blob = new Blob([response as any], {
+        type: "application/pdf",
+      });
+
+      console.log("blob", blob);
+      console.log("response", response.headers);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `BM.06-QT.05.11_Bien_ban_giao_nhan_phoi_nong_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export Excel failed:", error);
+      message.error("Xuất file thất bại!");
+    }
+  };
+
   return (
-    <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
+    <Card style={{ margin: -16, boxShadow: "0 2px 8px #f0f1f2" }}>
       {/* Tiêu đề biên bản */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          marginBottom: 12,
+          marginBottom: 6,
         }}
       >
         {/* Logo + tên công ty */}
@@ -1178,74 +1299,81 @@ const TaoPhieuPhoiNong = () => {
         <Form.Item name="idphieu" hidden>
           <Input type="hidden" />
         </Form.Item>
+        {/* HEADER - các trường nhập đầu và buttons */}
         {!isViecDenToi && (
           <div
             style={{
               display: "flex",
-              justifyContent: "flex-end",
-              gap: 8,
-              marginBottom: 12,
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              gap: 12,
+              marginBottom: 6,
+              flexWrap: "wrap",
+              maxHeight: 75,
             }}
           >
-            <Button
-              onClick={async () => {
-                // console.log("➡️ Reloading table data...", ngaySX);
-                fetchTableData({
-                  NgaySX: ngaySX ? dayjs(ngaySX).format("YYYY-MM-DD") : null,
-                  Ca: ca,
-                  LoaiPhoi: 1, // Phoi nong
-                  // MayDuc: thongtinphieu?.mayDuc,
-                });
-              }}
+            {/* Các trường form */}
+            <div
               style={{
-                backgroundColor: "#13c2c2",
-                borderColor: "#13c2c2",
-                color: "#fff",
+                display: "flex",
+                gap: 12,
+                flex: 1,
+                flexWrap: "wrap",
               }}
-              icon={<ReloadOutlined />}
             >
-              Làm mới
-            </Button>
-            <Button
-              onClick={handleTransferAll}
-              type="primary"
+              {config.headerFields.map((f, idx) => {
+                if (f.key === "mayduc") return null; // bỏ UI máy đúc
+                return (
+                  <div key={f.key || idx} style={{ minWidth: "200px" }}>
+                    <CustomFormItem field={f} idx={idx} readOnly={true} />
+                  </div>
+                );
+              })}
+            </div>
+            {/* Buttons */}
+            <div
               style={{
-                backgroundColor: "#52c41a",
-                borderColor: "#52c41a",
-                color: "#fff",
+                display: "flex",
+                gap: 6,
+                flexShrink: 0,
               }}
-              icon={<CheckCircleOutlined />}
             >
-              Chuyển hết
-            </Button>
-            <Button
-              onClick={openPartialTransferModal}
-              icon={<ArrowRightOutlined />}
-            >
-              Chuyển một phần
-            </Button>
-          </div>
-        )}
-        {/* HEADER - các trường nhập đầu */}
-        {!isViecDenToi && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 24,
-            }}
-          >
-            {config.headerFields.map((f, idx) => {
-              if (f.key === "mayduc") return null; // bỏ UI máy đúc
-              return (
-                <CustomFormItem
-                  key={f.key || idx}
-                  field={f}
-                  idx={idx}
-                  readOnly={true}
-                />
-              );
-            })}
+              <Button
+                onClick={async () => {
+                  fetchTableData({
+                    NgaySX: ngaySX ? dayjs(ngaySX).format("YYYY-MM-DD") : null,
+                    Ca: ca,
+                    LoaiPhoi: 1,
+                  });
+                }}
+                style={{
+                  backgroundColor: "#13c2c2",
+                  borderColor: "#13c2c2",
+                  color: "#fff",
+                }}
+                icon={<ReloadOutlined />}
+              >
+                Làm mới
+              </Button>
+              <Button
+                onClick={handleTransferAll}
+                type="primary"
+                style={{
+                  backgroundColor: "#52c41a",
+                  borderColor: "#52c41a",
+                  color: "#fff",
+                }}
+                icon={<CheckCircleOutlined />}
+              >
+                Chuyển hết
+              </Button>
+              <Button
+                onClick={openPartialTransferModal}
+                icon={<ArrowRightOutlined />}
+              >
+                Chuyển một phần
+              </Button>
+            </div>
           </div>
         )}
 
@@ -1255,80 +1383,131 @@ const TaoPhieuPhoiNong = () => {
             <div key={idx}>
               {layout.sectionType === "table" && (
                 <>
-                  <CustomFormTable
-                    columns={enhanceColumns(layout.columns || [])}
-                    initialData={tableData}
-                    onDataChange={setTableData}
-                    addRowButtonText="+ Thêm dòng"
-                    showAddButton={false}
-                    showDeleteButton={false}
-                    minRows={1}
-                    editable={false}
-                    loading={loading}
-                    selectionEnabled={true}
-                    selectedRowKeys={selectedRowKeys}
-                    onSelectionChange={(keys) => setSelectedRowKeys(keys)}
-                    isRowSelectable={(row) => Number(row.stChuaChuyen || 0) > 0}
-                    showStatus={true}
-                    stickyHeader={true}
-                    scrollY={460}
-                    readonlyFields={getReadonlyFields(layout.columns || [])}
-                    summary={() => {
-                      const s = calcSummary(tableData);
-                      return (
-                        <Table.Summary>
-                          <Table.Summary.Row>
-                            <Table.Summary.Cell
-                              index={1}
-                              colSpan={6}
-                              align="center"
-                            >
-                              <b>Tổng cộng</b>
-                            </Table.Summary.Cell>
-                            {/* Loại 1 */}
-                            <Table.Summary.Cell index={2} align="center">
-                              <b>{s.ST1}</b>
-                            </Table.Summary.Cell>
-                            <Table.Summary.Cell index={3} align="right">
-                              <b>{(s.KL1 ?? 0).toLocaleString("vi-VN")}</b>
-                            </Table.Summary.Cell>
+                  <style>{`
+                    .custom-form-table-no-scroll-x {
+                      overflow-x: hidden !important;
+                      position: relative;
+                    }
 
-                            {/* Loại 2 */}
-                            <Table.Summary.Cell index={4} align="center">
-                              <b>{s.ST2}</b>
-                            </Table.Summary.Cell>
-                            <Table.Summary.Cell index={5} align="right">
-                              <b>{(s.KL2 ?? 0).toLocaleString("vi-VN")}</b>
-                            </Table.Summary.Cell>
+                    .custom-form-table-no-scroll-x .ant-table-wrapper {
+                      overflow-x: hidden !important;
+                      width: 100% !important;
+                      padding-right: 8px;
+                    }
 
-                            {/* Loại 3 */}
-                            <Table.Summary.Cell index={6} align="center">
-                              <b>{s.ST3}</b>
-                            </Table.Summary.Cell>
-                            <Table.Summary.Cell index={7} align="right">
-                              <b>{(s.KL3 ?? 0).toLocaleString("vi-VN")}</b>
-                            </Table.Summary.Cell>
+                    .custom-form-table-no-scroll-x .ant-table {
+                      overflow-x: hidden !important;
+                      width: 100% !important;
+                    }
 
-                            {/* Tổng */}
-                            <Table.Summary.Cell index={8} align="center">
-                              <b>{s.ST}</b>
-                            </Table.Summary.Cell>
-                            <Table.Summary.Cell index={9} align="right">
-                              <b>{(s.TongKL ?? 0).toLocaleString("vi-VN")}</b>
-                            </Table.Summary.Cell>
-                          </Table.Summary.Row>
-                        </Table.Summary>
-                      );
-                    }}
-                  />
+                    .custom-form-table-no-scroll-x .ant-table-container {
+                      overflow-x: hidden !important;
+                      width: 100% !important;
+                    }
+
+                    .custom-form-table-no-scroll-x .ant-table-content {
+                      overflow-x: hidden !important;
+                      width: 100% !important;
+                      padding-right: 0 !important;
+                    }
+
+                    .custom-form-table-no-scroll-x .ant-table-body {
+                      overflow-x: hidden !important;
+                      overflow-y: scroll !important;
+                      width: calc(100% + 8px) !important;
+                      scrollbar-gutter: stable;
+                    }
+
+                    .custom-form-table-no-scroll-x .ant-spin-nested-loading,
+                    .custom-form-table-no-scroll-x .ant-spin-container {
+                      overflow-x: hidden !important;
+                      overflow-y: visible !important;
+                      width: 100% !important;
+                    }
+
+                    .custom-form-table-no-scroll-x table {
+                      width: 100% !important;
+                      table-layout: auto;
+                    }
+                  `}</style>
+                  <div className="custom-form-table-no-scroll-x">
+                    <CustomFormTable
+                      columns={enhanceColumns(layout.columns || [])}
+                      initialData={tableData}
+                      onDataChange={setTableData}
+                      addRowButtonText="+ Thêm dòng"
+                      showAddButton={false}
+                      showDeleteButton={false}
+                      minRows={1}
+                      editable={false}
+                      loading={loading}
+                      selectionEnabled={true}
+                      selectedRowKeys={selectedRowKeys}
+                      onSelectionChange={(keys) => setSelectedRowKeys(keys)}
+                      isRowSelectable={(row) =>
+                        Number(row.stChuaChuyen || 0) > 0
+                      }
+                      showStatus={true}
+                      stickyHeader={true}
+                      scrollY={460}
+                      readonlyFields={getReadonlyFields(layout.columns || [])}
+                      summary={() => {
+                        const s = calcSummary(tableData);
+                        return (
+                          <Table.Summary>
+                            <Table.Summary.Row>
+                              <Table.Summary.Cell
+                                index={1}
+                                colSpan={6}
+                                align="center"
+                              >
+                                <b>Tổng cộng</b>
+                              </Table.Summary.Cell>
+                              {/* Loại 1 */}
+                              <Table.Summary.Cell index={2} align="center">
+                                <b>{s.ST1}</b>
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={3} align="right">
+                                <b>{(s.KL1 ?? 0).toLocaleString("vi-VN")}</b>
+                              </Table.Summary.Cell>
+
+                              {/* Loại 2 */}
+                              <Table.Summary.Cell index={4} align="center">
+                                <b>{s.ST2}</b>
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={5} align="right">
+                                <b>{(s.KL2 ?? 0).toLocaleString("vi-VN")}</b>
+                              </Table.Summary.Cell>
+
+                              {/* Loại 3 */}
+                              <Table.Summary.Cell index={6} align="center">
+                                <b>{s.ST3}</b>
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={7} align="right">
+                                <b>{(s.KL3 ?? 0).toLocaleString("vi-VN")}</b>
+                              </Table.Summary.Cell>
+
+                              {/* Tổng */}
+                              <Table.Summary.Cell index={8} align="center">
+                                <b>{s.ST}</b>
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={9} align="right">
+                                <b>{(s.TongKL ?? 0).toLocaleString("vi-VN")}</b>
+                              </Table.Summary.Cell>
+                            </Table.Summary.Row>
+                          </Table.Summary>
+                        );
+                      }}
+                    />
+                  </div>
                 </>
               )}
             </div>
           ))}
 
         {/* TABLE - danh sách đã chuyển */}
-        <div style={{ marginTop: 32 }}>
-          <Typography.Title level={4} style={{ marginBottom: 16 }}>
+        <div style={{ marginTop: 16 }}>
+          <Typography.Title level={4} style={{ marginBottom: 8 }}>
             Danh sách phôi đã chuyển
           </Typography.Title>
           {/* Filter section */}
@@ -1336,9 +1515,9 @@ const TaoPhieuPhoiNong = () => {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 12,
-              marginBottom: 16,
-              padding: "12px",
+              gap: 8,
+              marginBottom: 8,
+              padding: "8px",
               backgroundColor: "#f5f5f5",
               borderRadius: "4px",
             }}
@@ -1453,7 +1632,7 @@ const TaoPhieuPhoiNong = () => {
             >
               Xóa filter
             </Button> */}
-                  {userInfo?.tenNgan == "P.QLCL" && type === "viecdentoi" && (
+                  {checkMaBP(userInfo) == "P.QLCL" && type === "viecdentoi" && (
                     <Button
                       size="small"
                       onClick={async () => {
@@ -1518,7 +1697,7 @@ const TaoPhieuPhoiNong = () => {
                       Xác nhận QLCL
                     </Button>
                   )}
-                  {userInfo?.tenNgan == "NM.CTD" && type === "viecdentoi" && (
+                  {checkMaBP(userInfo) == "NM.CTD" && type === "viecdentoi" && (
                     <Button
                       size="small"
                       onClick={async () => {
@@ -1581,74 +1760,108 @@ const TaoPhieuPhoiNong = () => {
                       Xác nhận
                     </Button>
                   )}
-                  {userInfo?.tenNgan == "P.KH" && type === "viecdentoi" && (
-                    <Button
-                      size="small"
-                      onClick={async () => {
-                        try {
-                          setLoadingChuyen(true);
-                          const source =
-                            filteredChuyenData.length > 0
-                              ? filteredChuyenData
-                              : chuyenData;
-                          const allDaXacNhan = source.every(
-                            (r: any) =>
-                              Number(r.tinhTrangCTD || 0) === 1 &&
-                              Number(r.tinhTrangQLCL || 0) === 1
-                          );
-                          if (!allDaXacNhan) {
-                            message.warning(
-                              "Tất cả dòng phải được CTD và QLCL xác nhận trước khi chốt"
+                  {checkMaBP(userInfo) == "P.KH" && type === "viecdentoi" && (
+                    <>
+                      <Button
+                        size="small"
+                        onClick={async () => {
+                          try {
+                            setLoadingChuyen(true);
+                            const source =
+                              filteredChuyenData.length > 0
+                                ? filteredChuyenData
+                                : chuyenData;
+                            const allDaXacNhan = source.every(
+                              (r: any) =>
+                                Number(r.tinhTrangCTD || 0) === 1 &&
+                                Number(r.tinhTrangQLCL || 0) === 1
                             );
-                            setLoadingChuyen(false);
-                            return;
-                          }
-                          // const hasChuaXacNhan = source.some(
-                          //   (r: any) =>
-                          //     selectedProcessedKeys.includes(r.key) &&
-                          //     (Number(r.tinhTrangCTD || 0) === 0 ||
-                          //       Number(r.tinhTrangQLCL || 0) === 0)
-                          // );
-
-                          // if (hasChuaXacNhan) {
-                          //   message.warning(
-                          //     "Dữ liệu chưa được CTD/QLCL xác nhận"
-                          //   );
-                          //   setLoadingChuyen(false);
-                          //   return;
-                          // }
-                          await PhieuApi.changeStatus_extended(
-                            thongtinphieu.idphieu,
-                            {
-                              status: 5,
-                              isLock: 0,
-                              isDelete: 0,
+                            if (!allDaXacNhan) {
+                              message.warning(
+                                "Tất cả dòng phải được CTD và QLCL xác nhận trước khi chốt"
+                              );
+                              setLoadingChuyen(false);
+                              return;
                             }
-                          );
-                          // Cập nhật lại trạng thái chốt ở các dòng
-                          var params = {
-                            NgaySX: filterNgay
-                              ? filterNgay.format("YYYY-MM-DD")
-                              : null,
-                            Ca: filterCa ? Number(filterCa) : null,
-                            Xuong: filterXuong || null,
-                          };
-                          await CtdPhoiNongApi.updateStatusChot(params);
-                          message.success("Đã chốt phiếu");
-                        } catch (e) {
-                          message.error("Có lỗi xảy ra không thể chốt phiếu!");
-                        } finally {
-                          setLoadingChuyen(false);
-                        }
-                      }}
-                      type="primary"
-                      style={{
-                        backgroundColor: "#52c41a",
-                        borderColor: "#52c41a",
-                      }}
-                    >
-                      Chốt phiếu
-                    </Button>
+                            // const hasChuaXacNhan = source.some(
+                            //   (r: any) =>
+                            //     selectedProcessedKeys.includes(r.key) &&
+                            //     (Number(r.tinhTrangCTD || 0) === 0 ||
+                            //       Number(r.tinhTrangQLCL || 0) === 0)
+                            // );
+
+                            // if (hasChuaXacNhan) {
+                            //   message.warning(
+                            //     "Dữ liệu chưa được CTD/QLCL xác nhận"
+                            //   );
+                            //   setLoadingChuyen(false);
+                            //   return;
+                            // }
+                            await PhieuApi.changeStatus_extended(
+                              thongtinphieu.idphieu,
+                              {
+                                status: 5,
+                                isLock: 0,
+                                isDelete: 0,
+                              }
+                            );
+
+                            // Cập nhật lại trạng thái chốt ở các dòng
+                            var params = {
+                              NgaySX: filterNgay
+                                ? filterNgay.format("YYYY-MM-DD")
+                                : null,
+                              Ca: filterCa ? Number(filterCa) : null,
+                              Xuong: filterXuong || null,
+                            };
+                            await CtdPhoiNongApi.updateStatusChot(params);
+                            message.success("Đã chốt phiếu");
+                          } catch (e) {
+                            message.error(
+                              "Có lỗi xảy ra không thể chốt phiếu!"
+                            );
+                          } finally {
+                            setLoadingChuyen(false);
+                          }
+                        }}
+                        type="primary"
+                        style={{
+                          backgroundColor: "#52c41a",
+                          borderColor: "#52c41a",
+                        }}
+                      >
+                        Chốt phiếu
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={handleExportExcelPKH}
+                        type="default"
+                        icon={<DownloadOutlined />}
+                      >
+                        Xuất Excel PKH
+                      </Button>
+                    </>
+                  )}
+
+                  {isViecDenToi && thongtinphieu.tinhTrang == 5 && (
+                    <>
+                      <Button
+                        size="small"
+                        onClick={handleExportExcel}
+                        type="default"
+                        icon={<DownloadOutlined />}
+                      >
+                        Xuất Excel
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={handleExportPdf}
+                        type="default"
+                        icon={<FilePdfOutlined />}
+                      >
+                        Xuất Pdf
+                      </Button>
+                    </>
                   )}
 
                   {!isViecDenToi && (
@@ -1666,14 +1879,6 @@ const TaoPhieuPhoiNong = () => {
                     </Button>
                   )}
                 </Space>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    alignItems: "flex-end",
-                    paddingBottom: 2,
-                  }}
-                ></div>
               </Col>
             </Row>
           </div>
@@ -1681,8 +1886,8 @@ const TaoPhieuPhoiNong = () => {
           <div
             style={{
               display: "flex",
-              gap: 8,
-              marginBottom: 16,
+              gap: 6,
+              marginBottom: 8,
               justifyContent: "flex-end",
             }}
           ></div>
@@ -1701,7 +1906,7 @@ const TaoPhieuPhoiNong = () => {
                     (!isViecDenToi &&
                       (Number(record.tinhTrangCTD || 0) === 1 ||
                         Number(record.tinhTrangQLCL || 0) === 1)) ||
-                    userInfo?.tenNgan == "P.KH",
+                    checkMaBP(userInfo) == "P.KH",
                 }),
                 // getCheckboxProps: (record: any) => ({
                 //   disabled: Number(record.tinhTrang || 0) == 1,

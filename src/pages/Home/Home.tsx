@@ -1,5 +1,8 @@
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store";
+import { useEffect } from "react";
+import { TaiKhoanApi } from "../../services/TaiKhoanService";
+import { message } from "antd";
 // import EditableTable from '../../components/CustomTable';
 
 // const schema: JSONSchema7 = {
@@ -63,6 +66,16 @@ const HomePage = () => {
   // const handleSubmit = (data: any) => {
   //   console.log("Form data:", data);
   // };
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+      } catch (error) {
+        console.error("Lỗi fetch user detail:", error);
+      }
+    };
+
+    fetchSession();
+  }, []);
   return (
     <>
       <div>{username}</div>

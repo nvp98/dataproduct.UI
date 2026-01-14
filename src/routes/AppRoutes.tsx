@@ -13,7 +13,7 @@ const AppRoutes = () => {
 // Bọc trong BrowserRouter
 const RouterWrapper = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/sanxuat">
       <AppRoutes />
     </BrowserRouter>
   );

@@ -1,4 +1,4 @@
-import { Card, Col, Row, Typography, Tooltip } from "antd";
+import { Card, Col, Row, Typography, Tooltip, Alert, Spin } from "antd";
 import {
   FileTextOutlined,
   SettingOutlined,
@@ -9,6 +9,9 @@ import {
 } from "@ant-design/icons";
 import { MenuDataDashboard } from "../../utils/configs/menuDashboard";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { BmQuyenXlApi } from "../../services/BmQuyenXlApi";
+import { isAdminUser } from "../../utils/helpers/checkAdminRole";
 
 const { Title } = Typography;
 
@@ -37,14 +40,85 @@ const getIcon = (type: string, color: string) => {
 
 const TaoYeuCau = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+  const [userBmPermissions, setUserBmPermissions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserAndPermissions();
+  }, []);
+
+  const loadUserAndPermissions = async () => {
+    try {
+      // Lấy user từ localStorage
+      const userStr = localStorage.getItem("userinfo");
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+
+        // Nếu admin thì không cần load quyền (xem tất cả)
+        if (isAdminUser(userData)) {
+          setUserBmPermissions([]);
+        } else {
+          // Gọi API để lấy danh sách BM mà user có quyền
+          const ID_TaiKhoan = userData.iD_TaiKhoan || userData.ID_TaiKhoan;
+          const res = await BmQuyenXlApi.getByTaiKhoan(ID_TaiKhoan);
+          const permissions = Array.isArray(res) ? res : res?.data || [];
+          console.log("Quyền BM của user:", permissions);
+          const bmList = permissions
+            .map((p: any) => p.maBm)
+            .filter((bm: string) => bm);
+          console.log("Danh sách mã BM được phép:", bmList);
+          setUserBmPermissions(bmList);
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi load user và quyền:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSelect = (code: string) => {
     navigate(`/${code}`);
   };
 
+  if (loading) {
+    return (
+      <div style={{ padding: 24, textAlign: "center" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  // Filter menu dựa trên quyền BM
+  const filteredMenuData = MenuDataDashboard.map((group: any) => {
+    const filteredItems = group.items.filter((item: any) => {
+      // Admin xem tất cả
+      if (isAdminUser(user)) return true;
+      // User thường chỉ xem các BM được cấp quyền
+      return userBmPermissions.includes(item.maBm || item.code);
+    });
+
+    return {
+      ...group,
+      items: filteredItems,
+    };
+  }).filter((group: any) => group.items.length > 0); // Loại bỏ group không còn item nào
+
   return (
     <div>
       <h1 className="text-xl font-bold">Tạo yêu cầu </h1>
-      {MenuDataDashboard.map((group: any) => (
+      {!isAdminUser(user) && userBmPermissions.length === 0 && (
+        <Alert
+          message="Thông báo"
+          description="Bạn không có quyền tạo yêu cầu cho biểu mẫu nào. Vui lòng liên hệ quản trị viên để được cấp quyền."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      {filteredMenuData.map((group: any) => (
         <div key={group.category} style={{ marginBottom: 40 }}>
           <Title
             level={4}

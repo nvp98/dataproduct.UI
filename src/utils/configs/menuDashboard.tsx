@@ -26,6 +26,7 @@ export const MenuDataDashboard = [
       {
         code: "bienbanphoinong",
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (GIAO PHÔI)",
+        maBm: "CTD_BB_Phoinong",
       },
       {
         code: "bienbanphoinguoi",
@@ -60,6 +61,7 @@ export const MenuDataDashboard = [
       {
         code: "viecdentoi/bienbanphoinong",
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (NHẬN PHÔI)",
+        maBm: "CTD_BB_Phoinong",
       },
       // {
       //   code: "bienbanphoinguoi",

@@ -20,3 +20,14 @@ a {
   text-decoration: none;
   color: inherit;
 }
+
+/* Override Ant Design Layout Content padding */
+/* .ant-layout-content {
+  padding: 4px !important;
+} */
+
+/* Override cho các class CSS auto-generated của Ant Design */
+/* .css-dev-only-do-not-override-xepvsj.ant-layout-content {
+  padding: 16px !important;
+  margin: 8px !important;
+} */

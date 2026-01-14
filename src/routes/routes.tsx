@@ -44,6 +44,7 @@ import STD_NhapXuatTon from "../pages/NM.HRC2/STD_NhapXuatTon/STD_NhapXuatTon";
 import Tao_STD from "../pages/NM.HRC2/STD_NhapXuatTon/Tao_STD";
 import ChiTiet_STD from "../pages/NM.HRC2/STD_NhapXuatTon/ChiTiet_STD";
 import ChiTietPhieuPhoiNguoi from "../pages/NMCTD/BienBanPhoiNguoi/ChiTietPhieuPhoiNguoi";
+import PhanQuyenBieuMau from "../pages/Settings/PhanQuyenBieuMau";
 export const routes = [
   {
     path: "/",
@@ -105,6 +106,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <Settings />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "phanquyenbieumau",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin"]}>
+              <PhanQuyenBieuMau />
             </RequireRole>
           </RequireAuth>
         ),

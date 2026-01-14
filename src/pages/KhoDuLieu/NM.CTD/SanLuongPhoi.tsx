@@ -10,23 +10,24 @@
 import {
   Button,
   Card,
-  Col,
   DatePicker,
   Form,
   Input,
   Modal,
   Popconfirm,
-  Row,
   Select,
   Space,
   Table,
 } from "antd";
 // import PdfMakeExample from "../../components/PdfMakeExample";
-import { DeleteTwoTone, EyeOutlined, SearchOutlined } from "@ant-design/icons";
+import { DeleteTwoTone, EyeOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { phoiGiaoNhanApi } from "../../../services/BKPhoiThepApi";
+import PhieuFilterCard, {
+  type FilterFieldConfig,
+} from "../../../components/PhieuFilterCard";
 // Dữ liệu mẫu
 
 const SanLuongPhoi = ({}: { type?: string }) => {
@@ -45,68 +46,53 @@ const SanLuongPhoi = ({}: { type?: string }) => {
     record: undefined,
   });
   const [editForm] = Form.useForm();
-  // const editEditorRef = useRef<any>(null); // Ref for TinyMCE editor
-
-  // Thêm state cho bộ lọc ngày
-  const [dateRange, setDateRange] = useState<any>(null);
+  const [filters, setFilters] = useState<any>({});
 
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
 
-  const fetchData = async () => {
+  const fetchData = async (filterParams: any = {}) => {
     setLoading(true);
     try {
-      const res = await phoiGiaoNhanApi.getData({});
+      const res = await phoiGiaoNhanApi.getData(filterParams);
       setData(res as any);
-
-      // setPagination({
-      //   current: page,
-      //   pageSize: pageSize,
-      //   total: res.totalRecords,
-      // });
-      // setFilters(filters); // lưu filter hiện tại
     } catch (err) {
-      console.error("Error fetch tickets:", err);
+      console.error("Error fetch data:", err);
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
-    // fetchData(pagination.current, pagination.pageSize, {
-    //   usercode: userObj?.maNV || "",
-    // });
     fetchData();
-    // setData(mockData);
-    // setPagination({
-    //   current: 1,
-    //   pageSize: 10,
-    //   total: mockData.length,
-    // });
   }, []);
 
   // Xử lý khi nhấn nút Lọc
-  const handleFilter = () => {
-    const filterObj: any = {
-      usercode: userObj?.maNV || "",
-    };
-    if (dateRange && dateRange.length === 2) {
-      filterObj.fromDate = dateRange[0].format("YYYY-MM-DD");
-      filterObj.toDate = dateRange[1].format("YYYY-MM-DD");
+  const handleFilter = (filterValues: any) => {
+    console.log("Filter values from PhieuFilterCard:", filterValues);
+
+    // Có thể cần transform filter values nếu backend API mong đợi format khác
+    // Ví dụ: nếu backend muốn fromDate/toDate thay vì ngaySxFrom/ngaySxTo
+    const apiParams: any = { ...filterValues };
+
+    // Transform date range nếu cần
+    if (filterValues.ngaySxFrom && filterValues.ngaySxTo) {
+      apiParams.NgaySX = filterValues.ngaySxFrom;
+      // apiParams.NgaySX = filterValues.ngaySxTo;
+      // Có thể xóa ngaySxFrom/ngaySxTo nếu backend không cần
+      // delete apiParams.ngaySxFrom;
+      // delete apiParams.ngaySxTo;
     }
-    // fetchData(1, pagination.pageSize, filterObj);
+
+    console.log("API params being sent:", apiParams);
+    setFilters(apiParams);
+    fetchData(apiParams);
   };
-  // const statusConfig: Record<string, { color: string; text: string }> = {
-  //   0: { color: "purple", text: "Chờ xử lý" },
-  //   1: { color: "pink", text: "Đang xử lý" },
-  //   2: { color: "green", text: "Hoàn tất" },
-  // };
 
   // Xử lý khi xóa bộ lọc
   const handleClearFilter = () => {
-    setDateRange(null);
-    // fetchData(1, pagination.pageSize, {
-    //   usercode: userObj?.maNV || "",
-    // });
+    setFilters({});
+    fetchData();
   };
 
   //   const handleDelete = (key: string) => {
@@ -250,36 +236,58 @@ const SanLuongPhoi = ({}: { type?: string }) => {
     },
   ];
 
+  // Config cho các filter fields
+  const filterFieldsConfig: FilterFieldConfig[] = [
+    {
+      key: "ngaySx",
+      label: "Ngày sản xuất",
+      type: "dateRange",
+      placeholder: "Khoảng ngày",
+    },
+    {
+      key: "ca",
+      label: "Ca",
+      type: "select",
+      placeholder: "Chọn ca",
+      options: [
+        { label: "Ca ngày (1)", value: 1 },
+        { label: "Ca đêm (2)", value: 2 },
+      ],
+    },
+    {
+      key: "kip",
+      label: "Kíp",
+      type: "text",
+      placeholder: "Nhập kíp...",
+    },
+    {
+      key: "mac",
+      label: "Mác",
+      type: "text",
+      placeholder: "Nhập mác...",
+    },
+    {
+      key: "mayDuc",
+      label: "Máy đúc",
+      type: "text",
+      placeholder: "Nhập máy đúc...",
+    },
+    {
+      key: "loaiPhoi",
+      label: "Loại phôi",
+      type: "text",
+      placeholder: "Nhập loại phôi...",
+    },
+  ];
+
   return (
     <div>
-      <Card style={{ marginBottom: 16 }} title="SẢN LƯỢNG PHÔI THÉP">
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
-            <Input placeholder="Số phiếu..." allowClear />
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <DatePicker.RangePicker
-              style={{ width: "100%" }}
-              format="DD/MM/YYYY"
-              placeholder={["Từ ngày", "Đến ngày"]}
-              value={dateRange}
-              onChange={setDateRange}
-            />
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              onClick={handleFilter}
-            >
-              Lọc
-            </Button>
-          </Col>
-          <Col>
-            <Button onClick={handleClearFilter}>Xóa bộ lọc</Button>
-          </Col>
-        </Row>
-      </Card>
+      <PhieuFilterCard
+        title="SẢN LƯỢNG PHÔI THÉP"
+        onFilter={handleFilter}
+        onClearFilter={handleClearFilter}
+        filterFields={filterFieldsConfig}
+      />
       <Card>
         <Table
           columns={columns}

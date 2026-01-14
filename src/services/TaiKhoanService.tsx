@@ -5,6 +5,8 @@ export const TaiKhoanApi = {
     apiService.get("/api/TaiKhoan/nguoiky", { params }),
 
   postLogin: (data: any) => apiService.post("/api/TaiKhoan/login", data),
-
-  //   getDetail: (id: string) => apiService.get(`/api/phoigionhan/${id}`),
+  getSession: (params?: any) =>
+    apiService.get("/api/TaiKhoan/me", { withCredentials: true }),
+  getDetail: (tenTaiKhoan: string) =>
+    apiService.get(`/api/TaiKhoan/info/${tenTaiKhoan}`),
 };

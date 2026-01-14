@@ -1,0 +1,32 @@
+{
+  "adminPhongBan": [
+    {
+      "maPhongBan": "P.KH",
+      "tenPhongBan": "Phòng Kế hoạch",
+      "moTa": "Phòng Kế hoạch - Full quyền quản trị hệ thống"
+    },
+    {
+      "maPhongBan": "B.CNTT",
+      "tenPhongBan": "Phòng Công nghệ thông tin",
+      "moTa": "Phòng IT - Quản trị kỹ thuật hệ thống"
+    },
+    {
+      "maPhongBan": "ADMIN",
+      "tenPhongBan": "Quản trị viên",
+      "moTa": "Tài khoản quản trị viên hệ thống"
+    }
+  ],
+  "adminRoles": [
+    "admin",
+    "superadmin",
+    "system"
+  ],
+  "permissions": {
+    "phanQuyenBieuMau": true,
+    "quanTriTaiKhoan": true,
+    "xemToanBoPhieu": true,
+    "xoaPhieu": true,
+    "suaPhieuDaChot": true,
+    "pheeDuyetTatCa": true
+  }
+}
