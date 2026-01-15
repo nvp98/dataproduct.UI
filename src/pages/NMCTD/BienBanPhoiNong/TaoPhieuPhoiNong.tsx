@@ -415,9 +415,9 @@ const TaoPhieuPhoiNong = () => {
   };
   const enhanceColumns = (cols: any[]) => {
     return (cols || []).map((c: any) => {
-      if (c.title === "Mẻ") return { ...c, width: 120, fixed: "left" };
-      if (c.title === "Mác") return { ...c, width: 90, fixed: "left" };
-      if (c.title === "Kích thước") return { ...c, width: 160 };
+      if (c.title === "Mẻ") return { ...c, width: 200, fixed: "left" };
+      if (c.title === "Mác") return { ...c, width: 120, fixed: "left" };
+      if (c.title === "Kích thước") return { ...c, width: 230 };
       if (c.title === "Đúc") return { ...c, width: 90 };
       if (c.dataIndex == "vanChuyen")
         return {
@@ -1355,24 +1355,28 @@ const TaoPhieuPhoiNong = () => {
               >
                 Làm mới
               </Button>
-              <Button
-                onClick={handleTransferAll}
-                type="primary"
-                style={{
-                  backgroundColor: "#52c41a",
-                  borderColor: "#52c41a",
-                  color: "#fff",
-                }}
-                icon={<CheckCircleOutlined />}
-              >
-                Chuyển hết
-              </Button>
-              <Button
-                onClick={openPartialTransferModal}
-                icon={<ArrowRightOutlined />}
-              >
-                Chuyển một phần
-              </Button>
+              {checkMaBP(userInfo) == "NM.HRC1" && (
+                <>
+                  <Button
+                    onClick={handleTransferAll}
+                    type="primary"
+                    style={{
+                      backgroundColor: "#52c41a",
+                      borderColor: "#52c41a",
+                      color: "#fff",
+                    }}
+                    icon={<CheckCircleOutlined />}
+                  >
+                    Chuyển hết
+                  </Button>
+                  <Button
+                    onClick={openPartialTransferModal}
+                    icon={<ArrowRightOutlined />}
+                  >
+                    Chuyển một phần
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1864,7 +1868,7 @@ const TaoPhieuPhoiNong = () => {
                     </>
                   )}
 
-                  {!isViecDenToi && (
+                  {!isViecDenToi && checkMaBP(userInfo) == "NM.HRC1" && (
                     <Button
                       size="small"
                       onClick={handleRecall}
