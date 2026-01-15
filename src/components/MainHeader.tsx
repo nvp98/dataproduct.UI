@@ -45,7 +45,8 @@ const MainHeader = ({ collapsed, setCollapsed }: any) => {
       navigate("/profile");
     }
   };
-  const username = localStorage.getItem("username");
+  const userString = localStorage.getItem("user");
+  const username = userString ? JSON.parse(userString) : { name: "" };
   return (
     <Header
       style={{
@@ -74,8 +75,8 @@ const MainHeader = ({ collapsed, setCollapsed }: any) => {
         trigger={["click"]}
       >
         <Space style={{ cursor: "pointer" }}>
-          <Avatar src="https://i.pravatar.cc/150?img=3" />
-          <span style={{ fontWeight: 500 }}>{username}</span>
+          <Avatar />
+          <span style={{ fontWeight: 500 }}>{username.name}</span>
         </Space>
       </Dropdown>
     </Header>

@@ -66,7 +66,7 @@ const BienBanPhoiNguoi = () => {
     try {
       const res = await PhieuApi.getData({
         MaBM: "CTD_BB_Phoinguoi",
-        NguoiTaoID: userObj.id,
+        // NguoiTaoID: userObj.id,
         page,
         pageSize,
         ...filters,
@@ -156,8 +156,8 @@ const BienBanPhoiNguoi = () => {
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() =>
-            navigate("/taophieuphoinguoi", {
-              state: { idphieu: record.idphieu },
+            navigate("/chitietphieuphoinguoi", {
+              state: { idphieu: record.idphieu, pheduyet: record.pheDuyet },
             })
           }
         >

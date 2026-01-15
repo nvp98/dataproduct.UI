@@ -1,5 +1,6 @@
 {
   "code": "CTD_BB_Phoinguoi",
+  "prefix": "BBPNG",
   "title": "BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
   "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
@@ -59,8 +60,8 @@
   ],
 
   "signatures": [
-    { "label": "NM.HRC1","type":"selectNguoiKy", "key": "nguoiKy_NMHRC1","maphongBan":"NM.HRC1","capduyet":3,"isChon":true,"required": true },
-    { "label": "P.QLCL","type":"selectNguoiKy", "key": "nguoiKy_QLCL","maphongBan":"P.QLCL","capduyet":2,"isChon":true,"required": true },
-    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_CTD" ,"maphongBan":"NM.CTD","capduyet":1,"isChon":false}
+    { "label": "NM.HRC1","type":"selectNguoiKy", "key": "nguoiKy_NMHRC1","maphongBan":"NM.HRC1","capduyet":0,"isChon":false },
+    { "label": "P.QLCL","type":"selectNguoiKy", "key": "nguoiKy_QLCL","maphongBan":"P.QLCL","capduyet":1,"isChon":true,"required": true },
+    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_CTD" ,"maphongBan":"NM.CTD","capduyet":2,"isChon":true,"required": true }
   ]
 }

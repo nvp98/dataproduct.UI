@@ -1,0 +1,46 @@
+.readonly-field {
+  position: relative;
+}
+
+.readonly-overlay {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  cursor: not-allowed;
+  z-index: 2;
+}
+
+.readonly-field input,
+.readonly-field .ant-input,
+.readonly-field .ant-select-selector,
+.readonly-field .ant-picker,
+.readonly-field .ant-input-number,
+.readonly-field textarea {
+  background-color: #fff !important;
+  color: inherit !important;
+}
+
+.readonly-field .ant-select-arrow,
+.readonly-field .ant-picker-suffix {
+  color: inherit;
+}
+
+.ant-input[disabled],
+.ant-input-disabled,
+.ant-select-disabled .ant-select-selector,
+.ant-picker input[disabled],
+.ant-picker-disabled .ant-picker-input input,
+.ant-input-number-input[disabled],
+.ant-input-number-disabled .ant-input-number-input,
+.ant-textarea[disabled],
+.ant-input-number[disabled] {
+  background-color: #fff !important;
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+.ant-select-disabled .ant-select-arrow,
+.ant-picker-disabled .ant-picker-suffix {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+

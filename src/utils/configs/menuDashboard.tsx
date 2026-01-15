@@ -19,6 +19,38 @@ export const MenuDataDashboard = [
         code: "bienbantheplong",
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
       },
+      {
+        code: "tieuhaolothoi",
+        title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+      },
+      {
+        code: "bienbanphoinong",
+        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (GIAO PHÔI)",
+        maBm: "CTD_BB_Phoinong",
+      },
+      {
+        code: "bienbanphoinguoi",
+        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      },
+    ],
+  },
+  {
+    category: "NM.HRC2",
+    icon: "nmhrc2",
+    color: "#019221ff",
+    items: [
+      {
+        code: "tieuhaonauluyen_lf",
+        title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
+      },
+      {
+        code: "tieuhaonauluyen_bof",
+        title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+      },
+      {
+        code: "tieuhaonauluyen_rf",
+        title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
+      },
     ],
   },
   {
@@ -27,13 +59,14 @@ export const MenuDataDashboard = [
     color: "#722ed1",
     items: [
       {
-        code: "bienbanphoinong",
-        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG",
+        code: "viecdentoi/bienbanphoinong",
+        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (NHẬN PHÔI)",
+        maBm: "CTD_BB_Phoinong",
       },
-      {
-        code: "bienbanphoinguoi",
-        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-      },
+      // {
+      //   code: "bienbanphoinguoi",
+      //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      // },
     ],
   },
   {
@@ -55,6 +88,7 @@ export const MenuDataDashboard = [
       },
     ],
   },
+
   // {
   //   category: "Quản lý thiết bị",
   //   icon: "equipment",

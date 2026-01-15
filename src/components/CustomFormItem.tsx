@@ -1,27 +1,62 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { Form, Input, Select, DatePicker } from "antd";
 import CustomChonNguoiKy from "./CustomChonNguoiKy";
+import "../styles/readonly.css";
 
 interface CustomFormItemProps {
   field: any; // hoặc định nghĩa kiểu riêng nếu có schema cụ thể
   idx?: number;
+  disabled?: boolean;
+  readOnly?: boolean;
+  initialValue?: any;
 }
 
-const CustomFormItem: React.FC<CustomFormItemProps> = ({ field, idx }) => {
+const CustomFormItem: React.FC<CustomFormItemProps> = ({
+  field,
+  idx,
+  disabled,
+  readOnly = false,
+  // initialValue,
+}) => {
+  const isDisabled = disabled ?? field.disabled ?? false;
+
   const renderField = () => {
     switch (field.type) {
       case "datetime":
-        return <DatePicker showTime format="DD/MM/YYYY" />;
+        return (
+          <DatePicker
+            showTime
+            format="DD/MM/YYYY"
+            disabled={isDisabled}
+            style={{ width: "100%" }}
+            size="middle"
+          />
+        );
 
       case "date":
-        return <DatePicker format="DD/MM/YYYY" />;
+        return (
+          <DatePicker
+            allowClear={!readOnly}
+            // open={!readOnly}
+            open={readOnly ? false : undefined}
+            inputReadOnly={readOnly}
+            format="DD/MM/YYYY"
+            disabled={isDisabled}
+            style={{ width: "100%" }}
+            size="middle"
+          />
+        );
 
       case "select":
         return (
           <Select
             placeholder={field.placeholder || "Chọn..."}
-            allowClear
-            // style={{ width: "100%" }}
+            allowClear={!readOnly}
+            open={readOnly ? false : undefined}
+            disabled={isDisabled}
+            style={{ width: "100%" }}
+            size="middle"
           >
             {field.options?.map((opt: any) => (
               <Select.Option key={opt.value} value={opt.value}>
@@ -32,16 +67,34 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({ field, idx }) => {
         );
 
       case "selectNguoiKy":
-        return <CustomChonNguoiKy maphongBan={field.maphongBan} />;
+        return (
+          <CustomChonNguoiKy
+            maphongBan={field.maphongBan}
+            disabled={isDisabled}
+          />
+        );
 
       case "number":
-        return <Input type="number" placeholder={field.placeholder || ""} />;
+        return (
+          <Input
+            type="number"
+            placeholder={field.placeholder || ""}
+            readOnly={isDisabled}
+          />
+        );
 
       case "textarea":
-        return <Input.TextArea placeholder={field.placeholder || ""} />;
+        return (
+          <Input.TextArea
+            placeholder={field.placeholder || ""}
+            readOnly={isDisabled}
+          />
+        );
 
       default:
-        return <Input placeholder={field.placeholder || ""} />;
+        return (
+          <Input placeholder={field.placeholder || ""} disabled={isDisabled} />
+        );
     }
   };
 
@@ -57,6 +110,8 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({ field, idx }) => {
       key={field.key || idx}
       name={field.key}
       label={field.label}
+      className={readOnly ? "readonly-field" : undefined}
+      // initialValue={initialValue ?? field.initialValue}
       // initialValue={initialValue}
       rules={[
         ...(field.rules || []),
@@ -65,7 +120,10 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({ field, idx }) => {
           : []),
       ]}
     >
-      {renderField()}
+      <>
+        {renderField()}
+        {/* {readOnly && <div className="readonly-overlay" />} */}
+      </>
     </Form.Item>
   );
 };

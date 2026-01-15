@@ -1,0 +1,130 @@
+{
+  "code": "HRC2_STD_NXT",
+  "prefix": "STD_NXT_HRC2",
+  "title": "SỔ THEO DÕI XUẤT - NHẬP - TỒN NGUYÊN LIỆU HRC2",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.16/QT.05.155",
+    "effectiveDate": "10/011/2025",
+    "revision": "00"
+  },
+  "headerFields": [
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true },
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    }
+  ],
+  "layout1": [
+    {
+      "sectionType": "groupedTable",
+      "title": "1. Số liệu kiểm kê",
+      "key": "table1",
+      "columns": [
+        { "title": "Khu vực", "dataIndex": "khuVuc", "isLabel": true },
+        { "title": "Vị trí", "dataIndex": "viTri" },
+        { "title": "Nguyên nhiên liệu", "dataIndex": "nguyenNhienLieu" },
+        { "title": "Tồn đầu ca", "children": [
+          { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa", "readOnly": true },
+          { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanDauCa" }
+        ]},
+        { "title": "Nhập vào trong ca (Kg)", "dataIndex": "nhapTrongCa" },
+        { "title": "Mức liệu", "dataIndex": "mucLieu" },
+        { "title": "Thể tích", "dataIndex": "theTich" },
+        { "title": "Tỷ trọng", "dataIndex": "tyTrong" },
+        { "title": "Tồn cuối ca thực tế", "children": [
+          { "title": "Khối lượng (Kg)", "dataIndex": "tonCuoiCa" },
+          { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanCuoiCa" }
+        ] },
+        { "title": "Tổng thực tế sử dụng", "dataIndex": "tongThucTe" }
+      ],
+      "khuVucList": [
+        {"label": "Lò thổi 6", "value": "1", "bieuMau":"BOF", "scope": 6},
+        {"label": "Lò thổi 7", "value": "2", "bieuMau":"BOF", "scope": 7 },
+        {"label": "Tinh luyện LF", "value": "3", "bieuMau":"LF", "scope": 6},
+        {"label": "RH1", "value": "4", "bieuMau":"RH", "scope": 1},
+        {"label": "RH2", "value": "5", "bieuMau":"RH", "scope": 2}
+      ],
+  
+      "defaultViTri": 1
+    }
+  ],
+
+  "layout2": [
+    {
+      "sectionType": "summaryTable",
+      "title": "2. Tổng hợp số liệu kiểm kê - phân bổ",
+      "key": "table2",
+      "columns": [
+        {
+          "title": "",
+          "dataIndex": "totalText",
+          "isLabel": true
+        },
+        {
+          "title": "Nguyên nhiên liệu",
+          "dataIndex": "totalNguyenNhienLieu"
+        },
+        {
+          "title": "Khối lượng tồn đầu ca (tấn)",
+          "dataIndex": "totalTonDauCa"
+        },
+        {
+          "title": "Khối lượng nhập trong ca (tấn)",
+          "dataIndex": "totalNhapTrongCa"
+        },
+        {
+          "title": "Khối lượng tồn cuối ca (tấn)",
+          "dataIndex": "totalTonCuoiCa"
+        },
+        {
+          "title": "Tổng sử dụng",
+          "dataIndex": "totalSuDung"
+        },
+        {
+          "title": "Tổng sử dụng trên sổ sách",
+          "dataIndex": "totalSDTrongSoSach"
+        },
+        {
+          "title": "Chênh lệch",
+          "dataIndex": "totalChenhLech"
+        }
+      ],
+      "initialData": [
+        {
+          "totalText": "Tổng cộng (cả trong và ngoài silo)"
+        }
+      ]
+    }
+  ],
+
+  "signatures": [
+    {
+      "label": "Người giao ca",
+      "type": "selectNguoiKy",
+      "key": "nguoinhanca_HRC2", 
+      "maphongBan": "NM.HRC2",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Người nhận ca",
+      "type": "selectNguoiKy",
+      "key": "nguoigiaoca_HRC2",
+      "maphongBan": "NM.HRC2",
+      "capduyet": 0,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

@@ -1,0 +1,325 @@
+{
+  "code": "HRC1_BB_Lothoi",
+  "title": "BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.08/QT.05.15",
+    "effectiveDate": "10/01/2025",
+    "revision": "00"
+  },
+
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        {
+          "label": "Ca ngày",
+          "value": 1
+        },
+        {
+          "label": "Ca đêm",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "label": "Ngày sản xuất",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết tiêu hao nấu luyện lò thổi",
+      "key": "table1",
+      "columns": [
+        {
+          "title": "Mẻ nấu số",
+          "dataIndex": "meNauSo",
+          "width": 80
+        },
+        {
+          "title": "Mác thép",
+          "dataIndex": "macThep",
+          "width": 100
+        },
+        {
+          "title": "Nguyên liệu đầu vào (tấn)",
+          "children": [
+            {
+              "title": "Gang lỏng",
+              "dataIndex": "gangLong",
+              "width": 90
+            },
+            {
+              "title": "Thép phế",
+              "dataIndex": "thepPhe",
+              "width": 90
+            }
+          ]
+        },
+        {
+          "title": "Phụ gia công nghệ (Kg)",
+          "children": [
+            {
+              "title": "Quặng Fe",
+              "dataIndex": "quangFe",
+              "width": 80
+            },
+            {
+              "title": "Vôi",
+              "dataIndex": "voi",
+              "width": 80
+            },
+            {
+              "title": "Dolomite",
+              "dataIndex": "dolomite",
+              "width": 80
+            },
+            {
+              "title": "Vôi",
+              "dataIndex": "voi",
+              "width": 80
+            },
+            {
+              "title": "Vôi LF",
+              "dataIndex": "voiLf",
+              "width": 80
+            },
+            {
+              "title": "SiMn",
+              "dataIndex": "siMn",
+              "width": 80
+            },
+            {
+              "title": "FeSi",
+              "dataIndex": "feSi",
+              "width": 80
+            },
+            {
+              "title": "Than",
+              "dataIndex": "than",
+              "width": 80
+            },
+            {
+              "title": "FeMn",
+              "dataIndex": "feMn",
+              "width": 80
+            },
+            {
+              "title": "HC-FeMn75",
+              "dataIndex": "hcFeMn75",
+              "width": 80
+            },
+            {
+              "title": "LDSF",
+              "dataIndex": "ldsf",
+              "width": 80
+            },
+            {
+              "title": "LFAK",
+              "dataIndex": "lfak",
+              "width": 80
+            },
+            {
+              "title": "Dây CaAl (m)",
+              "dataIndex": "dayCaAl",
+              "width": 80
+            },
+            {
+              "title": "Al",
+              "dataIndex": "nhomThoi",
+              "width": 80
+            },
+            {
+              "title": "Dây Al (m)",
+              "dataIndex": "dayAl",
+              "width": 80
+            },
+            {
+              "title": "Vôi bắn xỉ",
+              "dataIndex": "voiBanXi",
+              "width": 80
+            },
+            {
+              "title": "Dolomite bắn xỉ",
+              "dataIndex": "dolomiteBanXi",
+              "width": 80
+            },
+            {
+              "title": "Vôi lót lò",
+              "dataIndex": "voiLotLo",
+              "width": 80
+            },
+            {
+              "title": "Dolomite lót lò",
+              "dataIndex": "dolomiteLotLo",
+              "width": 80
+            },
+            {
+              "title": "Chất Tăng C",
+              "dataIndex": "chatTangC",
+              "width": 80
+            },
+            {
+              "title": "FeP",
+              "dataIndex": "feP",
+              "width": 80
+            },
+            {
+              "title": "Niken",
+              "dataIndex": "niken",
+              "width": 80
+            },
+            {
+              "title": "CaSi (m)",
+              "dataIndex": "daycasi",
+              "width": 80
+            },
+            {
+              "title": "FeSi (Al thấp)",
+              "dataIndex": "feSiAl",
+              "width": 80
+            },
+            {
+              "title": "Khác",
+              "dataIndex": "khac",
+              "width": 80
+            }
+          ]
+        },
+        {
+          "title": "Nhiên liệu (m3)",
+          "children": [
+            {
+              "title": "Oxy",
+              "dataIndex": "oxy",
+              "width": 80
+            },
+            {
+              "title": "Nitơ",
+              "dataIndex": "nito",
+              "width": 80
+            }
+          ]
+        },
+        {
+          "title": "Ghi chú",
+          "dataIndex": "ghiChu",
+          "width": 120
+        }
+      ]
+    }
+  ],
+
+  "layout2": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết tiêu hao nấu luyện lò thổi (bảng 2)",
+      "key": "table2",
+      "columns": [
+        {
+          "title": "",
+          "dataIndex": "materialName",
+          "isLabel": true
+        },
+        {
+          "title": "Tồn đầu kíp",
+          "dataIndex": "tonDauKip"
+        },
+        {
+          "title": "Nhập trong kíp",
+          "dataIndex": "nhapTrongKip"
+        },
+        {
+          "title": "Tồn cuối kíp",
+          "dataIndex": "tonCuoiKip"
+        }
+      ],
+      "initialData": [
+        {
+          "key": "1",
+          "materialName": "Lượng Vôi"
+        },
+        {
+          "key": "2",
+          "materialName": "Lượng Dolomite"
+        },
+        {
+          "key": "3",
+          "materialName": "Lượng Quặng"
+        },
+        {
+          "key": "4",
+          "materialName": "Lượng FeSi"
+        },
+        {
+          "key": "5",
+          "materialName": "Lượng SiMn"
+        },
+        {
+          "key": "6",
+          "materialName": "Lượng FeMn"
+        },
+        {
+          "key": "7",
+          "materialName": "Lượng LDSF"
+        },
+        {
+          "key": "8",
+          "materialName": "Lượng Than"
+        },
+        {
+          "key": "9",
+          "materialName": "Lượng Al"
+        },
+        {
+          "key": "10",
+          "materialName": "Lượng Chất tăng cacbon"
+        },
+        {
+          "key": "11",
+          "materialName": "Lượng HC-FeMn75"
+        },
+        {
+          "key": "12",
+          "materialName": "Nguyên liệu khác:"
+        }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+    "Biên bản này được lập thành 2 bản có giá trị như nhau: bên giao và bên nhận mỗi bên giữ 1 bản."
+  ],
+
+  "signatures": [
+    {
+      "label": "Trưởng kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_TruongKip",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Người lập",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Nhan",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

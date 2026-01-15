@@ -1,0 +1,127 @@
+{
+  "code": "HRC2_BB_NauLuyen_RH",
+  "prefix": "BBTL_RH",
+  "title": "BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.16/QT.05.155",
+    "effectiveDate": "10/011/2025",
+    "revision": "00"
+  },
+
+  "headerFields": [
+    {
+      "label": "Khu vực",
+      "type": "select",
+      "key": "scope",
+      "required": true,
+      "options": [
+        { "label": "Khu vực 1", "value": 1 },
+        { "label": "Khu vực 2", "value": 2 }
+      ]
+    },
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key": "table1",
+      "dataSource": {
+        "type": "api",
+        "url": "TieuHaoNauLuyen_RH",
+        "params": { "ngaySX": "@ngaySX", "ca": "@ca" }
+      },
+      "columns": [
+        { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 150 ,"editable": false},
+        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false},
+        {
+          "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
+          "dataIndex": "klThepLong", "width": 100
+        },
+        {
+          "title": "Chất hợp kim hóa", "dataIndex": "KL", "editable": false
+        },
+        {
+          "title": "Phụ gia và chất khử oxy", "dataIndex": "PG", "editable": false
+        },
+        {
+          "title": "Khác", "dataIndex": "others", "editable": false, "width": 100
+        },
+        {
+          "title": "Khí (m³)",
+          "children": [
+            { "title": "Argon", "dataIndex": "ar_RH", "width": 100 },
+            { "title": "Nito", "dataIndex": "n2", "width": 100 },
+            { "title": "Oxi", "dataIndex": "o2", "width": 100 }
+          ]
+        },
+        { "title": "Que lấy mẫu (Cái)", "dataIndex": "queLayMau", "width": 100 },
+        { "title": "Que đo nhiệt (Cái)", "dataIndex": "queDoNhiet", "width": 100 },
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 120 }
+      ]
+    }
+  ],
+  "layout2": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết tiêu hao nấu luyện lò thổi RH (bảng 2)",
+      "key": "table2",
+      "columns": [
+        {
+          "title": "",
+          "dataIndex": "materialName"
+        },
+        {
+          "title": "Tồn đầu kíp",
+          "dataIndex": "tonDauKip"
+        },
+        {
+          "title": "Nhập trong kíp",
+          "dataIndex": "nhapTrongKip"
+        },
+        {
+          "title": "Tồn cuối kíp",
+          "dataIndex": "tonCuoiKip"
+        }
+      ],
+      "initialData": []
+    }
+  ],
+  "footerNotes": [],
+
+  "signatures": [
+    {
+      "label": "Tổ trưởng",
+      "type": "selectNguoiKy",
+      "key": "toTruong_HRC2", 
+      "maphongBan": "NM.HRC2",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Người lập",
+      "type": "selectNguoiKy",
+      "key": "nguoiLap_HRC2",
+      "maphongBan": "NM.HRC2",
+      "capduyet": 0,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}
