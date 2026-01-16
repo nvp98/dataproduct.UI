@@ -90,7 +90,9 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
             }
           }}
         >
-          {text}
+          {type === "viecdentoi"
+            ? text
+            : text.split("-").slice(0, -1).join("-") || text}
         </b>
       ),
       width: 200,
@@ -108,6 +110,8 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       key: "ca",
       width: 220,
       ellipsis: true,
+      render: (value: number) =>
+        value === 1 ? "Ca ngày" : value === 2 ? "Ca đêm" : "-",
     },
     // {
     //   title: "Xưởng sản xuất",

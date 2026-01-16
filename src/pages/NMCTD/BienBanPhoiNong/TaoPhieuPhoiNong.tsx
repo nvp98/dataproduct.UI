@@ -78,6 +78,60 @@ const TaoPhieuPhoiNong = () => {
   const ca = Form.useWatch("ca", form);
 
   /**
+   * Tính toán ca hiện tại + 2 ca liền kề sau
+   * VD: Ca ngày 14 -> [Ca ngày 14, Ca đêm 14, Ca ngày 15]
+   *     Ca đêm 14 -> [Ca đêm 14, Ca ngày 15, Ca đêm 15]
+   */
+  const getValidNextShifts = () => {
+    if (!ngaySX || !ca) return null;
+
+    const currentDate = dayjs(ngaySX);
+    const currentShift = Number(ca);
+
+    if (currentShift === 1) {
+      // Ca ngày -> ca hiện tại + 2 ca liền kề: ca ngày, ca đêm cùng ngày, ca ngày hôm sau
+      return [
+        { date: currentDate, shift: 1 },
+        { date: currentDate, shift: 2 },
+        { date: currentDate.add(1, "day"), shift: 1 },
+      ];
+    } else {
+      // Ca đêm -> ca hiện tại + 2 ca liền kề: ca đêm, ca ngày hôm sau, ca đêm hôm sau
+      return [
+        { date: currentDate, shift: 2 },
+        { date: currentDate.add(1, "day"), shift: 1 },
+        { date: currentDate.add(1, "day"), shift: 2 },
+      ];
+    }
+  };
+
+  const validShifts = getValidNextShifts();
+
+  // Kiểm tra ngày có hợp lệ không
+  const isDateValid = (date: dayjs.Dayjs) => {
+    if (!validShifts) return true;
+    return validShifts.some((vs) => vs.date.isSame(date, "day"));
+  };
+
+  // Kiểm tra ca có hợp lệ không với ngày đã chọn
+  const isShiftValid = (shift: number) => {
+    if (!validShifts || !filterNgay) return true;
+    return validShifts.some(
+      (vs) => vs.date.isSame(filterNgay, "day") && vs.shift === shift
+    );
+  };
+
+  // Reset filterCa khi filterNgay thay đổi và ca hiện tại không hợp lệ
+  useEffect(() => {
+    if (!isViecDenToi && filterCa && filterNgay) {
+      const shiftNum = Number(filterCa);
+      if (!isShiftValid(shiftNum)) {
+        setFilterCa("");
+      }
+    }
+  }, [filterNgay]);
+
+  /**
    * Map dữ liệu API BKMIS sang hàng bảng phôi nóng
    * - Khi không có dữ liệu: tạo một dòng trống với cấu trúc chuẩn
    * - Tính `tongSoThanh` và `stChuaChuyen` dựa trên số lượng đã chuyển
@@ -1578,6 +1632,10 @@ const TaoPhieuPhoiNong = () => {
                   open={isViecDenToi ? false : undefined}
                   inputReadOnly={isViecDenToi}
                   allowClear={!isViecDenToi}
+                  disabledDate={(current) => {
+                    if (isViecDenToi || !validShifts) return false;
+                    return !isDateValid(current);
+                  }}
                 />
               </Col>
 
@@ -1595,8 +1653,22 @@ const TaoPhieuPhoiNong = () => {
                   allowClear={!isViecDenToi}
                   open={isViecDenToi ? false : undefined}
                   options={[
-                    { label: "Ngày", value: "1" },
-                    { label: "Đêm", value: "2" },
+                    {
+                      label: "Ngày",
+                      value: "1",
+                      disabled:
+                        !isViecDenToi && validShifts
+                          ? !isShiftValid(1)
+                          : undefined,
+                    },
+                    {
+                      label: "Đêm",
+                      value: "2",
+                      disabled:
+                        !isViecDenToi && validShifts
+                          ? !isShiftValid(2)
+                          : undefined,
+                    },
                   ]}
                 />
               </Col>
