@@ -18,7 +18,7 @@ export const PhieuApi = {
 
   changeStatus_extended: (
     id: string,
-    payload: { status: number; isLock: number; isDelete: number }
+    payload: { status: number; isLock: number; isDelete: number },
   ) => apiService.put(`/api/Phieus/${id}/status-extended`, payload),
 
   search: (payload: SearchPhieuRequest) =>
@@ -26,4 +26,6 @@ export const PhieuApi = {
 
   initializePhieu: (id: string) =>
     apiService.post(`/api/Phieus/${id}/initialize`),
+  syncNguoiTaoPhieu: (id: string, data: any) =>
+    apiService.put(`/api/Phieus/${id}/sync-nguoi-tao`, data),
 };

@@ -84,8 +84,8 @@
   ],
 
   "signatures": [
-    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_CTD" ,"maphongBan":"NM.CTD","capduyet":0,"isChon":false},
+    { "label": "NM.HRC1","type":"selectNguoiKy", "key": "nguoiKy_HRC1" ,"maphongBan":"NM.HRC1","capduyet":0,"isChon":false},
     { "label": "P.QLCL","type":"selectNguoiKy", "key": "nguoiKy_QLCL","maphongBan":"P.QLCL","capduyet":1,"isChon":true,"required": true },
-    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_NMHRC1","maphongBan":"NM.CTD","capduyet":2,"isChon":true,"required": true }
+    { "label": "NM.CTD","type":"selectNguoiKy", "key": "nguoiKy_CTD","maphongBan":"NM.CTD","capduyet":2,"isChon":true,"required": true }
   ]
 }

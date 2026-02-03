@@ -23,7 +23,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
 
   const fixedFilters = useMemo(
     () => ({ usercode: userObj?.maNV || "" }),
-    [userObj?.maNV]
+    [userObj?.maNV],
   );
 
   const {
@@ -58,6 +58,8 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
       key: "soPhieu",
+      width: 180,
+      ellipsis: true,
       render: (text: string, record: any) => (
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
@@ -95,20 +97,18 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
             : text.split("-").slice(0, -1).join("-") || text}
         </b>
       ),
-      width: 200,
     },
     {
-      title: "Quy trình",
+      title: "Mã BM",
       dataIndex: "maBm",
       key: "maBm",
-      width: 220,
       ellipsis: true,
     },
     {
       title: "Ca",
       dataIndex: "ca",
       key: "ca",
-      width: 220,
+      width: 100,
       ellipsis: true,
       render: (value: number) =>
         value === 1 ? "Ca ngày" : value === 2 ? "Ca đêm" : "-",
@@ -124,22 +124,29 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       title: "Ngày sản xuất",
       dataIndex: "ngaySX",
       key: "ngaySX",
-      width: 140,
-      render: (value: string) =>
-        value ? dayjs(value).format("DD/MM/YYYY") : "-",
-    },
-    {
-      title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
-      // width: 220,
+      width: 180,
       ellipsis: true,
+      render: (value: string, record: any) => {
+        if (!value) return "-";
+        const ca = record.ca || "";
+        const kip = record.kip || "";
+        const ngaySX = dayjs(value).format("DD/MM/YYYY");
+        return ca ? `${ca}${kip} - ${ngaySX}` : `${ca} - ${ngaySX}`;
+      },
     },
+    // {
+    //   title: "Người tạo",
+    //   dataIndex: "nguoiTaoId",
+    //   key: "nguoiTaoId",
+    //   // width: 220,
+    //   ellipsis: true,
+    // },
     {
       title: "Ngày tạo",
       dataIndex: "ngayTao",
       key: "ngayTao",
-      width: 140,
+      width: 150,
+      ellipsis: true,
       render: (value: string) =>
         value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "-",
       sorter: (a: any, b: any) => {
@@ -149,17 +156,17 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       },
       defaultSortOrder: "descend" as const,
     },
-    {
-      title: "Trạng thái",
-      dataIndex: "tinhTrang",
-      key: "tinhTrang",
-      width: 110,
-      render: (status: string) => (
-        <Tag color={statusConfig[status]?.color || "default"}>
-          {statusConfig[status]?.text || status}
-        </Tag>
-      ),
-    },
+    // {
+    //   title: "Trạng thái",
+    //   dataIndex: "tinhTrang",
+    //   key: "tinhTrang",
+    //   width: 110,
+    //   render: (status: string) => (
+    //     <Tag color={statusConfig[status]?.color || "default"}>
+    //       {statusConfig[status]?.text || status}
+    //     </Tag>
+    //   ),
+    // },
     // {
     //   title: "Người hỗ trợ",
     //   dataIndex: "userAssigneeName",
@@ -172,37 +179,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       title: "Ghi chú",
       dataIndex: "note",
       key: "note",
-      width: 150,
-    },
-
-    {
-      title: "Thao tác",
-      key: "action",
-      width: 90,
-      render: (_: any, record: any) => (
-        <Space>
-          {/* <Popconfirm
-            title="Bạn có chắc chắn muốn xóa ticket này?"
-            okText="Xóa"
-            cancelText="Hủy"
-            onConfirm={() => handleDelete(record.key)}
-          >
-            <Button
-              type="text"
-              icon={<DeleteTwoTone twoToneColor="#ff4d4f" />}
-            />
-          </Popconfirm> */}
-          <Button
-            type="text"
-            icon={<EyeOutlined twoToneColor="#1890ff" />}
-            onClick={() =>
-              navigate("/chitietphieuphoinong", {
-                state: { idphieu: record.idphieu },
-              })
-            }
-          />
-        </Space>
-      ),
+      ellipsis: true,
     },
   ];
 
@@ -305,7 +282,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
               `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: onPageChange,
           }}
-          scroll={{ x: 1100 }}
+          scroll={{ x: "max-content" }}
           summary={() => (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={9} align="right">

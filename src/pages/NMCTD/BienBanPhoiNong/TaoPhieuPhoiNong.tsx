@@ -33,6 +33,7 @@ import {
 } from "@ant-design/icons";
 import { CtdPhoiNongApi } from "../../../services/CtdPhoiNongApi";
 import { getFileNameFromContentDisposition } from "../../../utils/helpers";
+import { PheDuyetApi } from "../../../services/PheDuyetApi";
 
 const TaoPhieuPhoiNong = () => {
   const location = useLocation();
@@ -71,6 +72,7 @@ const TaoPhieuPhoiNong = () => {
   const [filterMe, setFilterMe] = useState("");
   const [filteredChuyenData, setFilteredChuyenData] = useState<any[]>([]);
   const [selectedProcessedKeys, setSelectedProcessedKeys] = useState<Key[]>([]);
+  const [pheDuyetFromApi, setPheDuyetFromApi] = useState<any[]>([]);
   const isViecDenToi = String(type || "") === "viecdentoi";
 
   // Theo dõi thay đổi trên các field chính
@@ -117,7 +119,7 @@ const TaoPhieuPhoiNong = () => {
   const isShiftValid = (shift: number) => {
     if (!validShifts || !filterNgay) return true;
     return validShifts.some(
-      (vs) => vs.date.isSame(filterNgay, "day") && vs.shift === shift
+      (vs) => vs.date.isSame(filterNgay, "day") && vs.shift === shift,
     );
   };
 
@@ -175,8 +177,8 @@ const TaoPhieuPhoiNong = () => {
         stChuaChuyen == 0
           ? 1
           : stChuaChuyen > 0 && stChuaChuyen < tongSoThanhBKM
-          ? 2
-          : 0;
+            ? 2
+            : 0;
       return {
         key: item.id || uuidv4(),
         me: item.me ?? "",
@@ -211,7 +213,7 @@ const TaoPhieuPhoiNong = () => {
    */
   const mapRowToCtdPhoiNong = (
     row: any,
-    opts?: { sum?: number; ngaySx?: string; ca?: string | number }
+    opts?: { sum?: number; ngaySx?: string; ca?: string | number },
   ) => {
     const idphieuVal = form.getFieldValue("idphieu") || idphieu || null;
     const caVal =
@@ -282,7 +284,7 @@ const TaoPhieuPhoiNong = () => {
       sums?: Record<string, number>;
       ngaySx?: string;
       ca?: string | number;
-    }
+    },
   ) => {
     try {
       const payload = rows.map((r) =>
@@ -290,7 +292,7 @@ const TaoPhieuPhoiNong = () => {
           sum: opts?.sums ? Number(opts.sums[String(r.key)] || 0) : undefined,
           ngaySx: filterNgay?.format("YYYY-MM-DD") ?? null,
           ca: filterCa ?? null,
-        })
+        }),
       );
       console.log("➡️ Payload gửi sang CtdPhoiNong/bulk: rows", rows);
       await CtdPhoiNongApi.bulk(payload); // đẩy dữ liệu vào API CtdPhoiNong/bulk
@@ -345,7 +347,7 @@ const TaoPhieuPhoiNong = () => {
         (l) =>
           l.sectionType === "table" &&
           l.key === "table1" &&
-          config.code === "CTD_BB_Phoinong"
+          config.code === "CTD_BB_Phoinong",
       );
       if (!tablePhoiNong) return; // check đúng bảng phôi nóng
 
@@ -398,6 +400,13 @@ const TaoPhieuPhoiNong = () => {
         if (res) {
           setSoPhieu((res as any)?.soPhieu);
           console.log("✅ Dữ liệu phiếu:", res);
+
+          // Lưu pheDuyet từ API nếu có
+          if ((res as any)?.pheDuyet && Array.isArray((res as any)?.pheDuyet)) {
+            setPheDuyetFromApi((res as any).pheDuyet);
+            console.log("✅ Đã load pheDuyet từ API:", (res as any).pheDuyet);
+          }
+
           // data.Data là phần JSON đã parse (form động)
           const data = (res as any)?.jsonData || {}; //
           // Chuyển chuỗi -> dayjs
@@ -506,13 +515,23 @@ const TaoPhieuPhoiNong = () => {
    * - Chuẩn hóa dữ liệu bảng: cập nhật `stBKM` theo `stChuaChuyen`
    * - Build luồng phê duyệt: thêm người tạo (cấp 1) nếu có cấu hình
    * - POST/PUT dữ liệu phiếu tùy theo có `idphieu`
+   * - Cập nhật người xử lý vào pheDuyetFlow nếu có thamSo xacNhanInfo
    */
-  const saveAfterTransfer = async (nextTable: any[], nextThung: any[]) => {
+  const saveAfterTransfer = async (
+    nextTable: any[],
+    nextThung: any[],
+    xacNhanInfo?: { maKyDuyet: string; nguoiXuLyId: number; tinhTrang: number },
+  ) => {
     try {
       const stored = localStorage.getItem("userinfo");
       const values = form.getFieldsValue();
-      const pheDuyetFlow = config.signatures
-        .filter((s) => s.isChon)
+
+      // Build mới từ config và sau đó map với flow api nếu có
+      let pheDuyetFlow: any[];
+
+      // Luôn build mới từ config trước
+      pheDuyetFlow = config.signatures
+        // .filter((s) => s.isChon)
         .map((s) => ({
           capDuyet: s.capduyet,
           maKyDuyet: s.key,
@@ -520,18 +539,95 @@ const TaoPhieuPhoiNong = () => {
           tinhTrang: 0,
           ghiChu: "",
         }));
-      const hasCreator = config.signatures.find(
-        (x) => x.isChon === false && x.capduyet === 1
-      );
-      if (hasCreator) {
-        pheDuyetFlow.unshift({
-          capDuyet: 1,
-          maKyDuyet: hasCreator?.key || "",
-          nguoiDuyetId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
-          tinhTrang: 1,
-          ghiChu: "Người tạo phiếu",
+
+      // const hasCreator = config.signatures.find(
+      //   (x) =>
+      //     x.isChon === false &&
+      //     x.capduyet === 0 &&
+      //     x.maphongBan === (stored ? JSON.parse(stored).tenNgan : ""),
+      // );
+      // if (hasCreator) {
+      //   pheDuyetFlow.unshift({
+      //     capDuyet: 0,
+      //     maKyDuyet: hasCreator?.key || "",
+      //     nguoiDuyetId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
+      //     tinhTrang: 1,
+      //     ghiChu: "Người tạo phiếu",
+      //   });
+      // }
+
+      // console.log("🆕 Build pheDuyetFlow từ config:", pheDuyetFlow);
+
+      // Map với dữ liệu từ API nếu có
+      if (pheDuyetFromApi && pheDuyetFromApi.length > 0) {
+        console.log("📋 Mapping với pheDuyetFlow từ API:", pheDuyetFromApi);
+
+        pheDuyetFlow.forEach((item) => {
+          const apiItem = pheDuyetFromApi.find(
+            (api) => api.capDuyet === item.capDuyet,
+          );
+          if (apiItem) {
+            item.nguoiDuyetId = apiItem.nguoiDuyetId;
+            item.tinhTrang = apiItem.tinhTrang;
+            item.ghiChu = apiItem.ghiChu || "";
+            console.log(`✅ Đã map cấp ${item.capDuyet} từ API:`, apiItem);
+          }
         });
       }
+
+      // Cập nhật người xử lý vào pheDuyetFlow nếu có thông tin xác nhận
+      if (xacNhanInfo) {
+        const { maKyDuyet, nguoiXuLyId, tinhTrang } = xacNhanInfo;
+
+        console.log("🔍 Tìm kiếm trong config với maKyDuyet:", maKyDuyet);
+        console.log("📋 PheDuyetFlow hiện tại:", pheDuyetFlow);
+
+        // Tìm cấp duyệt trong config
+        const signatureConfig = config.signatures.find(
+          (s) => s.key === maKyDuyet,
+        );
+
+        if (!signatureConfig) {
+          console.warn(
+            `⚠️ Không tìm thấy ${maKyDuyet} trong config signatures`,
+          );
+          return;
+        }
+
+        const capDuyet = signatureConfig.capduyet;
+
+        // Tìm item trong pheDuyetFlow theo cấp duyệt
+        const flowItem = pheDuyetFlow.find(
+          (item) => item.capDuyet === capDuyet,
+        );
+
+        if (flowItem) {
+          // Cập nhật item theo cấp duyệt
+          flowItem.maKyDuyet = maKyDuyet;
+          flowItem.nguoiDuyetId = nguoiXuLyId;
+          flowItem.tinhTrang = tinhTrang;
+          flowItem.ghiChu =
+            tinhTrang === 1
+              ? `Đã xác nhận bởi ${maKyDuyet}`
+              : `Thu hồi bởi ${maKyDuyet}`;
+          console.log(
+            `✅ Đã cập nhật cấp ${capDuyet} (${maKyDuyet}):`,
+            flowItem,
+          );
+        } else {
+          console.warn(
+            `⚠️ Không tìm thấy cấp duyệt ${capDuyet} trong pheDuyetFlow`,
+          );
+        }
+
+        // Cập nhật người ký vào form
+        form.setFieldValue(maKyDuyet, nguoiXuLyId);
+        console.log(`📝 Đã cập nhật form field ${maKyDuyet} = ${nguoiXuLyId}`);
+      }
+
+      // Cập nhật lại state để sử dụng cho lần sau
+      setPheDuyetFromApi(pheDuyetFlow);
+
       const normalizedTable = (nextTable || []).map((r: any) => ({
         ...r,
         stBKM: Number(r.stBKM || 0),
@@ -544,13 +640,16 @@ const TaoPhieuPhoiNong = () => {
         ...values,
         NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
         maBm: config.code,
-        nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
+        // nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
         xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
         idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
         table1: normalizedTable,
         chuyenData: normalizedThung,
-        // pheDuyet: pheDuyetFlow,
+        pheDuyet: pheDuyetFlow,
       };
+      console.log("📤 Payload gửi lên API:", payload);
+      console.log("📋 PheDuyetFlow trong payload:", payload.pheDuyet);
+
       if (values.idphieu) {
         await PhieuApi.putData(values.idphieu, payload);
         message.success("Đã lưu cập nhật sau khi chuyển");
@@ -652,8 +751,8 @@ const TaoPhieuPhoiNong = () => {
       };
       const params = Object.fromEntries(
         Object.entries(rawParams).filter(
-          ([_, v]) => v !== undefined && v !== null && v !== ""
-        )
+          ([_, v]) => v !== undefined && v !== null && v !== "",
+        ),
       );
       // const params = {
       //   NgaySX: paramsInit?.NgaySX ?? filterNgay.format("YYYY-MM-DD"),
@@ -669,7 +768,7 @@ const TaoPhieuPhoiNong = () => {
       setSelectedProcessedKeys([]);
     } catch (e) {
       message.error(
-        "Không thể tải danh sách phôi đã chuyển từ API CtdPhoiNong"
+        "Không thể tải danh sách phôi đã chuyển từ API CtdPhoiNong",
       );
     } finally {
       setLoadingChuyen(false);
@@ -708,7 +807,7 @@ const TaoPhieuPhoiNong = () => {
       const source =
         filteredChuyenData.length > 0 ? filteredChuyenData : chuyenData;
       const selected = source.filter((r: any) =>
-        selectedProcessedKeys.includes(r.key)
+        selectedProcessedKeys.includes(r.key),
       );
       if (!selected || selected.length === 0) {
         message.warning("Chọn dòng để thu hồi");
@@ -722,10 +821,10 @@ const TaoPhieuPhoiNong = () => {
             r.soThanhLoai1 != null
               ? r.soThanhLoai1
               : r.tongSoThanh != null
-              ? r.tongSoThanh
-              : r.tongSt != null
-              ? r.tongSt
-              : 0
+                ? r.tongSoThanh
+                : r.tongSt != null
+                  ? r.tongSt
+                  : 0,
           ),
         }));
       // console.log("stUpdatePayload", stUpdatePayload);
@@ -735,10 +834,10 @@ const TaoPhieuPhoiNong = () => {
       await Promise.all(
         selected
           .filter((r: any) => Number(r.id || 0) > 0)
-          .map((r: any) => CtdPhoiNongApi.delete(Number(r.id)))
+          .map((r: any) => CtdPhoiNongApi.delete(Number(r.id))),
       );
       const updatedChuyenData = chuyenData.filter(
-        (r: any) => !selected.find((f: any) => f.key === r.key)
+        (r: any) => !selected.find((f: any) => f.key === r.key),
       );
       setChuyenData(updatedChuyenData);
       setFilteredChuyenData([]);
@@ -749,8 +848,8 @@ const TaoPhieuPhoiNong = () => {
         NgaySX: formNgay
           ? formNgay.format("YYYY-MM-DD")
           : ngaySX
-          ? dayjs(ngaySX).format("YYYY-MM-DD")
-          : null,
+            ? dayjs(ngaySX).format("YYYY-MM-DD")
+            : null,
         Ca: form.getFieldValue("ca") || ca,
         LoaiPhoi: 1,
         // MayDuc: thongtinphieu?.mayDuc,
@@ -795,7 +894,7 @@ const TaoPhieuPhoiNong = () => {
 
       // Thêm dòng mặc định cho người tạo phiếu = cấp 1
       const hasCreator = config.signatures.find(
-        (x) => x.isChon === false && x.capduyet === 1
+        (x) => x.isChon === false && x.capduyet === 1,
       );
       if (hasCreator) {
         pheDuyetFlow.unshift({
@@ -847,7 +946,7 @@ const TaoPhieuPhoiNong = () => {
           isDelete: 0,
         });
         message.success(
-          `Gửi trình ký thành công: ${(res as any)?.soPhieu || ""}`
+          `Gửi trình ký thành công: ${(res as any)?.soPhieu || ""}`,
         );
       }
     } catch (error) {
@@ -915,7 +1014,7 @@ const TaoPhieuPhoiNong = () => {
   const getSelectedRowsOrWarn = () => {
     if (!filterNgay || !filterCa) {
       message.warning(
-        "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển'"
+        "Vui lòng chọn Ngày và Ca trong vùng 'Danh sách phôi đã chuyển'",
       );
       return null;
     }
@@ -940,7 +1039,7 @@ const TaoPhieuPhoiNong = () => {
 
     if (invalid) {
       message.warning(
-        "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng"
+        "Vui lòng nhập Mẻ, Mác và ít nhất 1 loại có Số thanh & Khối lượng",
       );
       return null;
     }
@@ -957,8 +1056,8 @@ const TaoPhieuPhoiNong = () => {
     if (trungMe) {
       message.warning(
         `Mẻ ${trungMe.me} đã được chuyển phôi trong ngày ${filterNgay.format(
-          "DD/MM/YYYY"
-        )} ca ${filterCa === "1" ? "Ngày" : "Đêm"}`
+          "DD/MM/YYYY",
+        )} ca ${filterCa === "1" ? "Ngày" : "Đêm"}`,
       );
       return;
     }
@@ -972,7 +1071,7 @@ const TaoPhieuPhoiNong = () => {
     const transferRows = selectedRows.map((r) => {
       const soChuyen = Math.min(
         Number(r.ST_LoaiI || 0),
-        Number(r.stChuaChuyen || 0)
+        Number(r.stChuaChuyen || 0),
       );
 
       sums[String(r.key)] = soChuyen;
@@ -1014,6 +1113,19 @@ const TaoPhieuPhoiNong = () => {
     // 5. Reload danh sách đã chuyển
     await reloadChuyenData();
 
+    // 6. Đồng bộ người tạo phiếu
+    const values = form.getFieldsValue();
+    if (values.idphieu) {
+      try {
+        const stored = localStorage.getItem("userinfo");
+        const nguoiTaoId = stored ? JSON.parse(stored).iD_TaiKhoan : null;
+        await PhieuApi.syncNguoiTaoPhieu(values.idphieu, nguoiTaoId);
+        console.log("📝 Đã đồng bộ người tạo phiếu:", nguoiTaoId);
+      } catch (e) {
+        console.error("Lỗi khi đồng bộ người tạo:", e);
+      }
+    }
+
     message.success("Đã chuyển hết các dòng đã chọn");
   };
 
@@ -1028,8 +1140,8 @@ const TaoPhieuPhoiNong = () => {
         `Mẻ ${
           trungMe.me
         } đã được NM.CTD hoặc P.QLCL xác nhận trong ngày ${filterNgay.format(
-          "DD/MM/YYYY"
-        )} ca ${filterCa === "1" ? "Ngày" : "Đêm"}`
+          "DD/MM/YYYY",
+        )} ca ${filterCa === "1" ? "Ngày" : "Đêm"}`,
       );
       return;
     }
@@ -1043,7 +1155,7 @@ const TaoPhieuPhoiNong = () => {
   // Chuyển một phần các dòng đã chọn
   const handleConfirmPartialTransfer = async () => {
     const selectedRows = tableData.filter((r) =>
-      selectedRowKeys.includes(r.key)
+      selectedRowKeys.includes(r.key),
     );
     const updatedSelectedRows = selectedRows.map((r) => {
       const v = partialValues[String(r.key)] || {};
@@ -1131,6 +1243,19 @@ const TaoPhieuPhoiNong = () => {
       // MayDuc: thongtinphieu?.mayDuc,
     });
 
+    // 6. Đồng bộ người tạo phiếu
+    const values = form.getFieldsValue();
+    if (values.idphieu) {
+      try {
+        const stored = localStorage.getItem("userinfo");
+        const nguoiTaoId = stored ? JSON.parse(stored).iD_TaiKhoan : null;
+        await PhieuApi.syncNguoiTaoPhieu(values.idphieu, nguoiTaoId);
+        console.log("📝 Đã đồng bộ người tạo phiếu:", nguoiTaoId);
+      } catch (e) {
+        console.error("Lỗi khi đồng bộ người tạo:", e);
+      }
+    }
+
     message.success("Đã chuyển một phần các dòng đã chọn");
   };
 
@@ -1154,12 +1279,12 @@ const TaoPhieuPhoiNong = () => {
               item.qlclXacNhan === true)
           );
         })
-        .map((item: any) => String(item.me).trim())
+        .map((item: any) => String(item.me).trim()),
     );
 
     // tìm mẻ bị trùng
     const trungMe = rows.find((r) =>
-      meDaXacNhan.has(String(r.me || "").trim())
+      meDaXacNhan.has(String(r.me || "").trim()),
     );
 
     return trungMe || null;
@@ -1188,7 +1313,7 @@ const TaoPhieuPhoiNong = () => {
         KL2: 0,
         KL3: 0,
         TongKL: 0,
-      }
+      },
     );
   };
 
@@ -1275,6 +1400,7 @@ const TaoPhieuPhoiNong = () => {
         NgaySX: filterNgay ? filterNgay.format("YYYY-MM-DD") : null,
         Ca: filterCa ? Number(filterCa) : null,
         Xuong: filterXuong || null,
+        id: form.getFieldValue("idphieu") || idphieu || null,
       };
       const response = await CtdPhoiNongApi.exportPdf(params);
 
@@ -1709,132 +1835,312 @@ const TaoPhieuPhoiNong = () => {
               Xóa filter
             </Button> */}
                   {checkMaBP(userInfo) == "P.QLCL" && type === "viecdentoi" && (
-                    <Button
-                      size="small"
-                      onClick={async () => {
-                        if (
-                          !selectedProcessedKeys ||
-                          selectedProcessedKeys.length === 0
-                        ) {
-                          message.warning(
-                            "Vui lòng chọn ít nhất một dòng để QLCL xác nhận"
-                          );
-                          return;
-                        }
-                        try {
-                          setLoadingChuyen(true);
-                          const source =
-                            filteredChuyenData.length > 0
-                              ? filteredChuyenData
-                              : chuyenData;
-                          const idsPayload = source
-                            .filter((r: any) =>
-                              selectedProcessedKeys.includes(r.key)
-                            )
-                            .map((r: any) => ({
-                              id: Number(r.id || 0),
-                              tinhTrangQLCL: 1,
-                            }));
-                          if (idsPayload.length === 0) {
+                    <>
+                      <Button
+                        size="small"
+                        onClick={async () => {
+                          if (
+                            !selectedProcessedKeys ||
+                            selectedProcessedKeys.length === 0
+                          ) {
                             message.warning(
-                              "Không có dòng hợp lệ để QLCL xác nhận"
+                              "Vui lòng chọn ít nhất một dòng để QLCL xác nhận",
                             );
-                            setLoadingChuyen(false);
                             return;
                           }
-                          await CtdPhoiNongApi.updateStatus(idsPayload);
-                          const next = source.map((r: any) =>
-                            selectedProcessedKeys.includes(r.key)
-                              ? { ...r, tinhTrangQLCL: 1 }
-                              : r
-                          );
-                          if (filteredChuyenData.length > 0) {
-                            setFilteredChuyenData(next);
-                          } else {
-                            setChuyenData(next);
+                          try {
+                            setLoadingChuyen(true);
+                            const source =
+                              filteredChuyenData.length > 0
+                                ? filteredChuyenData
+                                : chuyenData;
+                            const idsPayload = source
+                              .filter((r: any) =>
+                                selectedProcessedKeys.includes(r.key),
+                              )
+                              .map((r: any) => ({
+                                id: Number(r.id || 0),
+                                tinhTrangQLCL: 1,
+                              }));
+                            if (idsPayload.length === 0) {
+                              message.warning(
+                                "Không có dòng hợp lệ để QLCL xác nhận",
+                              );
+                              setLoadingChuyen(false);
+                              return;
+                            }
+                            await CtdPhoiNongApi.updateStatus(idsPayload);
+                            const next = source.map((r: any) =>
+                              selectedProcessedKeys.includes(r.key)
+                                ? { ...r, tinhTrangQLCL: 1 }
+                                : r,
+                            );
+                            if (filteredChuyenData.length > 0) {
+                              setFilteredChuyenData(next);
+                            } else {
+                              setChuyenData(next);
+                            }
+                            setSelectedProcessedKeys([]);
+
+                            // Lưu thông tin người xử lý QLCL xác nhận
+                            const stored = localStorage.getItem("userinfo");
+                            const userId = stored
+                              ? JSON.parse(stored).iD_TaiKhoan
+                              : null;
+                            await saveAfterTransfer(tableData, next, {
+                              maKyDuyet: "nguoiKy_QLCL",
+                              nguoiXuLyId: userId,
+                              tinhTrang: 1,
+                            });
+
+                            message.success(
+                              "QLCL đã xác nhận các dòng đã chọn",
+                            );
+                          } catch (e) {
+                            message.error(
+                              "Không thể cập nhật trạng thái xác nhận QLCL",
+                            );
+                          } finally {
+                            setLoadingChuyen(false);
                           }
-                          setSelectedProcessedKeys([]);
-                          await saveAfterTransfer(tableData, next);
-                          message.success("QLCL đã xác nhận các dòng đã chọn");
-                        } catch (e) {
-                          message.error(
-                            "Không thể cập nhật trạng thái xác nhận QLCL"
-                          );
-                        } finally {
-                          setLoadingChuyen(false);
-                        }
-                      }}
-                      type="primary"
-                      style={{
-                        backgroundColor: "#13c2c2",
-                        borderColor: "#13c2c2",
-                      }}
-                    >
-                      Xác nhận QLCL
-                    </Button>
+                        }}
+                        type="primary"
+                        style={{
+                          backgroundColor: "#13c2c2",
+                          borderColor: "#13c2c2",
+                        }}
+                      >
+                        Xác nhận QLCL
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={async () => {
+                          if (
+                            !selectedProcessedKeys ||
+                            selectedProcessedKeys.length === 0
+                          ) {
+                            message.warning(
+                              "Vui lòng chọn ít nhất một dòng để QLCL xác nhận",
+                            );
+                            return;
+                          }
+                          try {
+                            setLoadingChuyen(true);
+                            const source =
+                              filteredChuyenData.length > 0
+                                ? filteredChuyenData
+                                : chuyenData;
+                            const idsPayload = source
+                              .filter((r: any) =>
+                                selectedProcessedKeys.includes(r.key),
+                              )
+                              .map((r: any) => ({
+                                id: Number(r.id || 0),
+                                tinhTrangQLCL: 0,
+                              }));
+                            if (idsPayload.length === 0) {
+                              message.warning(
+                                "Không có dòng hợp lệ để QLCL xác nhận",
+                              );
+                              setLoadingChuyen(false);
+                              return;
+                            }
+                            await CtdPhoiNongApi.updateStatus(idsPayload);
+                            const next = source.map((r: any) =>
+                              selectedProcessedKeys.includes(r.key)
+                                ? { ...r, tinhTrangQLCL: 0 }
+                                : r,
+                            );
+                            if (filteredChuyenData.length > 0) {
+                              setFilteredChuyenData(next);
+                            } else {
+                              setChuyenData(next);
+                            }
+                            setSelectedProcessedKeys([]);
+
+                            // Lưu thông tin người xử lý QLCL thu hồi
+                            const stored = localStorage.getItem("userinfo");
+                            const userId = stored
+                              ? JSON.parse(stored).iD_TaiKhoan
+                              : null;
+                            await saveAfterTransfer(tableData, next, {
+                              maKyDuyet: "nguoiKy_QLCL",
+                              nguoiXuLyId: userId,
+                              tinhTrang: 0,
+                            });
+
+                            message.success(
+                              "QLCL đã xác nhận các dòng đã chọn",
+                            );
+                          } catch (e) {
+                            message.error(
+                              "Không thể cập nhật trạng thái xác nhận QLCL",
+                            );
+                          } finally {
+                            setLoadingChuyen(false);
+                          }
+                        }}
+                        type="primary"
+                        style={{
+                          backgroundColor: "#c21313",
+                          borderColor: "#c21313",
+                        }}
+                      >
+                        Thu hồi QLCL
+                      </Button>
+                    </>
                   )}
                   {checkMaBP(userInfo) == "NM.CTD" && type === "viecdentoi" && (
-                    <Button
-                      size="small"
-                      onClick={async () => {
-                        if (
-                          !selectedProcessedKeys ||
-                          selectedProcessedKeys.length === 0
-                        ) {
-                          message.warning(
-                            "Vui lòng chọn ít nhất một dòng để xác nhận"
-                          );
-                          return;
-                        }
-                        try {
-                          setLoadingChuyen(true);
-                          const source =
-                            filteredChuyenData.length > 0
-                              ? filteredChuyenData
-                              : chuyenData;
-                          const idsPayload = source
-                            .filter((r: any) =>
-                              selectedProcessedKeys.includes(r.key)
-                            )
-                            .map((r: any) => ({
-                              id: Number(r.id || 0),
-                              tinhTrangCTD: 1,
-                            }));
-                          if (idsPayload.length === 0) {
-                            message.warning("Không có dòng hợp lệ để xác nhận");
-                            setLoadingChuyen(false);
+                    <>
+                      <Button
+                        size="small"
+                        onClick={async () => {
+                          if (
+                            !selectedProcessedKeys ||
+                            selectedProcessedKeys.length === 0
+                          ) {
+                            message.warning(
+                              "Vui lòng chọn ít nhất một dòng để xác nhận",
+                            );
                             return;
                           }
-                          await CtdPhoiNongApi.updateStatus(idsPayload);
-                          const next = source.map((r: any) =>
-                            selectedProcessedKeys.includes(r.key)
-                              ? { ...r, tinhTrangCTD: 1, tinhTrang: 1 }
-                              : r
-                          );
-                          if (filteredChuyenData.length > 0) {
-                            setFilteredChuyenData(next);
-                          } else {
-                            setChuyenData(next);
+                          try {
+                            setLoadingChuyen(true);
+                            const source =
+                              filteredChuyenData.length > 0
+                                ? filteredChuyenData
+                                : chuyenData;
+                            const idsPayload = source
+                              .filter((r: any) =>
+                                selectedProcessedKeys.includes(r.key),
+                              )
+                              .map((r: any) => ({
+                                id: Number(r.id || 0),
+                                tinhTrangCTD: 1,
+                              }));
+                            if (idsPayload.length === 0) {
+                              message.warning(
+                                "Không có dòng hợp lệ để xác nhận",
+                              );
+                              setLoadingChuyen(false);
+                              return;
+                            }
+                            await CtdPhoiNongApi.updateStatus(idsPayload);
+                            const next = source.map((r: any) =>
+                              selectedProcessedKeys.includes(r.key)
+                                ? { ...r, tinhTrangCTD: 1 }
+                                : r,
+                            );
+                            if (filteredChuyenData.length > 0) {
+                              setFilteredChuyenData(next);
+                            } else {
+                              setChuyenData(next);
+                            }
+                            setSelectedProcessedKeys([]);
+
+                            // Lưu thông tin người xử lý CTD xác nhận
+                            const stored = localStorage.getItem("userinfo");
+                            const userId = stored
+                              ? JSON.parse(stored).iD_TaiKhoan
+                              : null;
+                            await saveAfterTransfer(tableData, next, {
+                              maKyDuyet: "nguoiKy_CTD",
+                              nguoiXuLyId: userId,
+                              tinhTrang: 1,
+                            });
+
+                            message.success("Đã xác nhận các dòng đã chọn");
+                          } catch (e) {
+                            message.error(
+                              "Không thể cập nhật trạng thái xác nhận CTD",
+                            );
+                          } finally {
+                            setLoadingChuyen(false);
                           }
-                          setSelectedProcessedKeys([]);
-                          await saveAfterTransfer(tableData, next);
-                          message.success("Đã xác nhận các dòng đã chọn");
-                        } catch (e) {
-                          message.error(
-                            "Không thể cập nhật trạng thái xác nhận CTD"
-                          );
-                        } finally {
-                          setLoadingChuyen(false);
-                        }
-                      }}
-                      type="primary"
-                      style={{
-                        backgroundColor: "#52c41a",
-                        borderColor: "#52c41a",
-                      }}
-                    >
-                      Xác nhận
-                    </Button>
+                        }}
+                        type="primary"
+                        style={{
+                          backgroundColor: "#52c41a",
+                          borderColor: "#52c41a",
+                        }}
+                      >
+                        Xác nhận
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={async () => {
+                          if (
+                            !selectedProcessedKeys ||
+                            selectedProcessedKeys.length === 0
+                          ) {
+                            message.warning(
+                              "Vui lòng chọn ít nhất một dòng để xác nhận",
+                            );
+                            return;
+                          }
+                          try {
+                            setLoadingChuyen(true);
+                            const source =
+                              filteredChuyenData.length > 0
+                                ? filteredChuyenData
+                                : chuyenData;
+                            const idsPayload = source
+                              .filter((r: any) =>
+                                selectedProcessedKeys.includes(r.key),
+                              )
+                              .map((r: any) => ({
+                                id: Number(r.id || 0),
+                                tinhTrangCTD: 0,
+                              }));
+                            if (idsPayload.length === 0) {
+                              message.warning(
+                                "Không có dòng hợp lệ để xác nhận",
+                              );
+                              setLoadingChuyen(false);
+                              return;
+                            }
+                            await CtdPhoiNongApi.updateStatus(idsPayload);
+                            const next = source.map((r: any) =>
+                              selectedProcessedKeys.includes(r.key)
+                                ? { ...r, tinhTrangCTD: 0 }
+                                : r,
+                            );
+                            if (filteredChuyenData.length > 0) {
+                              setFilteredChuyenData(next);
+                            } else {
+                              setChuyenData(next);
+                            }
+                            setSelectedProcessedKeys([]);
+
+                            // Lưu thông tin người xử lý CTD thu hồi
+                            const stored = localStorage.getItem("userinfo");
+                            const userId = stored
+                              ? JSON.parse(stored).iD_TaiKhoan
+                              : null;
+                            await saveAfterTransfer(tableData, next, {
+                              maKyDuyet: "nguoiKy_CTD",
+                              nguoiXuLyId: userId,
+                              tinhTrang: 0,
+                            });
+
+                            message.success("Đã xác nhận các dòng đã chọn");
+                          } catch (e) {
+                            message.error(
+                              "Không thể cập nhật trạng thái xác nhận CTD",
+                            );
+                          } finally {
+                            setLoadingChuyen(false);
+                          }
+                        }}
+                        type="primary"
+                        style={{
+                          backgroundColor: "#c41a1a",
+                          borderColor: "#c41a1a",
+                        }}
+                      >
+                        Thu hồi
+                      </Button>
+                    </>
                   )}
                   {checkMaBP(userInfo) == "P.KH" && type === "viecdentoi" && (
                     <>
@@ -1850,11 +2156,11 @@ const TaoPhieuPhoiNong = () => {
                             const allDaXacNhan = source.every(
                               (r: any) =>
                                 Number(r.tinhTrangCTD || 0) === 1 &&
-                                Number(r.tinhTrangQLCL || 0) === 1
+                                Number(r.tinhTrangQLCL || 0) === 1,
                             );
                             if (!allDaXacNhan) {
                               message.warning(
-                                "Tất cả dòng phải được CTD và QLCL xác nhận trước khi chốt"
+                                "Tất cả dòng phải được CTD và QLCL xác nhận trước khi chốt",
                               );
                               setLoadingChuyen(false);
                               return;
@@ -1879,7 +2185,7 @@ const TaoPhieuPhoiNong = () => {
                                 status: 5,
                                 isLock: 0,
                                 isDelete: 0,
-                              }
+                              },
                             );
 
                             // Cập nhật lại trạng thái chốt ở các dòng
@@ -1891,10 +2197,14 @@ const TaoPhieuPhoiNong = () => {
                               Xuong: filterXuong || null,
                             };
                             await CtdPhoiNongApi.updateStatusChot(params);
+
+                            // Load lại dữ liệu phiếu sau khi chốt
+                            await reloadChuyenData();
+
                             message.success("Đã chốt phiếu");
                           } catch (e) {
                             message.error(
-                              "Có lỗi xảy ra không thể chốt phiếu!"
+                              "Có lỗi xảy ra không thể chốt phiếu!",
                             );
                           } finally {
                             setLoadingChuyen(false);
@@ -1910,6 +2220,54 @@ const TaoPhieuPhoiNong = () => {
                       </Button>
                       <Button
                         size="small"
+                        onClick={async () => {
+                          try {
+                            setLoadingChuyen(true);
+
+                            // Cập nhật trạng thái phiếu về trạng thái trước đó (ví dụ: 2 - Hoàn thành)
+                            await PhieuApi.changeStatus_extended(
+                              thongtinphieu.idphieu,
+                              {
+                                status: 2,
+                                isLock: 0,
+                                isDelete: 0,
+                              },
+                            );
+
+                            // Cập nhật lại trạng thái hủy chốt ở các dòng
+                            var params = {
+                              NgaySX: filterNgay
+                                ? filterNgay.format("YYYY-MM-DD")
+                                : null,
+                              Ca: filterCa ? Number(filterCa) : null,
+                              Xuong: filterXuong || null,
+                              status: 0,
+                            };
+                            await CtdPhoiNongApi.updateStatusChot(params);
+
+                            // Load lại dữ liệu phiếu sau khi hủy chốt
+                            await reloadChuyenData();
+
+                            message.success("Đã hủy chốt phiếu");
+                          } catch (e) {
+                            message.error(
+                              "Có lỗi xảy ra không thể hủy chốt phiếu!",
+                            );
+                          } finally {
+                            setLoadingChuyen(false);
+                          }
+                        }}
+                        danger
+                        type="primary"
+                        style={{
+                          backgroundColor: "#ff4d4f",
+                          borderColor: "#ff4d4f",
+                        }}
+                      >
+                        Hủy chốt
+                      </Button>
+                      <Button
+                        size="small"
                         onClick={handleExportExcelPKH}
                         type="default"
                         icon={<DownloadOutlined />}
@@ -1919,7 +2277,7 @@ const TaoPhieuPhoiNong = () => {
                     </>
                   )}
 
-                  {isViecDenToi && thongtinphieu.tinhTrang == 5 && (
+                  {isViecDenToi && (
                     <>
                       <Button
                         size="small"
@@ -2181,7 +2539,7 @@ const TaoPhieuPhoiNong = () => {
                 return (
                   <Table.Summary>
                     <Table.Summary.Row>
-                      <Table.Summary.Cell index={1} colSpan={10} align="center">
+                      <Table.Summary.Cell index={1} colSpan={11} align="center">
                         <b>Tổng cộng</b>
                       </Table.Summary.Cell>
                       {/* Loại 1 */}
