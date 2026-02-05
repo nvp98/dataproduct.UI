@@ -1,0 +1,230 @@
+{
+    "code": "CTD_BB_GiaoNhanPhoiNhapKho",
+    "prefix": "CTD_BB_GNPNK",
+    "title": "BIÊN BẢN GIAO NHẬN PHÔI NHẬP KHO",
+    "headerInfo": {
+        "company": "HÒA PHÁT DUNG QUẤT",
+        "subCompany": "CÔNG TY CỔ PHẦN THÉP"
+    },
+    "isoInfo": {
+        "code": "BM.12/QT.05.11",
+        "effectiveDate": "05/09/2025",
+        "revision": "02"
+    },
+    "headerFields": [
+        {
+            "label": "Ca",
+            "type": "select",
+            "key": "ca",
+            "required": true,
+            "options": [
+                {
+                    "label": "Ca Ngày",
+                    "value": 1
+                },
+                {
+                    "label": "Ca Đêm",
+                    "value": 2
+                }
+            ]
+        },
+        {
+            "label": "Kíp",
+            "type": "select",
+            "key": "kip",
+            "required": true,
+            "options": [
+                {
+                    "label": "Kíp A",
+                    "value": "A"
+                },
+                {
+                    "label": "Kíp B",
+                    "value": "B"
+                },
+                {
+                    "label": "Kíp C",
+                    "value": "C"
+                }
+            ]
+        },
+        {
+            "label": "Ngày sản xuất",
+            "type": "date",
+            "key": "NgaySX",
+            "required": true
+        },
+        {
+            "label": "Máy Đúc",
+            "type": "select",
+            "required": true,
+            "key": "mayDuc",
+            "options": [
+                {
+                    "label": "Đúc 1",
+                    "value": 1
+                },
+                {
+                    "label": "Đúc 2",
+                    "value": 2
+                },
+                {
+                    "label": "Đúc 3",
+                    "value": 3
+                }
+            ]
+        }
+    ],
+    "layout": [
+        {
+            "sectionType": "table",
+            "title": "",
+            "key": "table1",
+            "dataSource": {
+                "type": "api",
+                "url": "BKSanluongphoi/Get_BangGiaoNhanPhoiNhapKho",
+                "params": {
+                    "kip": "@kip",
+                    "fromTime": "@fromTime",
+                    "toTime": "@toTime",
+                    "mayDuc": "@mayDuc"
+                }
+            },
+            "columns": [             
+                {
+                    "title": "Mẻ",
+                    "dataIndex": "me",
+                    "width": 110
+                },
+                {
+                    "title": "Mác thép",
+                    "dataIndex": "mac",
+                    "width": 80
+                },
+                {
+                    "title": "Kích thước",
+                    "dataIndex": "kichThuoc",
+                    "width": 130
+                },
+                {
+                    "title": "Loại I",
+                    "children": [
+                        {
+                            "title": "Số thanh",
+                            "dataIndex": "stLoai1",
+                            "width": 80
+                        },
+                        {
+                            "title": "Khối lượng (Kg)",
+                            "dataIndex": "klLoai1",
+                            "width": 105
+                        }
+                    ]
+                },
+                {
+                    "title": "Phôi ngắn",
+                    "children": [
+                        {
+                            "title": "Số thanh",
+                            "dataIndex": "stPhoiNgan",
+                            "width": 80
+                        },
+                        {
+                            "title": "Khối lượng (Kg)",
+                            "dataIndex": "klPhoiNgan",
+                            "width": 105
+                        }
+                    ]
+                },
+                {
+                    "title": "Loại II",
+                    "children": [
+                        {
+                            "title": "Số thanh",
+                            "dataIndex": "stLoai2",
+                            "width": 80
+                        },
+                        {
+                            "title": "Khối lượng (Kg)",
+                            "dataIndex": "klLoai2",
+                            "width": 105
+                        }
+                    ]
+                },
+                {
+                    "title": "Loại II TP",
+                    "children": [
+                        {
+                            "title": "Số thanh",
+                            "dataIndex": "stLoai2tp",
+                            "width": 80
+                        },
+                        {
+                            "title": "Khối lượng (Kg)",
+                            "dataIndex": "klLoai2tp",
+                            "width": 105
+                        }
+                    ]
+                },
+                {
+                    "title": "Loại III",
+                    "children": [
+                        {
+                            "title": "Số thanh",
+                            "dataIndex": "stLoai3",
+                            "width": 80
+                        },
+                        {
+                            "title": "Khối lượng (Kg)",
+                            "dataIndex": "klLoai3",
+                            "width": 105
+                        }
+                    ]
+                },
+                {
+                    "title": "Tổng số thanh",
+                    "dataIndex": "tongSoThanh",
+                    "width": 110
+                },
+                {
+                    "title": "Tổng khối lượng (Kg)",
+                    "dataIndex": "tongKhoiLuong",
+                    "width": 125
+                }
+            ]
+        }
+    ],
+    "footerNotes": [
+        "Biên bản này được lập thành 03 (ba) bản có giá trị như nhau, mỗi bên giữ 01 (một) bản để làm căn cứ.",
+        "Tất cả phôi khi đã vào trong nhà máy cán, kể cả còn đang nằm trên băng con lăn đều bàn giao ngay trong kíp, không để sang kíp sau.",
+        "Thời điểm xác nhận biên bản giao nhận phôi nóng ở thời điểm 8h00 và 20h00.",
+        "Trọng lượng trên được tính theo đơn trọng quy định và chiều dài thực.",
+        "Kích thước chỉ bao gồm các loại: Chiều dài chuẩn theo lệnh sản xuất, 6m, từ 9 – 12m."
+    ],
+    "signatures": [
+        {
+            "label": "Kho phôi NM.HRC1",
+            "type": "selectNguoiKy",
+            "key": "nguoiKy_KhoPhoi",
+            "maphongBan": "NM.HRC1",
+            "capDuyet": 0,
+            "required": true
+        },
+        {
+            "label": "P.QLCL",
+            "type": "selectNguoiKy",
+            "key": "nguoiKy_QLCL",
+            "maphongBan": "P.QLCL",
+            "capDuyet": 1,
+            "required": true
+        },
+        {
+            "label": "Xưởng đúc phôi vuông NM.HRC1",
+            "type": "selectNguoiKy",
+            "key": "nguoiKy_XuongDuc",
+            "maphongBan": "NM.HRC1",
+            "capDuyet": 2,
+            "required": true
+        }
+    ]
+}
