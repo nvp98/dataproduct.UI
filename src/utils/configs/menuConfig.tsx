@@ -40,7 +40,6 @@ export const menuConfig = [
           // { key: "6", label: "Option 6" },
         ],
       },
-<<<<<<< Updated upstream
       // {
       //   key: "sub1-2",
       //   label: "NM.NL",
@@ -80,7 +79,6 @@ export const menuConfig = [
       //     },
       //   ],
       // },
-=======
       {
         key: "sub1-2",
         label: "NM.NL",
@@ -126,7 +124,6 @@ export const menuConfig = [
           },
         ],
       },
->>>>>>> Stashed changes
     ],
   },
   {

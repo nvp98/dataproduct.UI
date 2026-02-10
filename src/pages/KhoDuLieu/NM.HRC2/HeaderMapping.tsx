@@ -564,12 +564,12 @@ const HeaderMapping = () => {
               <Select.Option value="PG">Phụ gia và chất khử oxy</Select.Option>
             </Select>
           </Form.Item>
-<<<<<<< Updated upstream
           <Form.Item name="mota" label="Mô tả">
             <Input.TextArea
               rows={3}
               placeholder="Ghi chú thêm (không bắt buộc)"
-=======
+            />
+          </Form.Item>
           <Form.Item
             name="tyTrong"
             label="Tỷ trọng"
@@ -581,7 +581,6 @@ const HeaderMapping = () => {
               precision={3}
               placeholder="Nhập tỷ trọng"
               style={{ width: "100%" }}
->>>>>>> Stashed changes
             />
           </Form.Item>
           <Form.Item
