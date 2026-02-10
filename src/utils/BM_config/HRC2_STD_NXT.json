@@ -33,16 +33,17 @@
         { "title": "Khu vực", "dataIndex": "khuVuc", "isLabel": true },
         { "title": "Vị trí", "dataIndex": "viTri" },
         { "title": "Nguyên nhiên liệu", "dataIndex": "nguyenNhienLieu" },
+        { "title": "Silo", "dataIndex": "tenSilo" },
         { "title": "Tồn đầu ca", "children": [
           { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa", "readOnly": true },
           { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanDauCa" }
         ]},
         { "title": "Nhập vào trong ca (Kg)", "dataIndex": "nhapTrongCa" },
         { "title": "Mức liệu", "dataIndex": "mucLieu" },
-        { "title": "Thể tích", "dataIndex": "theTich" },
-        { "title": "Tỷ trọng", "dataIndex": "tyTrong" },
+        { "title": "Thể tích", "dataIndex": "theTich", "readOnly": true },
+        { "title": "Tỷ trọng", "dataIndex": "tyTrong", "readOnly": true },
         { "title": "Tồn cuối ca thực tế", "children": [
-          { "title": "Khối lượng (Kg)", "dataIndex": "tonCuoiCa" },
+          { "title": "Khối lượng (Kg)", "dataIndex": "tonCuoiCa", "readOnly": true },
           { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanCuoiCa" }
         ] },
         { "title": "Tổng thực tế sử dụng", "dataIndex": "tongThucTe" }

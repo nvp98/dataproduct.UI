@@ -40,6 +40,7 @@ export const menuConfig = [
           // { key: "6", label: "Option 6" },
         ],
       },
+<<<<<<< Updated upstream
       // {
       //   key: "sub1-2",
       //   label: "NM.NL",
@@ -79,6 +80,53 @@ export const menuConfig = [
       //     },
       //   ],
       // },
+=======
+      {
+        key: "sub1-2",
+        label: "NM.NL",
+        children: [
+          {
+            key: "sub1-1.2",
+            label: (
+              <Tooltip title="Nguyên Vật liệu">
+                <NavLink to="/nguyennhienlieu">Nguyên vật liệu</NavLink>
+              </Tooltip>
+            ),
+          },
+          // { key: "6", label: "Option 6" },
+        ],
+      },
+      {
+        key: "sub1-3",
+        label: "NM.HRC2",
+        children: [
+          {
+            key: "sub1-1.3",
+            label: (
+              <Tooltip title="HRC2 - Dữ liệu luyện thép">
+                <NavLink to="/dlnmhrc2luyenthep">HRC2 - Dữ liệu luyện thép</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub1-1.4",
+            label: (
+              <Tooltip title="HRC2 - Phụ Liệu">
+                <NavLink to="/header-mapping">HRC2 - Phụ Liệu</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub1-1.5",
+            label: (
+              <Tooltip title="HRC2 - Silo Nguyên liệu">
+                <NavLink to="/silo">HRC2 - Silo Nguyên liệu</NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
+>>>>>>> Stashed changes
     ],
   },
   {

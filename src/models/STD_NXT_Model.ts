@@ -9,6 +9,8 @@ export interface STD_NXT_Table1Row {
   viTri: number; // Vị trí (Trong silo, Ngoài silo)
   nguyenNhienLieu: string; // Tên nguyên nhiên liệu (từ HeaderKey.tenHienThi)
   idNguyenNhienLieu?: number | null; // ID của HeaderKey
+  siloId?: number | null; // ID của Silo
+  tenSilo?: string | null; // Tên Silo
   tonDauCa?: string | number; // Tồn đầu ca - Khối lượng (Kg)
   tuongQuanDauCa?: string; // Tồn đầu ca - Tương quan (bao, kiện, mức...)
   nhapTrongCa?: string | number; // Nhập trong ca (Kg)

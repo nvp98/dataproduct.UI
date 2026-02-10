@@ -43,8 +43,12 @@ import ChiTietTieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/C
 import STD_NhapXuatTon from "../pages/NM.HRC2/STD_NhapXuatTon/STD_NhapXuatTon";
 import Tao_STD from "../pages/NM.HRC2/STD_NhapXuatTon/Tao_STD";
 import ChiTiet_STD from "../pages/NM.HRC2/STD_NhapXuatTon/ChiTiet_STD";
+<<<<<<< Updated upstream
 import ChiTietPhieuPhoiNguoi from "../pages/NMCTD/BienBanPhoiNguoi/ChiTietPhieuPhoiNguoi";
 import PhanQuyenBieuMau from "../pages/Settings/PhanQuyenBieuMau";
+=======
+import Silo from "../pages/KhoDuLieu/NM.HRC2/Silo";
+>>>>>>> Stashed changes
 export const routes = [
   {
     path: "/",
@@ -440,6 +444,16 @@ export const routes = [
           </RequireAuth>
         ),
       },
+      {
+        path: "silo",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <Silo />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      }
     ],
   },
   {

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
-import { FilterOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { FilterOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -18,8 +18,6 @@ import {
 } from "../../../services/HRC2TableService";
 import HeaderMappingModal from "../../../components/HeaderMapping";
 import type { HeaderMappingRecord } from "../../../components/HeaderMapping";
-import HeaderKeyAutocomplete from "../../../components/HeaderKeyAutocomplete";
-import type { HeaderKey } from "../../../models/HeaderKeyModel";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 
@@ -66,79 +64,12 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
   ].includes(currentTinhTrang);
   const isFormLocked = !(currentTinhTrang === TrangThaiPhieuConst.DangLuu || currentTinhTrang === TrangThaiPhieuConst.DaThuHoi);
 
+  // Xóa logic thêm adjust column thủ công - giờ tự động từ dữ liệu phân bổ
   const addAdjustColumn = useCallback(() => {
-    setShowAdjustColumns(true);
-    setAdjustColumnMetas((prev) => {
-      const key = `adjust_${Date.now()}`;
-      return [
-        ...prev,
-        {
-          key,
-          dataIndex: `${key}_adjust`,
-          headerKeyId: null,
-          headerKeyLabel: undefined,
-          width: 140,
-        },
-      ];
-    });
+    message.info("Các cột điều chỉnh được tự động tạo từ dữ liệu phân bổ. Vui lòng lọc dữ liệu để xem.");
   }, []);
 
-  const updateAdjustColumnMeta = useCallback(
-    (columnKey: string, patch: Partial<AdjustColumnMeta>) => {
-      setAdjustColumnMetas((prev) =>
-        prev.map((meta) => (meta.key === columnKey ? { ...meta, ...patch } : meta))
-      );
-    },
-    []
-  );
-
-  const handleAdjustOptionSelect = useCallback(
-    (columnKey: string, option: HeaderKey | null) => {
-      updateAdjustColumnMeta(columnKey, {
-        headerKeyId: option?.id ?? null,
-        headerKeyLabel: option
-          ? option.tenHienThi || option.mota || `Header Key #${option.id}`
-          : undefined,
-      });
-    },
-    [updateAdjustColumnMeta]
-  );
-
-  const handleAdjustValueChange = useCallback(
-    (columnKey: string, value: number | null) => {
-      if (value === null) {
-        updateAdjustColumnMeta(columnKey, {
-          headerKeyId: null,
-          headerKeyLabel: undefined,
-        });
-        return;
-      }
-      updateAdjustColumnMeta(columnKey, { headerKeyId: value });
-    },
-    [updateAdjustColumnMeta]
-  );
-
-  const removeAdjustColumn = useCallback(
-    (columnKey: string) => {
-      setAdjustColumnMetas((prev) => {
-        const target = prev.find((meta) => meta.key === columnKey);
-        if (target) {
-          setTableData((rows) =>
-            rows.map((row) => {
-              if (!(target.dataIndex in row)) {
-                return row;
-              }
-              const next = { ...row };
-              delete next[target.dataIndex];
-              return next;
-            })
-          );
-        }
-        return prev.filter((meta) => meta.key !== columnKey);
-      });
-    },
-    [setTableData]
-  );
+  // Các function thêm adjust column thủ công đã được xóa - giờ tự động từ dữ liệu phân bổ
 
   const openMappingModalWithRecord = useCallback((record: HeaderMappingRecord) => {
     setMappingRecord({
@@ -193,42 +124,15 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
       return [];
     }
     return adjustColumnMetas.map((meta) => ({
-      title: (
-        <div style={{ width: "100%" }}>
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => removeAdjustColumn(meta.key)}
-              disabled={isFormLocked}
-              style={{
-                padding: "4px",
-                minWidth: "auto",
-                height: "auto",
-              }}
-            />
-            <HeaderKeyAutocomplete
-              value={meta.headerKeyId ?? null}
-              defaultLabel={meta.headerKeyLabel ?? undefined}
-              allowClear
-              size="small"
-              placeholder="Chọn phụ liệu"
-              onChange={(val) => handleAdjustValueChange(meta.key, val)}
-              onSelectOption={(option) => handleAdjustOptionSelect(meta.key, option)}
-              disabled={isFormLocked}
-              style={{ width: "100%" }}
-            />
-            
-          </div>
-      ),
+      title: meta.headerKeyLabel ?? "Điều chỉnh",
       dataIndex: meta.dataIndex,
       width: meta.width ?? 140,
-      editable: true,
+      editable: false, // ⭐ KHÔNG cho phép chỉnh sửa thủ công
       variant: "adjust",
-      metaLabel: meta.headerKeyLabel ?? "Chưa chọn phụ liệu",
+      metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
+      headerKeyId: meta.headerKeyId ?? null,
     }));
-  }, [adjustColumnMetas, handleAdjustValueChange, handleAdjustOptionSelect, removeAdjustColumn, isFormLocked]);
+  }, [adjustColumnMetas]);
 
   const fetchPhuLieus = useCallback(async (params: { NgaySX?: string | null; Ca?: number | null; Scope?: number | null }) => {
     try {
@@ -285,6 +189,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
         message.info("Không có dữ liệu phù hợp với điều kiện lọc.");
         setPhuGiaColumns([]);
         setKhacColumns([]);
+        setAdjustColumnMetas([]);
         setTableData([]);
         return;
       }
@@ -301,6 +206,21 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
 
       setPhuGiaColumns(readonlyPhuGia);
       setKhacColumns(readonlyKhac);
+
+      // Tự động tạo adjust columns từ dữ liệu phân bổ
+      if (result.adjustColumns && result.adjustColumns.length > 0) {
+        const adjustMetas = result.adjustColumns.map((col) => ({
+          key: col.dataIndex || `adjust_${col.headerKeyId}`,
+          dataIndex: col.dataIndex || `adjust_${col.headerKeyId}_adjust`,
+          headerKeyId: col.headerKeyId ?? null,
+          headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
+          width: col.width || 140,
+        }));
+        setAdjustColumnMetas(adjustMetas);
+        setShowAdjustColumns(true);
+      } else {
+        setAdjustColumnMetas([]);
+      }
 
       // Merge dữ liệu mới từ server với dữ liệu đang nhập theo meThoi
       // Các field editable (config trong JSON) sẽ được preserve từ dữ liệu getDetail
