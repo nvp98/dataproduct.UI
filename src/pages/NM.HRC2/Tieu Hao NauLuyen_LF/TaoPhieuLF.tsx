@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC2_BB_NauLuyen_LF from "../../../utils/BM_config/HRC2_BB_NauLuyen_LF.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
-import { FilterOutlined, LinkOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { FilterOutlined, LinkOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -14,8 +14,6 @@ import { hrc2PhuLieuService } from "../../../services/HRC2PhuLieuService";
 import { hrc2TableService, type DynamicColumnMeta, type AdjustColumnMeta } from "../../../services/HRC2TableService";
 import HeaderMappingModal from "../../../components/HeaderMapping";
 import type { HeaderMappingRecord } from "../../../components/HeaderMapping";
-import HeaderKeyAutocomplete from "../../../components/HeaderKeyAutocomplete";
-import type { HeaderKey } from "../../../models/HeaderKeyModel";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 
@@ -68,84 +66,17 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     currentTinhTrang === TrangThaiPhieuConst.DaThuHoi
   );
 
+  // Xóa logic thêm adjust column thủ công - giờ tự động từ dữ liệu phân bổ
   const addAdjustColumn = useCallback(() => {
-    setShowAdjustColumns(true);
-    setAdjustColumnMetas((prev) => {
-      const key = `adjust_${Date.now()}`;
-      return [
-        ...prev,
-        {
-          key,
-          dataIndex: `${key}_adjust`,
-          headerKeyId: null,
-          headerKeyLabel: undefined,
-          width: 140,
-        },
-      ];
-    });
+    message.info("Các cột điều chỉnh được tự động tạo từ dữ liệu phân bổ. Vui lòng lọc dữ liệu để xem.");
   }, []);
+
+  // Các function thêm adjust column thủ công đã được xóa - giờ tự động từ dữ liệu phân bổ
 
   const getUserInfo = useCallback(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
   }, []);
-
-  const updateAdjustColumnMeta = useCallback(
-    (columnKey: string, patch: Partial<AdjustColumnMeta>) => {
-      setAdjustColumnMetas((prev) =>
-        prev.map((meta) => (meta.key === columnKey ? { ...meta, ...patch } : meta))
-      );
-    },
-    []
-  );
-
-  const handleAdjustOptionSelect = useCallback(
-    (columnKey: string, option: HeaderKey | null) => {
-      updateAdjustColumnMeta(columnKey, {
-        headerKeyId: option?.id ?? null,
-        headerKeyLabel: option
-          ? option.tenHienThi || option.mota || `Header Key #${option.id}`
-          : undefined,
-      });
-    },
-    [updateAdjustColumnMeta]
-  );
-
-  const handleAdjustValueChange = useCallback(
-    (columnKey: string, value: number | null) => {
-      if (value === null) {
-        updateAdjustColumnMeta(columnKey, {
-          headerKeyId: null,
-          headerKeyLabel: undefined,
-        });
-        return;
-      }
-      updateAdjustColumnMeta(columnKey, { headerKeyId: value });
-    },
-    [updateAdjustColumnMeta]
-  );
-
-  const removeAdjustColumn = useCallback(
-    (columnKey: string) => {
-      setAdjustColumnMetas((prev) => {
-        const target = prev.find((meta) => meta.key === columnKey);
-        if (target) {
-          setTableData((rows) =>
-            rows.map((row) => {
-              if (!(target.dataIndex in row)) {
-                return row;
-              }
-              const next = { ...row };
-              delete next[target.dataIndex];
-              return next;
-            })
-          );
-        }
-        return prev.filter((meta) => meta.key !== columnKey);
-      });
-    },
-    [setTableData]
-  );
 
   const openMappingModalWithRecord = useCallback((record: HeaderMappingRecord) => {
     setMappingRecord({
@@ -198,41 +129,19 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     if (!adjustColumnMetas.length) {
       return [];
     }
+    // ⭐ Adjust columns giờ được tạo tự động từ dữ liệu phân bổ (phanBoPhulieus)
+    // ⚠️ LƯU Ý: Các cột phân bổ KHÔNG cho phép chỉnh sửa thủ công
+    // Chỉ được tự động phân bổ từ nút "Phân bổ" ở SummaryTableSTD
     return adjustColumnMetas.map((meta) => ({
-      title: (
-        <div style={{ width: "100%" }}>
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => removeAdjustColumn(meta.key)}
-              style={{
-                padding: "4px",
-                minWidth: "auto",
-                height: "auto",
-              }}
-            />
-            <HeaderKeyAutocomplete
-              value={meta.headerKeyId ?? null}
-              defaultLabel={meta.headerKeyLabel ?? undefined}
-              allowClear
-              size="small"
-              placeholder="Chọn phụ liệu"
-              onChange={(val) => handleAdjustValueChange(meta.key, val)}
-              onSelectOption={(option) => handleAdjustOptionSelect(meta.key, option)}
-              style={{ width: "100%" }}
-            />
-            
-          </div>
-      ),
+      title: meta.headerKeyLabel ?? "Điều chỉnh",
       dataIndex: meta.dataIndex,
       width: meta.width ?? 140,
-      editable: true,
+      editable: false, // ⭐ KHÔNG cho phép chỉnh sửa thủ công
       variant: "adjust",
-      metaLabel: meta.headerKeyLabel ?? "Chưa chọn phụ liệu",
+      metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
+      headerKeyId: meta.headerKeyId ?? null,
     }));
-  }, [adjustColumnMetas, handleAdjustValueChange, handleAdjustOptionSelect, removeAdjustColumn]);
+  }, [adjustColumnMetas]);
 
   const restoreDynamicColumns = useCallback(
     (map?: Record<string, DynamicColumnMeta[]>) => {
@@ -314,6 +223,22 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       setPhuGiaColumns(result.phuGiaColumns);
       setChatHopKimColumns(result.chatHopKimColumns);
       setKhacColumns(result.khacColumns);
+
+      // Tự động tạo adjust columns từ dữ liệu phân bổ
+      if (result.adjustColumns && result.adjustColumns.length > 0) {
+        const adjustMetas = result.adjustColumns.map((col) => ({
+          key: col.dataIndex || `adjust_${col.headerKeyId}`,
+          dataIndex: col.dataIndex || `adjust_${col.headerKeyId}_adjust`,
+          headerKeyId: col.headerKeyId ?? null,
+          headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
+          width: col.width || 140,
+        }));
+        setAdjustColumnMetas(adjustMetas);
+        setShowAdjustColumns(true);
+      } else {
+        setAdjustColumnMetas([]);
+      }
+
       setTableData((prev) =>
         hrc2TableService.mergeServerRows(
           result.tableData || [],

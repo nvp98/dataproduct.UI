@@ -60,14 +60,6 @@ export interface PhieuActionServiceParams {
   onError?: (error: unknown) => void;
 }
 
-type CloneResponse = {
-  idphieu?: string;
-  Idphieu?: string;
-  idPhieu?: string;
-  IdPhieu?: string;
-  data?: CloneResponse;
-};
-
 /**
  * Helper functions để kiểm tra quyền
  */
@@ -126,20 +118,6 @@ const checkPermission = {
   ): boolean => {
     return checkPermission.isAssignedUser(currentUserId, pheDuyet);
   },
-};
-
-const extractPhieuId = (response?: CloneResponse): string | undefined => {
-  if (!response) return undefined;
-  return (
-    response.idphieu ??
-    response.Idphieu ??
-    response.idPhieu ??
-    response.IdPhieu ??
-    response.data?.idphieu ??
-    response.data?.Idphieu ??
-    response.data?.idPhieu ??
-    response.data?.IdPhieu
-  );
 };
 
 /**
@@ -394,8 +372,8 @@ export const phieuActionService = {
           },
         });
       }
-      // Trạng thái 1 - Đã gửi: Lưu phiếu // Trạng thái 2 - Hoàn thành: Thu hồi
-      if ((tinhTrang === TrangThaiPhieuConst.DaGui || tinhTrang === TrangThaiPhieuConst.HoanThanh) && isCreatorZero) {
+      // Trạng thái 2 - Hoàn thành: Thu hồi
+      if (tinhTrang === TrangThaiPhieuConst.HoanThanh && isCreatorZero) {
         buttons.push({
           key: "recall",
           label: "Thu hồi",
@@ -418,9 +396,33 @@ export const phieuActionService = {
         });
       }
 
-      // Trạng thái 3 - Đã thu hồi: Lưu, Lưu và Gửi (khi lưu sẽ clone)
+      // Trạng thái 1 - Đã gửi hoặc 6 - Đang phê duyệt: Thu hồi
+      if ((tinhTrang === TrangThaiPhieuConst.DaGui || tinhTrang === TrangThaiPhieuConst.DangPheDuyet) && isCreatorZero) {
+        buttons.push({
+          key: "recall",
+          label: "Thu hồi",
+          icon: <UndoOutlined />,
+          type: "default",
+          confirm: {
+            title: "Xác nhận thu hồi",
+            description: "Bạn có chắc chắn muốn thu hồi phiếu này?",
+          },
+          onClick: async () => {
+            try {
+              await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.DaThuHoi);
+              message.success("Thu hồi phiếu thành công!");
+              onSuccess?.();
+            } catch (error) {
+              message.error((error as any)?.message);
+              onError?.(error);
+            }
+          },
+        });
+      }
+
+      // Trạng thái 3 - Đã thu hồi: Lưu, Lưu và Gửi (sửa trực tiếp, không clone)
       if (tinhTrang === TrangThaiPhieuConst.DaThuHoi && isCreatorZero) {
-        // Button Lưu (sẽ clone)
+        // Button Lưu (sửa trực tiếp, không clone)
         buttons.push({
           key: "save",
           label: "Lưu",
@@ -432,15 +434,13 @@ export const phieuActionService = {
                 message.error("Không có dữ liệu để lưu");
                 return;
               }
-              const cloned = await PhieuApi.clone(phieuIdParam, formDataParam);
-              const newPhieuId = extractPhieuId(cloned);
-              if (!newPhieuId) {
-                message.warning("Không lấy được ID phiếu mới sau khi clone.");
-                onSuccess?.();
-                return;
+              // Đã có idphieu, cập nhật trực tiếp (không clone)
+              await PhieuApi.putData(phieuIdParam, formDataParam);
+              if (customPutApi) {
+                await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }
-              message.success("Lưu phiếu thành công (đã tạo bản clone)!");
-              onSuccess?.({ newPhieuId });
+              message.success("Lưu phiếu thành công!");
+              onSuccess?.();
             } catch (error) {
               message.error((error as any)?.message);
               onError?.(error);
@@ -448,7 +448,7 @@ export const phieuActionService = {
           },
         });
 
-        // Button Lưu và Gửi (sẽ clone)
+        // Button Lưu và Gửi (sửa trực tiếp, không clone)
         buttons.push({
           key: "saveAndSend",
           label: "Lưu và Gửi phiếu",
@@ -456,7 +456,7 @@ export const phieuActionService = {
           type: "primary",
           confirm: {
             title: "Xác nhận",
-            description: "Bạn có chắc chắn muốn lưu và gửi phiếu này? (Sẽ tạo bản clone)",
+            description: "Bạn có chắc chắn muốn lưu và gửi phiếu này?",
           },
           onClick: async (phieuIdParam, formDataParam) => {
             try {
@@ -464,23 +464,20 @@ export const phieuActionService = {
                 message.error("Không có dữ liệu để lưu");
                 return;
               }
-              const cloned = await PhieuApi.clone(phieuIdParam, formDataParam);
-              const newPhieuId = extractPhieuId(cloned);
-              if (!newPhieuId) {
-                message.warning("Không lấy được ID phiếu mới sau khi clone.");
-                onSuccess?.();
-                return;
+              // Đã có idphieu, cập nhật trực tiếp và chuyển sang trạng thái 1 (không clone)
+              await PhieuApi.putData(phieuIdParam, formDataParam);
+              if (customPutApi) {
+                await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }
-              await PhieuApi.changeStatus(newPhieuId, TrangThaiPhieuConst.DaGui);
-              message.success("Lưu và gửi phiếu thành công (đã tạo bản clone)!");
-              onSuccess?.({ newPhieuId });
+              await PhieuApi.changeStatus(phieuIdParam, TrangThaiPhieuConst.DaGui);
+              message.success("Lưu và gửi phiếu thành công!");
+              onSuccess?.();
             } catch (error) {
               if((error as any)?.message){
                 message.error((error as any)?.message);
               } else {
                 message.error("Phiếu đã được gửi, vui lòng kiểm tra lại");
               }
-        
               onError?.(error);
             }
           },

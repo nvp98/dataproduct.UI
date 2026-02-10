@@ -51,6 +51,8 @@ import BienBanPhoiNhapKho from "../pages/NMCTD/BienBanPhoiNhapKho/BienBanPhoiNha
 import ChiTietSanLuongPhoi from "../pages/NMCTD/BienBanSanLuongPhoi/ChiTietSanLuongPhoi";
 import TaoPhieuSanLuongPhoi from "../pages/NMCTD/BienBanSanLuongPhoi/TaoPhieuSanLuongPhoi";
 import BienBanSanLuongPhoi from "../pages/NMCTD/BienBanSanLuongPhoi/BienBanSanLuongPhoi";
+import QuanLySilo from "../pages/KhoDuLieu/NM.HRC2/Silo";
+
 export const routes = [
   {
     path: "/",
@@ -447,6 +449,7 @@ export const routes = [
         ),
       },
 
+
       // sản lượng phôi
             {
         path: "bienbansanluongphoi",
@@ -548,6 +551,17 @@ export const routes = [
           </RequireAuth>
         ),
       },
+
+      {
+        path: "silo",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLySilo />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      }
     ],
   },
   {

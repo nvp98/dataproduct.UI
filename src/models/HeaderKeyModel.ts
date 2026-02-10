@@ -8,6 +8,7 @@ export interface HeaderKey {
   ngayTao?: string | null;
   thuTu?: number | null;
   isUsedNXT?: boolean | null;
+  tyTrong?: number | null; // Tỷ trọng
 }
 
 export interface HeaderKeyPayload {

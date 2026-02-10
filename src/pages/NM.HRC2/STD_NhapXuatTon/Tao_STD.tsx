@@ -47,7 +47,9 @@ const Tao_STD = () => {
     TrangThaiPhieuConst.DangPheDuyet,
     TrangThaiPhieuConst.DaChot,
   ].includes(currentTinhTrang);
-  const isFormLocked = !(currentTinhTrang === TrangThaiPhieuConst.DangLuu || currentTinhTrang === TrangThaiPhieuConst.DaThuHoi);
+  // Cho phép edit khi ở trạng thái ĐangLuu (0) hoặc Đã thu hồi (3)
+  const isFormLocked = !(currentTinhTrang === TrangThaiPhieuConst.DangLuu || 
+                         currentTinhTrang === TrangThaiPhieuConst.DaThuHoi);
   const currentUserInfo = useMemo(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
@@ -625,6 +627,9 @@ const Tao_STD = () => {
               defaultViTri={layout1.defaultViTri || 1}
               editable={!isFormLocked}
               loading={loading}
+              ngaySX={form.getFieldValue("NgaySX")}
+              khuVucConfig={kvList}
+              nhaMay={2} // HRC2
             />
               );
             })()}

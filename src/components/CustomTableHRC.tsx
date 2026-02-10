@@ -281,8 +281,10 @@ const CustomTableHRC = ({
               fixed: childSticky ? ("left" as const) : undefined,
               render: (_: unknown, record: HRCTableRow) => {
                 const isManualRow = record.IsNM === false;
+                // ⚠️ Cột phân bổ (variant="adjust") luôn read-only, không cho phép chỉnh sửa thủ công
+                const isAdjustColumn = child.variant === "adjust";
                 const canEditThisCell =
-                  editable && (isManualRow || isColumnEditable);
+                  !isAdjustColumn && editable && (isManualRow || isColumnEditable);
                 const cellValue = record[child.dataIndex];
                 const displayValue = cellValue !== undefined && cellValue !== null 
                   ? String(cellValue) 
@@ -311,14 +313,16 @@ const CustomTableHRC = ({
                         ? () => emitDataChange(rowsRef.current)
                         : undefined
                     }
-                    disabled={!editable}
-                    readOnly={!canEditThisCell}
+                    disabled={!editable || isAdjustColumn}
+                    readOnly={!canEditThisCell || isAdjustColumn}
                     style={{
                       ...readonlyStyle,
                       // Highlight mẻ thổi trùng (ưu tiên cao nhất)
                       ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
                       // Cột chưa được móc nối (highlight) - chỉ khi không phải mẻ thổi trùng
                       ...(!(isMeThoiColumn && isTrungMeThoi) && child.highlight ? { backgroundColor: "#fff1f0" } : {}),
+                      // Cột phân bổ có style đặc biệt (xám nhạt, không cho chỉnh sửa)
+                      ...(isAdjustColumn ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}),
                       ...(!canEditThisCell ? { cursor: "not-allowed" } : {}),
                     }}
                   />
@@ -361,8 +365,10 @@ const CustomTableHRC = ({
         fixed: baseFixed,
         render: (_: unknown, record: HRCTableRow) => {
           const isManualRow = record.IsNM === false;
+          // ⚠️ Cột phân bổ (variant="adjust") luôn read-only, không cho phép chỉnh sửa thủ công
+          const isAdjustColumn = col.variant === "adjust";
           const canEditThisCell =
-            editable && (isManualRow || isColumnEditable);
+            !isAdjustColumn && editable && (isManualRow || isColumnEditable);
           const cellValue = record[col.dataIndex || ""];
           const displayValue =
             cellValue !== undefined && cellValue !== null
@@ -393,14 +399,16 @@ const CustomTableHRC = ({
                   ? () => emitDataChange(rowsRef.current)
                   : undefined
               }
-              disabled={!editable}
-              readOnly={!canEditThisCell}
+              disabled={!editable || isAdjustColumn}
+              readOnly={!canEditThisCell || isAdjustColumn}
               style={{
                 ...readonlyStyle,
                 // Highlight mẻ thổi trùng (ưu tiên cao nhất)
                 ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
                 // Cột chưa được móc nối (highlight) - chỉ khi không phải mẻ thổi trùng
                 ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight ? { backgroundColor: "#fff1f0" } : {}),
+                // Cột phân bổ có style đặc biệt (xám nhạt, không cho chỉnh sửa)
+                ...(isAdjustColumn ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}),
                 ...(!canEditThisCell ? { cursor: "not-allowed" } : {}),
               }}
             />

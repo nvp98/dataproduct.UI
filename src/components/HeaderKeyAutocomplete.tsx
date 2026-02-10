@@ -21,6 +21,8 @@ export interface HeaderKeyAutocompleteProps {
   defaultLabel?: string;
   loaiPhieu?: string;
   dropdownMatchSelectWidth?: number | boolean;
+  resetOnBlur?: boolean; // ⭐ Reset options về danh sách ban đầu khi blur
+  onBlur?: () => void; // ⭐ Callback khi blur
 }
 
 const buildOptionLabel = (item: HeaderKey) =>
@@ -38,6 +40,8 @@ const HeaderKeyAutocomplete = ({
   defaultLabel,
   loaiPhieu,
   dropdownMatchSelectWidth = 260,
+  resetOnBlur = false,
+  onBlur,
 }: HeaderKeyAutocompleteProps) => {
   const [options, setOptions] = useState<HeaderKeySelectOption[]>([]);
   const [fetching, setFetching] = useState(false);
@@ -45,6 +49,7 @@ const HeaderKeyAutocomplete = ({
     SelectProps["value"]
   >(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialOptionsRef = useRef<HeaderKeySelectOption[]>([]); // ⭐ Lưu danh sách ban đầu để reset
 
   const mappedValue = useMemo(() => {
     if (value === null || value === undefined) {
@@ -71,7 +76,7 @@ const HeaderKeyAutocomplete = ({
         const res: any = await headerKeyApi.searchAutocomplete({
           searchKey,
           LoaiPhieu: loaiPhieu,
-          pageSize: 20,
+          pageSize: searchKey ? 20 : 50, // ⭐ Load 50 items ban đầu, 20 items khi search
         });
         const items =
           res.data?.map((item: any) => ({
@@ -80,6 +85,10 @@ const HeaderKeyAutocomplete = ({
             label: buildOptionLabel(item),
           })) ?? [];
         setOptions(items);
+        // ⭐ Lưu danh sách ban đầu (khi không có searchKey) để reset sau này
+        if (!searchKey) {
+          initialOptionsRef.current = items;
+        }
       } catch (error) {
         console.error("Failed to fetch header keys:", error);
       } finally {
@@ -136,6 +145,15 @@ const HeaderKeyAutocomplete = ({
     setSelectedValue({ value: numericValue, label });
     onChange?.(Number.isNaN(numericValue) ? null : numericValue);
     onSelectOption?.(matched ?? null);
+    // ⭐ KHÔNG reset options ngay sau khi chọn, chỉ reset khi blur để UX tốt hơn
+  };
+
+  const handleBlur = () => {
+    // ⭐ Reset options về danh sách ban đầu khi blur
+    if (resetOnBlur && initialOptionsRef.current.length > 0) {
+      setOptions(initialOptionsRef.current);
+    }
+    onBlur?.();
   };
 
   return (
@@ -153,12 +171,16 @@ const HeaderKeyAutocomplete = ({
       notFoundContent={fetching ? <Spin size="small" /> : null}
       dropdownMatchSelectWidth={dropdownMatchSelectWidth}
       onDropdownVisibleChange={(open) => {
-        if (open && !options.length) {
-          fetchOptions();
+        // ⭐ Khi mở dropdown: nếu chưa có options thì fetch, nếu có rồi thì giữ nguyên
+        if (open) {
+          if (!options.length) {
+            fetchOptions();
+          }
         }
       }}
       onSearch={handleSearch}
       onChange={handleChange}
+      onBlur={handleBlur}
     />
   );
 };

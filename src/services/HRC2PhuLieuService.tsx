@@ -21,6 +21,7 @@ export interface ProcessedPhuLieusResult {
   phuGiaColumns: HRCChildColumn[]; // Phụ liệu loại PG (Phụ gia và chất khử oxy)
   chatHopKimColumns: HRCChildColumn[]; // Phụ liệu loại KL (Chất hợp kim hóa)
   khacColumns: HRCChildColumn[]; // Phụ liệu chưa mapped
+  adjustColumns: HRCChildColumn[]; // Cột điều chỉnh từ dữ liệu phân bổ
   tableData: HRCTableRow[];
 }
 
@@ -332,6 +333,16 @@ export const hrc2PhuLieuService = {
         }
       });
 
+      // Map các phụ liệu phân bổ (IsPhanBo = true) vào adjust columns
+      if (item.phanBoPhulieus && item.phanBoPhulieus.length > 0) {
+        item.phanBoPhulieus.forEach((phanBo: HeaderKeyResponse) => {
+          if (phanBo.idHeaderKey) {
+            const dataIndex = `adjust_${phanBo.idHeaderKey}_adjust`;
+            row[dataIndex] = phanBo.klPhuGiaTotal ?? phanBo.klPhuGia ?? "";
+          }
+        });
+      }
+
       return row;
     });
 
@@ -356,12 +367,44 @@ export const hrc2PhuLieuService = {
         })
       : phuGiaColumns;
 
+    // ========== Tạo adjust columns từ dữ liệu phân bổ ==========
+    // Tập hợp tất cả phụ liệu phân bổ từ tất cả các item (mẻ) và loại bỏ trùng lặp
+    const allPhanBoPhuLieus: Record<number, HeaderKeyResponse> = {};
+    data.forEach(item => {
+      if (item.phanBoPhulieus && item.phanBoPhulieus.length > 0) {
+        item.phanBoPhulieus.forEach(phuLieu => {
+          if (phuLieu.idHeaderKey && !allPhanBoPhuLieus[phuLieu.idHeaderKey]) {
+            allPhanBoPhuLieus[phuLieu.idHeaderKey] = phuLieu;
+          }
+        });
+      }
+    });
+
+    const phanBoPhuLieus = Object.values(allPhanBoPhuLieus);
+    
+    // Tạo adjust columns từ dữ liệu phân bổ
+    // ⚠️ LƯU Ý: Các cột phân bổ KHÔNG cho phép chỉnh sửa thủ công
+    // Chỉ được tự động phân bổ từ nút "Phân bổ" ở SummaryTableSTD
+    const adjustColumns: HRCChildColumn[] = phanBoPhuLieus.map(phuLieu => {
+      const label = phuLieu.tenHienThi || `Phân bổ #${phuLieu.idHeaderKey}`;
+      return {
+        title: label,
+        dataIndex: `adjust_${phuLieu.idHeaderKey}_adjust`,
+        width: 140,
+        metaLabel: label,
+        editable: false, // ⭐ KHÔNG cho phép chỉnh sửa thủ công
+        variant: "adjust",
+        headerKeyId: phuLieu.idHeaderKey ?? null,
+      };
+    });
+
     return {
       mappedPhuLieus,
       unmappedPhuLieus,
       phuGiaColumns: mergedColumns,
       chatHopKimColumns: mergeMappedPhuLieus ? [] : chatHopKimColumns,
       khacColumns,
+      adjustColumns,
       tableData,
     };
   },

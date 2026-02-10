@@ -165,6 +165,7 @@ const HeaderMapping = () => {
       keyGuid: record.keyGuid,
       thuTu: record.thuTu,
       isUsedNXT: record.isUsedNXT ?? false,
+      tyTrong: record.tyTrong,
     });
     setModalVisible(true);
   };
@@ -185,6 +186,7 @@ const HeaderMapping = () => {
         isActive: values.isActive ?? true,
         thuTu: values.thuTu ?? null,
         isUsedNXT: values.isUsedNXT ?? false,
+        tyTrong: values.tyTrong ?? null,
       };
       if (editingRecord?.keyGuid) {
         payload.keyGuid = editingRecord.keyGuid;
@@ -569,6 +571,19 @@ const HeaderMapping = () => {
             />
           </Form.Item>
           <Form.Item
+            name="tyTrong"
+            label="Tỷ trọng"
+            tooltip="Tỷ trọng của nguyên nhiên liệu (đơn vị: kg/m³ hoặc tương đương)"
+          >
+            <InputNumber
+              min={0}
+              step={0.001}
+              precision={3}
+              placeholder="Nhập tỷ trọng"
+              style={{ width: "100%" }}
+            />
+          </Form.Item>
+          <Form.Item
             name="thuTu"
             label="Thứ tự"
             tooltip="Số thứ tự để sắp xếp các phụ liệu khi hiển thị"
@@ -580,6 +595,10 @@ const HeaderMapping = () => {
               style={{ width: "100%" }}
             />
           </Form.Item>
+          <Form.Item name="mota" label="Mô tả">
+            <Input.TextArea rows={3} placeholder="Ghi chú thêm (không bắt buộc)" />
+          </Form.Item>
+          
           <Form.Item
             name="isActive"
             label="Trạng thái"
@@ -596,6 +615,7 @@ const HeaderMapping = () => {
           >
             <Switch checkedChildren="Có" unCheckedChildren="Không" />
           </Form.Item>
+          
         </Form>
       </Modal>
     </div>
