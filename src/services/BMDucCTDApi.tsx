@@ -24,6 +24,32 @@ interface InsertSanLuongPhoiPayload {
   }>;
 }
 
+interface InsertPhoiNhapKhoPayload {
+  idPhieu: string;
+  soPhieu: string;
+  ngaySX: string;
+  kip: string;
+  ca: number;
+  mayDuc: number;
+  table1: Array<{
+    me: string;
+    mac: string;
+    kichThuoc: string;
+    stLoai1: number;
+    klLoai1: number;
+    stPhoiNgan: number;
+    klPhoiNgan: number;
+    stLoai2: number;
+    klLoai2: number;
+    stLoai2tp: number;
+    klLoai2tp: number;
+    stLoai3: number;
+    klLoai3: number;
+    tongSoThanh: number;
+    tongKhoiLuong: number;
+  }>;
+}
+//============================= SẢN LƯỢNG PHÔI  =============================
 export const sanLuongPhoiApi = {
   getByKipNgay: (params: {
     ca: string;
@@ -32,15 +58,29 @@ export const sanLuongPhoiApi = {
   }) =>
     apiService.get("/api/BMDucCTD/sanluongphoithep", { params }),
   
-  exportPdf: (idphieu: string) =>
-    apiService.get<Blob>(`/api/BMDucCTD/sanluongphoithep/export-pdf/${idphieu}`, {
+  // exportPdf: (idphieu: string) =>
+  //   apiService.get<Blob>(`/api/BMDucCTD/sanluongphoithep/export-pdf/${idphieu}`, {
+  //     responseType: "blob",
+  //   }),
+  
+  exportSanLuongPdf: (params: {
+    NgaySX?: string;
+    Ca?: number;
+    Kip?: string;
+    idPhieu?: string;
+  }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-sanluong-pdf", {
+      params,
       responseType: "blob",
     }),
   
   insertSanLuongPhoi: (payload: InsertSanLuongPhoiPayload) =>
     apiService.post("/api/BMDucCTD/InsertSanLuongPhoi", payload),
+  
+  deleteSanLuongPhoiByIdPhieu: (idPhieu: string) =>
+    apiService.delete(`/api/BMDucCTD/DeleteSanLuongPhoi/${idPhieu}`),
 };
-
+// ============================= PHÔI NHẬP KHO =============================
 export const phoiNhapKhoApi = {
   getByKipNgay: (params: {
     ca: number;
@@ -49,4 +89,23 @@ export const phoiNhapKhoApi = {
     mayduc: number;
   }) =>
     apiService.get("/api/BMDucCTD/Getphoinhapkho", { params }),
+  
+  insertPhoiNhapKho: (payload: InsertPhoiNhapKhoPayload) =>
+    apiService.post("/api/BMDucCTD/InsertPhoiNhapKho", payload),
+  
+  deletePhoiNhapKhoByIdPhieu: (idPhieu: string) =>
+    apiService.delete(`/api/BMDucCTD/DeletePhoiNhapKho/${idPhieu}`),
+
+  
+  exportPhoiNhapKhoPdf: (params: {
+    NgaySX?: string;
+    Ca?: number;
+    Kip?: string;
+    idPhieu?: string;
+  }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-phoinhapkho-pdf", {
+      params,
+      responseType: "blob",
+    }),
+  
 };

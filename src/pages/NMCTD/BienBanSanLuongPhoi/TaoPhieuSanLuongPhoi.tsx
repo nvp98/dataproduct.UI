@@ -67,7 +67,7 @@ const TaoPhieuSanLuongPhoi = () => {
 
   /** Hàm load dữ liệu từ API theo filter */
   const loadDataFromAPI = useCallback(async () => {
-    
+
     if (!kip) {
       message.warning("Vui lòng chọn Kíp");
       return;
@@ -90,24 +90,24 @@ const TaoPhieuSanLuongPhoi = () => {
       setLoading(true);
       // Format ngày nếu là dayjs object, nếu không thì dùng trực tiếp
       const ngaySXFormatted = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : ngaySXValue;
-      
-      const params = { 
-        kip, 
-        ca, 
-        NgaySX: ngaySXFormatted 
+
+      const params = {
+        kip,
+        ca,
+        NgaySX: ngaySXFormatted
       };
-      
+
       const response = await sanLuongPhoiApi.getByKipNgay(params);
-      
+
       if (response && Array.isArray(response)) {
         const updatedData = response.map((newRow: any, index: number) => {
           // Tìm record hiện tại có cùng điều kiện (kipNgay, macThep, kichThuoc)
-          const existingRow = tableData.find((row: any) => 
-            row.kipNgay === newRow.kipNgay && 
-            row.macThep === newRow.macThep && 
+          const existingRow = tableData.find((row: any) =>
+            row.kipNgay === newRow.kipNgay &&
+            row.macThep === newRow.macThep &&
             row.kichThuoc === newRow.kichThuoc
           );
-          
+
           // Nếu tìm thấy record cũ có ID, giữ nguyên ID
           if (existingRow && existingRow.id) {
             return {
@@ -116,14 +116,14 @@ const TaoPhieuSanLuongPhoi = () => {
               id: existingRow.id, // Giữ nguyên ID cũ
             };
           }
-          
+
           // Nếu không tìm thấy, trả về record mới
           return {
             key: `row-${index}`,
             ...newRow,
           };
         });
-        
+
         setTableData(updatedData);
         message.success(`Cập nhật dữ liệu thành công! Có ${updatedData.length} bản ghi`);
       } else {
@@ -191,12 +191,12 @@ const TaoPhieuSanLuongPhoi = () => {
           }
 
           const tinhTrang = (res as any)?.tinhTrang ?? 0;
-          
+
           // Lấy tất cả date fields từ config
           const dateFields = config.headerFields
             .filter((f: any) => f.type === "date")
             .map((f: any) => f.key);
-          
+
           // Parse tất cả date fields an toàn
           const parsedDates: Record<string, any> = {};
           dateFields.forEach((fieldKey: string) => {
@@ -204,13 +204,13 @@ const TaoPhieuSanLuongPhoi = () => {
               const parsed = dayjs(data[fieldKey]);
               parsedDates[fieldKey] = parsed.isValid() ? parsed : null;
             }
-          });       
+          });
           const formValues = {
             ...data,
             ...signatureFields,
             ...parsedDates,
             idphieu: (res as any)?.idphieu || "",
-          };  
+          };
           form.setFieldsValue(formValues);
 
           // Nếu trạng thái là DangLuu, override lại các field có capDuyet === 0 bằng currentUser
@@ -243,7 +243,7 @@ const TaoPhieuSanLuongPhoi = () => {
       } else {
         // Tạo phiếu mới - set giá trị mặc định cho cấp duyệt 0
         setPhieuInfo({});
-        
+
         // Set người ký cấp 0 = user hiện tại
         setTimeout(() => {
           const overrideFields: Record<string, any> = {};
@@ -294,7 +294,7 @@ const TaoPhieuSanLuongPhoi = () => {
     const dateFields = config.headerFields
       .filter((f: any) => f.type === "date")
       .map((f: any) => f.key);
-    
+
     const formattedDates: Record<string, any> = {};
     dateFields.forEach((fieldKey: string) => {
       if (formData[fieldKey]) {
@@ -331,44 +331,105 @@ const TaoPhieuSanLuongPhoi = () => {
         });
         return;
       }
+
+      // Reload lại dữ liệu phiếu sau khi action thành công
       await initData();
     },
     [navigate, initData]
   );
 
-  // const handleExportPdf = async () => {
-  //   if (!idphieu) {
-  //     message.warning("Vui lòng lưu phiếu trước khi xuất PDF!");
-  //     return;
-  //   }
+  const handleStatusChange = useCallback(
+    async (idPhieu: string, newStatus: number) => {
+      // Xử lý insert/delete dựa trên trạng thái mới
+      try {
+        const formValues = await form.validateFields();
+        console.log("✅ Form validated:", formValues);
 
-  //   try {
-  //     setLoading(true);
-  //     const response = await sanLuongPhoiApi.exportPdf(idphieu);
+        // Nếu đơn đã phê duyệt hoàn tất => Insert
+        if (newStatus === TrangThaiPhieuConst.HoanThanh) {
 
-  //     const blob = new Blob([response as any], {
-  //       type: "application/pdf",
-  //     });
+          const payload = {
+            idPhieu: idPhieu,
+            soPhieu: soPhieu || "",
+            ngaySX: formValues.NgaySX ? formValues.NgaySX.format("YYYY-MM-DD") : "",
+            kip: formValues.kip || "",
+            ca: formValues.ca || 0,
+            mayDuc: formValues.mayDuc || 0,
+            table1: tableData.map((row) => ({
+              kipNgay: row.kipNgay || "",
+              macThep: row.macThep || "",
+              kichThuoc: row.kichThuoc || "",
+              stLoai1: Number(row.stLoai1) || 0,
+              klLoai1: Number(row.klLoai1) || 0,
+              stPhoiNgan: Number(row.stPhoiNgan) || 0,
+              klPhoiNgan: Number(row.klPhoiNgan) || 0,
+              stLoai2: Number(row.stLoai2) || 0,
+              klLoai2: Number(row.klLoai2) || 0,
+              stLoai3: Number(row.stLoai3) || 0,
+              klLoai3: Number(row.klLoai3) || 0,
+              tongSoThanh: Number(row.tongSoThanh) || 0,
+              tongKhoiLuong: Number(row.tongKhoiLuong) || 0,
+            })),
+          };
+          await sanLuongPhoiApi.insertSanLuongPhoi(payload);
+          console.log("✅ INSERT successful!");
+          message.success("Đã insert dữ liệu sản lượng phôi thành công!");
+        }
 
-  //     const url = window.URL.createObjectURL(blob);
-  //     const link = document.createElement("a");
-  //     link.href = url;
-  //     link.download = `Bien_ban_san_luong_phoi_${soPhieu || idphieu}_${new Date()
-  //       .toISOString()
-  //       .slice(0, 10)}.pdf`;
-  //     document.body.appendChild(link);
-  //     link.click();
-  //     document.body.removeChild(link);
-  //     window.URL.revokeObjectURL(url);
-      
-  //     message.success("Xuất PDF thành công!");
-  //   } catch (error: any) {
-  //     console.error("Export PDF failed:", error);
-  //     message.error(error?.message || "Xuất file PDF thất bại!");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+        // Nếu đơn đã thu hồi => Delete
+        if (newStatus === TrangThaiPhieuConst.DaThuHoi) {
+          await sanLuongPhoiApi.deleteSanLuongPhoiByIdPhieu(idPhieu);
+          console.log("✅ DELETE successful!");
+          message.success("Đã xóa dữ liệu sản lượng phôi!");
+        }
+      } catch (error: any) {
+        console.error("❌ Error in handleStatusChange:", error);
+        console.error("Error details:", error?.response?.data || error?.message);
+        // Hiện error để user biết
+        message.error(`Lỗi: ${error?.response?.data?.message || error?.message || "Không xác định"}`);
+      }
+    },
+    [form, soPhieu, tableData]
+  );
+
+  const handleExportPdf = async () => {
+    if (!idphieu) {
+      message.warning("Vui lòng lưu phiếu trước khi xuất PDF!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await sanLuongPhoiApi.exportSanLuongPdf({
+        NgaySX: form.getFieldValue("NgaySX") ? form.getFieldValue("NgaySX").format("YYYY-MM-DD") : undefined,
+        Ca: form.getFieldValue("ca"),
+        Kip: form.getFieldValue("kip"),
+        idPhieu: idphieu,
+      });
+
+      const blob = new Blob([response as any], {
+        type: "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Bien_ban_san_luong_phoi_${soPhieu || idphieu}_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      message.success("Xuất PDF thành công!");
+    } catch (error: any) {
+      console.error("Export PDF failed:", error);
+      message.error(error?.message || "Xuất file PDF thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
@@ -382,6 +443,7 @@ const TaoPhieuSanLuongPhoi = () => {
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
       pheDuyet: phieuInfo.pheDuyet ?? [],
+      onStatusChange: handleStatusChange,
       onSuccess: handleActionSuccess,
       onError: (error) => {
         console.error("Action error:", error);
@@ -391,7 +453,7 @@ const TaoPhieuSanLuongPhoi = () => {
     if (buttons.length === 0) return null;
 
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleActionSuccess]);
+  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess]);
 
   const tableSection = config.layout.find(
     (section: any) => section.sectionType === "table" && section.key === "table1"
@@ -417,7 +479,7 @@ const TaoPhieuSanLuongPhoi = () => {
         </div>
 
         {/* ISO góc phải */}
-        {config.isoInfo && (
+        {/* {config.isoInfo && (
           <div style={{ fontSize: 13, textAlign: "right", lineHeight: "20px" }}>
             <div>
               <b>{config.isoInfo.code}</b>
@@ -425,7 +487,7 @@ const TaoPhieuSanLuongPhoi = () => {
             <div>Ngày hiệu lực: {config.isoInfo.effectiveDate}</div>
             <div>Lần sửa đổi: {config.isoInfo.revision}</div>
           </div>
-        )}
+        )} */}
       </div>
 
       <Form form={form} layout="vertical">
@@ -461,8 +523,18 @@ const TaoPhieuSanLuongPhoi = () => {
           >
             Tải dữ liệu
           </Button>
+           {idphieu && (currentTinhTrang === TrangThaiPhieuConst.HoanThanh || currentTinhTrang === TrangThaiPhieuConst.DaChot) && (
+          <Button
+            type="default"
+            icon={<FilePdfOutlined />}
+            onClick={handleExportPdf}
+            loading={loading}
+          >
+            Xuất PDF
+          </Button>
+        )}
         </div>
-
+       
         {/* TABLE - danh sách phôi */}
         {config.layout.map((layout, idx) => (
           <div key={idx}>
@@ -564,12 +636,12 @@ const TaoPhieuSanLuongPhoi = () => {
             const autoValue = isLevelZero
               ? currentUserInfo?.iD_TaiKhoan ?? null
               : undefined;
-            
+
             // Lấy thông tin phê duyệt
             const duyet = phieuInfo.pheDuyet?.find(
               (p: any) => p.capDuyet === sig.capDuyet
             );
-            
+
             return (
               <div key={sig.key || i}>
                 <CustomFormItem
@@ -581,8 +653,8 @@ const TaoPhieuSanLuongPhoi = () => {
                 {idphieu && duyet && (
                   <div style={{ marginTop: 8 }}>
                     <Typography.Text type="secondary">
-                      {duyet?.tinhTrang === 1 ? "Đã ký" 
-                      :duyet?.tinhTrang === 2 ? "Đã từ chối" 
+                      {duyet?.tinhTrang === 1 ? "Đã ký"
+                      :duyet?.tinhTrang === 2 ? "Đã từ chối"
                       : "Chưa xử lý"}
                     </Typography.Text>
                   </div>
@@ -604,16 +676,7 @@ const TaoPhieuSanLuongPhoi = () => {
         }}
       >
         {actionButtons}
-       {/* {idphieu && (
-          <Button
-            type="default"
-            icon={<FilePdfOutlined />}
-            onClick={handleExportPdf}
-            loading={loading}
-          >
-            Xuất PDF
-          </Button>
-       )} */}
+       
       </div>
     </Card>
   );

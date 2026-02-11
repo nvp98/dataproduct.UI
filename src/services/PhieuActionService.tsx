@@ -47,6 +47,9 @@ export interface PhieuActionServiceParams {
   // Cho phép gọi API bổ sung sau khi lưu phiếu (ví dụ lưu sang bảng khác)
   // Được gọi sau khi PhieuApi.postData hoặc PhieuApi.putData thành công
   customPutApi?: (idphieu: string, formData: Record<string, unknown>) => Promise<any>;
+  // Callback được gọi sau khi thay đổi trạng thái thành công
+  // Nhận vào idPhieu và trạng thái mới
+  onStatusChange?: (idPhieu: string, newStatus: number) => void | Promise<void>;
   // Thông tin user hiện tại
   currentUserId?: number | null;
   currentUserPhongBanId?: number | null;
@@ -171,6 +174,7 @@ export const phieuActionService = {
       tinhTrang,
       isClone,
       customPutApi,
+      onStatusChange,
       currentUserId,
       currentUserPhongBanId,
       currentUserTenNgan,
@@ -201,6 +205,7 @@ export const phieuActionService = {
             try {
               await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.DaChot);
               message.success("Chốt phiếu thành công!");
+              await onStatusChange?.(phieuId, TrangThaiPhieuConst.DaChot);
               onSuccess?.();
             } catch (error) {
               // message.error("Không thể chốt phiếu");
@@ -223,6 +228,7 @@ export const phieuActionService = {
             try {
               await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.HoanThanh);
               message.success("Hủy chốt phiếu thành công!");
+              await onStatusChange?.(phieuId, TrangThaiPhieuConst.HoanThanh);
               onSuccess?.();
             } catch (error) {
               // message.error("Không thể hủy chốt phiếu");
@@ -293,6 +299,7 @@ export const phieuActionService = {
             const resData = res as { idphieu?: string; soPhieu?: string } | undefined;
             if (resData?.idphieu) {
               await PhieuApi.changeStatus(resData.idphieu, TrangThaiPhieuConst.DaGui);
+              await onStatusChange?.(resData.idphieu, TrangThaiPhieuConst.DaGui);
             }
             message.success(`Tạo và gửi phiếu thành công: ${resData?.soPhieu || ""}`);
             onSuccess?.();
@@ -359,6 +366,7 @@ export const phieuActionService = {
                 await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }
               await PhieuApi.changeStatus(phieuIdParam, TrangThaiPhieuConst.DaGui);
+              await onStatusChange?.(phieuIdParam, TrangThaiPhieuConst.DaGui);
               message.success("Lưu và gửi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
@@ -386,6 +394,7 @@ export const phieuActionService = {
           onClick: async () => {
             try {
               await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.DaThuHoi);
+              await onStatusChange?.(phieuId, TrangThaiPhieuConst.DaThuHoi);
               message.success("Thu hồi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
@@ -410,6 +419,7 @@ export const phieuActionService = {
           onClick: async () => {
             try {
               await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.DaThuHoi);
+              await onStatusChange?.(phieuId, TrangThaiPhieuConst.DaThuHoi);
               message.success("Thu hồi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
@@ -470,6 +480,7 @@ export const phieuActionService = {
                 await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }
               await PhieuApi.changeStatus(phieuIdParam, TrangThaiPhieuConst.DaGui);
+              await onStatusChange?.(phieuIdParam, TrangThaiPhieuConst.DaGui);
               message.success("Lưu và gửi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
@@ -519,6 +530,16 @@ export const phieuActionService = {
                 currentUserId,
                 TrangThaiXacNhanPhieuConst.DaXacNhan
               );
+              
+              // Lấy trạng thái mới của phiếu sau khi cập nhật
+              const phieuDetail = await PhieuApi.getDetail(phieuId);
+              const newPhieuStatus = (phieuDetail as any)?.tinhTrang;
+              console.log("✅ Phiếu sau khi xác nhận:", { phieuId, newPhieuStatus });
+              
+              if (newPhieuStatus !== undefined && onStatusChange) {
+                await onStatusChange(phieuId, newPhieuStatus);
+              }
+              
               message.success("Xác nhận phiếu thành công!");
               onSuccess?.();
             } catch (error) {
@@ -547,6 +568,16 @@ export const phieuActionService = {
               // Cập nhật tinhTrang của user hiện tại = 1 (xác nhận)
               // API sẽ tự động check và cập nhật trạng thái phiếu nếu tất cả đều xác nhận
               await PheDuyetApi.updateTinhTrang(phieuId, currentUserId, TrangThaiXacNhanPhieuConst.DaXacNhan);
+              
+              // Lấy trạng thái mới của phiếu sau khi cập nhật
+              const phieuDetail = await PhieuApi.getDetail(phieuId);
+              const newPhieuStatus = (phieuDetail as any)?.tinhTrang;
+              console.log("✅ Phiếu sau khi xác nhận:", { phieuId, newPhieuStatus });
+              
+              if (newPhieuStatus !== undefined && onStatusChange) {
+                await onStatusChange(phieuId, newPhieuStatus);
+              }
+              
               message.success("Xác nhận phiếu thành công!");
               onSuccess?.();
             } catch (error) {

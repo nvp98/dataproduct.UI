@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import CTD_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/CTD_BB_GiaoNhanPhoiNhapKho.json";
 import { Button, Card, Form, Input, Typography, message, Table } from "antd";
-import { FilterOutlined } from "@ant-design/icons";
+import { FilePdfOutlined, FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -11,7 +11,7 @@ import CustomFormTable from "../../../components/CustomFormTable";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
-import { phoiNhapKhoApi } from "../../../services/BMDucCTDApi";
+import { phoiNhapKhoApi, sanLuongPhoiApi } from "../../../services/BMDucCTDApi";
 
 interface TableRow {
   key?: string;
@@ -339,11 +339,116 @@ const TaoPhieuPhoiNhapKho = () => {
         });
         return;
       }
+      
+      // Reload lại dữ liệu phiếu sau khi action thành công
       await initData();
     },
     [navigate, initData]
   );
+  
+  const handleStatusChange = useCallback(
+    async (idPhieu: string, newStatus: number) => {
+      console.log("🔔 handleStatusChange called:", { idPhieu, newStatus });
+      
+      // Xử lý insert/delete dựa trên trạng thái mới
+      try {
+        const formValues = await form.validateFields();
+        console.log("✅ Form validated:", formValues);
 
+        // Nếu đơn đã phê duyệt hoàn tất => Insert
+        if (newStatus === TrangThaiPhieuConst.HoanThanh) {
+          console.log("📥 Preparing to INSERT phoi nhap kho...");
+          
+          // Sử dụng selectRow nếu có chọn, nếu không thì dùng toàn bộ tableData
+          const dataToProcess = selectRow.length > 0 ? selectRow : tableData;
+          
+          const payload = {
+            idPhieu: idPhieu,
+            soPhieu: soPhieu || "",
+            ngaySX: formValues.NgaySX ? formValues.NgaySX.format("YYYY-MM-DD") : "",
+            kip: formValues.kip || "",
+            ca: formValues.ca || 0,
+            mayDuc: formValues.mayDuc || 0,
+            table1: dataToProcess.map((row) => ({
+              me: row.me || "",
+              mac: row.mac || "",
+              kichThuoc: row.kichThuoc || "",
+              stLoai1: Number(row.stLoai1) || 0,
+              klLoai1: Number(row.klLoai1) || 0,
+              stPhoiNgan: Number(row.stPhoiNgan) || 0,
+              klPhoiNgan: Number(row.klPhoiNgan) || 0,
+              stLoai2: Number(row.stLoai2) || 0,
+              klLoai2: Number(row.klLoai2) || 0,
+              stLoai2tp: Number(row.stLoai2tp) || 0,
+              klLoai2tp: Number(row.klLoai2tp) || 0,
+              stLoai3: Number(row.stLoai3) || 0,
+              klLoai3: Number(row.klLoai3) || 0,
+              tongSoThanh: Number(row.tongSoThanh) || 0,
+              tongKhoiLuong: Number(row.tongKhoiLuong) || 0,
+            })),
+          };
+          
+         // console.log("📦 Insert phoi nhap kho payload:", payload);
+          await phoiNhapKhoApi.insertPhoiNhapKho(payload);
+          // console.log("✅ INSERT phoi nhap kho successful!");
+          // message.success("Đã insert dữ liệu phôi nhập kho thành công!");
+        }
+        
+        // Nếu đơn đã thu hồi => Delete
+        if (newStatus === TrangThaiPhieuConst.DaThuHoi) {
+        //  console.log("🗑️ Preparing to DELETE phoi nhap kho...");
+          await phoiNhapKhoApi.deletePhoiNhapKhoByIdPhieu(idPhieu);
+          // console.log("✅ DELETE phoi nhap kho successful!");
+          // message.success("Đã xóa dữ liệu phôi nhập kho!");
+        }
+      } catch (error: any) {
+        console.error("❌ Error in handleStatusChange:", error);
+        console.error("Error details:", error?.response?.data || error?.message);
+        // Hiện error để user biết
+        message.error(`Lỗi: ${error?.response?.data?.message || error?.message || "Không xác định"}`);
+      }
+    },
+    [form, soPhieu, selectRow, tableData]
+  );
+
+  const handleExportPdf = async () => {
+    if (!idphieu) {
+      message.warning("Vui lòng lưu phiếu trước khi xuất PDF!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await phoiNhapKhoApi.exportPhoiNhapKhoPdf({
+        NgaySX: form.getFieldValue("NgaySX") ? form.getFieldValue("NgaySX").format("YYYY-MM-DD") : undefined,
+        Ca: form.getFieldValue("ca"),
+        Kip: form.getFieldValue("kip"),
+        idPhieu: idphieu,
+      });
+
+      const blob = new Blob([response as any], {
+        type: "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Bien_ban_san_luong_phoi_${soPhieu || idphieu}_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      message.success("Xuất PDF thành công!");
+    } catch (error: any) {
+      console.error("Export PDF failed:", error);
+      message.error(error?.message || "Xuất file PDF thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  };
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
     const buttons = phieuActionService.getActionButtons({
@@ -356,6 +461,7 @@ const TaoPhieuPhoiNhapKho = () => {
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
       pheDuyet: phieuInfo.pheDuyet ?? [],
+      onStatusChange: handleStatusChange,
       onSuccess: handleActionSuccess,
       onError: (error) => {
         console.error("Action error:", error);
@@ -365,7 +471,7 @@ const TaoPhieuPhoiNhapKho = () => {
     if (buttons.length === 0) return null;
 
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleActionSuccess]);
+  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess]);
 
   const tableSection = config.layout.find(
     (section: any) => section.sectionType === "table" && section.key === "table1"
@@ -435,6 +541,16 @@ const TaoPhieuPhoiNhapKho = () => {
           >
             Tải dữ liệu
           </Button>
+           {idphieu && (currentTinhTrang === TrangThaiPhieuConst.HoanThanh || currentTinhTrang === TrangThaiPhieuConst.DaChot) && (
+          <Button
+            type="default"
+            icon={<FilePdfOutlined />}
+            onClick={handleExportPdf}
+            loading={loading}
+          >
+            Xuất PDF
+          </Button>
+        )}
         </div>
 
         {/* TABLE - danh sách phôi */}
