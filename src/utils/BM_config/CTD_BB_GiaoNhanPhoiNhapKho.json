@@ -58,7 +58,7 @@
             "label": "Máy Đúc",
             "type": "select",
             "required": true,
-            "key": "mayDuc",
+            "key": "mayduc",
             "options": [
                 {
                     "label": "Đúc 1",
@@ -87,7 +87,7 @@
                     "kip": "@kip",
                     "fromTime": "@fromTime",
                     "toTime": "@toTime",
-                    "mayDuc": "@mayDuc"
+                    "mayduc": "@mayduc"
                 }
             },
             "columns": [             

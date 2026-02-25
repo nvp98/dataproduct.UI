@@ -91,9 +91,9 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
       ellipsis: true,
     },
     {
-      title: "Kíp",
-      dataIndex: "kip",
-      key: "kip",
+      title: "Ca",
+      dataIndex: "ca",
+      key: "ca",
       width: 150,
       ellipsis: true,
     },

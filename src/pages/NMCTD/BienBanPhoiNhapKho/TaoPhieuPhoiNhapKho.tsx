@@ -27,8 +27,6 @@ const TaoPhieuPhoiNhapKho = () => {
   const [form] = Form.useForm();
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<Array<string | number>>([]);
-  const [selectRow, setSelectRow] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
@@ -42,7 +40,7 @@ const TaoPhieuPhoiNhapKho = () => {
   // Theo dõi thay đổi trên các field chính
   const kip = Form.useWatch("kip", form);
   const ca = Form.useWatch("ca", form);
-  const mayDuc = Form.useWatch("mayDuc", form);
+  const mayduc = Form.useWatch("mayduc", form);
   const ngaySX = Form.useWatch("NgaySX", form);
 
   const currentUserInfo = useMemo(() => {
@@ -81,7 +79,7 @@ const TaoPhieuPhoiNhapKho = () => {
       return;
     }
 
-    if (!mayDuc) {
+    if (!mayduc) {
       message.warning("Vui lòng chọn Máy đúc");
       return;
     }
@@ -102,7 +100,7 @@ const TaoPhieuPhoiNhapKho = () => {
       const params = { 
         kip, 
         ca: Number(ca),
-        mayduc: Number(mayDuc),
+        mayduc: Number(mayduc),
         ngaySX: ngaySXFormatted 
       };
       
@@ -135,8 +133,6 @@ const TaoPhieuPhoiNhapKho = () => {
         message.success(`Cập nhật dữ liệu thành công! Có ${updatedData.length} bản ghi`);
       } else {
         setTableData([]);
-        setSelectedRowKeys([]);
-        setSelectRow([]);
         message.info("Không có dữ liệu");
       }
     } catch (error) {
@@ -146,7 +142,7 @@ const TaoPhieuPhoiNhapKho = () => {
     } finally {
       setLoading(false);
     }
-  }, [kip, ca, mayDuc, form, tableData]);
+  }, [kip, ca, mayduc , form, tableData]);
 
   /** Hàm xử lý khi bấm nút Filter */
   const handleFilter = useCallback(() => {
@@ -160,7 +156,7 @@ const TaoPhieuPhoiNhapKho = () => {
       message.warning("Vui lòng chọn Ca");
       return;
     }
-    if (!mayDuc) {
+    if (!mayduc) {
       message.warning("Vui lòng chọn Máy đúc");
       return;
     }
@@ -169,7 +165,7 @@ const TaoPhieuPhoiNhapKho = () => {
       return;
     }
     loadDataFromAPI();
-  }, [kip, ca, mayDuc, form, loadDataFromAPI]);
+  }, [kip, ca, mayduc, form, loadDataFromAPI]);
 
   // Hàm khởi tạo dữ liệu ban đầu
   // Hàm khởi tạo dữ liệu ban đầu
@@ -296,8 +292,7 @@ const TaoPhieuPhoiNhapKho = () => {
       ghiChu: "",
     }));
 
-    // Sử dụng selectRow nếu có chọn, nếu không thì dùng toàn bộ tableData
-    const dataToProcess = selectRow.length > 0 ? selectRow : tableData;
+    const dataToProcess = tableData;
 
     const processedTable1 = dataToProcess.map((row) => {
       const processedRow = { ...row };
@@ -329,7 +324,7 @@ const TaoPhieuPhoiNhapKho = () => {
       pheDuyet: pheDuyetFlow,
       prefix: config.prefix
     };
-  }, [getUserInfo, form, config.signatures, config.code, config.headerFields, config.prefix, selectRow, tableData]);
+  }, [getUserInfo, form, config.signatures, config.code, config.headerFields, config.prefix, tableData]);
 
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
@@ -359,8 +354,7 @@ const TaoPhieuPhoiNhapKho = () => {
         if (newStatus === TrangThaiPhieuConst.HoanThanh) {
           console.log("📥 Preparing to INSERT phoi nhap kho...");
           
-          // Sử dụng selectRow nếu có chọn, nếu không thì dùng toàn bộ tableData
-          const dataToProcess = selectRow.length > 0 ? selectRow : tableData;
+          const dataToProcess = tableData;
           
           const payload = {
             idPhieu: idPhieu,
@@ -408,7 +402,7 @@ const TaoPhieuPhoiNhapKho = () => {
         message.error(`Lỗi: ${error?.response?.data?.message || error?.message || "Không xác định"}`);
       }
     },
-    [form, soPhieu, selectRow, tableData]
+    [form, soPhieu, tableData]
   );
 
   const handleExportPdf = async () => {
@@ -567,13 +561,7 @@ const TaoPhieuPhoiNhapKho = () => {
                 minRows={0}
                 editable={!isFormLocked && (layout as any).editable !== false}
                 loading={loading}
-                selectionEnabled={true}
-                selectedRowKeys={selectedRowKeys}
-                onSelectionChange={(keys, rows) => {
-                  setSelectedRowKeys(keys);
-                  setSelectRow(rows as TableRow[]);
-                  console.log("Selected rows:", rows);
-                }}
+              //  selectionEnabled={false}
                 summary={(pageData) => {
                   // Tính tổng cho từng cột số
                   const totals = {
@@ -609,7 +597,7 @@ const TaoPhieuPhoiNhapKho = () => {
                   return (
                     <Table.Summary fixed>
                       <Table.Summary.Row style={{ backgroundColor: "#fafafa", fontWeight: "bold" }}>
-                        <Table.Summary.Cell index={0} colSpan={4} align="center">
+                        <Table.Summary.Cell index={0} colSpan={3} align="center">
                           TỔNG CỘNG
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={1} align="right">

@@ -39,12 +39,7 @@
       "type": "date",
       "key": "NgaySX",
       "required": true
-    },
-    { "label": "Máy Đúc", "type": "select","required": true, "key": "mayduc","options": [
-        { "label": "Đúc 1", "value": 1 },
-        { "label": "Đúc 2", "value": 2 },
-        { "label": "Đúc 3", "value": 3 }
-      ] }
+    }
   ],
 
   "layout": [

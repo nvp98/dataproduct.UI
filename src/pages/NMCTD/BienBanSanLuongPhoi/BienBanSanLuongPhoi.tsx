@@ -186,17 +186,17 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
         { label: "Kíp C", value: "C" },
       ],
     },
-    {
-      key: "mayduc",
-      label: "Máy đúc",
-      type: "select",
-      placeholder: "Chọn máy đúc",
-      options: [
-        { label: "Đúc 1", value: 1 },
-        { label: "Đúc 2", value: 2 },
-        { label: "Đúc 3", value: 3 },
-      ],
-    },
+    // {
+    //   key: "mayduc",
+    //   label: "Máy đúc",
+    //   type: "select",
+    //   placeholder: "Chọn máy đúc",
+    //   options: [
+    //     { label: "Đúc 1", value: 1 },
+    //     { label: "Đúc 2", value: 2 },
+    //     { label: "Đúc 3", value: 3 },
+    //   ],
+    // },
   ];
 
   return (
