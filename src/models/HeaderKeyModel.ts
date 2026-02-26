@@ -18,6 +18,7 @@ export interface HeaderKeyPayload {
   loaiPhieu?: string | null;
   isActive: boolean;
   thuTu?: number | null;
+  tyTrong?: number | null;
   isUsedNXT?: boolean | null;
 }
 
@@ -46,6 +47,7 @@ export interface HeaderKeyMapping {
   ngayTao?: string | null;
   isUsedNXT?: boolean | null;
   thuTu?: number | null;
+  tyTrong?: number | null;
   iD_PhuLieu?: number | null; // có thể null nếu là HeaderKey chưa móc nối
   tenNguonDuLieu?: string | null;
   tenPhuLieu?: string | null;

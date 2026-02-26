@@ -19,7 +19,7 @@ import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutli
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { SiloServiceApi } from "../../../services/SiloServiceApi";
-import type { Silo as QuanLySilo, SiloPayload } from "../../../models/SiloModel";
+import type { Silo, SiloPayload } from "../../../models/SiloModel";
 import { NhaMayEnum as NhaMayEnumValues } from "../../../models/SiloModel";
 import SiloMappingModal, { type SiloMappingRecord } from "../../../components/SiloMappingModal";
 
@@ -57,14 +57,14 @@ const QuanLySilo = () => {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [data, setData] = useState<QuanLySilo[]>([]);
+  const [data, setData] = useState<Silo[]>([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
   const [filters, setFilters] = useState<FilterState>({});
-  const [editingRecord, setEditingRecord] = useState<QuanLySilo | null>(null);
+  const [editingRecord, setEditingRecord] = useState<Silo | null>(null);
   const [mappingModalOpen, setMappingModalOpen] = useState(false);
   const [mappingRecord, setMappingRecord] = useState<SiloMappingRecord | null>(null);
 
@@ -127,7 +127,7 @@ const QuanLySilo = () => {
     setModalVisible(true);
   };
 
-  const openEditModal = (record: QuanLySilo) => {
+  const openEditModal = (record: Silo) => {
     setEditingRecord(record);
     modalForm.setFieldsValue({
       tenSilo: record.tenSilo,
@@ -194,7 +194,7 @@ const QuanLySilo = () => {
     }
   };
 
-  const openMappingModal = (record: QuanLySilo) => {
+  const openMappingModal = (record: Silo) => {
     setMappingRecord({
       siloId: record.id,
       tenSilo: record.tenSilo,
@@ -214,7 +214,7 @@ const QuanLySilo = () => {
         dataIndex: "tenSilo",
         key: "tenSilo",
         width: 200,
-        sorter: (a: QuanLySilo, b: QuanLySilo) => (a.tenSilo || "").localeCompare(b.tenSilo || ""),
+        sorter: (a: Silo, b: Silo) => (a.tenSilo || "").localeCompare(b.tenSilo || ""),
         render: (value: string) => value || "-",
       },
       {
@@ -269,7 +269,7 @@ const QuanLySilo = () => {
         title: "Thao tác",
         key: "actions",
         width: 220,
-        render: (_: unknown, record: QuanLySilo) => (
+        render: (_: unknown, record: Silo) => (
           <Space>
             <Button
               size="small"
