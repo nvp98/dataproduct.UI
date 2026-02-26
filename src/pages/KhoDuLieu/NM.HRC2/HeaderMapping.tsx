@@ -282,14 +282,21 @@ const HeaderMapping = () => {
         ellipsis: true,
         render: (value: string) => value || "-",
       },
-      {
-        title: "Phụ liệu NM",
-        dataIndex: "headerMappings",
-        key: "headerMappings",
-        width: 250,
-        render: (value: HeaderMappingType[]) =>
-          value.map((item) => item.tenNguonDuLieu).join("; "),
-      },
+      // {
+      //   title: "Phụ liệu NM",
+      //   dataIndex: "headerMappings",
+      //   key: "headerMappings",
+      //   width: 250,
+      //   render: (value: HeaderMappingType[] | undefined) => {
+      //     if (!Array.isArray(value) || value.length === 0) {
+      //       return "-";
+      //     }
+      //     return value
+      //       .filter((item) => !!item?.tenNguonDuLieu)
+      //       .map((item) => item.tenNguonDuLieu)
+      //       .join("; ");
+      //   },
+      // },
       {
         title: "Thứ tự",
         dataIndex: "thuTu",

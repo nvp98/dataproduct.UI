@@ -18,10 +18,11 @@ export interface SiloPayload {
   nhaMay: number; 
 }
 
-export enum NhaMayEnum {
-  HRC1 = 1,
-  HRC2 = 2,
-}
+export const NhaMayEnum = {
+  HRC1: 1,
+  HRC2: 2,
+} as const;
+export type NhaMayEnum = (typeof NhaMayEnum)[keyof typeof NhaMayEnum];
 
 export interface SiloSearchResponse {
   data: Silo[];
