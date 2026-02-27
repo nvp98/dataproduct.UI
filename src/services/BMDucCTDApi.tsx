@@ -39,6 +39,7 @@ interface InsertPhoiNhapKhoPayload {
     klLoai1: number;
     stPhoiNgan: number;
     klPhoiNgan: number;
+    cdPhoiNgan:number;
     stLoai2: number;
     klLoai2: number;
     stLoai2tp: number;

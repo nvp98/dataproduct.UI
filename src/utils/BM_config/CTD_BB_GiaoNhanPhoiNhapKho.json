@@ -121,23 +121,9 @@
                         }
                     ]
                 },
+              
                 {
-                    "title": "Phôi ngắn",
-                    "children": [
-                        {
-                            "title": "Số thanh",
-                            "dataIndex": "stPhoiNgan",
-                            "width": 80
-                        },
-                        {
-                            "title": "Khối lượng (Kg)",
-                            "dataIndex": "klPhoiNgan",
-                            "width": 105
-                        }
-                    ]
-                },
-                {
-                    "title": "Loại II",
+                    "title": "Loại II BM",
                     "children": [
                         {
                             "title": "Số thanh",
@@ -152,7 +138,7 @@
                     ]
                 },
                 {
-                    "title": "Loại II TP",
+                    "title": "Loại II TPHH",
                     "children": [
                         {
                             "title": "Số thanh",
@@ -162,6 +148,26 @@
                         {
                             "title": "Khối lượng (Kg)",
                             "dataIndex": "klLoai2tp",
+                            "width": 105
+                        }
+                    ]
+                },
+                  {
+                    "title": "Phôi ngắn",
+                    "children": [
+                        {
+                            "title": "Số thanh",
+                            "dataIndex": "stPhoiNgan",
+                            "width": 80
+                        },
+                         {
+                            "title": "Chiều dài (m)",
+                            "dataIndex": "cdPhoiNgan",
+                            "width": 80
+                        },
+                        {
+                            "title": "Khối lượng (Kg)",
+                            "dataIndex": "klPhoiNgan",
                             "width": 105
                         }
                     ]
@@ -180,11 +186,6 @@
                             "width": 105
                         }
                     ]
-                },
-                {
-                    "title": "Tổng số thanh",
-                    "dataIndex": "tongSoThanh",
-                    "width": 110
                 },
                 {
                     "title": "Tổng khối lượng (Kg)",

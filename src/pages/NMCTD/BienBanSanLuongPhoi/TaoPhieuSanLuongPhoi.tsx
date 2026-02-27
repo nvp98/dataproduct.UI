@@ -533,6 +533,7 @@ const TaoPhieuSanLuongPhoi = () => {
             Xuất PDF
           </Button>
         )}
+        {actionButtons}
         </div>
        
         {/* TABLE - danh sách phôi */}
@@ -664,7 +665,7 @@ const TaoPhieuSanLuongPhoi = () => {
           })}
         </div>
       </Form>
-
+{/* 
       <div
         style={{
           textAlign: "center",
@@ -677,7 +678,7 @@ const TaoPhieuSanLuongPhoi = () => {
       >
         {actionButtons}
        
-      </div>
+      </div> */}
     </Card>
   );
 };

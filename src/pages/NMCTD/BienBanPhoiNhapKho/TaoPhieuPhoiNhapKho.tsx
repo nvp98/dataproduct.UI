@@ -370,6 +370,7 @@ const TaoPhieuPhoiNhapKho = () => {
               stLoai1: Number(row.stLoai1) || 0,
               klLoai1: Number(row.klLoai1) || 0,
               stPhoiNgan: Number(row.stPhoiNgan) || 0,
+              cdPhoiNgan: Number(row.cdPhoiNgan) || 0,
               klPhoiNgan: Number(row.klPhoiNgan) || 0,
               stLoai2: Number(row.stLoai2) || 0,
               klLoai2: Number(row.klLoai2) || 0,
@@ -545,6 +546,7 @@ const TaoPhieuPhoiNhapKho = () => {
             Xuất PDF
           </Button>
         )}
+        {actionButtons}
         </div>
 
         {/* TABLE - danh sách phôi */}
@@ -569,6 +571,7 @@ const TaoPhieuPhoiNhapKho = () => {
                     klLoai1: 0,
                     stPhoiNgan: 0,
                     klPhoiNgan: 0,
+                    cdPhoiNgan:0,
                     stLoai2: 0,
                     klLoai2: 0,
                     stLoai2tp: 0,
@@ -584,6 +587,7 @@ const TaoPhieuPhoiNhapKho = () => {
                     totals.klLoai1 += Number(row.klLoai1) || 0;
                     totals.stPhoiNgan += Number(row.stPhoiNgan) || 0;
                     totals.klPhoiNgan += Number(row.klPhoiNgan) || 0;
+                    totals.cdPhoiNgan += Number(row.cdPhoiNgan) || 0;
                     totals.stLoai2 += Number(row.stLoai2) || 0;
                     totals.klLoai2 += Number(row.klLoai2) || 0;
                     totals.stLoai2tp += Number(row.stLoai2tp) || 0;
@@ -606,36 +610,45 @@ const TaoPhieuPhoiNhapKho = () => {
                         <Table.Summary.Cell index={2} align="right">
                           {totals.klLoai1.toLocaleString("en-US")}
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={3} align="right">
-                          {totals.stPhoiNgan.toLocaleString("en-US")}
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={4} align="right">
-                          {totals.klPhoiNgan.toLocaleString("en-US")}
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={5} align="right">
+
+                       <Table.Summary.Cell index={3} align="right">
                           {totals.stLoai2.toLocaleString("en-US")}
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={6} align="right">
+                        <Table.Summary.Cell index={4} align="right">
                           {totals.klLoai2.toLocaleString("en-US")}
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={7} align="right">
+
+                        <Table.Summary.Cell index={5} align="right">
                           {totals.stLoai2tp.toLocaleString("en-US")}
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={8} align="right">
+                        <Table.Summary.Cell index={6} align="right">
                           {totals.klLoai2tp.toLocaleString("en-US")}
                         </Table.Summary.Cell>
+
+                        <Table.Summary.Cell index={7} align="right">
+                          {totals.stPhoiNgan.toLocaleString("en-US")}
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={8} align="right">
+                          {totals.cdPhoiNgan.toLocaleString("en-US")}
+                        </Table.Summary.Cell>
                         <Table.Summary.Cell index={9} align="right">
+                          {totals.klPhoiNgan.toLocaleString("en-US")}
+                        </Table.Summary.Cell>
+
+                  
+
+                        <Table.Summary.Cell index={10} align="right">
                           {totals.stLoai3.toLocaleString("en-US")}
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={10} align="right">
+                        <Table.Summary.Cell index={11} align="right">
                           {totals.klLoai3.toLocaleString("en-US")}
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={11} align="right">
-                          {totals.tongSoThanh.toLocaleString("en-US")}
-                        </Table.Summary.Cell>
+
                         <Table.Summary.Cell index={12} align="right">
                           {totals.tongKhoiLuong.toLocaleString("en-US")}
                         </Table.Summary.Cell>
+
+                        
                       </Table.Summary.Row>
                     </Table.Summary>
                   );
@@ -687,19 +700,6 @@ const TaoPhieuPhoiNhapKho = () => {
           })}
         </div>
       </Form>
-
-      <div
-        style={{
-          textAlign: "center",
-          marginTop: 32,
-          display: "flex",
-          gap: 8,
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        {actionButtons}
-      </div>
     </Card>
   );
 };
