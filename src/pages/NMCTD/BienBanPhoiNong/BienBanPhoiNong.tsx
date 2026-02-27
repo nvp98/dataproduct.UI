@@ -39,13 +39,19 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
   });
 
   const statusConfig: Record<string, { color: string; text: string }> = {
-    0: { color: "purple", text: "Đang lưu" },
+    0: { color: "purple", text: "Đang xử lý" },
     1: { color: "pink", text: "Đã gửi" },
     2: { color: "blue", text: "Hoàn thành" },
     3: { color: "tomato", text: "Đã thu hồi" },
     4: { color: "yellow", text: "Không xác nhận" },
-    5: { color: "green", text: "Chốt" },
+    5: { color: "green", text: "Đã Chốt" },
     6: { color: "gray", text: "Đang phê duyệt" },
+  };
+
+  const statusXL: Record<string, { color: string; text: string }> = {
+    0: { color: "purple", text: "Chờ xử lý" },
+    1: { color: "green", text: "Đã xử lý" },
+    2: { color: "pink", text: "Hủy" },
   };
 
   type TableRecord = SearchPhieuResponseModel & {
@@ -141,40 +147,67 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     //   // width: 220,
     //   ellipsis: true,
     // },
-    {
-      title: "Ngày tạo",
-      dataIndex: "ngayTao",
-      key: "ngayTao",
-      width: 150,
-      ellipsis: true,
-      render: (value: string) =>
-        value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "-",
-      sorter: (a: any, b: any) => {
-        const va = dayjs(a?.ngayTao).valueOf();
-        const vb = dayjs(b?.ngayTao).valueOf();
-        return va - vb;
-      },
-      defaultSortOrder: "descend" as const,
-    },
     // {
-    //   title: "Trạng thái",
-    //   dataIndex: "tinhTrang",
-    //   key: "tinhTrang",
-    //   width: 110,
-    //   render: (status: string) => (
-    //     <Tag color={statusConfig[status]?.color || "default"}>
-    //       {statusConfig[status]?.text || status}
-    //     </Tag>
-    //   ),
-    // },
-    // {
-    //   title: "Người hỗ trợ",
-    //   dataIndex: "userAssigneeName",
-    //   key: "userAssigneeName",
+    //   title: "Ngày tạo",
+    //   dataIndex: "ngayTao",
+    //   key: "ngayTao",
     //   width: 150,
-    //   render: (assignee: string) =>
-    //     assignee || <span style={{ color: "#aaa" }}>-</span>,
+    //   ellipsis: true,
+    //   render: (value: string) =>
+    //     value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "-",
+    //   sorter: (a: any, b: any) => {
+    //     const va = dayjs(a?.ngayTao).valueOf();
+    //     const vb = dayjs(b?.ngayTao).valueOf();
+    //     return va - vb;
+    //   },
+    //   defaultSortOrder: "descend" as const,
     // },
+    {
+      title: "Trạng thái",
+      dataIndex: "tinhTrang",
+      key: "tinhTrang",
+      width: 110,
+      render: (status: string) => (
+        <Tag color={statusConfig[status]?.color || "default"}>
+          {statusConfig[status]?.text || status}
+        </Tag>
+      ),
+    },
+    {
+      title: "Trạng thái CTD",
+      dataIndex: "pheDuyet",
+      key: "tinhTrangCTD",
+      width: 110,
+      render: (_: any, record: TableRecord) => {
+        const ctdApproval = record.pheDuyet?.find(
+          (item: any) => item.capDuyet === 2,
+        );
+        const status = ctdApproval?.tinhTrang?.toString() || "0";
+        return (
+          <Tag color={statusXL[status]?.color || "default"}>
+            {statusXL[status]?.text || status}
+          </Tag>
+        );
+      },
+    },
+
+    {
+      title: "Trạng thái QLCL",
+      dataIndex: "pheDuyet",
+      key: "tinhTrangQLCL",
+      width: 110,
+      render: (_: any, record: TableRecord) => {
+        const ctdApproval = record.pheDuyet?.find(
+          (item: any) => item.capDuyet === 1,
+        );
+        const status = ctdApproval?.tinhTrang?.toString() || "0";
+        return (
+          <Tag color={statusXL[status]?.color || "default"}>
+            {statusXL[status]?.text || status}
+          </Tag>
+        );
+      },
+    },
     {
       title: "Ghi chú",
       dataIndex: "note",
