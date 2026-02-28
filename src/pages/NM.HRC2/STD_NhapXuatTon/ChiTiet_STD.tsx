@@ -13,7 +13,7 @@ import {
   Input,
 } from "antd";
 import dayjs from "dayjs";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_STD_NXT from "../../../utils/BM_config/HRC2_STD_NXT.json";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
@@ -25,6 +25,7 @@ const { Title, Text } = Typography;
 
 const ChiTiet_STD = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { idphieu } = location.state || {};
   const { pheduyet } = location.state || {};
 
@@ -41,6 +42,7 @@ const ChiTiet_STD = () => {
 
   useEffect(() => {
     const loadData = async () => {
+      if (!idphieu) return;
       try {
         // Thông tin phê duyệt
         if (pheduyet != null) {
@@ -48,16 +50,21 @@ const ChiTiet_STD = () => {
         }
         setLoading(true);
         const res = await PhieuApi.getDetail(idphieu);
-
         setData(res);
-      } catch (error) {
-        console.error("Lỗi tải dữ liệu phiếu:", error);
+      } catch (err: any) {
+        console.error("Lỗi tải dữ liệu phiếu:", err);
+        if (err?.status === 404) {
+          message.warning("Phiếu không tồn tại hoặc đã bị xóa. Chuyển về danh sách.");
+          navigate("/std_nhapxuatton", { replace: true });
+        } else {
+          message.error("Không thể tải phiếu.");
+        }
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [idphieu, pheduyet]);
+  }, [idphieu, pheduyet, navigate]);
 
   //   if (!data) return null;
 

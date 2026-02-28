@@ -17,6 +17,7 @@ import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
+import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 // Dữ liệu mẫu
 
 const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
@@ -42,15 +43,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
     fixedFilters,
   });
 
-  const statusConfig: Record<string, { color: string; text: string }> = {
-    0: { color: "purple", text: "Đang lưu" },
-    1: { color: "pink", text: "Đã gửi" },
-    2: { color: "blue", text: "Hoàn thành" },
-    3: { color: "tomato", text: "Đã thu hồi" },
-    4: { color: "yellow", text: "Không xác nhận" },
-    5: { color: "green", text: "Chốt" },
-    6: { color: "gray", text: "Đang phê duyệt" },
-  };
+  const statusConfig = PHIEU_STATUS_CONFIG;
 
   type TableRecord = SearchPhieuResponseModel & {
     pheDuyet?: Array<Record<string, unknown>>;

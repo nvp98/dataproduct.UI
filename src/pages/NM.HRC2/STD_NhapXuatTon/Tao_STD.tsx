@@ -47,9 +47,12 @@ const Tao_STD = () => {
     TrangThaiPhieuConst.DangPheDuyet,
     TrangThaiPhieuConst.DaChot,
   ].includes(currentTinhTrang);
-  // Cho phép edit khi ở trạng thái ĐangLuu (0) hoặc Đã thu hồi (3)
-  const isFormLocked = !(currentTinhTrang === TrangThaiPhieuConst.DangLuu || 
-                         currentTinhTrang === TrangThaiPhieuConst.DaThuHoi);
+  // Cho phép edit khi ĐangLuu (0), Đã thu hồi (3) hoặc Hiệu chỉnh (7 = phiếu clone)
+  const isFormLocked = !(
+    currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
+    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+    currentTinhTrang === TrangThaiPhieuConst.HieuChinh
+  );
   const currentUserInfo = useMemo(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
@@ -180,8 +183,18 @@ const Tao_STD = () => {
     try {
       setLoading(true);
       if (idphieu) {
-        const res = await PhieuApi.getDetail(idphieu);
-        const formData = (res as any)?.jsonData || {};
+        let res: any;
+        try {
+          res = await PhieuApi.getDetail(idphieu);
+        } catch (getErr: any) {
+          if (getErr?.status === 404) {
+            message.warning("Phiếu không tồn tại hoặc đã bị xóa. Chuyển về danh sách.");
+            navigate("/std_nhapxuatton", { replace: true });
+            return;
+          }
+          throw getErr;
+        }
+        const formData = res?.jsonData || {};
 
         // Khôi phục form values (ưu tiên jsonData). Tách NgaySX/ca để tránh bị override bởi spread.
         const { NgaySX, ca, ...restFormData } = formData;
@@ -263,7 +276,7 @@ const Tao_STD = () => {
     } finally {
       setLoading(false);
     }
-  }, [form, idphieu, config.layout1]);
+  }, [form, idphieu, config.layout1, navigate]);
 
   // Chuẩn bị payload cho action buttons (theo pattern TaoPhieuBOF)
   const getFormData = useCallback(async () => {
