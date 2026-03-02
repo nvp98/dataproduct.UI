@@ -133,12 +133,12 @@ const checkPermission = {
  * - Người trong pheDuyet không thấy button gì
  * 
  * Trạng thái 1 (Đã gửi):
- * - NguoiTaoId thấy: Sửa, Gửi
- * - Người trong pheDuyet (tinhTrang = 0) thấy: Xác nhận, Từ chối
+ * - NguoiTaoId thấy: Thu hồi (sửa trực tiếp trên phiếu), Lưu, Gửi khi đã thu hồi
+ * - Người trong pheDuyet thấy: Xác nhận, Từ chối
  * 
- * Trạng thái 2 (Hoàn thành):
- * - NguoiTaoId thấy: Sửa, Gửi
- * - Cả phòng ban (cùng idphongBan) thấy: Chốt
+ * Trạng thái 2 (Hoàn thành) / 6 (Đang phê duyệt):
+ * - NguoiTaoId thấy: Đề nghị hiệu chỉnh (clone phiếu, gán phiếu gốc = Hiệu chỉnh 7, redirect sang phiếu clone)
+ * - Cả phòng ban thấy: Chốt (khi Hoàn thành)
  * 
  * Trạng thái 5 (Đã chốt):
  * - NguoiTaoId không thấy: Sửa, Gửi
@@ -380,8 +380,8 @@ export const phieuActionService = {
           },
         });
       }
-      // Trạng thái 2 - Hoàn thành: Thu hồi
-      if (tinhTrang === TrangThaiPhieuConst.HoanThanh && isCreatorZero) {
+      // Trạng thái 1 - Đã gửi: Thu hồi (sửa trực tiếp trên phiếu đó)
+      if (tinhTrang === TrangThaiPhieuConst.DaGui && isCreatorZero) {
         buttons.push({
           key: "recall",
           label: "Thu hồi",
@@ -389,7 +389,7 @@ export const phieuActionService = {
           type: "default",
           confirm: {
             title: "Xác nhận thu hồi",
-            description: "Bạn có chắc chắn muốn thu hồi phiếu này?",
+            description: "Bạn có chắc chắn muốn thu hồi phiếu này? Sau khi thu hồi có thể chỉnh sửa trực tiếp trên phiếu.",
           },
           onClick: async () => {
             try {
@@ -405,25 +405,104 @@ export const phieuActionService = {
         });
       }
 
-      // Trạng thái 1 - Đã gửi hoặc 6 - Đang phê duyệt: Thu hồi
-      if ((tinhTrang === TrangThaiPhieuConst.DaGui || tinhTrang === TrangThaiPhieuConst.DangPheDuyet) && isCreatorZero) {
+      // Trạng thái 6 - Đang phê duyệt hoặc 2 - Hoàn thành: Đề nghị hiệu chỉnh chỉ trên phiếu gốc (!isClone), đảm bảo chỉ 1 phiếu clone tồn tại
+      if (
+        (tinhTrang === TrangThaiPhieuConst.DangPheDuyet || tinhTrang === TrangThaiPhieuConst.HoanThanh) &&
+        isCreatorZero &&
+        !isClone
+      ) {
         buttons.push({
-          key: "recall",
-          label: "Thu hồi",
-          icon: <UndoOutlined />,
+          key: "requestEdit",
+          label: "Đề nghị hiệu chỉnh",
+          icon: <EditOutlined />,
           type: "default",
           confirm: {
-            title: "Xác nhận thu hồi",
-            description: "Bạn có chắc chắn muốn thu hồi phiếu này?",
+            title: "Xác nhận đề nghị hiệu chỉnh",
+            description:
+              "Sẽ tạo bản sao phiếu để chỉnh sửa. Phiếu hiện tại sẽ bị ẩn (khóa). Bạn có chắc chắn?",
           },
-          onClick: async () => {
+          onClick: async (_phieuIdParam, formDataParam) => {
             try {
-              await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.DaThuHoi);
-              await onStatusChange?.(phieuId, TrangThaiPhieuConst.DaThuHoi);
-              message.success("Thu hồi phiếu thành công!");
+              if (!formDataParam) {
+                message.error("Không có dữ liệu form. Vui lòng tải lại trang và thử lại.");
+                onError?.(new Error("Missing formData for clone"));
+                return;
+              }
+              const res = await PhieuApi.clone(phieuId, formDataParam);
+              const newPhieuId =
+                (res as any)?.idphieu ?? (res as any)?.data?.idphieu ?? (res as any)?.IdPhieu;
+              if (!newPhieuId) {
+                message.error("Tạo phiếu hiệu chỉnh thất bại: không nhận được ID phiếu mới.");
+                onError?.(new Error("Clone response missing idphieu"));
+                return;
+              }
+              if (customPutApi) {
+                await customPutApi(newPhieuId, formDataParam as Record<string, unknown>);
+              }
+              message.success("Đề nghị hiệu chỉnh thành công! Đang chuyển sang phiếu mới.");
+              onSuccess?.({ newPhieuId: String(newPhieuId) });
+            } catch (error) {
+              message.error((error as any)?.message ?? "Không thể đề nghị hiệu chỉnh.");
+              onError?.(error);
+            }
+          },
+        });
+      }
+
+      // Trạng thái 7 - Hiệu chỉnh (phiếu clone): Lưu không đổi trạng thái, Lưu và Gửi thì đi luồng bình thường
+      if (tinhTrang === TrangThaiPhieuConst.HieuChinh && isCreatorZero) {
+        buttons.push({
+          key: "save",
+          label: "Lưu",
+          icon: <EditOutlined />,
+          type: "default",
+          onClick: async (phieuIdParam, formDataParam) => {
+            try {
+              if (!formDataParam) {
+                message.error("Không có dữ liệu để lưu");
+                return;
+              }
+              await PhieuApi.putData(phieuIdParam, formDataParam);
+              if (customPutApi) {
+                await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
+              }
+              message.success("Lưu phiếu thành công!");
               onSuccess?.();
             } catch (error) {
               message.error((error as any)?.message);
+              onError?.(error);
+            }
+          },
+        });
+        buttons.push({
+          key: "saveAndSend",
+          label: "Lưu và Gửi phiếu",
+          icon: <SendOutlined />,
+          type: "primary",
+          confirm: {
+            title: "Xác nhận",
+            description: "Bạn có chắc chắn muốn lưu và gửi phiếu này? Phiếu sẽ chuyển sang luồng phê duyệt.",
+          },
+          onClick: async (phieuIdParam, formDataParam) => {
+            try {
+              if (!formDataParam) {
+                message.error("Không có dữ liệu để lưu");
+                return;
+              }
+              await PhieuApi.putData(phieuIdParam, formDataParam);
+              if (customPutApi) {
+                await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
+              }
+              await PhieuApi.changeStatus(phieuIdParam, TrangThaiPhieuConst.DaGui);
+              await onStatusChange?.(phieuIdParam, TrangThaiPhieuConst.DaGui);
+              message.success("Lưu và gửi phiếu thành công!");
+              onSuccess?.();
+            } catch (error) {
+              if ((error as any)?.message) {
+                message.error((error as any)?.message);
+              } else {
+                message.error("Phiếu đã được gửi, vui lòng kiểm tra lại");
+              }
               onError?.(error);
             }
           },
@@ -480,7 +559,6 @@ export const phieuActionService = {
                 await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }
               await PhieuApi.changeStatus(phieuIdParam, TrangThaiPhieuConst.DaGui);
-              await onStatusChange?.(phieuIdParam, TrangThaiPhieuConst.DaGui);
               message.success("Lưu và gửi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
@@ -499,94 +577,43 @@ export const phieuActionService = {
     // }
     
 
-    // ========== BUTTONS CHO LIST USER PHE DUYET ==========
+    // ========== BUTTONS CHO CẤP PHÊ DUYỆT (trừ cấp 0): Xác nhận luôn; Không xác nhận chỉ khi phiếu là clone ==========
     const canApprovePhieu =
       (tinhTrang === TrangThaiPhieuConst.DaGui ||
         tinhTrang === TrangThaiPhieuConst.DangPheDuyet) &&
       isAssigned;
 
     if (canApprovePhieu) {
-      // Nếu IsClone = false: Chỉ hiện button Xác nhận
-      if (!isClone) {
-        buttons.push({
-          key: "approve",
-          label: "Xác nhận",
-          icon: <CheckOutlined />,
-          type: "primary",
-          confirm: {
-            title: "Xác nhận phiếu",
-            description: "Bạn có chắc chắn muốn xác nhận phiếu này?",
-          },
-          onClick: async () => {
-            try {
-              if (!currentUserId) {
-                message.error("Không tìm thấy thông tin người dùng");
-                return;
-              }
-              // Cập nhật tinhTrang của user hiện tại = 1 (xác nhận)
-              // API sẽ tự động check và cập nhật trạng thái phiếu nếu tất cả đều xác nhận
-              await PheDuyetApi.updateTinhTrang(
-                phieuId,
-                currentUserId,
-                TrangThaiXacNhanPhieuConst.DaXacNhan
-              );
-              
-              // Lấy trạng thái mới của phiếu sau khi cập nhật
-              const phieuDetail = await PhieuApi.getDetail(phieuId);
-              const newPhieuStatus = (phieuDetail as any)?.tinhTrang;
-              console.log("✅ Phiếu sau khi xác nhận:", { phieuId, newPhieuStatus });
-              
-              if (newPhieuStatus !== undefined && onStatusChange) {
-                await onStatusChange(phieuId, newPhieuStatus);
-              }
-              
-              message.success("Xác nhận phiếu thành công!");
-              onSuccess?.();
-            } catch (error) {
-              message.error("Không thể xác nhận phiếu");
-              onError?.(error);
+      buttons.push({
+        key: "approve",
+        label: "Xác nhận",
+        icon: <CheckOutlined />,
+        type: "primary",
+        confirm: {
+          title: "Xác nhận phiếu",
+          description: "Bạn có chắc chắn muốn xác nhận phiếu này?",
+        },
+        onClick: async () => {
+          try {
+            if (!currentUserId) {
+              message.error("Không tìm thấy thông tin người dùng");
+              return;
             }
-          },
-        });
-      } else {
-        // Nếu IsClone = true: Hiện 2 button Xác nhận và Không xác nhận
-        buttons.push({
-          key: "approve",
-          label: "Xác nhận",
-          icon: <CheckOutlined />,
-          type: "primary",
-          confirm: {
-            title: "Xác nhận phiếu",
-            description: "Bạn có chắc chắn muốn xác nhận phiếu này?",
-          },
-          onClick: async () => {
-            try {
-              if (!currentUserId) {
-                message.error("Không tìm thấy thông tin người dùng");
-                return;
-              }
-              // Cập nhật tinhTrang của user hiện tại = 1 (xác nhận)
-              // API sẽ tự động check và cập nhật trạng thái phiếu nếu tất cả đều xác nhận
-              await PheDuyetApi.updateTinhTrang(phieuId, currentUserId, TrangThaiXacNhanPhieuConst.DaXacNhan);
-              
-              // Lấy trạng thái mới của phiếu sau khi cập nhật
-              const phieuDetail = await PhieuApi.getDetail(phieuId);
-              const newPhieuStatus = (phieuDetail as any)?.tinhTrang;
-              console.log("✅ Phiếu sau khi xác nhận:", { phieuId, newPhieuStatus });
-              
-              if (newPhieuStatus !== undefined && onStatusChange) {
-                await onStatusChange(phieuId, newPhieuStatus);
-              }
-              
-              message.success("Xác nhận phiếu thành công!");
-              onSuccess?.();
-            } catch (error) {
-              message.error((error as any)?.message);
-              onError?.(error);
-            }
-          },
-        });
-
+            await PheDuyetApi.updateTinhTrang(
+              phieuId,
+              currentUserId,
+              TrangThaiXacNhanPhieuConst.DaXacNhan
+            );
+            message.success("Xác nhận phiếu thành công!");
+            onSuccess?.();
+          } catch (error) {
+            message.error((error as any)?.message ?? "Không thể xác nhận phiếu");
+            onError?.(error);
+          }
+        },
+      });
+      // Chỉ phiếu clone mới hiện nút Không xác nhận (xóa clone và lôi phiếu gốc lên)
+      if (isClone) {
         buttons.push({
           key: "reject",
           label: "Không xác nhận",
@@ -595,7 +622,8 @@ export const phieuActionService = {
           danger: true,
           confirm: {
             title: "Xác nhận không xác nhận",
-            description: "Bạn có chắc chắn muốn từ chối phiếu này?",
+            description:
+              "Bạn có chắc chắn muốn từ chối phiếu này? Phiếu hiệu chỉnh sẽ bị xóa và phiếu gốc sẽ được hiển thị lại.",
           },
           onClick: async () => {
             try {
@@ -603,13 +631,15 @@ export const phieuActionService = {
                 message.error("Không tìm thấy thông tin người dùng");
                 return;
               }
-              // Cập nhật tinhTrang của user hiện tại = 2 (không xác nhận)
-              // API sẽ tự động check và cập nhật trạng thái phiếu nếu tất cả đều không xác nhận
-              await PheDuyetApi.updateTinhTrang(phieuId, currentUserId, TrangThaiXacNhanPhieuConst.KhongXacNhan);
+              await PheDuyetApi.updateTinhTrang(
+                phieuId,
+                currentUserId,
+                TrangThaiXacNhanPhieuConst.KhongXacNhan
+              );
               message.success("Từ chối phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              message.error("Không thể từ chối phiếu");
+              message.error((error as any)?.message ?? "Không thể từ chối phiếu");
               onError?.(error);
             }
           },
