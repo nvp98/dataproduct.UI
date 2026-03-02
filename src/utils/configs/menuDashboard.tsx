@@ -67,6 +67,18 @@ export const MenuDataDashboard = [
       //   code: "bienbanphoinguoi",
       //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
       // },
+      {
+        code: "bienbanphoinguoi",
+        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      },
+      {
+        code: "bienbansanluongphoi",
+        title: "BM.11/QT.05.11 BIÊN BẢN XÁC NHẬN SẢN LƯỢNG PHÔI THÉP",
+      },
+      {
+        code: "bienbanphoinapkho",
+        title: "BM.12/QT.05.11 BIÊN BẢN GIAO NHẬN PHÔI NHẬP KHO",
+      },
     ],
   },
   {

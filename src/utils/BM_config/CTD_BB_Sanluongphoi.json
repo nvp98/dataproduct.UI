@@ -1,0 +1,126 @@
+{
+  "code": "CTD_BB_Sanluongphoi",
+  "prefix": "CTD_BB_SLP",
+  "title": "BIÊN BẢN XÁC NHẬN SẢN LƯỢNG PHÔI THÉP",
+  "headerInfo": {
+    "company": "HÒA PHÁT DUNG QUẤT",
+    "subCompany": "CÔNG TY CỔ PHẦN THÉP "
+  },
+  "isoInfo": {
+    "code": "BM.11/QT.05.11",
+    "effectiveDate": "05/09/2025",
+    "revision": "02"
+  },
+
+  "headerFields": [
+    {
+      "label": "Kíp",
+      "type": "select",
+      "key": "kip",
+      "required": true,
+      "options": [
+        { "label": "Kíp A", "value": "A" },
+        { "label": "Kíp B", "value": "B" },
+        { "label": "Kíp C", "value": "C" }
+      ]
+    },
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value":1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    {
+      "label": "Ngày sản xuất",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key":"table1",
+      "dataSource": {
+        "type": "api",
+        "url": "BKSanluongphoi/Get_BangSanLuongPhoi_TheoKip",
+        "params": { "kip": "@kip" }
+      },
+      "columns": [
+         { "title": "Kíp - Ngày", "dataIndex": "kipNgay", "width": 120 },
+        { "title": "Mác thép", "dataIndex": "macThep", "width": 100 },
+        { "title": "Kích thước", "dataIndex": "kichThuoc", "width": 120 },
+         {
+          "title": "Loại I",
+          "width": 180,
+          "children": [
+            { "title": "Số thanh", "dataIndex": "stLoai1", "width": 90 },
+            { "title": "Khối lượng (kg)", "dataIndex": "klLoai1", "width": 90 }
+          ]
+        },
+        {
+          "title": "Phôi ngắn-dài (11m-9m–6m)",
+          "width": 200,
+          "children": [
+            { "title": "Số thanh", "dataIndex": "stPhoiNgan", "width": 100 },
+            { "title": "Khối lượng (kg)", "dataIndex": "klPhoiNgan", "width": 100 }
+          ]
+        },
+        {
+          "title": "Loại II",
+          "width": 180,
+          "children": [
+            { "title": "Số thanh", "dataIndex": "stLoai2", "width": 90 },
+            { "title": "Khối lượng (kg)", "dataIndex": "klLoai2", "width": 90 }
+          ]
+        },
+        {
+          "title": "Loại III",
+          "width": 180,
+          "children": [
+            { "title": "Số thanh", "dataIndex": "stLoai3", "width": 90 },
+            { "title": "Khối lượng (kg)", "dataIndex": "klLoai3", "width": 90 }
+          ]
+        },
+
+        { "title": "Tổng số thanh", "dataIndex": "tongSoThanh", "width": 120 },
+        { "title": "Tổng khối lượng (kg)", "dataIndex": "tongKhoiLuong", "width": 150 }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+  ],
+
+  "signatures": [
+    {
+      "label": "Kho phôi NM.HRC1",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_KhoPhoi",
+      "maphongBan": "NM.HRC1",
+      "capDuyet": 2,
+      "required": true
+    },
+    {
+      "label": "P.QLCL",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_QLCL",
+      "maphongBan": "P.QLCL",
+      "capDuyet": 1,
+      "required": true
+    },
+    {
+      "label": "Xưởng đúc phôi vuông NM.HRC1",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_XuongDuc",
+      "maphongBan": "NM.HRC1",
+      "capDuyet": 0,
+      "required": true
+    }]
+}
