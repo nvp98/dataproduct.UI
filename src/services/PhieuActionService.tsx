@@ -405,11 +405,10 @@ export const phieuActionService = {
         });
       }
 
-      // Trạng thái 6 - Đang phê duyệt hoặc 2 - Hoàn thành: Đề nghị hiệu chỉnh chỉ trên phiếu gốc (!isClone), đảm bảo chỉ 1 phiếu clone tồn tại
+      // Trạng thái 6 - Đang phê duyệt hoặc 2 - Hoàn thành: Đề nghị hiệu chỉnh (cho cả phiếu clone nếu cần)
       if (
         (tinhTrang === TrangThaiPhieuConst.DangPheDuyet || tinhTrang === TrangThaiPhieuConst.HoanThanh) &&
-        isCreatorZero &&
-        !isClone
+        isCreatorZero
       ) {
         buttons.push({
           key: "requestEdit",

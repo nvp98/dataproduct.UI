@@ -27,18 +27,14 @@ apiService.interceptors.response.use(
       });
     }
 
-    const payload =
-      error.response?.data && typeof error.response.data === "object"
-        ? { ...error.response.data, status: error.response.status }
-        : { message: String(error.response?.data ?? error.message), status: error.response?.status };
-    return Promise.reject(payload);
+    return Promise.reject(error.response?.data || error);
   }
 );
 
 export default apiService;
 
 export const apiClient = {
-  async get(url: string, params?: Record<string, unknown>) {
+  async get(url: string, params?: Record<string, any>) {
     const query = params ? "?" + new URLSearchParams(params).toString() : "";
     const res = await fetch(url + query);
     if (!res.ok) throw new Error("API Error");

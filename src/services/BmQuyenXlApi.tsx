@@ -5,8 +5,15 @@ export interface BmQuyenXlModel {
   idTaiKhoan: number;
   maBm: string;
   maKhuVuc: string;
+  quyenChucNang?: number;
   ngayTao?: string;
   nguoiTao?: string;
+}
+
+/** Quyền menu: Việc tôi bắt đầu (chỉnh sửa) và Việc đến tôi (duyệt). */
+export interface MenuPermissionsResponse {
+  processingForms: string[];
+  approvingForms: string[];
 }
 
 export const BmQuyenXlApi = {
@@ -14,11 +21,26 @@ export const BmQuyenXlApi = {
   getByTaiKhoan: (idTaiKhoan: number) =>
     apiService.get(`/api/BmQuyenXl?idTaiKhoan=${idTaiKhoan}`),
 
+  /** Lấy MaBM cho menu: processingForms = XULY/CHOT, approvingForms = PHEDUYET */
+  getMenuPermissions: async (idTaiKhoan: number): Promise<MenuPermissionsResponse> => {
+    const res = await apiService.get<MenuPermissionsResponse & { ProcessingForms?: string[]; ApprovingForms?: string[] }>(
+      `/api/BmQuyenXl/menu-permissions?idTaiKhoan=${idTaiKhoan}`
+    );
+    return {
+      processingForms: res?.processingForms ?? res?.ProcessingForms ?? [],
+      approvingForms: res?.approvingForms ?? res?.ApprovingForms ?? [],
+    };
+  },
+
   // Lấy tất cả quyền
   getAll: () => apiService.get("/api/BmQuyenXl"),
 
   // Thêm quyền mới
   create: (data: BmQuyenXlModel) => apiService.post("/api/BmQuyenXl", data),
+
+  // Cập nhật quyền (gửi idTaiKhoan, maBm, maKhuVuc, quyenChucNang)
+  update: (id: number, data: Pick<BmQuyenXlModel, "idTaiKhoan" | "maBm" | "maKhuVuc" | "quyenChucNang">) =>
+    apiService.put(`/api/BmQuyenXl/${id}`, data),
 
   // Xóa quyền
   delete: (id: number) => apiService.delete(`/api/BmQuyenXl/${id}`),
