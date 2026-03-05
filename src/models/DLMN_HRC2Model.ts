@@ -185,4 +185,8 @@ export interface ChuyenMeThoiRequest {
 export interface FilterSTD_NXTRequest {
   NgaySX: string;
   Ca: number;
+  /** Nếu có: BE sẽ chạy sp_Init_XuatNhapTon_HRC2 để cập nhật dữ liệu phiếu hiện tại. */
+  idPhieu?: string | null;
+  /** Danh sách Id_HeaderKey đang hiển thị trên bảng (kể cả dòng mới chưa lưu). BE dùng cho Init. */
+  headerKeyIds?: number[] | null;
 }

@@ -11,7 +11,13 @@ import GroupedTableSTD from "../../../components/GroupedTableSTD";
 import SummaryTableSTD from "../../../components/SummaryTableSTD";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
-import type { STD_NXT_Table1Row, STD_NXT_Table2Row, STD_NXT_HRC2_UpsertDto, NXTSummaryDto } from "../../../models/STD_NXT_Model";
+import type {
+  STD_NXT_Table1Row,
+  STD_NXT_Table2Row,
+  STD_NXT_HRC2_UpsertDto,
+  NXTSummaryDto,
+  STD_NXT_HRC2_PhanBoDto,
+} from "../../../models/STD_NXT_Model";
 import { STD_NXT_HRC2ServiceApi } from "../../../services/STD_NXT_HRC2ServiceApi";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
 
@@ -106,64 +112,45 @@ const Tao_STD = () => {
         }
       });
 
-      // Summary: ưu tiên table2Data; nếu trống, tự tổng hợp từ details
-      let summary: NXTSummaryDto[] = [];
-
-      if (table2Data && table2Data.length > 0) {
-        summary = table2Data
-          .filter((r) => r.totalNguyenNhienLieu)
-          .map((r) => {
-            const name = r.totalNguyenNhienLieu ?? "";
-            const id = name ? idByName[name] ?? 0 : 0;
-            return {
-              Id_HeaderKey: id,
-              TenNguyenLieu: name,
-              TongTonDauCa: Number(r.totalTonDauCa || 0),
-              TongNhapTrongCa: Number(r.totalNhapTrongCa || 0),
-              TongTonCuoiCa: Number(r.totalTonCuoiCa || 0),
-              TongSuDung: Number(r.totalSuDung || 0),
-              TongSDTrenSoSach: Number(r.totalSDTrongSoSach || 0),
-              ChenhLech: Number(r.totalChenhLech || 0),
-            };
-          });
-      } else {
-        // Tự tổng hợp từ details (group theo TenNguyenLieu)
-        const grouped: Record<string, { id: number; tonDau: number; nhap: number; tonCuoi: number; sdss: number }> = {};
-        details.forEach((d) => {
-          const name = d.TenNguyenLieu || "";
-          if (!name) return;
-          if (!grouped[name]) {
-            grouped[name] = {
-              id: d.Id_HeaderKey || 0,
-              tonDau: 0,
-              nhap: 0,
-              tonCuoi: 0,
-              sdss: 0,
-            };
-          }
-          grouped[name].id = d.Id_HeaderKey || grouped[name].id;
-          grouped[name].tonDau += d.TonDauCa || 0;
-          grouped[name].nhap += d.NhapVaoTrongCa || 0;
-          grouped[name].tonCuoi += d.TonCuoiCa || 0;
-          grouped[name].sdss += d.TongThucTe || 0; // giả sử TongThucTe là số sổ sách
-        });
-
-        summary = Object.keys(grouped).map((name) => {
-          const g = grouped[name];
-          const tongSuDung = g.tonDau + g.nhap - g.tonCuoi;
-          const chenh = Math.abs(tongSuDung - g.sdss);
-          return {
-            Id_HeaderKey: g.id,
-            TenNguyenLieu: name,
-            TongTonDauCa: g.tonDau,
-            TongNhapTrongCa: g.nhap,
-            TongTonCuoiCa: g.tonCuoi,
-            TongSuDung: tongSuDung,
-            TongSDTrenSoSach: g.sdss,
-            ChenhLech: chenh,
+      // Summary: tổng hợp trực tiếp từ details (group theo TenNguyenLieu)
+      const grouped: Record<
+        string,
+        { id: number; tonDau: number; nhap: number; tonCuoi: number; sdss: number }
+      > = {};
+      details.forEach((d) => {
+        const name = d.TenNguyenLieu || "";
+        if (!name) return;
+        if (!grouped[name]) {
+          grouped[name] = {
+            id: d.Id_HeaderKey || 0,
+            tonDau: 0,
+            nhap: 0,
+            tonCuoi: 0,
+            sdss: 0,
           };
-        });
-      }
+        }
+        grouped[name].id = d.Id_HeaderKey || grouped[name].id;
+        grouped[name].tonDau += d.TonDauCa || 0;
+        grouped[name].nhap += d.NhapVaoTrongCa || 0;
+        grouped[name].tonCuoi += d.TonCuoiCa || 0;
+        grouped[name].sdss += d.TongThucTe || 0; // giả sử TongThucTe là số sổ sách
+      });
+
+      const summary: NXTSummaryDto[] = Object.keys(grouped).map((name) => {
+        const g = grouped[name];
+        const tongSuDung = g.tonDau + g.nhap - g.tonCuoi;
+        const chenh = Math.abs(tongSuDung - g.sdss);
+        return {
+          Id_HeaderKey: g.id,
+          TenNguyenLieu: name,
+          TongTonDauCa: g.tonDau,
+          TongNhapTrongCa: g.nhap,
+          TongTonCuoiCa: g.tonCuoi,
+          TongSuDung: tongSuDung,
+          TongSDTrenSoSach: g.sdss,
+          ChenhLech: chenh,
+        };
+      });
 
       return {
         IdPhieu: formValues.idphieu || null,
@@ -242,19 +229,23 @@ const Tao_STD = () => {
           };
         });
 
-        // Map summary từ BE sang format frontend
-        const mappedSummary: STD_NXT_Table2Row[] = (data?.summary || []).map((item: any) => {
-          return {
-            key: `summary_${item.id_HeaderKey}`,
-            totalNguyenNhienLieu: item.tenNguyenLieu || "",
-            totalTonDauCa: item.tongTonDauCa ?? null,
-            totalNhapTrongCa: item.tongTonNhapTrongCa ?? null,
-            totalTonCuoiCa: item.tongTonCuoiCa ?? null,
-            totalSuDung: item.tongSuDung ?? null,
-            totalSDTrongSoSach: item.tongSDTrenSoSach ?? null,
-            totalChenhLech: item.chenhLech ?? null,
-          };
-        });
+        // Map summary từ BE sang format frontend (gồm HasPhanBo, Id_HeaderKey, NgaySX, Ca cho SummaryTableSTD)
+        const ngaySxStr = (data?.ngaySX ?? data?.NgaySX) != null ? (typeof (data?.ngaySX ?? data?.NgaySX) === "string" ? (data?.ngaySX ?? data?.NgaySX) : (data?.ngaySX ?? data?.NgaySX)?.format?.("YYYY-MM-DD")) : undefined;
+        const caVal = data?.ca ?? data?.Ca ?? undefined;
+        const mappedSummary: STD_NXT_Table2Row[] = (data?.summary || []).map((item: any) => ({
+          key: `summary_${item.id_HeaderKey ?? item.Id_HeaderKey}`,
+          totalNguyenNhienLieu: item.tenNguyenLieu ?? item.TenNguyenLieu ?? "",
+          totalTonDauCa: item.tongTonDauCa ?? item.TongTonDauCa ?? null,
+          totalNhapTrongCa: item.tongTonNhapTrongCa ?? item.TongTonNhapTrongCa ?? null,
+          totalTonCuoiCa: item.tongTonCuoiCa ?? item.TongTonCuoiCa ?? null,
+          totalSuDung: item.tongSuDung ?? item.TongSuDung ?? null,
+          totalSDTrongSoSach: item.tongSDTrenSoSach ?? item.TongSDTrenSoSach ?? null,
+          totalChenhLech: item.chenhLech ?? item.ChenhLech ?? null,
+          HasPhanBo: item.hasPhanBo ?? item.HasPhanBo ?? null,
+          Id_HeaderKey: item.id_HeaderKey ?? item.Id_HeaderKey ?? null,
+          NgaySX: ngaySxStr,
+          Ca: caVal,
+        }));
 
         setTable1Data(mappedDetails);
         setTable2Data(mappedSummary);
@@ -397,8 +388,100 @@ const Tao_STD = () => {
     initData();
   }, [initData]);
 
-  const layout1 = config.layout1?.[0];
+  const layout1Raw = config.layout1?.[0];
+  const layout1 = layout1Raw
+    ? {
+        ...layout1Raw,
+        columns: (layout1Raw.columns || []).filter(
+          (col: any) => !col.hidden
+        ),
+      }
+    : undefined;
   const layout2 = config.layout2?.[0];
+
+  const handlePhanBoSummary = useCallback(
+    async (dto: STD_NXT_HRC2_PhanBoDto) => {
+      try {
+        if (!idphieu) {
+          message.warning("Vui lòng lưu phiếu trước khi phân bổ.");
+          return;
+        }
+        const values = await form.validateFields(["NgaySX", "ca"]);
+        const ngay = values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null;
+        const caVal = values.ca;
+        if (!ngay || !caVal) {
+          message.warning("Vui lòng chọn Ngày và Ca trước khi phân bổ.");
+          return;
+        }
+        const payload: STD_NXT_HRC2_PhanBoDto = {
+          NgaySX: ngay,
+          Ca: Number(caVal),
+          Id_HeaderKey: dto.Id_HeaderKey,
+          ChenhLech: dto.ChenhLech,
+          IdPhieu: idphieu,
+        };
+        setLoading(true);
+        const res = await STD_NXT_HRC2ServiceApi.phanBo(payload);
+        const ok = (res as any)?.data ?? res;
+        if (ok === true) {
+          message.success("Phân bổ chênh lệch thành công.");
+          if (idphieu) {
+            await initData();
+          }
+        } else {
+          message.warning("Phân bổ không thành công.");
+        }
+      } catch (error: any) {
+        console.error("Phân bổ thất bại:", error);
+        message.error(error?.message || "Không thể phân bổ. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [form, idphieu, initData]
+  );
+
+  const handleThuHoiSummary = useCallback(
+    async (dto: STD_NXT_HRC2_PhanBoDto) => {
+      try {
+        if (!idphieu) {
+          message.warning("Vui lòng lưu phiếu trước khi thu hồi phân bổ.");
+          return;
+        }
+        const values = await form.validateFields(["NgaySX", "ca"]);
+        const ngay = values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null;
+        const caVal = values.ca;
+        if (!ngay || !caVal) {
+          message.warning("Vui lòng chọn Ngày và Ca trước khi thu hồi phân bổ.");
+          return;
+        }
+        const payload: STD_NXT_HRC2_PhanBoDto = {
+          NgaySX: ngay,
+          Ca: Number(caVal),
+          Id_HeaderKey: dto.Id_HeaderKey,
+          ChenhLech: dto.ChenhLech,
+          IdPhieu: idphieu,
+        };
+        setLoading(true);
+        const res = await STD_NXT_HRC2ServiceApi.thuHoiPhanBo(payload);
+        const ok = (res as any)?.data ?? res;
+        if (ok === true) {
+          message.success("Thu hồi phân bổ thành công.");
+          if (idphieu) {
+            await initData();
+          }
+        } else {
+          message.warning("Thu hồi phân bổ không thành công.");
+        }
+      } catch (error: any) {
+        console.error("Thu hồi phân bổ thất bại:", error);
+        message.error(error?.message || "Không thể thu hồi phân bổ. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [form, idphieu, initData]
+  );
 
   const handleFilterData = useCallback(async () => {
     try {
@@ -410,104 +493,109 @@ const Tao_STD = () => {
         message.warning("Vui lòng chọn Ngày và Ca trước khi lọc dữ liệu");
         return;
       }
+      const idphieuVal = form.getFieldValue("idphieu") ?? idphieu;
+      const headerKeyIds = [...new Set(
+        table1Data
+          .map((r) => r.idNguyenNhienLieu)
+          .filter((id): id is number => id != null && id !== undefined && Number(id) > 0)
+      )];
       const res = await dlnmHRC2Api.filterSTD_NXT({
         NgaySX: ngay,
         Ca: Number(caVal),
+        ...(idphieuVal ? { idPhieu: idphieuVal } : {}),
+        ...(headerKeyIds.length > 0 ? { headerKeyIds } : {}),
       });
-      // Map dữ liệu trả về vào bảng 1
+      // Map dữ liệu trả về từ filter
       const payload = (res as any)?.data ?? res;
       const resultData = Array.isArray(payload) ? (payload as any[]) : [];
 
-      // helper tìm khu vực theo bieuMau + scope từ config
       const kvList = config.layout1?.[0]?.khuVucList || [];
       const findKhuVucLabel = (bieuMau: string | null | undefined, scope: number | null | undefined) => {
         const match = kvList.find((kv: any) => kv?.bieuMau === bieuMau && Number(kv?.scope) === Number(scope));
         return match?.label || match?.value || "";
       };
-
+      const getKhuVucByScope = (scope: number): string => {
+        const kv = kvList.find((kv: any) => {
+          const valueNum = kv?.value !== undefined ? Number(kv.value) : NaN;
+          return !Number.isNaN(valueNum) && valueNum === scope;
+        });
+        return kv?.label ? String(kv.label) : String(scope);
+      };
       const viTriDefault = config.layout1?.[0]?.defaultViTri ?? 1;
+      const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
 
-      // Update theo đúng mục đích:
-      // - Không làm ảnh hưởng danh sách phụ liệu đang hiển thị
-      // - Luôn reset tongThucTe = 0 trước, rồi đổ dữ liệu filter vào
-      // - Nếu filter có phụ liệu chưa móc nối -> thêm dòng mới (unmapped) theo đúng khu vực
-      setTable1Data((prev: STD_NXT_Table1Row[]) => {
-        const currentRows = prev.map((r) => ({
-          ...r,
-          // nếu không có dữ liệu filter trả về cho dòng này -> 0
-          tongThucTe: 0,
+      // Khi có idphieu: BE đã chạy Init và cập nhật DB → load lại detail từ BE rồi mới đổ resultData lên
+      if (idphieuVal) {
+        const detailRes: any = await STD_NXT_HRC2ServiceApi.getDetail(idphieuVal);
+        const data = detailRes?.data;
+        const mappedDetails: STD_NXT_Table1Row[] = (data?.details || []).map((item: any) => {
+          const scope = Number(item.scope) || 0;
+          const khuVuc = getKhuVucByScope(scope);
+          return {
+            key: `${scope}_${item.id_HeaderKey}_${item.viTri}`,
+            khuVuc,
+            viTri: Number(item.viTri) || 1,
+            nguyenNhienLieu: item.tenNguyenLieu || "",
+            idNguyenNhienLieu: item.id_HeaderKey || null,
+            isUnmapped: !item.id_HeaderKey,
+            tonDauCa: item.tonDauCa ?? null,
+            tuongQuanDauCa: item.tuongQuanDauCa ?? "",
+            mucLieu: item.mucLieu ?? null,
+            theTich: item.theTich ?? null,
+            tyTrong: item.tyTrong ?? null,
+            nhapTrongCa: item.nhapVaoTrongCa ?? null,
+            tonCuoiCa: item.tonCuoiCa ?? null,
+            tuongQuanCuoiCa: item.tuongQuanCuoiCa ?? "",
+            tongThucTe: item.tongThucTe ?? null,
+          };
+        });
+        const ngaySxStr = (data?.ngaySX ?? data?.NgaySX) != null ? (typeof (data?.ngaySX ?? data?.NgaySX) === "string" ? (data?.ngaySX ?? data?.NgaySX) : (data?.ngaySX ?? data?.NgaySX)?.format?.("YYYY-MM-DD")) : undefined;
+        const caVal = data?.ca ?? data?.Ca ?? undefined;
+        const mappedSummary: STD_NXT_Table2Row[] = (data?.summary || []).map((item: any) => ({
+          key: `summary_${item.id_HeaderKey ?? item.Id_HeaderKey}`,
+          totalNguyenNhienLieu: item.tenNguyenLieu ?? item.TenNguyenLieu ?? "",
+          totalTonDauCa: item.tongTonDauCa ?? item.TongTonDauCa ?? null,
+          totalNhapTrongCa: item.tongTonNhapTrongCa ?? item.TongTonNhapTrongCa ?? null,
+          totalTonCuoiCa: item.tongTonCuoiCa ?? item.TongTonCuoiCa ?? null,
+          totalSuDung: item.tongSuDung ?? item.TongSuDung ?? null,
+          totalSDTrongSoSach: item.tongSDTrenSoSach ?? item.TongSDTrenSoSach ?? null,
+          totalChenhLech: item.chenhLech ?? item.ChenhLech ?? null,
+          HasPhanBo: item.hasPhanBo ?? item.HasPhanBo ?? null,
+          Id_HeaderKey: item.id_HeaderKey ?? item.Id_HeaderKey ?? null,
+          NgaySX: ngaySxStr,
+          Ca: caVal,
         }));
 
+        const currentRows = mappedDetails.map((r) => ({ ...r, tongThucTe: 0 }));
         const newUnmappedRows: STD_NXT_Table1Row[] = [];
-        const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
 
-        // Xử lý từng item từ API
         resultData.forEach((item: any) => {
           const khuVucLabel = findKhuVucLabel(item.bieuMau, item.scope);
           if (!khuVucLabel) return;
-
           const targetHeaderId = (item.headerKeyId ?? item.HeaderKeyId) as number | null;
           const targetHeaderName = item.headerKeyName ?? item.HeaderKeyName;
           const totalKL = (item.totalKLPhuGia ?? item.TotalKLPhuGia ?? 0) as number;
           const phuLieus = Array.isArray(item.phuLieus ?? item.PhuLieus) ? (item.phuLieus ?? item.PhuLieus) : [];
 
           if (targetHeaderId) {
-            // Có headerKeyId: update tongThucTe cho TẤT CẢ các dòng cùng phụ liệu trong khu vực,
-            // kể cả dòng user tự thêm tay.
-            const matchedIndexes: number[] = [];
             currentRows.forEach((row, idx) => {
               if (row.khuVuc !== khuVucLabel) return;
-              // match chính xác theo id
-              if (row.idNguyenNhienLieu === targetHeaderId) {
-                matchedIndexes.push(idx);
-                return;
-              }
-              // fallback: nếu row chưa có id nhưng có tên, match theo headerKeyName từ API
-              if (!row.idNguyenNhienLieu && targetHeaderName && norm(row.nguyenNhienLieu) === norm(targetHeaderName)) {
-                matchedIndexes.push(idx);
+              if (row.idNguyenNhienLieu === targetHeaderId || (!row.idNguyenNhienLieu && targetHeaderName && norm(row.nguyenNhienLieu) === norm(targetHeaderName))) {
+                currentRows[idx] = { ...currentRows[idx], tongThucTe: totalKL ?? 0, isUnmapped: false, idNguyenNhienLieu: currentRows[idx].idNguyenNhienLieu ?? targetHeaderId };
               }
             });
-
-            matchedIndexes.forEach((idx) => {
-              currentRows[idx] = {
-                ...currentRows[idx],
-                tongThucTe: totalKL ?? 0,
-                isUnmapped: false,
-                // nếu row đang thiếu idNguyenNhienLieu mà match theo tên -> set lại id để lần sau match chuẩn
-                idNguyenNhienLieu: currentRows[idx].idNguyenNhienLieu ?? targetHeaderId,
-              };
-            });
-
-            // Nếu không tìm thấy -> không thêm mới (không ảnh hưởng danh sách đang hiển thị)
             return;
           }
-
-          // Unmapped: mỗi group này là theo ID_PhuLieu (BE đã group), nên phuLieus thường 1 phần tử
           phuLieus.forEach((pl: any) => {
             const fallbackName = pl?.tenPhuLieu ?? pl?.TenPhuLieu ?? "";
             const idPhuLieu = pl?.iD_PhuLieu ?? pl?.ID_PhuLieu ?? null;
             if (!idPhuLieu) return;
-
-            const existingUnmappedIndex = currentRows.findIndex(
-              (row) => row.isUnmapped && row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel
-            );
-
+            const existingUnmappedIndex = currentRows.findIndex((row) => row.isUnmapped && row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel);
             if (existingUnmappedIndex >= 0) {
-              currentRows[existingUnmappedIndex] = {
-                ...currentRows[existingUnmappedIndex],
-                tongThucTe: totalKL ?? 0,
-                rawTenPhuLieu: currentRows[existingUnmappedIndex].rawTenPhuLieu || fallbackName,
-                nguyenNhienLieu: currentRows[existingUnmappedIndex].nguyenNhienLieu || fallbackName,
-                isUnmapped: true,
-              };
+              currentRows[existingUnmappedIndex] = { ...currentRows[existingUnmappedIndex], tongThucTe: totalKL ?? 0, rawTenPhuLieu: currentRows[existingUnmappedIndex].rawTenPhuLieu || fallbackName, nguyenNhienLieu: currentRows[existingUnmappedIndex].nguyenNhienLieu || fallbackName, isUnmapped: true };
               return;
             }
-
-            // Nếu chưa có trong list đang hiển thị -> thêm dòng mới để user móc nối
-            const existsInNew = newUnmappedRows.some(
-              (row) => row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel
-            );
-            if (!existsInNew) {
+            if (!newUnmappedRows.some((row) => row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel)) {
               newUnmappedRows.push({
                 key: `${khuVucLabel}_unmapped_${idPhuLieu}_${Date.now()}`,
                 khuVuc: khuVucLabel,
@@ -517,19 +605,66 @@ const Tao_STD = () => {
                 rawTenPhuLieu: fallbackName,
                 isUnmapped: true,
                 idPhuLieu: idPhuLieu,
-                tonDauCa: "",
-                tuongQuanDauCa: "",
-                nhapTrongCa: "",
-                tonCuoiCa: "",
-                tuongQuanCuoiCa: "",
+                tonDauCa: "", tuongQuanDauCa: "", nhapTrongCa: "", tonCuoiCa: "", tuongQuanCuoiCa: "",
                 tongThucTe: totalKL ?? 0,
               });
             }
           });
         });
 
-        return [...currentRows, ...newUnmappedRows];
-      });
+        setTable1Data([...currentRows, ...newUnmappedRows]);
+        setTable2Data(mappedSummary);
+      } else {
+        // Không có phiếu: giữ logic cũ, đổ filter lên prev
+        setTable1Data((prev: STD_NXT_Table1Row[]) => {
+          const currentRows = prev.map((r) => ({ ...r, tongThucTe: 0 }));
+          const newUnmappedRows: STD_NXT_Table1Row[] = [];
+
+          resultData.forEach((item: any) => {
+            const khuVucLabel = findKhuVucLabel(item.bieuMau, item.scope);
+            if (!khuVucLabel) return;
+            const targetHeaderId = (item.headerKeyId ?? item.HeaderKeyId) as number | null;
+            const targetHeaderName = item.headerKeyName ?? item.HeaderKeyName;
+            const totalKL = (item.totalKLPhuGia ?? item.TotalKLPhuGia ?? 0) as number;
+            const phuLieus = Array.isArray(item.phuLieus ?? item.PhuLieus) ? (item.phuLieus ?? item.PhuLieus) : [];
+
+            if (targetHeaderId) {
+              currentRows.forEach((row, idx) => {
+                if (row.khuVuc !== khuVucLabel) return;
+                if (row.idNguyenNhienLieu === targetHeaderId || (!row.idNguyenNhienLieu && targetHeaderName && norm(row.nguyenNhienLieu) === norm(targetHeaderName))) {
+                  currentRows[idx] = { ...currentRows[idx], tongThucTe: totalKL ?? 0, isUnmapped: false, idNguyenNhienLieu: currentRows[idx].idNguyenNhienLieu ?? targetHeaderId };
+                }
+              });
+              return;
+            }
+            phuLieus.forEach((pl: any) => {
+              const fallbackName = pl?.tenPhuLieu ?? pl?.TenPhuLieu ?? "";
+              const idPhuLieu = pl?.iD_PhuLieu ?? pl?.ID_PhuLieu ?? null;
+              if (!idPhuLieu) return;
+              const existingUnmappedIndex = currentRows.findIndex((row) => row.isUnmapped && row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel);
+              if (existingUnmappedIndex >= 0) {
+                currentRows[existingUnmappedIndex] = { ...currentRows[existingUnmappedIndex], tongThucTe: totalKL ?? 0, rawTenPhuLieu: currentRows[existingUnmappedIndex].rawTenPhuLieu || fallbackName, nguyenNhienLieu: currentRows[existingUnmappedIndex].nguyenNhienLieu || fallbackName, isUnmapped: true };
+                return;
+              }
+              if (!newUnmappedRows.some((row) => row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel)) {
+                newUnmappedRows.push({
+                  key: `${khuVucLabel}_unmapped_${idPhuLieu}_${Date.now()}`,
+                  khuVuc: khuVucLabel,
+                  viTri: viTriDefault,
+                  nguyenNhienLieu: fallbackName,
+                  idNguyenNhienLieu: null,
+                  rawTenPhuLieu: fallbackName,
+                  isUnmapped: true,
+                  idPhuLieu: idPhuLieu,
+                  tonDauCa: "", tuongQuanDauCa: "", nhapTrongCa: "", tonCuoiCa: "", tuongQuanCuoiCa: "",
+                  tongThucTe: totalKL ?? 0,
+                });
+              }
+            });
+          });
+          return [...currentRows, ...newUnmappedRows];
+        });
+      }
 
       if (resultData.length === 0) {
         message.info("Không có dữ liệu phụ liệu cho Ngày/Ca đã chọn (đã reset Tổng thực tế sử dụng = 0)");
@@ -540,7 +675,7 @@ const Tao_STD = () => {
       console.error("Lọc dữ liệu thất bại:", error);
       message.error(error?.message || "Không thể lọc dữ liệu");
     }
-  }, [form, config.layout1, setTable1Data]);
+  }, [form, config.layout1, setTable1Data, table1Data, idphieu]);
 
   return (
     <Card className="mt-6 shadow-md">
@@ -658,6 +793,9 @@ const Tao_STD = () => {
               table1Data={table1Data}
               initialData={table2Data}
               onDataChange={setTable2Data}
+              onPhanBo={handlePhanBoSummary}
+              onThuHoi={handleThuHoiSummary}
+              idPhieu={idphieu ?? undefined}
               editable={!isFormLocked}
               loading={loading}
             />

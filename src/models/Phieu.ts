@@ -15,6 +15,7 @@ export interface SearchPhieuRequest {
   mayDuc?: number | null ;
   maBm?: string | null;
   searchText?: string | null;
+  nguoiDuyetId?: number | null;
   [key: string]: string | number | null | undefined;
 }
 export interface SearchPhieuResponseModel {

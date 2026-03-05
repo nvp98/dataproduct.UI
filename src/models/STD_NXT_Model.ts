@@ -30,14 +30,21 @@ export interface STD_NXT_Table1Row {
  */
 export interface STD_NXT_Table2Row {
   key?: string;
-  totalText?: string; // Text hiển thị (ví dụ: "Tổng cộng (cả trong và ngoài silo)")
-  totalNguyenNhienLieu?: string; // Tên nguyên nhiên liệu
-  totalTonDauCa?: string | number; // Khối lượng tồn đầu ca (tấn)
-  totalNhapTrongCa?: string | number; // Khối lượng nhập trong ca (tấn)
-  totalTonCuoiCa?: string | number; // Khối lượng tồn cuối ca (tấn)
-  totalSuDung?: string | number; // Tổng sử dụng (tấn)
-  totalSDTrongSoSach?: string | number; // Tổng sử dụng trên sổ sách (tấn)
-  totalChenhLech?: string | number; // Chênh lệch (tấn)
+  totalText?: string;
+  totalNguyenNhienLieu?: string;
+  totalTonDauCa?: string | number;
+  totalNhapTrongCa?: string | number;
+  totalTonCuoiCa?: string | number;
+  totalSuDung?: string | number;
+  totalSDTrongSoSach?: string | number;
+  totalChenhLech?: string | number;
+  /** Từ BE: đã phân bổ chênh lệch hay chưa (để hiển thị nút Thu hồi/Phân bổ) */
+  HasPhanBo?: boolean | null;
+  Id_HeaderKey?: number | null;
+  /** Ngày sản xuất (YYYY-MM-DD) — dùng cho payload phân bổ/thu hồi */
+  NgaySX?: string;
+  /** Ca (1/2) — dùng cho payload phân bổ/thu hồi */
+  Ca?: number;
 }
 
 /**
@@ -93,6 +100,7 @@ export interface NXTSummaryDto {
   TongSuDung: number; // Tổng sử dụng
   TongSDTrenSoSach: number; // Tổng sử dụng trên sổ sách
   ChenhLech: number; // Chênh lệch
+  HasPhanBo?: boolean | null; // Đã phân bổ hay chưa (từ BE)
 }
 
 /**
@@ -123,4 +131,5 @@ export interface STD_NXT_HRC2_PhanBoDto {
   Ca: number;
   Id_HeaderKey: number;
   ChenhLech: number;
+  IdPhieu: string;
 }

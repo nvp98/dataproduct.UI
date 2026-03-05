@@ -23,12 +23,16 @@ export const BmQuyenXlApi = {
 
   /** Lấy MaBM cho menu: processingForms = XULY/CHOT, approvingForms = PHEDUYET */
   getMenuPermissions: async (idTaiKhoan: number): Promise<MenuPermissionsResponse> => {
-    const res = await apiService.get<MenuPermissionsResponse & { ProcessingForms?: string[]; ApprovingForms?: string[] }>(
-      `/api/BmQuyenXl/menu-permissions?idTaiKhoan=${idTaiKhoan}`
-    );
+    const res = await apiService.get<
+      MenuPermissionsResponse & { ProcessingForms?: string[]; ApprovingForms?: string[] }
+    >(`/api/BmQuyenXl/menu-permissions?idTaiKhoan=${idTaiKhoan}`);
+
+    // Axios trả về AxiosResponse; cần unwrap .data trước khi đọc trường business
+    const data = (res as any)?.data ?? res;
+
     return {
-      processingForms: res?.processingForms ?? res?.ProcessingForms ?? [],
-      approvingForms: res?.approvingForms ?? res?.ApprovingForms ?? [],
+      processingForms: data?.processingForms ?? data?.ProcessingForms ?? [],
+      approvingForms: data?.approvingForms ?? data?.ApprovingForms ?? [],
     };
   },
 
