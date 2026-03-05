@@ -80,6 +80,12 @@ export const sanLuongPhoiApi = {
   
   deleteSanLuongPhoiByIdPhieu: (idPhieu: string) =>
     apiService.delete(`/api/BMDucCTD/DeleteSanLuongPhoi/${idPhieu}`),
+
+  hideSanLuongPhoiByIdPhieu: (idPhieu: string) =>
+    apiService.patch(`/api/BMDucCTD/HideSanLuongPhoi/${idPhieu}`),
+
+  restoreSanLuongPhoiByIdPhieu: (idPhieu: string) =>
+    apiService.patch(`/api/BMDucCTD/RestoreSanLuongPhoi/${idPhieu}`),
 };
 // ============================= PHÔI NHẬP KHO =============================
 export const phoiNhapKhoApi = {
@@ -98,6 +104,12 @@ export const phoiNhapKhoApi = {
     apiService.delete(`/api/BMDucCTD/DeletePhoiNhapKho/${idPhieu}`),
 
   
+  hidePhoiNhapKhoByIdPhieu: (idPhieu: string) =>
+    apiService.patch(`/api/BMDucCTD/HidePhoiNhapKho/${idPhieu}`),
+
+  restorePhoiNhapKhoByIdPhieu: (idPhieu: string) =>
+    apiService.patch(`/api/BMDucCTD/RestorePhoiNhapKho/${idPhieu}`),
+
   exportPhoiNhapKhoPdf: (params: {
     NgaySX?: string;
     Ca?: number;
