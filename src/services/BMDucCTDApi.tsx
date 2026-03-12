@@ -74,7 +74,14 @@ export const sanLuongPhoiApi = {
       params,
       responseType: "blob",
     }),
-  
+  exportExcelSanLuongPhoi: (params: {
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-excelSanLuongPhoi", {
+      params,
+      responseType: "blob",
+    }),
   insertSanLuongPhoi: (payload: InsertSanLuongPhoiPayload) =>
     apiService.post("/api/BMDucCTD/InsertSanLuongPhoi", payload),
   
@@ -87,6 +94,8 @@ export const sanLuongPhoiApi = {
   restoreSanLuongPhoiByIdPhieu: (idPhieu: string) =>
     apiService.patch(`/api/BMDucCTD/RestoreSanLuongPhoi/${idPhieu}`),
 };
+
+
 // ============================= PHÔI NHẬP KHO =============================
 export const phoiNhapKhoApi = {
   getByKipNgay: (params: {
@@ -120,5 +129,13 @@ export const phoiNhapKhoApi = {
       params,
       responseType: "blob",
     }),
-  
+  // thêm đoạn này
+  exportExcelPhoiNhapKho: (params: {
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-excelPhoiNhapKho", {
+      params,
+      responseType: "blob",
+    }),
 };

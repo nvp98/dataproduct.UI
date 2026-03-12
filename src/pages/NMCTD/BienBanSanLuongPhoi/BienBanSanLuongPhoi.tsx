@@ -11,18 +11,25 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
+import { sanLuongPhoiApi } from "../../../services/BMDucCTDApi";
 
 const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
   const config = CTD_BB_Sanluongphoi;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
+  const [currentFilter, setCurrentFilter] = useState<any>({});
 
+
+  const handleFilterWithCapture = (filters:any) => {
+  setCurrentFilter(filters); // lưu lại filter
+  handleFilter(filters);      // vẫn gọi tìm kiếm bình thường
+};
   const fixedFilters = useMemo(
     () => ({ usercode: userObj?.maNV || "" }),
     [userObj?.maNV]
@@ -68,12 +75,12 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
             if (type === "viecdentoi") {
               return navigate(`/chitietbienbansanluongphoi/${record.idphieu}`);
             }
-            
+
             // Nếu phiếu đang ở trạng thái Đang lưu (0), mở trang chỉnh sửa
             if (record.tinhTrang === 0) {
               return navigate(`/taophieubienbansanluongphoi/${record.idphieu}`);
             }
-            
+
             // Các trạng thái khác, mở trang chi tiết
             return navigate(`/chitietbienbansanluongphoi/${record.idphieu}`);
           }}
@@ -198,25 +205,63 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
     //   ],
     // },
   ];
+const handleExportExcel = async () => {
+  try {
+    const fromDate = currentFilter?.ngaySXFrom;
+    const toDate = currentFilter?.ngaySXTo;
 
+    const res = await sanLuongPhoiApi.exportExcelSanLuongPhoi({
+      fromDate,
+      toDate,
+    });
+
+    const blob = new Blob([res as unknown as BlobPart], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `TongHopSanLuongPhoi_${fromDate || ""}_${toDate || ""}.xlsx`;
+
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Export Excel lỗi:", error);
+  }
+};
   return (
     <div>
       <PhieuFilterCard
         title={config.title}
-        onFilter={handleFilter}
-        onClearFilter={handleClearFilter}
+        onFilter={handleFilterWithCapture}
+         onClearFilter={() => {
+        setCurrentFilter({});
+        handleClearFilter();
+      }}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
       />
       <Card
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => navigate("/taophieubienbansanluongphoi")}
-          >
-            Tạo phiếu mới
-          </Button>
+          <Space>
+            <Button onClick={handleExportExcel}>
+              Xuất Excel
+            </Button>
+
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate("/taophieubienbansanluongphoi")}
+            >
+              Tạo phiếu mới
+            </Button>
+          </Space>
+
         }
       >
         <Table<TableRecord>

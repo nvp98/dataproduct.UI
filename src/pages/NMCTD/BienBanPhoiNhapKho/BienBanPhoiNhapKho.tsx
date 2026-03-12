@@ -11,17 +11,24 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
+import { phoiNhapKhoApi } from "../../../services/BMDucCTDApi";
 
 const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
   const config = CTD_BB_GiaoNhanPhoiNhapKho;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
+  const [currentFilter, setCurrentFilter] = useState<any>({});
+
+  const handleFilterWithCapture = (filters: any) => {
+    setCurrentFilter(filters);
+    handleFilter(filters);
+  };
 
   const fixedFilters = useMemo(
     () => ({ usercode: userObj?.maNV || "" }),
@@ -149,6 +156,33 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
     },
   ];
 
+  const handleExportExcel = async () => {
+    try {
+      const fromDate = currentFilter?.ngaySXFrom;
+      const toDate = currentFilter?.ngaySXTo;
+
+      const res = await phoiNhapKhoApi.exportExcelPhoiNhapKho({
+        fromDate,
+        toDate,
+      });
+
+      const blob = new Blob([res as unknown as BlobPart], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TongHopPhoiNhapKho_${fromDate || ""}_${toDate || ""}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export Excel lỗi:", error);
+    }
+  };
+
   // Config cho các filter fields theo model phiếu
   const filterFieldsConfig: FilterFieldConfig[] = [
     {
@@ -191,20 +225,28 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
     <div>
       <PhieuFilterCard
         title={config.title}
-        onFilter={handleFilter}
-        onClearFilter={handleClearFilter}
+        onFilter={handleFilterWithCapture}
+        onClearFilter={() => {
+          setCurrentFilter({});
+          handleClearFilter();
+        }}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
       />
       <Card
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => navigate("/taophieubienbanphoinapkho")}
-          >
-            Tạo phiếu mới
-          </Button>
+          <Space>
+            <Button onClick={handleExportExcel}>
+              Xuất Excel
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate("/taophieubienbanphoinapkho")}
+            >
+              Tạo phiếu mới
+            </Button>
+          </Space>
         }
       >
         <Table<TableRecord>

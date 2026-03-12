@@ -23,7 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { PhieuApi } from "../../../services/PhieuApi";
 // Dữ liệu mẫu
 
-const BienBanGiaoNhanPhoiTam = (type: string) => {
+const BienBanGiaoNhanPhoiTam = ({ type }: { type?: string }) => {
   const config = HRC2_BBGN_PhoiTam;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);

@@ -23,9 +23,9 @@ export const BmQuyenXlApi = {
 
   /** Lấy MaBM cho menu: processingForms = XULY/CHOT, approvingForms = PHEDUYET */
   getMenuPermissions: async (idTaiKhoan: number): Promise<MenuPermissionsResponse> => {
-    const res = await apiService.get<MenuPermissionsResponse & { ProcessingForms?: string[]; ApprovingForms?: string[] }>(
+    const res = await apiService.get(
       `/api/BmQuyenXl/menu-permissions?idTaiKhoan=${idTaiKhoan}`
-    );
+    ) as unknown as MenuPermissionsResponse & { ProcessingForms?: string[]; ApprovingForms?: string[] };
     return {
       processingForms: res?.processingForms ?? res?.ProcessingForms ?? [],
       approvingForms: res?.approvingForms ?? res?.ApprovingForms ?? [],
