@@ -2,18 +2,20 @@ import type { SearchPhieuRequest } from "../models/Phieu";
 import apiService from "./ApiService";
 
 export const PhieuApi = {
-  getData: (params?: any) => apiService.get("/api/Phieus", { params }),
+  getData: (params?: Record<string, unknown>) =>
+    apiService.get("/api/Phieus", { params }),
 
-  postData: (data: any) => apiService.post("/api/Phieus", data),
+  postData: (data: Record<string, unknown>) => apiService.post("/api/Phieus", data),
 
   getDetail: (id: string) => apiService.get(`/api/Phieus/${id}`),
-  putData: (id: string, data: any) => apiService.put(`/api/Phieus/${id}`, data),
+  putData: (id: string, data: Record<string, unknown>) =>
+    apiService.put(`/api/Phieus/${id}`, data),
 
   deleteData: (id: string) => apiService.delete(`/api/Phieus/${id}`),
 
   changeStatus: (id: string, status: number) =>
     apiService.put(`/api/Phieus/${id}/status`, { status }),
-  clone: (id: string, data: any) =>
+  clone: (id: string, data: Record<string, unknown>) =>
     apiService.post(`/api/Phieus/${id}/clone`, data),
 
   changeStatus_extended: (
@@ -26,6 +28,6 @@ export const PhieuApi = {
 
   initializePhieu: (id: string) =>
     apiService.post(`/api/Phieus/${id}/initialize`),
-  syncNguoiTaoPhieu: (id: string, data: any) =>
+  syncNguoiTaoPhieu: (id: string, data: Record<string, unknown>) =>
     apiService.put(`/api/Phieus/${id}/sync-nguoi-tao`, data),
 };

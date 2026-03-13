@@ -9,9 +9,11 @@ interface CustomFormTableProps {
     isLabel?: boolean; // Xác định cột này là cột label
     width?: number | string;
     fixed?: "left" | "right";
+    format?: string; // ví dụ: "number-group"
     children?: Array<{
       title: string;
       dataIndex: string | number;
+      format?: string; // ví dụ: "number-group"
     }>;
   }>;
   initialData?: any[];
@@ -68,6 +70,25 @@ export default function CustomFormTable({
   compactWhenEmpty = false,
   summary,
 }: CustomFormTableProps) {
+  const formatNumberGroup = (value: unknown): string => {
+    if (value === null || value === undefined || value === "") return "";
+    const raw = String(value).trim();
+    if (!raw) return "";
+    const normalized = raw.replace(/\s+/g, "").replace(",", ".");
+    const n = Number(normalized);
+    if (!Number.isFinite(n)) return raw;
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(n);
+    const [intPartRaw, fracRaw] = String(abs).split(".");
+    const intPart = intPartRaw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return fracRaw ? `${sign}${intPart}.${fracRaw}` : `${sign}${intPart}`;
+  };
+
+  const formatIfNeeded = (format: unknown, value: unknown): string => {
+    if (format === "number-group") return formatNumberGroup(value);
+    return value === null || value === undefined ? "" : String(value);
+  };
+
   const [rows, setRows] = useState(initialData);
 
   const getCellStyle = (
@@ -76,6 +97,7 @@ export default function CustomFormTable({
     readonly?: boolean
   ) => {
     const style: any = {};
+    style.textAlign = "right";
     if (readonly || !editable) style.backgroundColor = "#fffbe6";
     if (String(dataIndex) === "stChuaChuyen" && Number(value) > 0) {
       style.backgroundColor = "#fff1f0";
@@ -169,7 +191,7 @@ export default function CustomFormTable({
                 readonlyFields.includes(String(child.dataIndex)) ? (
                   <Input
                     placeholder={child.title}
-                    value={record[child.dataIndex] ?? ""}
+                    value={formatIfNeeded((child as any)?.format, record[child.dataIndex])}
                     readOnly
                     style={getCellStyle(
                       child.dataIndex,
@@ -229,7 +251,7 @@ export default function CustomFormTable({
             readonlyFields.includes(String(col.dataIndex)) ? (
               <Input
                 placeholder={col.title}
-                value={record[col.dataIndex || ""] ?? ""}
+                value={formatIfNeeded((col as any)?.format, record[col.dataIndex || ""])}
                 readOnly
                 style={getCellStyle(
                   col.dataIndex as string,

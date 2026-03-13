@@ -11,9 +11,11 @@ interface SummaryTableSTDProps {
     width?: number | string;
   }>;
   table1Data: any[]; // Dữ liệu từ bảng 1
-  initialData?: any[];
+  initialData?: any[]; // Dữ liệu summary từ BE (có HasPhanBo, Id_HeaderKey, NgaySX, Ca...)
   onDataChange?: (data: any[]) => void;
-  onPhanBo?: (data: STD_NXT_HRC2_PhanBoDto) => void; // Callback khi click button Phân bổ
+  onPhanBo?: (data: STD_NXT_HRC2_PhanBoDto) => void;
+  onThuHoi?: (data: STD_NXT_HRC2_PhanBoDto) => void;
+  idPhieu?: string | null; // Phiếu đang mở (để gửi kèm payload phân bổ/thu hồi)
   editable?: boolean;
   loading?: boolean;
   className?: string;
@@ -22,16 +24,19 @@ interface SummaryTableSTDProps {
 export default function SummaryTableSTD({
   columns,
   table1Data = [],
+  initialData = [],
   onDataChange,
   onPhanBo,
+  onThuHoi,
+  idPhieu,
   editable = true,
   loading = false,
   className = "",
 }: SummaryTableSTDProps) {
   // Tính tổng theo nguyên nhiên liệu duy nhất (theo thứ tự xuất hiện ở bảng trên)
   const summaryData = useMemo(() => {
+    
     if (!table1Data || table1Data.length === 0) return [];
-
     const materialOrder: string[] = [];
     const grouped: Record<string, any[]> = {};
 
@@ -40,7 +45,7 @@ export default function SummaryTableSTD({
       if (!material) return;
       if (!grouped[material]) {
         grouped[material] = [];
-        materialOrder.push(material); // giữ thứ tự xuất hiện đầu tiên
+        materialOrder.push(material); 
       }
       grouped[material].push(row);
     });
@@ -55,7 +60,12 @@ export default function SummaryTableSTD({
       const totalSDTrongSoSach = rows.reduce((sum, r) => sum + (parseFloat(String(r.tongThucTe || 0)) || 0), 0);
       const totalSuDung = totalTonDauCa + totalNhapTrongCa - totalTonCuoiCa;
       const totalChenhLech = Math.abs(totalSuDung - totalSDTrongSoSach);
-      summaryRows.push({
+
+      // Lấy Id_HeaderKey từ bảng 1 (giả định mỗi nguyên liệu chỉ có 1 HeaderKey)
+      const anyWithId = rows.find((r) => r.idNguyenNhienLieu != null);
+      const idHeaderKey = anyWithId?.idNguyenNhienLieu ?? null;
+
+      const baseRow: any = {
         key: `summary_${material}`,
         totalText: index === 0 ? "Tổng cộng (cả trong và ngoài silo)" : "",
         totalNguyenNhienLieu: material,
@@ -65,14 +75,38 @@ export default function SummaryTableSTD({
         totalSuDung: totalSuDung,
         totalSDTrongSoSach: totalSDTrongSoSach,
         totalChenhLech: totalChenhLech,
+        Id_HeaderKey: idHeaderKey,
         _isFirstMaterialRow: index === 0,
         _materialRowCount: materialOrder.length,
-      });
+      };
+
+      // Gắn thêm meta từ initialData (nếu có): Id_HeaderKey, HasPhanBo, NgaySX, Ca
+      const meta = Array.isArray(initialData)
+        ? initialData.find((x: any) => {
+            const name =
+              x.tenNguyenLieu ??
+              x.TenNguyenLieu ??
+              x.totalNguyenNhienLieu ??
+              x.TotalNguyenNhienLieu ??
+              "";
+            return String(name).trim().toLowerCase() === material.toLowerCase();
+          })
+        : undefined;
+      if (meta) {
+        baseRow.HasPhanBo =
+          meta.hasPhanBo ??
+          meta.HasPhanBo ??
+          null;
+        baseRow.NgaySX = meta.ngaySX ?? meta.NgaySX ?? undefined;
+        baseRow.Ca = meta.ca ?? meta.Ca ?? undefined;
+      }
+
+      summaryRows.push(baseRow);
     });
 
 
     return summaryRows;
-  }, [table1Data]);
+  }, [table1Data, initialData]);
 
   // Tính chênh lệch khi có thay đổi
   const dataWithChenhLech = useMemo(() => {
@@ -190,7 +224,7 @@ export default function SummaryTableSTD({
     };
   });
 
-  // Thêm cột "Phân bổ" ở cuối
+  // Thêm cột "Phân bổ / Thu hồi" ở cuối
   tableColumns.push({
     title: "Phân bổ",
     dataIndex: "phanBo",
@@ -198,23 +232,34 @@ export default function SummaryTableSTD({
     align: "center" as const,
     fixed: "right" as const,
     render: (_: any, record: any) => {
-      // Không hiển thị button cho dòng total (nếu có)
       if (record._isTotalRow) {
         return <span></span>;
       }
+      // console.log(record)
+      // BE trả về HasPhanBo (PascalCase), meta gán baseRow.HasPhanBo — cần đọc cả hai kiểu
+      const hasPhanBo = record.hasPhanBo === true || record.HasPhanBo === true;
+      const label = hasPhanBo ? "Thu hồi" : "Phân bổ";
       return (
         <Button
-          type="primary"
+          type={hasPhanBo ? "default" : "primary"}
           size="small"
-          onClick={() => onPhanBo?.({
-            NgaySX: record.NgaySX,
-            Ca: record.Ca,
-            Id_HeaderKey: record.Id_HeaderKey,
-            ChenhLech: Number(record.totalChenhLech || 0),
-          })}
+          onClick={() => {
+            const payload: STD_NXT_HRC2_PhanBoDto = {
+              NgaySX: record.NgaySX ?? record.ngaySX,
+              Ca: record.Ca ?? record.ca,
+              Id_HeaderKey: record.Id_HeaderKey ?? record.id_HeaderKey,
+              ChenhLech: Number(record.totalChenhLech ?? 0),
+              IdPhieu: idPhieu ?? "",
+            };
+            if (hasPhanBo) {
+              onThuHoi?.(payload);
+            } else {
+              onPhanBo?.(payload);
+            }
+          }}
           disabled={!editable}
         >
-          Phân bổ
+          {label}
         </Button>
       );
     },

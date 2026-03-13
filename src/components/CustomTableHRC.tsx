@@ -7,8 +7,47 @@ import type { HeaderMappingRecord } from "./HeaderMapping";
 import { dlnmHRC2Api } from "../services/DLNMHRC2Api";
 import type { ChuyenMeThoiRequest } from "../models/DLMN_HRC2Model";
 import dayjs from "dayjs";
+import { formatByKind } from "../utils/formatters/numberFormat";
 
 type MappingPayload = HeaderMappingRecord;
+
+// ─── EditableCellInput ───────────────────────────────────────────────────────
+// Component tách biệt để cô lập state nhập liệu, tránh parent re-render
+// khi đang gõ dẫn đến mất con trỏ chuột.
+// Giá trị chỉ sync lên parent khi blur (onCommit).
+interface EditableCellInputProps {
+  initialValue: string;
+  onCommit: (value: string) => void;
+  style?: React.CSSProperties;
+  placeholder?: string;
+}
+
+type HRCRowWithManualFlags = HRCTableRow & Record<string, unknown>;
+
+const EditableCellInput = ({ initialValue, onCommit, style, placeholder }: EditableCellInputProps) => {
+  const [localValue, setLocalValue] = useState(initialValue);
+
+  // Sync khi giá trị bên ngoài thay đổi (ví dụ: load dữ liệu mới, reset form)
+  useEffect(() => {
+    setLocalValue(initialValue);
+  }, [initialValue]);
+
+  return (
+    <Input
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={() => onCommit(localValue)}
+      onDoubleClick={(e) => {
+        const target = e.target as HTMLInputElement;
+        target.focus();
+        target.select();
+      }}
+      style={style}
+      placeholder={placeholder}
+    />
+  );
+};
+// ────────────────────────────────────────────────────────────────────────────
 
 export interface HRCChildColumn {
   title: ReactNode;
@@ -17,6 +56,8 @@ export interface HRCChildColumn {
   placeholder?: string;
   highlight?: boolean;
   editable?: boolean;
+  format?: string; // ví dụ: "number-group"
+  align?: "left" | "center" | "right";
   metaLabel?: string;
   metaGroup?: string;
   allowMapping?: boolean;
@@ -34,6 +75,8 @@ export interface HRCParentColumn {
   children?: HRCChildColumn[];
   editable?: boolean;
   highlight?: boolean;
+  format?: string; // ví dụ: "number-group"
+  align?: "left" | "center" | "right";
   metaLabel?: string;
   allowMapping?: boolean;
   mappingPayload?: MappingPayload | null;
@@ -43,6 +86,7 @@ export interface HRCParentColumn {
 export interface HRCTableRow {
   key: string | number;
   IsNM?: boolean; // Flag để đánh dấu dòng từ NM (true) hay thêm tay (false)
+  _isNewRow?: boolean; // Flag UI: dòng thêm mới bằng button (highlight cả hàng + xếp cuối)
   id?: number; // ID bản ghi DLNM_HRC2 (nếu có)
   isTrungMeThoi?: boolean; // Flag để đánh dấu mẻ thổi bị trùng
   [key: string]: string | number | boolean | undefined;
@@ -146,23 +190,23 @@ const CustomTableHRC = ({
     [onDataChange]
   );
 
-  // Sắp xếp: các dòng từ NM (IsNM !== false) ở trên, dòng nhập tay (IsNM === false) xuống dưới
+  // Sắp xếp: dòng nhập tay (IsNM === false) xếp cuối, không di chuyển dòng NM khi edit ô
   const sortedRows = useMemo(() => {
     const cloned = [...rows];
     cloned.sort((a, b) => {
       const aManual = a.IsNM === false;
       const bManual = b.IsNM === false;
       if (aManual === bManual) return 0;
-      // Dòng nhập tay (IsNM === false) xếp sau
       return aManual ? 1 : -1;
     });
     return cloned;
   }, [rows]);
   const handleAddRow = () => {
     const fieldKeys = getAllFieldKeys(columns);
-    const newRow: HRCTableRow = { 
+    const newRow: HRCTableRow = {
       key: Date.now().toString(),
-      IsNM: false // Đánh dấu đây là dòng được thêm tay
+      IsNM: false,      // Đánh dấu cho BE: dòng nhập tay
+      _isNewRow: true,  // Đánh dấu cho UI: dòng thêm mới bằng button (highlight cả hàng + xếp cuối)
     };
     fieldKeys.forEach((key) => {
       newRow[key] = "";
@@ -234,14 +278,46 @@ const CustomTableHRC = ({
     });
   };
 
-  const handleCellChange = (value: string, rowKey: string | number, dataIndex: string) => {
-    setRows((prev) => {
-      const newData = prev.map((row) =>
-        row.key === rowKey ? { ...row, [dataIndex]: value } : row
-      );
-      return newData;
-    });
-  };
+  // Áp dụng thay đổi cell và emit ra ngoài - chỉ gọi khi blur (từ EditableCellInput.onCommit)
+  const applyAndEmitCellChange = useCallback(
+    (value: string, rowKey: string | number, dataIndex: string) => {
+      const origKey = `${dataIndex}__orig`;
+      const manualKey = `${dataIndex}__IsManual`;
+      const newData = rowsRef.current.map((row) => {
+        if (row.key !== rowKey) return row;
+        const isManualAddedColumn = dataIndex.startsWith("manual_col_");
+        const hasOrig = row[origKey] !== undefined;
+        const prevValue = row[dataIndex];
+        const origValue = hasOrig ? row[origKey] : (prevValue ?? "");
+
+        // manual_col_*: không tạo/gửi __orig. Giá trị nhập luôn được hiểu là manual.
+        const next: HRCTableRow = isManualAddedColumn
+          ? {
+              ...row,
+              [dataIndex]: value,
+            }
+          : {
+              ...row,
+              ...(hasOrig ? null : { [origKey]: prevValue ?? "" }),
+              [dataIndex]: value,
+            };
+
+        // IsNM = false chỉ cho dòng thêm bằng tay (Thêm dòng). Sửa ô phụ liệu trên dòng từ NM (IsNM = true) không đổi IsNM.
+        // Với ô phụ liệu: set cờ manual theo từng ô để BE/FE nhận biết (không dùng IsManual ở cấp dòng).
+        if (isManualAddedColumn) {
+          // manual_col_*: có giá trị thì coi là manual
+          (next as HRCRowWithManualFlags)[manualKey] = String(value ?? "").trim() !== "";
+        } else if (dataIndex.startsWith("phuLieu_") || dataIndex.startsWith("others_")) {
+          const isManualCell = String(value ?? "") !== String(origValue ?? "");
+          (next as HRCRowWithManualFlags)[manualKey] = isManualCell;
+        }
+        return next;
+      });
+      setRows(newData);
+      emitDataChange(newData);
+    },
+    [emitDataChange]
+  );
 
   const stickyKeysSet = useMemo(() => new Set(stickyColumnKeys), [stickyColumnKeys]);
 
@@ -265,8 +341,7 @@ const CustomTableHRC = ({
           title: baseTitle,
           width: col.width,
           children: col.children.map((child) => {
-            const isColumnEditable =
-              (child.editable ?? true) && (col.editable ?? true);
+            // bỏ logic disable theo config, chỉ giữ variant="adjust" là read-only
             const childSticky =
               (child.dataIndex && stickyKeysSet.has(child.dataIndex)) ||
               shouldStickyFirst;
@@ -278,54 +353,87 @@ const CustomTableHRC = ({
               title: child.title,
               dataIndex: child.dataIndex,
               width: child.width,
+              align: child.align,
               fixed: childSticky ? ("left" as const) : undefined,
               render: (_: unknown, record: HRCTableRow) => {
-                const isManualRow = record.IsNM === false;
                 // ⚠️ Cột phân bổ (variant="adjust") luôn read-only, không cho phép chỉnh sửa thủ công
                 const isAdjustColumn = child.variant === "adjust";
-                const canEditThisCell =
-                  !isAdjustColumn && editable && (isManualRow || isColumnEditable);
-                const cellValue = record[child.dataIndex];
-                const displayValue = cellValue !== undefined && cellValue !== null 
-                  ? String(cellValue) 
-                  : "";
-                // Ô không cho phép chỉnh sửa → highlight màu xám nhạt
-                const readonlyStyle = !canEditThisCell
-                  ? { backgroundColor: "#f5f5f5" }
-                  : {};
-                // Highlight ô mẻ thổi nếu bị trùng
                 const isMeThoiColumn = child.dataIndex === "meThoi";
+                const isMacThepColumn = child.dataIndex === "macThep";
+                // Dòng từ NM (IsNM !== false): disable meThoi và macThep
+                // Dòng thêm mới bằng button (IsNM === false): cho nhập tất cả các cột
+                const isNMRow = record.IsNM !== false;
+                const canEditThisCell =
+                  !isAdjustColumn &&
+                  editable &&
+                  (!isNMRow || (!isMeThoiColumn && !isMacThepColumn));
+
+                const origKey = `${child.dataIndex}__orig`;
+                const manualKey = `${child.dataIndex}__IsManual`;
+                const origValue = record[origKey];
+                const currentValue = record[child.dataIndex];
+                const isManualFlag = (record as HRCRowWithManualFlags)[manualKey] === true;
+                const isCellChanged =
+                  isManualFlag ||
+                  (origValue !== undefined && String(currentValue ?? "") !== String(origValue ?? ""));
+
+                const cellValue = record[child.dataIndex];
+                const displayValue = !canEditThisCell
+                  ? formatByKind(child.format, cellValue)
+                  : cellValue !== undefined && cellValue !== null
+                    ? String(cellValue)
+                    : "";
                 const isTrungMeThoi = record.isTrungMeThoi === true;
-                return (
-                  <Input
+
+                const tooltipTitle =
+                  isCellChanged
+                    ? `Cũ: ${String(origValue ?? "")} | Mới: ${String(currentValue ?? "")}`
+                    : undefined;
+
+                const isKeyColumn = isMeThoiColumn || isMacThepColumn;
+
+                // Style chung cho ô editable (highlight vàng sau khi blur)
+                const editableStyle: React.CSSProperties = {
+                  textAlign: child.align ?? "right",
+                  ...(isKeyColumn && record.IsNM === false ? { backgroundColor: "#fffbe6" } : {}),
+                  ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
+                  ...(!(isMeThoiColumn && isTrungMeThoi) && isCellChanged
+                    ? { backgroundColor: "#fff7b3" }
+                    : {}),
+                  ...(!(isMeThoiColumn && isTrungMeThoi) && child.highlight
+                    ? { backgroundColor: "#fff1f0" }
+                    : {}),
+                };
+
+                const inputNode = canEditThisCell ? (
+                  <EditableCellInput
+                    initialValue={displayValue}
+                    onCommit={(v) => applyAndEmitCellChange(v, record.key, child.dataIndex)}
+                    style={editableStyle}
                     placeholder={
                       child.placeholder ??
                       (typeof child.title === "string" ? child.title : undefined)
                     }
+                  />
+                ) : (
+                  <Input
                     value={displayValue}
-                    onChange={
-                      canEditThisCell
-                        ? (e) => handleCellChange(e.target.value, record.key, child.dataIndex)
-                        : undefined
-                    }
-                    onBlur={
-                      canEditThisCell
-                        ? () => emitDataChange(rowsRef.current)
-                        : undefined
-                    }
-                    disabled={!editable || isAdjustColumn}
-                    readOnly={!canEditThisCell || isAdjustColumn}
+                    readOnly
+                    disabled={isAdjustColumn}
                     style={{
-                      ...readonlyStyle,
-                      // Highlight mẻ thổi trùng (ưu tiên cao nhất)
-                      ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
-                      // Cột chưa được móc nối (highlight) - chỉ khi không phải mẻ thổi trùng
-                      ...(!(isMeThoiColumn && isTrungMeThoi) && child.highlight ? { backgroundColor: "#fff1f0" } : {}),
-                      // Cột phân bổ có style đặc biệt (xám nhạt, không cho chỉnh sửa)
-                      ...(isAdjustColumn ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}),
-                      ...(!canEditThisCell ? { cursor: "not-allowed" } : {}),
+                      textAlign: child.align ?? "right",
+                      backgroundColor: "#f5f5f5",
+                      cursor: "not-allowed",
                     }}
                   />
+                );
+
+                return tooltipTitle ? (
+                  <Tooltip title={tooltipTitle}>
+                    <span style={{ display: "block" }}>{inputNode}</span>
+                  </Tooltip>
+                ) : (
+                  inputNode
                 );
               },
             };
@@ -356,62 +464,84 @@ const CustomTableHRC = ({
         };
       }
 
-      const isColumnEditable = col.editable ?? true;
+      // bỏ logic disable theo config, chỉ giữ variant="adjust" là read-only
 
       return {
         title: baseTitle,
         dataIndex: col.dataIndex,
         width: col.width,
+        align: col.align,
         fixed: baseFixed,
         render: (_: unknown, record: HRCTableRow) => {
-          const isManualRow = record.IsNM === false;
           // ⚠️ Cột phân bổ (variant="adjust") luôn read-only, không cho phép chỉnh sửa thủ công
           const isAdjustColumn = col.variant === "adjust";
+          const isMeThoiColumn = col.dataIndex === "meThoi";
+          const isMacThepColumn = col.dataIndex === "macThep";
+          // Dòng từ NM (IsNM !== false): disable meThoi và macThep
+          // Dòng thêm mới bằng button (IsNM === false): cho nhập tất cả các cột
+          const isNMRow = record.IsNM !== false;
           const canEditThisCell =
-            !isAdjustColumn && editable && (isManualRow || isColumnEditable);
-          const cellValue = record[col.dataIndex || ""];
-          const displayValue =
-            cellValue !== undefined && cellValue !== null
+            !isAdjustColumn &&
+            editable &&
+            (!isNMRow || (!isMeThoiColumn && !isMacThepColumn));
+          const dataIndex = col.dataIndex || "";
+          const origKey = `${dataIndex}__orig`;
+          const manualKey = `${dataIndex}__IsManual`;
+          const origValue = record[origKey];
+          const currentValue = record[dataIndex];
+          const isManualFlag = (record as HRCRowWithManualFlags)[manualKey] === true;
+          const isCellChanged =
+            isManualFlag ||
+            (origValue !== undefined && String(currentValue ?? "") !== String(origValue ?? ""));
+
+          const cellValue = record[dataIndex];
+          const displayValue = !canEditThisCell
+            ? formatByKind(col.format, cellValue)
+            : cellValue !== undefined && cellValue !== null
               ? String(cellValue)
               : "";
-          const readonlyStyle = !canEditThisCell
-            ? { backgroundColor: "#f5f5f5" }
-            : {};
-          // Highlight ô mẻ thổi nếu bị trùng
-          const isMeThoiColumn = col.dataIndex === "meThoi";
           const isTrungMeThoi = record.isTrungMeThoi === true;
-          
-          return (
-            <Input
+
+          const isKeyColumn = isMeThoiColumn || isMacThepColumn;
+
+          const editableStyle: React.CSSProperties = {
+            textAlign: col.align ?? "right",
+            ...(isKeyColumn && record.IsNM === false ? { backgroundColor: "#fffbe6" } : {}),
+            ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
+            ...(!(isMeThoiColumn && isTrungMeThoi) && isCellChanged
+              ? { backgroundColor: "#fff7b3" }
+              : {}),
+            ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight
+              ? { backgroundColor: "#fff1f0" }
+              : {}),
+          };
+
+          const inputNode = canEditThisCell ? (
+            <EditableCellInput
+              initialValue={displayValue}
+              onCommit={(v) => applyAndEmitCellChange(v, record.key, dataIndex)}
+              style={editableStyle}
               placeholder={typeof baseTitle === "string" ? baseTitle : undefined}
+            />
+          ) : (
+            <Input
               value={displayValue}
-              onChange={
-                canEditThisCell && col.dataIndex
-                  ? (e) => handleCellChange(
-                      e.target.value,
-                      record.key,
-                      col.dataIndex as string
-                    )
-                  : undefined
-              }
-              onBlur={
-                canEditThisCell
-                  ? () => emitDataChange(rowsRef.current)
-                  : undefined
-              }
-              disabled={!editable || isAdjustColumn}
-              readOnly={!canEditThisCell || isAdjustColumn}
+              readOnly
+              disabled={isAdjustColumn}
               style={{
-                ...readonlyStyle,
-                // Highlight mẻ thổi trùng (ưu tiên cao nhất)
-                ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
-                // Cột chưa được móc nối (highlight) - chỉ khi không phải mẻ thổi trùng
-                ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight ? { backgroundColor: "#fff1f0" } : {}),
-                // Cột phân bổ có style đặc biệt (xám nhạt, không cho chỉnh sửa)
-                ...(isAdjustColumn ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : {}),
-                ...(!canEditThisCell ? { cursor: "not-allowed" } : {}),
+                textAlign: col.align ?? "right",
+                backgroundColor: "#f5f5f5",
+                cursor: "not-allowed",
               }}
             />
+          );
+
+          return isCellChanged ? (
+            <Tooltip title={`Cũ: ${String(origValue ?? "")} | Mới: ${String(currentValue ?? "")}`}>
+              <span style={{ display: "block" }}>{inputNode}</span>
+            </Tooltip>
+          ) : (
+            inputNode
           );
         },
       };
@@ -522,7 +652,7 @@ const CustomTableHRC = ({
             style={{ marginTop: 20 }}
             scroll={{ x: scrollX, y: defaultScrollY }}
             sticky={stickyHeaders ? { offsetHeader: 0 } : undefined}
-            // Highlight cả dòng cho dữ liệu nhập tay (IsNM === false)
+            // Highlight cả dòng nhập tay (IsNM === false) — cả dòng thêm mới lẫn load từ backend
             onRow={(record) => ({
               style:
                 record.IsNM === false

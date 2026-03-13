@@ -651,16 +651,16 @@ export const phieuActionService = {
 
   /**
    * Render các action buttons dưới dạng React components
-   * @param getFormData - Function để lấy formData mới nhất (được gọi mỗi khi click button)
+   * @param getFormData - Function để lấy formData mới nhất (được gọi mỗi khi click button, nhận actionKey để phân biệt loại action)
    */
   renderActionButtons(
     buttons: PhieuActionButton[],
     phieuId: string,
-    getFormData?: () => Record<string, unknown> | Promise<Record<string, unknown>>
+    getFormData?: (actionKey?: string) => Record<string, unknown> | Promise<Record<string, unknown>>
   ): React.ReactNode[] {
     return buttons.map((btn) => {
       const handleClick = async () => {
-        const formData = getFormData ? await getFormData() : undefined;
+        const formData = getFormData ? await getFormData(btn.key) : undefined;
         await btn.onClick(phieuId, formData);
       };
 

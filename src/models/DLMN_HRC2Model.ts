@@ -20,6 +20,8 @@ export type HRC2DetailRow = {
   idPhuLieu: number | null;
   tenPhuLieu: string | null;
   klPhuGia: number | null;
+  klPhuGia_Manual?: number | null;
+  isManual?: boolean | null;
   klPhuGiaTotal?: number | null; // Tổng KLPhuGia sau khi group
   keyGuid: string | null;
   tenHienThi: string | null;
@@ -93,6 +95,8 @@ export const normalizeHRC2GroupedResponse = (
       idPhuLieu: getValue<number>("iD_PhuLieu", "idPhuLieu", "ID_PhuLieu"),
       tenPhuLieu: getValue<string>("tenPhuLieu", "TenPhuLieu"),
       klPhuGia: getValue<number>("klPhuGia", "KLPhuGia"),
+      klPhuGia_Manual: getValue<number>("klPhuGia_Manual", "KLPhuGia_Manual"),
+      isManual: getValue<boolean>("isManual", "IsManual"),
       klPhuGiaTotal:
         getValue<number>("klPhuGiaTotal", "KLPhuGiaTotal") ??
         getValue<number>("klPhuGia", "KLPhuGia"),
@@ -185,4 +189,8 @@ export interface ChuyenMeThoiRequest {
 export interface FilterSTD_NXTRequest {
   NgaySX: string;
   Ca: number;
+  /** Nếu có: BE sẽ chạy sp_Init_XuatNhapTon_HRC2 để cập nhật dữ liệu phiếu hiện tại. */
+  idPhieu?: string | null;
+  /** Danh sách Id_HeaderKey đang hiển thị trên bảng (kể cả dòng mới chưa lưu). BE dùng cho Init. */
+  headerKeyIds?: number[] | null;
 }

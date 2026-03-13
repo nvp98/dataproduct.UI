@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC2_BB_NauLuyen_LF from "../../../utils/BM_config/HRC2_BB_NauLuyen_LF.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
-import { FilterOutlined, LinkOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined } from "@ant-design/icons";
+import { FilterOutlined, LinkOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
+import HeaderKeyAutocomplete from "../../../components/HeaderKeyAutocomplete";
+import type { HeaderKey } from "../../../models/HeaderKeyModel";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -67,12 +69,72 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     currentTinhTrang === TrangThaiPhieuConst.HieuChinh
   );
 
-  // Xóa logic thêm adjust column thủ công - giờ tự động từ dữ liệu phân bổ
+  // Thêm cột điều chỉnh mới — header sẽ là autocomplete chọn HeaderKey
   const addAdjustColumn = useCallback(() => {
-    message.info("Các cột điều chỉnh được tự động tạo từ dữ liệu phân bổ. Vui lòng lọc dữ liệu để xem.");
+    const dataIndex = `manual_col_${Date.now()}`;
+    setAdjustColumnMetas((prev) => [
+      ...prev,
+      {
+        key: dataIndex,
+        dataIndex,
+        headerKeyId: null,
+        headerKeyLabel: null,
+        width: 150,
+        isManuallyAdded: true,
+      },
+    ]);
+    setShowAdjustColumns(true);
   }, []);
 
-  // Các function thêm adjust column thủ công đã được xóa - giờ tự động từ dữ liệu phân bổ
+  const handleRemoveAdjustColumn = useCallback((dataIndex: string) => {
+    setAdjustColumnMetas((prev) => prev.filter((m) => m.dataIndex !== dataIndex));
+    setTableData((prev) => prev.map((row) => hrc2TableService.removeRowColumnKey(row, dataIndex)));
+  }, []);
+
+  // Cập nhật headerKeyId, label và dataIndex (manual_col_{ID_HeaderKey}) khi user chọn header key
+  const handleColumnHeaderChange = useCallback(
+    (oldDataIndex: string, opt: HeaderKey | null) => {
+      const headerKeyId = opt?.id ?? null;
+      const headerLabel = opt?.tenHienThi ?? null;
+
+      if (!headerKeyId) {
+        setAdjustColumnMetas((prev) =>
+          prev.map((m) =>
+            m.dataIndex === oldDataIndex
+              ? { ...m, headerKeyId: null, headerKeyLabel: null }
+              : m
+          )
+        );
+        return;
+      }
+
+      const newDataIndex = `manual_col_${headerKeyId}`;
+
+      setAdjustColumnMetas((prev) =>
+        hrc2TableService.dedupeAdjustMetas(
+          prev.map((m) =>
+            m.dataIndex === oldDataIndex
+              ? {
+                  ...m,
+                  key: newDataIndex,
+                  dataIndex: newDataIndex,
+                  headerKeyId,
+                  headerKeyLabel: headerLabel,
+                  isManuallyAdded: true,
+                }
+              : m
+          )
+        )
+      );
+
+      setTableData((prev) =>
+        prev.map((row) =>
+          hrc2TableService.renameRowColumnKey(row, oldDataIndex, newDataIndex)
+        )
+      );
+    },
+    []
+  );
 
   const getUserInfo = useCallback(() => {
     const stored = localStorage.getItem("userinfo");
@@ -130,19 +192,35 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     if (!adjustColumnMetas.length) {
       return [];
     }
-    // ⭐ Adjust columns giờ được tạo tự động từ dữ liệu phân bổ (phanBoPhulieus)
-    // ⚠️ LƯU Ý: Các cột phân bổ KHÔNG cho phép chỉnh sửa thủ công
-    // Chỉ được tự động phân bổ từ nút "Phân bổ" ở SummaryTableSTD
     return adjustColumnMetas.map((meta) => ({
-      title: meta.headerKeyLabel ?? "Điều chỉnh",
+      title: meta.isManuallyAdded ? (
+        <div style={{ position: "relative", minWidth: 140, paddingRight: 18 }}>
+          <HeaderKeyAutocomplete
+            value={meta.headerKeyId ?? null}
+            defaultLabel={meta.headerKeyLabel ?? undefined}
+            onSelectOption={(opt) => handleColumnHeaderChange(meta.dataIndex, opt)}
+            size="small"
+            placeholder="Chọn header key..."
+            style={{ minWidth: 120 }}
+            allowClear={false}
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<CloseOutlined />}
+            onClick={() => handleRemoveAdjustColumn(meta.dataIndex)}
+            style={{ position: "absolute", top: -6, right: -6, padding: 0, width: 18, height: 18 }}
+          />
+        </div>
+      ) : (meta.headerKeyLabel ?? "Điều chỉnh"),
       dataIndex: meta.dataIndex,
       width: meta.width ?? 140,
-      editable: false, // ⭐ KHÔNG cho phép chỉnh sửa thủ công
-      variant: "adjust",
+      editable: meta.isManuallyAdded ? true : false,
+      variant: meta.isManuallyAdded ? undefined : ("adjust" as const),
       metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
       headerKeyId: meta.headerKeyId ?? null,
     }));
-  }, [adjustColumnMetas]);
+  }, [adjustColumnMetas, handleColumnHeaderChange, handleRemoveAdjustColumn]);
 
   const restoreDynamicColumns = useCallback(
     (map?: Record<string, DynamicColumnMeta[]>) => {
@@ -155,7 +233,11 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       setChatHopKimColumns(restored.KL ?? []);
       setKhacColumns(restored.others ?? []);
       if (map.adjust) {
-        setAdjustColumnMetas(hrc2TableService.adjustMetaFromDynamic(map.adjust));
+        setAdjustColumnMetas(
+          hrc2TableService.dedupeAdjustMetas(
+            hrc2TableService.adjustMetaFromDynamic(map.adjust)
+          )
+        );
       } else {
         setAdjustColumnMetas([]);
       }
@@ -168,9 +250,9 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       setLoading(true);
       
       // Lấy base columns từ config
-      const baseColumns = config.layout.find(
+      const baseColumns = (config.layout.find(
         (l) => l.sectionType === "table" && l.key === "table1"
-      )?.columns || [];
+      )?.columns || []) as HRCParentColumn[];
 
       // Xác định các field editable dựa trên config JSON
       const editableFieldSet = new Set<string>();
@@ -234,20 +316,25 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
           headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
           width: col.width || 140,
         }));
-        setAdjustColumnMetas(adjustMetas);
+        setAdjustColumnMetas((prev) => hrc2TableService.mergeAdjustMetas(prev ?? [], adjustMetas));
         setShowAdjustColumns(true);
       } else {
-        setAdjustColumnMetas([]);
+        // Không xoá các cột manual_col đã restore từ phiếu
+        setAdjustColumnMetas((prev) => (prev ?? []).filter((m) => m.isManuallyAdded === true));
       }
 
-      setTableData((prev) =>
-        hrc2TableService.mergeServerRows(
+      setTableData((prev) => {
+        const baseMerged = hrc2TableService.mergeServerRows(
           result.tableData || [],
           prev,
           "meThoi",
           editableFields
-        )
-      );
+        );
+        return hrc2TableService.applyManualOverrides(baseMerged, prev, {
+          rowIdField: "id",
+          fallbackKeyField: "meThoi",
+        });
+      });
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);
       message.error("Không thể tải danh sách dữ liệu nhà máy");
@@ -281,9 +368,15 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     const tableLayout = config.layout.find(
       (l) => l.sectionType === "table" && l.key === "table1"
     ) as { columns?: HRCParentColumn[] } | undefined;
-    const baseColumns: HRCParentColumn[] = tableLayout?.columns
+    const rawBaseColumns: HRCParentColumn[] = tableLayout?.columns
       ? (tableLayout.columns as HRCParentColumn[])
       : [];
+
+    const baseColumns = rawBaseColumns.filter((col) => {
+      if (col.dataIndex === "KL" && chatHopKimColumns.length === 0) return false;
+      if (col.dataIndex === "PG" && phuGiaColumns.length === 0) return false;
+      return true;
+    });
 
     return hrc2TableService.buildColumnsWithAdjust({
       baseColumns,
@@ -423,9 +516,15 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     initData();
   }, [initData]);
 
-  const getFormData = useCallback(async () => {
+  // actionKey: "save" | "saveAndSend" | ... để phân biệt lưu vs gửi
+  const getFormData = useCallback(async (actionKey?: string) => {
     const userInfo = getUserInfo();
-    const formData = await form.validateFields();
+    const isSend = actionKey === "saveAndSend" || actionKey === "gui";
+    const headerFieldKeys = config.headerFields.map((f: any) => f.key);
+    const signatureKeys = config.signatures.filter((s) => s.isChon).map((s) => s.key);
+    const fieldsToValidate = isSend ? [...headerFieldKeys, ...signatureKeys] : headerFieldKeys;
+    await form.validateFields(fieldsToValidate);
+    const formData = form.getFieldsValue(true);
 
     const pheDuyetFlow = config.signatures
       .filter((s) => s.isChon)
@@ -457,13 +556,14 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     });
     dynamicColumnMap.adjust = hrc2TableService.adjustMetaToDynamic(adjustColumnMetas);
 
+    // Giữ nguyên toàn bộ key trong row (kể cả *__orig) để BE nhận đủ phụ liệu manual (IsManual, KLPhuGia_Manual)
     const processedTable1 = tableData.map((row) => {
       const processedRow = { ...row };
       if (processedRow.IsNM === undefined) {
         processedRow.IsNM = true;
       }
       delete processedRow._isNewRow;
-      return processedRow;  
+      return processedRow;
     });
 
     const processedTable2 = table2Data.map((row) => {
@@ -491,6 +591,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
   }, [
     getUserInfo,
     form,
+    config.headerFields,
     config.signatures,
     config.code,
     phuGiaColumns,
@@ -663,7 +764,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
             ) : (
               layout.sectionType === "table" && (
                 <CustomFormTable
-                  columns={layout.columns || []}
+                  columns={(layout.columns || []) as any}
                   initialData={tableData}
                   onDataChange={(rows) => setTableData(rows as HRCTableRow[])}
                   addRowButtonText="+ Thêm dòng"

@@ -62,7 +62,7 @@
         {
           "title": "Mẻ nấu số",
           "dataIndex": "meThoi",
-          "width": 110,
+          "width": 115,
           "editable": false
         },
         {
@@ -78,13 +78,17 @@
               "title": "Gang lỏng",
               "dataIndex": "klGangLong",
               "editable": false,
-              "width": 90
+              "width": 90,
+              "format": "number-group",
+              "align": "right"
             },
             {
               "title": "Thép phế",
               "dataIndex": "klThepPhe",
               "editable": false,
-              "width": 90
+              "width": 90,
+              "format": "number-group",
+              "align": "right"
             }
           ]
         },
@@ -94,7 +98,7 @@
           "editable": false
         },
         {
-          "title": "Khác", "dataIndex": "others" , "width": 100
+          "dataIndex": "dieuChinh"
         },
         {
           "title": "Nhiên liệu (m3)",
@@ -102,12 +106,16 @@
             {
               "title": "Oxy",
               "dataIndex": "o2",
-              "width": 100
+              "width": 100,
+              "format": "number-group",
+              "align": "right"
             },
             {
               "title": "Nitơ",
               "dataIndex": "n2",
-              "width": 100
+              "width": 100,
+              "format": "number-group",
+              "align": "right"
             }
           ]
         },
@@ -132,15 +140,21 @@
         },
         {
           "title": "Tồn đầu kíp",
-          "dataIndex": "tonDauKip"
+          "dataIndex": "tonDauKip",
+          "format": "number-group",
+          "align": "right"
         },
         {
           "title": "Nhập trong kíp",
-          "dataIndex": "nhapTrongKip"
+          "dataIndex": "nhapTrongKip",
+          "format": "number-group",
+          "align": "right"
         },
         {
           "title": "Tồn cuối kíp",
-          "dataIndex": "tonCuoiKip"
+          "dataIndex": "tonCuoiKip",
+          "format": "number-group",
+          "align": "right"
         }
       ],
       "initialData": []

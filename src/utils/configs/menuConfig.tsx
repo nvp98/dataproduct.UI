@@ -491,7 +491,7 @@ export const menuConfig = [
         label: "NM.CTD",
         children: [
           {
-            key: "9",
+            key: "sub5-1-11",
             maBM: "CTD_BB_Phoinong",
             label: (
               <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
@@ -505,7 +505,24 @@ export const menuConfig = [
           // { key: "6", label: "Option 6" },
         ],
       },
-      
+      {
+        key: "sub5-2",
+        label: "NM.HRC2",
+        children: [
+          {
+            key: "sub5-2-1",
+            maBM: "ThongKeHRC2",
+            label: (
+              <Tooltip title="Thống kê HRC2">
+                <NavLink to="/thongkehrc2">
+                  Thống kê HRC2
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+
+        ],
+      },
     ],
   },
   // {

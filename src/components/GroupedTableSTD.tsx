@@ -15,7 +15,7 @@ import type { HeaderMappingRecord } from "./HeaderMapping";
 import HeaderKeyAutocomplete from "./HeaderKeyAutocomplete";
 import { CommonAutocomplete } from "./CommonAutocomplete";
 import { SiloServiceApi } from "../services/SiloServiceApi";
-import type { SiloByHeaderKey } from "../models/SiloModel";
+import type { Silo, SiloByHeaderKey } from "../models/SiloModel";
 import dayjs from "dayjs";
 
 /* ======================= UTILITY FUNCTIONS ======================= */
@@ -99,12 +99,25 @@ export default function GroupedTableSTD({
     useState<HeaderMappingRecord | null>(null);
 
   /* ================= INIT DATA ================= */
+  // Dùng ref để track initialData reference, tránh loop do khuVucList/defaultNguyenNhienLieu
+  // luôn là array mới trên mỗi render của parent
+  const prevInitialDataRef = useRef<any[]>(initialData);
+
   useEffect(() => {
+    const initialDataChanged = prevInitialDataRef.current !== initialData;
+    prevInitialDataRef.current = initialData;
+
     if (initialData.length) {
-      setRows(initialData);
-      rowsRef.current = initialData;
+      // Chỉ update rows khi initialData thực sự thay đổi (reference mới từ parent state)
+      if (initialDataChanged) {
+        setRows(initialData);
+        rowsRef.current = initialData;
+      }
       return;
     }
+
+    // Init empty rows — chỉ chạy khi chưa có dữ liệu và initialData rỗng
+    if (!initialDataChanged) return;
 
     const init: any[] = [];
     khuVucList.forEach((kv: string) => {
@@ -206,47 +219,43 @@ export default function GroupedTableSTD({
   }, [khuVucConfig]);
 
   /* ================= LOAD SILOS FOR HEADERKEY ================= */
-  const loadSilosForHeaderKey = useCallback(
-    async (rowKey: string, headerKeyId: number, khuVuc?: string) => {
-      if (!ngaySX || !headerKeyId) {
-        console.log("loadSilosForHeaderKey: missing ngaySX or headerKeyId", { ngaySX, headerKeyId });
-        return;
-      }
-
-      try {
-        const ngaySXStr = dayjs(ngaySX).format("YYYY-MM-DD");
-        const bieuMau = khuVuc ? getBieuMauFromKhuVuc(khuVuc) : null;
-        console.log("loadSilosForHeaderKey: calling API", { rowKey, headerKeyId, ngaySXStr, nhaMay, bieuMau, khuVuc });
-        
-        const silos = await SiloServiceApi.getSilosByHeaderKey({
-          headerKeyId,
-          ngaySX: ngaySXStr,
-          nhaMay,
-          bieuMau,
-        });
-
-        console.log("loadSilosForHeaderKey: received silos", silos);
-
-        // Nếu chỉ có 1 silo, tự động chọn
-        if (silos.length === 1) {
-          const silo = silos[0];
-          console.log("loadSilosForHeaderKey: auto-selecting silo", silo);
-          commitCell(rowKey, "siloId", silo.siloId);
-          commitCell(rowKey, "tenSilo", silo.tenSilo);
-          if (silo.theTich !== undefined && silo.theTich !== null) {
-            commitCell(rowKey, "theTich", silo.theTich);
-          }
-        } else if (silos.length > 1) {
-          console.log("loadSilosForHeaderKey: multiple silos found, user needs to select", silos.length);
-        } else {
-          console.log("loadSilosForHeaderKey: no silos found");
-        }
-      } catch (error) {
-        console.error("Failed to load silos for headerkey:", error);
-      }
-    },
-    [ngaySX, commitCell, nhaMay, getBieuMauFromKhuVuc]
-  );
+  // Tạm comment: load silo theo headerKey — thay bằng autocomplete search tất cả silo theo nhaMay
+  // const loadSilosForHeaderKey = useCallback(
+  //   async (rowKey: string, headerKeyId: number, khuVuc?: string) => {
+  //     if (!ngaySX || !headerKeyId) {
+  //       console.log("loadSilosForHeaderKey: missing ngaySX or headerKeyId", { ngaySX, headerKeyId });
+  //       return;
+  //     }
+  //     try {
+  //       const ngaySXStr = dayjs(ngaySX).format("YYYY-MM-DD");
+  //       const bieuMau = khuVuc ? getBieuMauFromKhuVuc(khuVuc) : null;
+  //       console.log("loadSilosForHeaderKey: calling API", { rowKey, headerKeyId, ngaySXStr, nhaMay, bieuMau, khuVuc });
+  //       const silos = await SiloServiceApi.getSilosByHeaderKey({
+  //         headerKeyId,
+  //         ngaySX: ngaySXStr,
+  //         nhaMay,
+  //         bieuMau,
+  //       });
+  //       console.log("loadSilosForHeaderKey: received silos", silos);
+  //       if (silos.length === 1) {
+  //         const silo = silos[0];
+  //         console.log("loadSilosForHeaderKey: auto-selecting silo", silo);
+  //         commitCell(rowKey, "siloId", silo.siloId);
+  //         commitCell(rowKey, "tenSilo", silo.tenSilo);
+  //         if (silo.theTich !== undefined && silo.theTich !== null) {
+  //           commitCell(rowKey, "theTich", silo.theTich);
+  //         }
+  //       } else if (silos.length > 1) {
+  //         console.log("loadSilosForHeaderKey: multiple silos found, user needs to select", silos.length);
+  //       } else {
+  //         console.log("loadSilosForHeaderKey: no silos found");
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to load silos for headerkey:", error);
+  //     }
+  //   },
+  //   [ngaySX, commitCell, nhaMay, getBieuMauFromKhuVuc]
+  // );
 
   /* ================= OPEN MAPPING MODAL ================= */
   const openMappingModal = useCallback((row: any) => {
@@ -377,10 +386,10 @@ export default function GroupedTableSTD({
                           return;
                         }
                         commitCell(r.key, "idNguyenNhienLieu", id);
-                        // Load silo khi chọn headerkey
-                        if (ngaySX && id) {
-                          loadSilosForHeaderKey(r.key, id, r.khuVuc);
-                        }
+                        // Tạm comment: tự động load silo theo headerkey — giờ dùng autocomplete search
+                        // if (ngaySX && id) {
+                        //   loadSilosForHeaderKey(r.key, id, r.khuVuc);
+                        // }
                       }, 0);
                     }}
                     onSelectOption={(option) => {
@@ -392,10 +401,10 @@ export default function GroupedTableSTD({
                           if (option.tyTrong !== undefined && option.tyTrong !== null) {
                             commitCell(r.key, "tyTrong", option.tyTrong);
                           }
-                          // Load silo khi chọn headerkey
-                          if (ngaySX && option.id) {
-                            loadSilosForHeaderKey(r.key, option.id, r.khuVuc);
-                          }
+                          // Tạm comment: tự động load silo theo headerkey — giờ dùng autocomplete search
+                          // if (ngaySX && option.id) {
+                          //   loadSilosForHeaderKey(r.key, option.id, r.khuVuc);
+                          // }
                         } else {
                           commitCell(r.key, "nguyenNhienLieu", "");
                           commitCell(r.key, "tyTrong", null);
@@ -410,40 +419,26 @@ export default function GroupedTableSTD({
               }
 
               if (c.dataIndex === "tenSilo") {
-                // Render cột Silo với CommonAutocomplete
-                const bieuMau = getBieuMauFromKhuVuc(r.khuVuc);
+                // Render cột Silo với CommonAutocomplete - autocomplete search tất cả silo thuộc nhaMay
                 return (
-                  <CommonAutocomplete<SiloByHeaderKey>
+                  <CommonAutocomplete<Silo>
                     value={r.siloId ?? null}
-                    searchApi={async () => {
-                      // Nếu có headerkeyId, load silo từ API
-                      if (r.idNguyenNhienLieu && ngaySX) {
-                        const silos = await SiloServiceApi.getSilosByHeaderKey({
-                          headerKeyId: r.idNguyenNhienLieu,
-                          ngaySX: dayjs(ngaySX).format("YYYY-MM-DD"),
-                          nhaMay,
-                          bieuMau,
-                        });
-                        return {
-                          data: silos,
-                          totalRecords: silos.length,
-                          page: 1,
-                          pageSize: silos.length,
-                        };
-                      }
-                      return { data: [], totalRecords: 0, page: 1, pageSize: 0 };
+                    searchApi={async ({ searchKey } = {}) => {
+                      // Search tất cả silo thuộc nhaMay, lọc theo từ khóa người dùng nhập
+                      const res = await SiloServiceApi.search({ nhaMay, searchKey, tinhTrang: true });
+                      return res;
                     }}
                     mapOption={(item) => ({
-                      value: item.siloId,
+                      value: item.id,
                       label: item.tenSilo,
                     })}
-                    placeholder="Chọn silo"
+                    placeholder="Tìm silo..."
                     pageSize={50}
-                    disabled={!editable || !r.idNguyenNhienLieu}
+                    disabled={!editable}
                     allowClear
                     style={{ width: "100%" }}
                     size="small"
-                    fallbackLabelBuilder={(value) => `Silo ID: ${value}`}
+                    fallbackLabelBuilder={(value) => r.tenSilo || `Silo ID: ${value}`}
                     onChange={(siloId, option) => {
                       // Wrap trong setTimeout để tránh setState trong render
                       setTimeout(() => {
@@ -509,7 +504,7 @@ export default function GroupedTableSTD({
     }
 
     return [khuVucColumn, ...base];
-  }, [columns, editable, defaultViTri, commitCell, deleteRow, openMappingModal, updateCell, ngaySX, loadSilosForHeaderKey, nhaMay, getBieuMauFromKhuVuc]);
+  }, [columns, editable, defaultViTri, commitCell, deleteRow, openMappingModal, updateCell, ngaySX, nhaMay]);
 
   if (loading) return <div>Đang tải...</div>;
 
