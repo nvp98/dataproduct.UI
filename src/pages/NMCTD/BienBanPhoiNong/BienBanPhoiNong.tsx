@@ -1,10 +1,11 @@
-import { Button, Card, Space, Table, Tag } from "antd";
+import { Button, Card, Table, Tag, DatePicker, message, Col } from "antd";
 // import PdfMakeExample from "../../components/PdfMakeExample";
 import CTD_BB_Phoinong from "../../../utils/BM_config/CTD_BB_Phoinong.json";
-import { EyeOutlined } from "@ant-design/icons";
-import { useMemo } from "react";
-import dayjs from "dayjs";
+import { EyeOutlined, DownloadOutlined } from "@ant-design/icons";
+import { useMemo, useState } from "react";
+import dayjs, { type Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
+import { CtdPhoiNongApi } from "../../../services/CtdPhoiNongApi";
 // import { PhieuApi } from "../../../services/PhieuApi";
 import PhieuFilterCard, {
   type FilterFieldConfig,
@@ -37,6 +38,48 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     maBm: config.code as string,
     fixedFilters,
   });
+
+  // State for tracking selected date range (from filter) for export
+  const [selectedDateRange, setSelectedDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  // Handler for exporting Excel for P.KH
+  const handleExportExcelPKH = async () => {
+    try {
+      setExportLoading(true);
+
+      // Use selected date range if available, otherwise use current month
+      const startDate = selectedDateRange?.[0] || dayjs().startOf("month");
+      const endDate = selectedDateRange?.[1] || dayjs().endOf("month");
+
+      const params = {
+        TuNgay: startDate.format("YYYY-MM-DD"),
+        DenNgay: endDate.format("YYYY-MM-DD"),
+      };
+      const response = await CtdPhoiNongApi.exportExcelPKH(params);
+
+      const blob = new Blob([response as any], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `TongHop_Bien_ban_giao_nhan_phoi_nong_${startDate.format("YYYYMMDD")}_${endDate.format("YYYYMMDD")}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success("Xuất file Excel thành công!");
+    } catch (error) {
+      console.error("Export Excel failed:", error);
+      message.error("Xuất file thất bại!");
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const statusConfig: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang xử lý" },
@@ -223,12 +266,14 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       label: "Số phiếu",
       type: "text",
       placeholder: "Số phiếu...",
+      span: { xs: 24, sm: 8, md: 4 },
     },
     {
       key: "ngaySX",
       label: "Ngày sản xuất",
       type: "dateRange",
       placeholder: "Khoảng ngày",
+      span: { xs: 24, sm: 12, md: 6 },
     },
     {
       key: "ca",
@@ -239,6 +284,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
         { label: "Ca ngày (1)", value: 1 },
         { label: "Ca đêm (2)", value: 2 },
       ],
+      span: { xs: 24, sm: 6, md: 3 },
     },
     // {
     //   key: "tinhTrang",
@@ -288,9 +334,40 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilter}
-        onClearFilter={handleClearFilter}
+        onClearFilter={() => {
+          setSelectedDateRange(null);
+          handleClearFilter();
+        }}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        onFilterFieldChange={(key, value) => {
+          // Track date range changes for export (even before clicking Filter)
+          if (
+            key === "ngaySX" &&
+            Array.isArray(value) &&
+            value.length === 2 &&
+            value[0] &&
+            value[1]
+          ) {
+            setSelectedDateRange([value[0] as Dayjs, value[1] as Dayjs]);
+          } else if (key === "ngaySX" && !value) {
+            setSelectedDateRange(null);
+          }
+        }}
+        extraFilters={
+          <>
+            <Col>
+              <Button
+                type="default"
+                icon={<DownloadOutlined />}
+                onClick={handleExportExcelPKH}
+                loading={exportLoading}
+              >
+                Xuất Excel Tổng Hợp
+              </Button>
+            </Col>
+          </>
+        }
       />
       <Card>
         <Table<TableRecord>

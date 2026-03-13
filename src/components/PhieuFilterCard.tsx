@@ -44,6 +44,7 @@ export interface PhieuFilterCardProps {
   initialValues?: PhieuFilterValues; // Giá trị ban đầu
   mergeFilters?: PhieuFilterValues; // Các filter bổ sung sẽ được merge vào filter object
   filterFields?: FilterFieldConfig[]; // Config cho các filter fields động
+  onFilterFieldChange?: (key: string, value: any) => void; // Callback khi field thay đổi
 }
 
 const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
@@ -57,10 +58,19 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   initialValues,
   mergeFilters,
   filterFields = [],
+  onFilterFieldChange,
 }) => {
   // State cho các filter fields động
-  const [filterStates, setFilterStates] = useState<Record<string, string | number | [Dayjs | null, Dayjs | null] | null | undefined>>(() => {
-    const states: Record<string, string | number | [Dayjs | null, Dayjs | null] | null | undefined> = {};
+  const [filterStates, setFilterStates] = useState<
+    Record<
+      string,
+      string | number | [Dayjs | null, Dayjs | null] | null | undefined
+    >
+  >(() => {
+    const states: Record<
+      string,
+      string | number | [Dayjs | null, Dayjs | null] | null | undefined
+    > = {};
     filterFields.forEach((field) => {
       if (field.type === "dateRange") {
         states[field.key] = null;
@@ -75,45 +85,56 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   });
 
   const [soPhieu, setSoPhieu] = useState<string>(initialValues?.soPhieu || "");
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(
     initialValues?.fromDate && initialValues?.toDate
       ? null // Có thể parse từ string nếu cần
-      : null
+      : null,
   );
 
   const handleFilter = () => {
     const filterObj: PhieuFilterValues = {};
-    
+
     // Xử lý soPhieu (backward compatibility)
     if (soPhieu?.trim()) {
       filterObj.soPhieu = soPhieu.trim();
     }
-    
+
     // Xử lý dateRange (backward compatibility)
     if (dateRange && dateRange.length === 2 && dateRange[0] && dateRange[1]) {
       filterObj.fromDate = dateRange[0].format("YYYY-MM-DD");
       filterObj.toDate = dateRange[1].format("YYYY-MM-DD");
     }
-    
+
     // Xử lý các filter fields động
     filterFields.forEach((field) => {
       const value = filterStates[field.key];
       if (value !== null && value !== undefined && value !== "") {
-        if (field.type === "dateRange" && Array.isArray(value) && value.length === 2 && value[0] && value[1]) {
+        if (
+          field.type === "dateRange" &&
+          Array.isArray(value) &&
+          value.length === 2 &&
+          value[0] &&
+          value[1]
+        ) {
           filterObj[`${field.key}From`] = value[0].format("YYYY-MM-DD");
           filterObj[`${field.key}To`] = value[1].format("YYYY-MM-DD");
         } else if (field.type !== "dateRange") {
           // Chỉ gán nếu không phải dateRange (dateRange đã được xử lý riêng)
-          filterObj[field.key] = typeof value === "string" || typeof value === "number" ? value : undefined;
+          filterObj[field.key] =
+            typeof value === "string" || typeof value === "number"
+              ? value
+              : undefined;
         }
       }
     });
-    
+
     // Merge với các filter bổ sung nếu có
     if (mergeFilters) {
       Object.assign(filterObj, mergeFilters);
     }
-    
+
     onFilter(filterObj);
   };
 
@@ -121,12 +142,19 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
     setSoPhieu("");
     setDateRange(null);
     // Clear các filter fields động
-    const clearedStates: Record<string, string | number | [Dayjs | null, Dayjs | null] | null | undefined> = {};
+    const clearedStates: Record<
+      string,
+      string | number | [Dayjs | null, Dayjs | null] | null | undefined
+    > = {};
     filterFields.forEach((field) => {
       clearedStates[field.key] = field.type === "dateRange" ? null : "";
+      // Notify parent about cleared fields
+      if (onFilterFieldChange) {
+        onFilterFieldChange(field.key, field.type === "dateRange" ? null : "");
+      }
     });
     setFilterStates(clearedStates);
-    
+
     if (onClearFilter) {
       onClearFilter();
     } else {
@@ -135,8 +163,15 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
     }
   };
 
-  const updateFilterState = (key: string, value: string | number | [Dayjs | null, Dayjs | null] | null) => {
+  const updateFilterState = (
+    key: string,
+    value: string | number | [Dayjs | null, Dayjs | null] | null,
+  ) => {
     setFilterStates((prev) => ({ ...prev, [key]: value }));
+    // Notify parent component about field change
+    if (onFilterFieldChange) {
+      onFilterFieldChange(key, value);
+    }
   };
 
   const renderFilterField = (field: FilterFieldConfig) => {
@@ -163,8 +198,19 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
               type="number"
               placeholder={field.placeholder || field.label}
               allowClear
-              value={typeof rawValue === "number" ? rawValue : typeof rawValue === "string" ? rawValue : ""}
-              onChange={(e) => updateFilterState(field.key, e.target.value ? Number(e.target.value) : "")}
+              value={
+                typeof rawValue === "number"
+                  ? rawValue
+                  : typeof rawValue === "string"
+                    ? rawValue
+                    : ""
+              }
+              onChange={(e) =>
+                updateFilterState(
+                  field.key,
+                  e.target.value ? Number(e.target.value) : "",
+                )
+              }
               onPressEnter={handleFilter}
               min={field.min}
               max={field.max}
@@ -178,7 +224,11 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
               placeholder={field.placeholder || field.label}
               allowClear
               style={{ width: "100%" }}
-              value={rawValue !== null && rawValue !== undefined && rawValue !== "" ? rawValue : undefined}
+              value={
+                rawValue !== null && rawValue !== undefined && rawValue !== ""
+                  ? rawValue
+                  : undefined
+              }
               onChange={(val) => updateFilterState(field.key, val ?? "")}
               options={field.options}
             />
@@ -190,7 +240,11 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
             <DatePicker.RangePicker
               style={{ width: "100%" }}
               format="DD/MM/YYYY"
-              placeholder={field.placeholder ? [field.placeholder, field.placeholder] : ["Từ ngày", "Đến ngày"]}
+              placeholder={
+                field.placeholder
+                  ? [field.placeholder, field.placeholder]
+                  : ["Từ ngày", "Đến ngày"]
+              }
               value={Array.isArray(rawValue) ? rawValue : null}
               onChange={(dates) => updateFilterState(field.key, dates)}
             />
@@ -209,9 +263,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
       <Row gutter={[16, 16]}>
         {useCustomFields ? (
           // Render các filter fields từ config
-          <>
-            {filterFields.map((field) => renderFilterField(field))}
-          </>
+          <>{filterFields.map((field) => renderFilterField(field))}</>
         ) : (
           // Render mặc định (backward compatibility)
           <>
@@ -230,7 +282,9 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
                 format="DD/MM/YYYY"
                 placeholder={["Từ ngày", "Đến ngày"]}
                 value={dateRange}
-                onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null] | null)}
+                onChange={(dates) =>
+                  setDateRange(dates as [Dayjs | null, Dayjs | null] | null)
+                }
               />
             </Col>
           </>
@@ -265,4 +319,3 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
 };
 
 export default PhieuFilterCard;
-

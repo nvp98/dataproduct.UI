@@ -3,7 +3,7 @@ import CTD_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/CTD_BB_GiaoNhan
 import { Button, Card, Form, Input, Typography, message, Table } from "antd";
 import { FilePdfOutlined, FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { useNavigate, useParams } from "react-router-dom";
@@ -11,7 +11,7 @@ import CustomFormTable from "../../../components/CustomFormTable";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
-import { phoiNhapKhoApi, sanLuongPhoiApi } from "../../../services/BMDucCTDApi";
+import { phoiNhapKhoApi } from "../../../services/BMDucCTDApi";
 
 interface TableRow {
   key?: string;
@@ -35,7 +35,12 @@ const TaoPhieuPhoiNhapKho = () => {
     idphongBan?: number | null;
     pheDuyet?: PheDuyetItem[];
     isClone?: boolean;
+    idPhieuGoc?: string | null;
   }>({});
+
+  // ★ Ref luôn tươi – tránh stale closure trong handleStatusChange
+  const phieuInfoRef = useRef(phieuInfo);
+  useEffect(() => { phieuInfoRef.current = phieuInfo; }, [phieuInfo]);
 
   // Theo dõi thay đổi trên các field chính
   const kip = Form.useWatch("kip", form);
@@ -243,11 +248,16 @@ const TaoPhieuPhoiNhapKho = () => {
            }
  
            setPhieuInfo({
-             tinhTrang: (res as any)?.tinhTrang ?? 0,
+             tinhTrang:  (res as any)?.tinhTrang  ?? 0,
              nguoiTaoId: (res as any)?.nguoiTaoId ?? null,
              idphongBan: (res as any)?.idphongBan ?? null,
-             pheDuyet: (res as any)?.pheDuyet || data.pheDuyet || [],
-             isClone: (res as any)?.isClone ?? false,
+             pheDuyet:   (res as any)?.pheDuyet   || data.pheDuyet || [],
+             isClone:    (res as any)?.isClone    ?? false,
+             // ★ Đọc cả 3 biến thể tên field để an toàn
+             idPhieuGoc: (res as any)?.idPhieuGoc
+                      ?? (res as any)?.iD_PhieuGoc
+                      ?? (res as any)?.ID_PhieuGoc
+                      ?? null,
            });
          }
        } else {
@@ -326,85 +336,126 @@ const TaoPhieuPhoiNhapKho = () => {
     };
   }, [getUserInfo, form, config.signatures, config.code, config.headerFields, config.prefix, tableData]);
 
+  const handleStatusChange = useCallback(
+    async (idPhieu: string, newStatus: number) => {
+      const { isClone, idPhieuGoc } = phieuInfoRef.current; // ★ luôn fresh
+
+      try {
+        const formValues = await form.validateFields();
+
+        // ── HoanThanh → INSERT ───────────────────────────────────────────
+        if (newStatus === TrangThaiPhieuConst.HoanThanh) {
+          await phoiNhapKhoApi.insertPhoiNhapKho({
+            idPhieu, soPhieu: soPhieu || "",
+            ngaySX:  formValues.NgaySX ? formValues.NgaySX.format("YYYY-MM-DD") : "",
+            kip:     formValues.kip    || "",
+            ca:      formValues.ca     || 0,
+            mayDuc:  formValues.mayDuc || 0,
+            table1: tableData.map((row) => ({
+              me:            row.me            || "",
+              mac:           row.mac           || "",
+              kichThuoc:     row.kichThuoc     || "",
+              stLoai1:       Number(row.stLoai1)       || 0,
+              klLoai1:       Number(row.klLoai1)       || 0,
+              stPhoiNgan:    Number(row.stPhoiNgan)    || 0,
+              cdPhoiNgan:    Number(row.cdPhoiNgan)    || 0,
+              klPhoiNgan:    Number(row.klPhoiNgan)    || 0,
+              stLoai2:       Number(row.stLoai2)       || 0,
+              klLoai2:       Number(row.klLoai2)       || 0,
+              stLoai2tp:     Number(row.stLoai2tp)     || 0,
+              klLoai2tp:     Number(row.klLoai2tp)     || 0,
+              stLoai3:       Number(row.stLoai3)       || 0,
+              klLoai3:       Number(row.klLoai3)       || 0,
+              tongSoThanh:   Number(row.tongSoThanh)   || 0,
+              tongKhoiLuong: Number(row.tongKhoiLuong) || 0,
+            })),
+          });
+          message.success("Đã insert dữ liệu phôi nhập kho thành công!");
+          return;
+        }
+
+        // ── DaThuHoi → DELETE (+ RESTORE cha nếu là clone) ───────────────
+        if (newStatus === TrangThaiPhieuConst.DaThuHoi) {
+          await phoiNhapKhoApi.deletePhoiNhapKhoByIdPhieu(idPhieu);
+          message.success("Đã xóa dữ liệu phôi nhập kho!");
+          if (isClone && idPhieuGoc) {
+            await phoiNhapKhoApi.restorePhoiNhapKhoByIdPhieu(idPhieuGoc);
+            message.success("Đã khôi phục dữ liệu phiếu cha!");
+          }
+          return;
+        }
+
+        // ── KhongXacNhan → DELETE clone + RESTORE cha ────────────────────
+        if (newStatus === TrangThaiPhieuConst.KhongXacNhan) {
+          if (isClone && idPhieuGoc) {
+            try {
+              await phoiNhapKhoApi.deletePhoiNhapKhoByIdPhieu(idPhieu);
+            } catch {
+              // clone chưa có data → không sao
+            }
+            await phoiNhapKhoApi.restorePhoiNhapKhoByIdPhieu(idPhieuGoc);
+            message.success("Đã khôi phục dữ liệu phôi nhập kho của phiếu cha!");
+          }
+        }
+      } catch (error: any) {
+        console.error("❌ Error in handleStatusChange:", error);
+        message.error(`Lỗi: ${error?.response?.data?.message || error?.message || "Không xác định"}`);
+      }
+    },
+    [form, soPhieu, tableData]
+    // ★ KHÔNG đưa phieuInfo vào deps – đọc từ phieuInfoRef.current
+  );
+
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
+
+      // ── DeNghiHieuChinh → navigate sang clone (giữ nguyên data cha) ─────
       if (context?.newPhieuId) {
         navigate(`/taophieubienbanphoinapkho/${context.newPhieuId}`, {
           replace: true,
         });
         return;
       }
-      
-      // Reload lại dữ liệu phiếu sau khi action thành công
+
+      if (!idphieu) return;
+
+      try {
+        // ★ Đọc prevStatus từ ref để luôn fresh, tránh stale closure
+        const prevStatus = phieuInfoRef.current.tinhTrang;
+
+        const res: any = await PhieuApi.getDetail(idphieu);
+        const newStatus = res?.tinhTrang;
+
+        // ── HoanThanh → INSERT + HIDE cha (nếu là clone) ─────────────────
+        if (
+          newStatus  === TrangThaiPhieuConst.HoanThanh &&
+          prevStatus !== TrangThaiPhieuConst.HoanThanh
+        ) {
+          await handleStatusChange(idphieu, TrangThaiPhieuConst.HoanThanh);
+
+          // Dùng res (fresh từ API) để lấy idPhieuGoc, không dùng closure cũ
+          const parentId = res?.idPhieuGoc ?? res?.iD_PhieuGoc ?? res?.ID_PhieuGoc;
+          if (res?.isClone && parentId) {
+            try {
+              await phoiNhapKhoApi.hidePhoiNhapKhoByIdPhieu(parentId);
+            } catch {
+              // cha chưa có data → không block flow
+            }
+          }
+        }
+
+        // ── KhongXacNhan → đã xử lý trong handleStatusChange, skip ────────
+
+      } catch {
+        // bỏ qua lỗi fetch
+      }
+
       await initData();
     },
-    [navigate, initData]
+    [navigate, initData, idphieu, handleStatusChange]
+    // phieuInfoRef không cần deps – dùng ref
   );
-  
-  const handleStatusChange = useCallback(
-    async (idPhieu: string, newStatus: number) => {
-      console.log("🔔 handleStatusChange called:", { idPhieu, newStatus });
-      
-      // Xử lý insert/delete dựa trên trạng thái mới
-      try {
-        const formValues = await form.validateFields();
-        console.log("✅ Form validated:", formValues);
 
-        // Nếu đơn đã phê duyệt hoàn tất => Insert
-        if (newStatus === TrangThaiPhieuConst.HoanThanh) {
-          console.log("📥 Preparing to INSERT phoi nhap kho...");
-          
-          const dataToProcess = tableData;
-          
-          const payload = {
-            idPhieu: idPhieu,
-            soPhieu: soPhieu || "",
-            ngaySX: formValues.NgaySX ? formValues.NgaySX.format("YYYY-MM-DD") : "",
-            kip: formValues.kip || "",
-            ca: formValues.ca || 0,
-            mayDuc: formValues.mayDuc || 0,
-            table1: dataToProcess.map((row) => ({
-              me: row.me || "",
-              mac: row.mac || "",
-              kichThuoc: row.kichThuoc || "",
-              stLoai1: Number(row.stLoai1) || 0,
-              klLoai1: Number(row.klLoai1) || 0,
-              stPhoiNgan: Number(row.stPhoiNgan) || 0,
-              cdPhoiNgan: Number(row.cdPhoiNgan) || 0,
-              klPhoiNgan: Number(row.klPhoiNgan) || 0,
-              stLoai2: Number(row.stLoai2) || 0,
-              klLoai2: Number(row.klLoai2) || 0,
-              stLoai2tp: Number(row.stLoai2tp) || 0,
-              klLoai2tp: Number(row.klLoai2tp) || 0,
-              stLoai3: Number(row.stLoai3) || 0,
-              klLoai3: Number(row.klLoai3) || 0,
-              tongSoThanh: Number(row.tongSoThanh) || 0,
-              tongKhoiLuong: Number(row.tongKhoiLuong) || 0,
-            })),
-          };
-          
-         // console.log("📦 Insert phoi nhap kho payload:", payload);
-          await phoiNhapKhoApi.insertPhoiNhapKho(payload);
-          // console.log("✅ INSERT phoi nhap kho successful!");
-          // message.success("Đã insert dữ liệu phôi nhập kho thành công!");
-        }
-        
-        // Nếu đơn đã thu hồi => Delete
-        if (newStatus === TrangThaiPhieuConst.DaThuHoi) {
-        //  console.log("🗑️ Preparing to DELETE phoi nhap kho...");
-          await phoiNhapKhoApi.deletePhoiNhapKhoByIdPhieu(idPhieu);
-          // console.log("✅ DELETE phoi nhap kho successful!");
-          // message.success("Đã xóa dữ liệu phôi nhập kho!");
-        }
-      } catch (error: any) {
-        console.error("❌ Error in handleStatusChange:", error);
-        console.error("Error details:", error?.response?.data || error?.message);
-        // Hiện error để user biết
-        message.error(`Lỗi: ${error?.response?.data?.message || error?.message || "Không xác định"}`);
-      }
-    },
-    [form, soPhieu, tableData]
-  );
 
   const handleExportPdf = async () => {
     if (!idphieu) {
