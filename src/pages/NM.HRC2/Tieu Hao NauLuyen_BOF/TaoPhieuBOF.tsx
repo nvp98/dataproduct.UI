@@ -62,7 +62,11 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
     TrangThaiPhieuConst.DangPheDuyet,
     TrangThaiPhieuConst.DaChot,
   ].includes(currentTinhTrang);
-  const isFormLocked = !(currentTinhTrang === TrangThaiPhieuConst.DangLuu || currentTinhTrang === TrangThaiPhieuConst.DaThuHoi);
+  const isFormLocked = !(
+    currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
+    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+    currentTinhTrang === TrangThaiPhieuConst.HieuChinh
+  );
 
   // Xóa logic thêm adjust column thủ công - giờ tự động từ dữ liệu phân bổ
   const addAdjustColumn = useCallback(() => {

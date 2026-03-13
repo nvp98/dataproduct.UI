@@ -7,6 +7,7 @@ export const MenuDataDashboard = [
       {
         code: "nhatkyquangtrunghoa",
         title: "BM.06/QT.05.01 NHẬT KÝ THAO TÁC PHỐI TRỘN QUẶNG TRUNG HÒA",
+        maBm: "NL_BB_Quangtrunghoa",
       },
     ],
   },
@@ -18,10 +19,12 @@ export const MenuDataDashboard = [
       {
         code: "bienbantheplong",
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+        maBm: "HRC1_BB_Theplong",
       },
       {
         code: "tieuhaolothoi",
         title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+        maBm: "HRC1_BB_Lothoi",
       },
       {
         code: "bienbanphoinong",
@@ -31,6 +34,7 @@ export const MenuDataDashboard = [
       {
         code: "bienbanphoinguoi",
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+        maBm: "CTD_BB_Phoinguoi",
       },
     ],
   },
@@ -42,14 +46,17 @@ export const MenuDataDashboard = [
       {
         code: "tieuhaonauluyen_lf",
         title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
+        maBm: "HRC2_BB_NauLuyen_LF",
       },
       {
         code: "tieuhaonauluyen_bof",
         title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+        maBm: "HRC2_BB_NauLuyen_BOF",
       },
       {
         code: "tieuhaonauluyen_rf",
         title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
+        maBm: "HRC2_BB_NauLuyen_RH",
       },
     ],
   },
@@ -67,6 +74,18 @@ export const MenuDataDashboard = [
       //   code: "bienbanphoinguoi",
       //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
       // },
+      {
+        code: "bienbanphoinguoi",
+        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      },
+      {
+        code: "bienbansanluongphoi",
+        title: "BM.11/QT.05.11 BIÊN BẢN XÁC NHẬN SẢN LƯỢNG PHÔI THÉP",
+      },
+      {
+        code: "bienbanphoinapkho",
+        title: "BM.12/QT.05.11 BIÊN BẢN GIAO NHẬN PHÔI NHẬP KHO",
+      },
     ],
   },
   {

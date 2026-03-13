@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Card,
   Descriptions,
@@ -8,17 +8,12 @@ import {
   Row,
   Col,
   message,
-  Space,
-  Button,
-  Modal,
-  Input,
 } from "antd";
 import dayjs from "dayjs";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
-import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
-import { PheDuyetApi } from "../../../services/PheDuyetApi";
+import { phieuActionService } from "../../../services/PhieuActionService";
 
 const { Title, Text } = Typography;
 
@@ -32,39 +27,30 @@ type DynamicColumnsMap = Record<string, DynamicColumnMeta[]>;
 
 const ChiTietTieuHaoNauLuyen_BOF = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { idphieu } = location.state || {};
-  const { pheduyet } = location.state || {};
 
   const config = HRC2_BB_NauLuyen_BOF;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // thông tin phê duyệt
-  const [datapheduyet, setDataPheDuyet] = useState<any>(null);
-  const [action, setAction] = useState(""); // "approve" hoặc "reject"
-  const [open, setOpen] = useState(false);
-  const [ghiChu, setGhiChu] = useState("");
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await PhieuApi.getDetail(idphieu);
+      setData(res);
+    } catch (error) {
+      console.error("Lỗi tải dữ liệu phiếu:", error);
+      message.error("Không thể tải dữ liệu phiếu");
+    } finally {
+      setLoading(false);
+    }
+  }, [idphieu]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Thông tin phê duyệt
-        if (pheduyet != null) {
-          setDataPheDuyet(pheduyet);
-        }
-        setLoading(true);
-        const res = await PhieuApi.getDetail(idphieu);
-
-        setData(res);
-      } catch (error) {
-        console.error("Lỗi tải dữ liệu phiếu:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadData();
-  }, [idphieu, pheduyet]);
+  }, [loadData]);
 
   //   if (!data) return null;
 
@@ -118,98 +104,56 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
       section.sectionType === "table" && section.key === "table2"
   );
   const columns2 = tableSection2?.columns || [];
-  // xử lý phiếu
-  const handleSubmit = async () => {
-    if (!action) return;
-    try {
-      setLoading(true);
-      await PheDuyetApi.putData(pheduyet?.id, {
-        ...pheduyet,
-        tinhTrang: action === "approve" ? 1 : 2,
-        ghiChu: ghiChu,
-      });
-      message.success(
-        action === "approve"
-          ? "Xác nhận phiếu thành công!"
-          : "Đã từ chối phiếu!"
-      );
-      setOpen(false);
-      setGhiChu("");
-    } catch (error) {
-      console.error("Lỗi khi gửi phê duyệt:", error);
-      message.error("Lỗi khi gửi phê duyệt, vui lòng thử lại!");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getUserInfo = useCallback(() => {
+    const stored = localStorage.getItem("userinfo");
+    return stored ? JSON.parse(stored) : {};
+  }, []);
 
-  const openModal = (type: any) => {
-    setAction(type);
-    setOpen(true);
-  };
+  const handleActionSuccess = useCallback(
+    async (context?: { newPhieuId?: string }) => {
+      if (context?.newPhieuId) {
+        navigate("/taophieutieuhaonauluyen_bof", {
+          replace: true,
+          state: { idphieu: context.newPhieuId },
+        });
+        return;
+      }
+      await loadData();
+    },
+    [loadData, navigate]
+  );
+
+  const actionButtons = useMemo(() => {
+    if (!data || !idphieu) return null;
+    const userInfo = getUserInfo();
+    const buttons = phieuActionService.getActionButtons({
+      phieuId: idphieu,
+      tinhTrang: data.tinhTrang ?? 0,
+      isClone: data.isClone ?? false,
+      currentUserId: userInfo.iD_TaiKhoan ?? null,
+      currentUserPhongBanId: userInfo.iD_PhongBan ?? null,
+      currentUserTenNgan: userInfo.tenNgan ?? null,
+      nguoiTaoId: data.nguoiTaoId ?? null,
+      phieuPhongBanId: data.idphongBan ?? null,
+      pheDuyet: data.pheDuyet ?? [],
+      onSuccess: handleActionSuccess,
+      onError: (error) => {
+        console.error("Action error:", error);
+        message.error((error as any)?.message ?? "Không thể thực hiện thao tác");
+      },
+    });
+
+    if (buttons.length === 0) return null;
+    // Ở trang chi tiết, không chỉnh form nên không cần getFormData
+    return phieuActionService.renderActionButtons(buttons, idphieu || "");
+  }, [data, idphieu, getUserInfo, handleActionSuccess]);
 
   return (
-    <>
-      <div style={{ textAlign: "right" }}>
-        <Space>
-          {datapheduyet && datapheduyet?.tinhTrang === 0 && (
-            <>
-              <Button
-                type="primary"
-                icon={<CheckOutlined />}
-                onClick={() => openModal("approve")}
-              >
-                Xác nhận
-              </Button>
-              {/* Nút Từ chối phiếu */}
-              <Button
-                danger
-                icon={<CloseOutlined />}
-                onClick={() => openModal("reject")}
-              >
-                Từ chối
-              </Button>
-            </>
-          )}
-
-          {/* Nút in / xuất PDF */}
-          {/* <Button icon={<PrinterOutlined />} onClick={() => window.print()}>
-            In phiếu
-          </Button> */}
-        </Space>
-
-        <Modal
-          title={
-            action === "approve"
-              ? "Nhập nội dung phê duyệt"
-              : "Nhập lý do từ chối"
-          }
-          open={open}
-          okText={
-            action === "approve" ? "Xác nhận phê duyệt" : "Xác nhận từ chối"
-          }
-          cancelText="Hủy"
-          confirmLoading={loading}
-          onOk={handleSubmit}
-          onCancel={() => setOpen(false)}
-        >
-          <Input.TextArea
-            rows={3}
-            placeholder={
-              action === "approve"
-                ? "Nhập ghi chú phê duyệt (nếu có)..."
-                : "Nhập lý do từ chối..."
-            }
-            value={ghiChu}
-            onChange={(e) => setGhiChu(e.target.value)}
-          />
-        </Modal>
-      </div>
-      <Card
-        bordered
-        style={{ padding: 24, background: "#fff" }}
-        loading={loading}
-      >
+    <Card
+      bordered
+      style={{ padding: 24, background: "#fff" }}
+      loading={loading}
+    >
         {/* Logo + tên công ty */}
         <div
           style={{
@@ -333,8 +277,21 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
             );
           })}
         </Row>
+
+        {/* Action buttons dưới cùng giống màn tạo phiếu */}
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 32,
+            display: "flex",
+            gap: 8,
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {actionButtons}
+        </div>
       </Card>
-    </>
   );
 };
 

@@ -45,7 +45,14 @@ import Tao_STD from "../pages/NM.HRC2/STD_NhapXuatTon/Tao_STD";
 import ChiTiet_STD from "../pages/NM.HRC2/STD_NhapXuatTon/ChiTiet_STD";
 import ChiTietPhieuPhoiNguoi from "../pages/NMCTD/BienBanPhoiNguoi/ChiTietPhieuPhoiNguoi";
 import PhanQuyenBieuMau from "../pages/Settings/PhanQuyenBieuMau";
+import ChiTietPhoiNhapKho from "../pages/NMCTD/BienBanPhoiNhapKho/ChiTietPhoiNhapKho";
+import TaoPhieuPhoiNhapKho from "../pages/NMCTD/BienBanPhoiNhapKho/TaoPhieuPhoiNhapKho";
+import BienBanPhoiNhapKho from "../pages/NMCTD/BienBanPhoiNhapKho/BienBanPhoiNhapKho";
+import ChiTietSanLuongPhoi from "../pages/NMCTD/BienBanSanLuongPhoi/ChiTietSanLuongPhoi";
+import TaoPhieuSanLuongPhoi from "../pages/NMCTD/BienBanSanLuongPhoi/TaoPhieuSanLuongPhoi";
+import BienBanSanLuongPhoi from "../pages/NMCTD/BienBanSanLuongPhoi/BienBanSanLuongPhoi";
 import QuanLySilo from "../pages/KhoDuLieu/NM.HRC2/Silo";
+
 export const routes = [
   {
     path: "/",
@@ -282,6 +289,16 @@ export const routes = [
         ),
       },
       {
+        path: "viecdentoi/tieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_BOF type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieutieuhaonauluyen_bof",
         element: (
           <RequireAuth>
@@ -312,6 +329,16 @@ export const routes = [
         ),
       },
       {
+        path: "viecdentoi/tieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_LF type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieutieuhaonauluyen_lf",
         element: (
           <RequireAuth>
@@ -337,6 +364,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TieuHaoNauLuyen_RH />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/tieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_RH type="viecdentoi" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -392,6 +429,16 @@ export const routes = [
         ),
       },
       {
+        path: "viecdentoi/bbgnphoitam",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanGiaoNhanPhoiTam type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "form-bbgnphoitam",
         element: (
           <RequireAuth>
@@ -441,6 +488,110 @@ export const routes = [
           </RequireAuth>
         ),
       },
+
+
+      // sản lượng phôi
+            {
+        path: "bienbansanluongphoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanSanLuongPhoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/bienbansanluongphoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanSanLuongPhoi type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieubienbansanluongphoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuSanLuongPhoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieubienbansanluongphoi/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuSanLuongPhoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietbienbansanluongphoi/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietSanLuongPhoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "bienbanphoinapkho",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanPhoiNhapKho />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/bienbanphoinapkho",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanPhoiNhapKho type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieubienbanphoinapkho",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuPhoiNhapKho />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieubienbanphoinapkho/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuPhoiNhapKho />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietbienbanphoinapkho/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietPhoiNhapKho />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+
       {
         path: "silo",
         element: (

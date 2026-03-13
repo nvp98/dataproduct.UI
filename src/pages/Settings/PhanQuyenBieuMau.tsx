@@ -18,7 +18,7 @@ import {
 import {
   PlusOutlined,
   DeleteOutlined,
-  SearchOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { BmQuyenXlApi } from "../../services/BmQuyenXlApi";
 import { TaiKhoanApi } from "../../services/TaiKhoanService";
@@ -28,11 +28,20 @@ import {
   canManagePermissions,
 } from "../../utils/helpers/checkAdminRole";
 
+/** 1 = Xử lý, 2 = Phê duyệt, 3 = Chốt, 4 = Xử lý + Phê duyệt */
+const QUYEN_CHUC_NANG_OPTIONS = [
+  { value: 1, label: "Xử lý (Việc tôi bắt đầu)" },
+  { value: 2, label: "Phê duyệt (Việc đến tôi)" },
+  { value: 3, label: "Chốt" },
+  { value: 4, label: "Xử lý + Phê duyệt" },
+];
+
 const PhanQuyenBieuMau = () => {
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<{ id: number; idTaiKhoan: number; maBm: string; maKhuVuc: string; quyenChucNang?: number } | null>(null);
   const [form] = Form.useForm();
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -102,14 +111,52 @@ const PhanQuyenBieuMau = () => {
         idTaiKhoan: values.idTaiKhoan,
         maBm: values.maBm,
         maKhuVuc: values.maKhuVuc,
+        quyenChucNang: values.quyenChucNang ?? 1,
       });
       message.success("Thêm quyền thành công");
       setModalOpen(false);
+      setEditingRecord(null);
       form.resetFields();
       loadData();
     } catch (error) {
       message.error("Không thể thêm quyền");
     }
+  };
+
+  // Cập nhật quyền
+  const handleUpdate = async (values: any) => {
+    if (!editingRecord || !isAdminUser(currentUser)) {
+      message.error("Bạn không có quyền thực hiện thao tác này");
+      return;
+    }
+
+    try {
+      await BmQuyenXlApi.update(editingRecord.id, {
+        idTaiKhoan: values.idTaiKhoan,
+        maBm: values.maBm,
+        maKhuVuc: values.maKhuVuc,
+        quyenChucNang: values.quyenChucNang ?? 1,
+      });
+      message.success("Cập nhật quyền thành công");
+      setModalOpen(false);
+      setEditingRecord(null);
+      form.resetFields();
+      loadData();
+    } catch (error) {
+      message.error("Không thể cập nhật quyền");
+    }
+  };
+
+  const handleEdit = (record: { id: number; idTaiKhoan?: number; IdTaiKhoan?: number; maBm: string; maKhuVuc: string; quyenChucNang?: number }) => {
+    const idTaiKhoan = record.idTaiKhoan ?? record.IdTaiKhoan ?? 0;
+    setEditingRecord({ id: record.id, idTaiKhoan, maBm: record.maBm, maKhuVuc: record.maKhuVuc, quyenChucNang: record.quyenChucNang });
+    form.setFieldsValue({
+      idTaiKhoan,
+      maBm: record.maBm,
+      maKhuVuc: record.maKhuVuc,
+      quyenChucNang: record.quyenChucNang ?? 1,
+    });
+    setModalOpen(true);
   };
 
   // Xóa quyền
@@ -182,6 +229,21 @@ const PhanQuyenBieuMau = () => {
       ),
     },
     {
+      title: "Quyền xử lý",
+      dataIndex: "quyenChucNang",
+      key: "quyenChucNang",
+      width: 180,
+      render: (q: number | null | undefined) => {
+        const opt = QUYEN_CHUC_NANG_OPTIONS.find((o) => o.value === q);
+        if (q == null) return <Tag color="default">Xử lý (mặc định)</Tag>;
+        let color: string = "blue";
+        if (q === 2) color = "orange";
+        else if (q === 3) color = "green";
+        else if (q === 4) color = "purple";
+        return <Tag color={color}>{opt?.label ?? q}</Tag>;
+      },
+    },
+    {
       title: "Ngày tạo",
       dataIndex: "ngayTao",
       key: "ngayTao",
@@ -192,16 +254,23 @@ const PhanQuyenBieuMau = () => {
     {
       title: "Thao tác",
       key: "action",
-      width: 100,
+      width: 120,
       render: (_: any, record: any) => (
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa quyền này?"
-          onConfirm={() => handleDelete(record.id)}
-          okText="Xóa"
-          cancelText="Hủy"
-        >
-          <Button type="text" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
+        <Space>
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          />
+          <Popconfirm
+            title="Bạn có chắc chắn muốn xóa quyền này?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -302,7 +371,11 @@ const PhanQuyenBieuMau = () => {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              setEditingRecord(null);
+              form.resetFields();
+              setModalOpen(true);
+            }}
           >
             Thêm quyền
           </Button>
@@ -322,18 +395,23 @@ const PhanQuyenBieuMau = () => {
       </Card>
 
       <Modal
-        title="Thêm quyền xử lý"
+        title={editingRecord ? "Cập nhật quyền xử lý" : "Thêm quyền xử lý"}
         open={modalOpen}
         onCancel={() => {
           setModalOpen(false);
+          setEditingRecord(null);
           form.resetFields();
         }}
         onOk={() => form.submit()}
-        okText="Thêm"
+        okText={editingRecord ? "Cập nhật" : "Thêm"}
         cancelText="Hủy"
         width={600}
       >
-        <Form form={form} layout="vertical" onFinish={handleAdd}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={editingRecord ? handleUpdate : handleAdd}
+        >
           <Form.Item
             name="idTaiKhoan"
             label="Tài khoản"
@@ -382,6 +460,18 @@ const PhanQuyenBieuMau = () => {
                 value: kv.maKhuVuc,
                 label: `[${kv.nhom}] ${kv.tenKhuVuc}`,
               }))}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="quyenChucNang"
+            label="Quyền xử lý"
+            initialValue={1}
+            rules={[{ required: true, message: "Vui lòng chọn quyền xử lý" }]}
+          >
+            <Select
+              placeholder="Chọn quyền (Xử lý / Phê duyệt / Chốt)"
+              options={QUYEN_CHUC_NANG_OPTIONS}
             />
           </Form.Item>
         </Form>

@@ -1,0 +1,141 @@
+import apiService from "./ApiService";
+
+interface InsertSanLuongPhoiPayload {
+  idPhieu: string;
+  soPhieu: string;
+  ngaySX: string;
+  kip: string;
+  ca: number;
+  mayDuc: number;
+  table1: Array<{
+    kipNgay: string;
+    macThep: string;
+    kichThuoc: string;
+    stLoai1: number;
+    klLoai1: number;
+    stPhoiNgan: number;
+    klPhoiNgan: number;
+    stLoai2: number;
+    klLoai2: number;
+    stLoai3: number;
+    klLoai3: number;
+    tongSoThanh: number;
+    tongKhoiLuong: number;
+  }>;
+}
+
+interface InsertPhoiNhapKhoPayload {
+  idPhieu: string;
+  soPhieu: string;
+  ngaySX: string;
+  kip: string;
+  ca: number;
+  mayDuc: number;
+  table1: Array<{
+    me: string;
+    mac: string;
+    kichThuoc: string;
+    stLoai1: number;
+    klLoai1: number;
+    stPhoiNgan: number;
+    klPhoiNgan: number;
+    cdPhoiNgan:number;
+    stLoai2: number;
+    klLoai2: number;
+    stLoai2tp: number;
+    klLoai2tp: number;
+    stLoai3: number;
+    klLoai3: number;
+    tongSoThanh: number;
+    tongKhoiLuong: number;
+  }>;
+}
+//============================= SẢN LƯỢNG PHÔI  =============================
+export const sanLuongPhoiApi = {
+  getByKipNgay: (params: {
+    ca: string;
+    kip: string;
+    NgaySX: string;
+  }) =>
+    apiService.get("/api/BMDucCTD/sanluongphoithep", { params }),
+  
+  // exportPdf: (idphieu: string) =>
+  //   apiService.get<Blob>(`/api/BMDucCTD/sanluongphoithep/export-pdf/${idphieu}`, {
+  //     responseType: "blob",
+  //   }),
+  
+  exportSanLuongPdf: (params: {
+    NgaySX?: string;
+    Ca?: number;
+    Kip?: string;
+    idPhieu?: string;
+  }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-sanluong-pdf", {
+      params,
+      responseType: "blob",
+    }),
+  exportExcelSanLuongPhoi: (params: {
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-excelSanLuongPhoi", {
+      params,
+      responseType: "blob",
+    }),
+  insertSanLuongPhoi: (payload: InsertSanLuongPhoiPayload) =>
+    apiService.post("/api/BMDucCTD/InsertSanLuongPhoi", payload),
+  
+  deleteSanLuongPhoiByIdPhieu: (idPhieu: string) =>
+    apiService.delete(`/api/BMDucCTD/DeleteSanLuongPhoi/${idPhieu}`),
+
+  hideSanLuongPhoiByIdPhieu: (idPhieu: string) =>
+    apiService.patch(`/api/BMDucCTD/HideSanLuongPhoi/${idPhieu}`),
+
+  restoreSanLuongPhoiByIdPhieu: (idPhieu: string) =>
+    apiService.patch(`/api/BMDucCTD/RestoreSanLuongPhoi/${idPhieu}`),
+};
+
+
+// ============================= PHÔI NHẬP KHO =============================
+export const phoiNhapKhoApi = {
+  getByKipNgay: (params: {
+    ca: number;
+    kip: string;
+    ngaySX: string;
+    mayduc: number;
+  }) =>
+    apiService.get("/api/BMDucCTD/Getphoinhapkho", { params }),
+  
+  insertPhoiNhapKho: (payload: InsertPhoiNhapKhoPayload) =>
+    apiService.post("/api/BMDucCTD/InsertPhoiNhapKho", payload),
+  
+  deletePhoiNhapKhoByIdPhieu: (idPhieu: string) =>
+    apiService.delete(`/api/BMDucCTD/DeletePhoiNhapKho/${idPhieu}`),
+
+  
+  hidePhoiNhapKhoByIdPhieu: (idPhieu: string) =>
+    apiService.patch(`/api/BMDucCTD/HidePhoiNhapKho/${idPhieu}`),
+
+  restorePhoiNhapKhoByIdPhieu: (idPhieu: string) =>
+    apiService.patch(`/api/BMDucCTD/RestorePhoiNhapKho/${idPhieu}`),
+
+  exportPhoiNhapKhoPdf: (params: {
+    NgaySX?: string;
+    Ca?: number;
+    Kip?: string;
+    idPhieu?: string;
+  }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-phoinhapkho-pdf", {
+      params,
+      responseType: "blob",
+    }),
+  // thêm đoạn này
+  exportExcelPhoiNhapKho: (params: {
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-excelPhoiNhapKho", {
+      params,
+      responseType: "blob",
+    }),
+};

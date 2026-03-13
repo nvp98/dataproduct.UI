@@ -63,7 +63,8 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
   // Khóa form giống BOF: chỉ mở khi Đang lưu hoặc Đã thu hồi
   const isFormLocked = !(
     currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
-    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi
+    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+    currentTinhTrang === TrangThaiPhieuConst.HieuChinh
   );
 
   // Xóa logic thêm adjust column thủ công - giờ tự động từ dữ liệu phân bổ
