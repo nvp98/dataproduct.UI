@@ -1,15 +1,15 @@
 {
   "code": "CTD_BB_Phoinguoi",
   "prefix": "BBPNG",
-  "title": "BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+  "title": "BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI",
   "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
     "subCompany": "HÒA PHÁT GANG THÉP"
   },
   "isoInfo": {
-    "code": "BM.07/QT.05.11",
-    "effectiveDate": "15/05/2025",
-    "revision": "01"
+    "code": "BM.02/QT.05.13",
+    "effectiveDate": "15/08/2025",
+    "revision": "03"
   },
 
   "headerFields": [
@@ -24,11 +24,10 @@
       ]
     },
     { "label": "Ngày", "type": "date", "key": "NgaySX","required": true },
-    { "label": "Máy Đúc", "type": "select","required": true, "key": "mayduc","options": [
-        { "label": "Đúc 1", "value": 1 },
-        { "label": "Đúc 2", "value": 2 },
-        { "label": "Đúc 3", "value": 3 },
-        { "label": "Đúc 4", "value": 4 }
+    { "label": "Xưởng cán", "type": "select","required": true, "key": "xuong","options": [
+        { "label": "Xưởng cán 1", "value": 1 },
+        { "label": "Xưởng cán 2", "value": 2 },
+        { "label": "Xưởng cán 3", "value": 3 }
       ]
     }
   ],
