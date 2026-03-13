@@ -76,6 +76,7 @@ export interface NXTDetailDto {
   Scope: number; // Scope (1: Lò thổi 6, 2: Lò thổi 7, 3: Tinh luyện LF, 4: RH1, 5: RH2)
   ViTri: number; // Vị trí (Trong silo = 1, Ngoài silo = 2)
   Id_HeaderKey: number; // ID của HeaderKey
+  IDSilo?: number | null; // ID của Silo
   TenNguyenLieu: string; // Tên nguyên nhiên liệu
   TonDauCa: number; // Tồn đầu ca
   MucLieu: number; // Mức liệu

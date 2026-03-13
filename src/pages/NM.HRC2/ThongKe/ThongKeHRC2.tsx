@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Card,
   Table,
+  Tooltip,
   Typography,
   message,
   Form,
@@ -15,6 +16,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
+import { formatNumberVN } from "../../../utils/formatters/numberFormat";
 import {
   THONGKE_HRC2_HEADERS,
   type ThongKeHeaderColumn,
@@ -23,6 +25,25 @@ import {
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
+
+type HkCellData = { value: number | null; manualValue?: number | null; isManual?: boolean };
+
+const renderHkCell = (cellData: HkCellData | null | unknown) => {
+  if (cellData === null || cellData === undefined) return "";
+  const { value, manualValue, isManual } = cellData as HkCellData;
+  const displayValue = isManual && manualValue != null ? manualValue : value;
+  const formatted = formatNumberVN(displayValue);
+  if (isManual && manualValue != null) {
+    return (
+      <Tooltip title={`Giá trị tự động: ${formatNumberVN(value)} | Giá trị chỉnh sửa: ${formatNumberVN(manualValue)}`}>
+        <span style={{ backgroundColor: "#fff7b3", display: "block", padding: "0 4px" }}>
+          {formatted}
+        </span>
+      </Tooltip>
+    );
+  }
+  return formatted;
+};
 
 type LoaiBMKey = ThongKeLoaiBMKey;
 
@@ -33,11 +54,16 @@ const toAntdColumns = (cols: ThongKeHeaderColumn[]): any[] => {
       dataIndex: c.dataIndex,
       title: c.title,
       width: c.width,
+      align: "right" as const,
     };
 
     if (c.dataIndex === "ngaySx") {
       mapped.render = (value: unknown) =>
         value ? dayjs(String(value)).format("DD/MM/YYYY") : "";
+    }
+
+    if (c.dataIndex === "klGangLongCCT" || c.dataIndex === "klThepPhe") {
+      mapped.render = (value: unknown) => formatNumberVN(value);
     }
 
     if (Array.isArray(c.children) && c.children.length > 0) {
@@ -56,41 +82,6 @@ const deriveScopeLabel = (loai: LoaiBMKey, scopeRaw: unknown): string => {
   return String(scopeNum);
 };
 
-const flattenLeafDataIndexes = (cols: ThongKeHeaderColumn[]): string[] => {
-  const out: string[] = [];
-  const walk = (items: ThongKeHeaderColumn[]) => {
-    items.forEach((c) => {
-      if (Array.isArray(c.children) && c.children.length > 0) {
-        walk(c.children);
-      } else if (c.dataIndex) {
-        out.push(c.dataIndex);
-      }
-    });
-  };
-  walk(cols);
-  return out;
-};
-
-const buildSampleRows = (loai: LoaiBMKey, headers: ThongKeHeaderColumn[]) => {
-  const leafs = flattenLeafDataIndexes(headers);
-  const base: Record<string, unknown> = { key: "sample-1" };
-  leafs.forEach((di) => {
-    if (di === "ngaySx") base[di] = "2025-12-21";
-    else if (di === "ca") base[di] = 1;
-    else if (di === "kip") base[di] = "A";
-    else if (di === "loThoi") base[di] = "Lò thổi 6";
-    else if (di === "tinhLuyen") base[di] = loai === "RH" ? "RH1" : "LF";
-    else if (di === "meThoi") base[di] = "25F006389";
-    else if (di === "macThep") base[di] = "M01";
-    else base[di] = 0;
-  });
-
-  const row2: Record<string, unknown> = { ...base, key: "sample-2" };
-  row2.ngaySx = "2025-12-22";
-  row2.ca = 2;
-  row2.meThoi = "25F006390";
-  return [base, row2];
-};
 
 const CA_OPTIONS = [
   { value: 1, label: "Ca Ngày" },
@@ -118,30 +109,19 @@ const ThongKeHRC2 = () => {
   const [columns, setColumns] = useState<any[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
   const [loaiBmKey, setLoaiBmKey] = useState<LoaiBMKey>("BOF");
-  const [hasSearched, setHasSearched] = useState(false);
-
-  const headerConfig = useMemo(
-    () => THONGKE_HRC2_HEADERS[loaiBmKey] as ThongKeHeaderColumn[],
-    [loaiBmKey]
-  );
-
-  const headerColumns = useMemo(() => toAntdColumns(headerConfig), [headerConfig]);
-
-  const sampleRows = useMemo(() => buildSampleRows(loaiBmKey, headerConfig), [loaiBmKey, headerConfig]);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
 
   const handleSearch = useCallback(
-    async (overrideLoaiBm?: LoaiBMKey) => {
+    async (overrideLoaiBm?: LoaiBMKey, page?: number, pageSize?: number) => {
       try {
         // Multi search: không bắt validate field nào
         const values = form.getFieldsValue(true) as Record<string, unknown>;
         const currentLoaiBm: LoaiBMKey = overrideLoaiBm ?? loaiBmKey ?? "BOF";
-        setHasSearched(true);
 
         const dateRange = values.dateRange as
           | [dayjs.Dayjs, dayjs.Dayjs]
           | undefined;
-        // Không chọn ngày thì mặc định lấy ngày hiện tại để gọi API (không chặn search)
-        const fromDate = dateRange?.[0] ?? dayjs();
+        const fromDate = dateRange?.[0] ?? null;
 
         const ca = values.ca as number | undefined;
         let scope = values.scope as number | undefined;
@@ -153,43 +133,134 @@ const ThongKeHRC2 = () => {
         }
         const meThoiFilter = (values.meThoi as string | undefined)?.trim();
 
-        // Lấy base columns từ config header thống kê (2 form chính)
-        const baseColumns =
+        // Cột cố định: không hardcode phụ liệu theo config nữa
+        const configCols =
           THONGKE_HRC2_HEADERS[currentLoaiBm] as ThongKeHeaderColumn[];
-        const headerColumns = toAntdColumns(baseColumns);
+        const fixedDataIndexes =
+          currentLoaiBm === "BOF"
+            ? new Set([
+                "ngaySx",
+                "ca",
+                "kip",
+                "loThoi",
+                "meThoi",
+                "macThep",
+                "klGangLongCCT",
+                "klThepPhe",
+              ])
+            : new Set(["ngaySx", "ca", "kip", "tinhLuyen", "meThoi", "macThep"]);
+        const fixedCols = configCols.filter((c) => fixedDataIndexes.has(c.dataIndex));
+        const fixedColumns = toAntdColumns(fixedCols);
 
         setLoading(true);
 
-        const res = await dlnmHRC2Api.searchGrouped({
-          NgaySX: fromDate.format("YYYY-MM-DD"),
+        const currentPage = page ?? 1;
+        const currentPageSize = pageSize ?? pagination.pageSize;
+        const toDate = dateRange?.[1] ?? null;
+        const res = await dlnmHRC2Api.searchThongKe({
+          TuNgay: fromDate ? fromDate.format("YYYY-MM-DD") : null,
+          DenNgay: toDate ? toDate.format("YYYY-MM-DD") : null,
           Ca: ca ?? undefined,
           LoaiBM: currentLoaiBm,
           Scope: scope ?? undefined,
-          searchText: meThoiFilter ?? undefined,
-          page: 1,
-          pageSize: 100,
+          SearchText: meThoiFilter ?? undefined,
+          Page: currentPage,
+          PageSize: currentPageSize,
         });
 
-        const rawList: any[] =
-          (Array.isArray((res as any)?.data) && (res as any).data) ||
-          (Array.isArray((res as any)?.Data) && (res as any).Data) ||
+        const payload = res as any;
+
+        const headerListRaw: any[] =
+          (payload?.phuLieuHeaderTables as any[]) ||
+          (payload?.PhuLieuHeaderTables as any[]) ||
           [];
+        const headerList = headerListRaw
+          .map((h: any) => ({
+            idHeaderKey: Number(h?.iDHeaderKey ?? h?.IDHeaderKey ?? h?.idHeaderKey ?? 0),
+            tenPhuLieu: String(h?.tenPhuLieu ?? h?.TenPhuLieu ?? "").trim(),
+            loaiThongKe: h?.loaiThongKe ?? h?.LoaiThongKe,
+          }))
+          .filter((h: any) => h.idHeaderKey > 0 && !!h.tenPhuLieu);
+
+        const totalRecords: number =
+          payload?.totalRecords ??
+          payload?.TotalRecords ??
+          payload?.totalCount ??
+          payload?.TotalCount ??
+          0;
+
+        const rawList: any[] =
+          (Array.isArray(payload?.data) && payload.data) ||
+          (Array.isArray(payload?.Data) && payload.Data) ||
+          [];
+
+        // Nhóm phụ liệu theo 2 list (LF/RH): KL & PG, giữ nguyên thứ tự trong từng nhóm
+        let headerColumns: any[];
+        if (currentLoaiBm === "LF" || currentLoaiBm === "RH") {
+          const klHeaders = headerList.filter(
+            (h: any) => Number(h.loaiThongKe ?? 0) === 2
+          );
+          const pgHeaders = headerList.filter(
+            (h: any) => Number(h.loaiThongKe ?? 0) === 3
+          );
+
+          const phuLieuGroups: any[] = [];
+          if (klHeaders.length > 0) {
+            phuLieuGroups.push({
+              title: "Chất hợp kim hóa",
+              children: klHeaders.map((h: any) => ({
+                key: `hk_${h.idHeaderKey}`,
+                dataIndex: `hk_${h.idHeaderKey}`,
+                title: h.tenPhuLieu,
+                width: 90,
+                align: "right" as const,
+                render: (value: unknown) => renderHkCell(value),
+              })),
+            });
+          }
+          if (pgHeaders.length > 0) {
+            phuLieuGroups.push({
+              title: "Phụ gia và chất khử oxy",
+              children: pgHeaders.map((h: any) => ({
+                key: `hk_${h.idHeaderKey}`,
+                dataIndex: `hk_${h.idHeaderKey}`,
+                title: h.tenPhuLieu,
+                width: 90,
+                align: "right" as const,
+                render: (value: unknown) => renderHkCell(value),
+              })),
+            });
+          }
+
+          headerColumns = [...fixedColumns, ...phuLieuGroups];
+        } else {
+          // BOF: giữ layout phẳng như hiện tại
+          headerColumns = [
+            ...fixedColumns,
+            ...headerList.map((h: any) => ({
+              key: `hk_${h.idHeaderKey}`,
+              dataIndex: `hk_${h.idHeaderKey}`,
+              title: h.tenPhuLieu,
+              width: 90,
+              align: "right" as const,
+              render: (value: unknown) => renderHkCell(value),
+            })),
+          ];
+        }
 
         if (!rawList.length) {
           message.info("Không có dữ liệu phù hợp với điều kiện lọc.");
           setColumns(headerColumns);
           setTableData([]);
+          setPagination({ current: currentPage, pageSize: currentPageSize, total: 0 });
           return;
         }
 
-        const leafs = flattenLeafDataIndexes(baseColumns);
-
         const rows = rawList.map((item: any, idx: number) => {
-          const dataObj = item?.data ?? item?.Data ?? {};
-          const mapped = (item?.mappedPhulieus ??
-            item?.mappedPhuLieus ??
-            item?.MappedPhulieus ??
-            item?.MappedPhuLieus ??
+          // Sau khi BE đơn giản hóa, mỗi item là HRC2ThongKeRow: { Data, Values }
+          const dataObj = (item?.data ?? item?.Data ?? {}) as any;
+          const valuesArr = (item?.values ??
+            item?.Values ??
             []) as any[];
 
           const row: any = {
@@ -233,73 +304,43 @@ const ThongKeHRC2 = () => {
             return null;
           };
 
-          // Lookup từ mappedPhulieus (chỉ những phụ liệu có trong Header_Mapping)
-          const valueByHeaderKeyId = new Map<number, number | null>();
-          const idByName = new Map<string, number>();
-          mapped.forEach((pl: any) => {
+          // Lookup giá trị theo IDHeaderKey từ Values
+          const valueByHeaderKeyId = new Map<number, HkCellData>();
+          valuesArr.forEach((v: any) => {
             const hkId: number | null | undefined =
-              pl?.iD_HeaderKey ??
-              pl?.ID_HeaderKey ??
-              pl?.id_HeaderKey ??
-              pl?.Id_HeaderKey ??
-              pl?.idHeaderKey ??
-              pl?.IDHeaderKey;
+              v?.iDHeaderKey ??
+              v?.IDHeaderKey ??
+              v?.idHeaderKey ??
+              v?.IdHeaderKey ??
+              v?.id_headerKey ??
+              v?.ID_HeaderKey;
             if (!hkId) return;
 
-            const rawVal =
-              pl?.kLPhuGiaTotal ??
-              pl?.KLPhuGiaTotal ??
-              pl?.klPhuGiaTotal ??
-              pl?.kLPhuGia ??
-              pl?.KLPhuGia ??
-              pl?.klPhuGia ??
-              null;
-            const val =
-              rawVal === null || rawVal === undefined ? null : Number(rawVal);
-            valueByHeaderKeyId.set(Number(hkId), Number.isFinite(val ?? NaN) ? (val as number) : null);
+            const rawVal = v?.kLPhuGia ?? v?.KLPhuGia ?? v?.klPhuGia ?? null;
+            const val = rawVal === null || rawVal === undefined ? null : Number(rawVal);
+            const value = Number.isFinite(val ?? NaN) ? (val as number) : null;
 
-            const tenHienThi = pl?.tenHienThi ?? pl?.TenHienThi;
-            const tenNguonDuLieu =
-              pl?.tenNguonDuLieu ?? pl?.TenNguonDuLieu ?? null;
+            const rawManual = v?.klPhuGia_Manual ?? v?.KLPhuGia_Manual ?? null;
+            const manualVal = rawManual === null || rawManual === undefined ? null : Number(rawManual);
+            const manualValue = Number.isFinite(manualVal ?? NaN) ? (manualVal as number) : null;
 
-            const pushName = (name: unknown) => {
-              if (name === null || name === undefined) return;
-              const key = String(name).trim().toLowerCase();
-              if (!key) return;
-              if (!idByName.has(key)) {
-                idByName.set(key, Number(hkId));
-              }
-            };
+            const isManual = v?.isManual === true || v?.IsManual === true;
 
-            pushName(tenHienThi);
-            pushName(tenNguonDuLieu);
+            valueByHeaderKeyId.set(Number(hkId), { value, manualValue, isManual });
           });
 
-          leafs.forEach((di) => {
+          // Set các field cố định
+          fixedCols.forEach((c) => {
+            const di = c.dataIndex;
             if (di === "loThoi" || di === "tinhLuyen") return;
+            row[di] = getFieldValue(di);
+          });
 
-            // 1) Field cơ bản từ data (nếu có)
-            const baseVal = getFieldValue(di);
-            if (baseVal !== null && baseVal !== undefined) {
-              row[di] = baseVal;
-              return;
-            }
-
-            // 2) Phụ liệu: không match Header_Mapping => null
-            let headerKeyId: number | null = null;
-            const m = /^phuLieu_(\d+)$/.exec(di);
-            if (m) headerKeyId = Number(m[1]);
-            else if (/^\d+$/.test(di)) headerKeyId = Number(di);
-            else {
-              const key = di.trim().toLowerCase();
-              headerKeyId = idByName.get(key) ?? null;
-            }
-
-            if (headerKeyId && valueByHeaderKeyId.has(headerKeyId)) {
-              row[di] = valueByHeaderKeyId.get(headerKeyId) ?? null;
-            } else {
-              row[di] = null;
-            }
+          // Set các cột phụ liệu theo headers trả về từ BE (theo IDHeaderKey)
+          headerList.forEach((h: any) => {
+            const di = `hk_${h.idHeaderKey}`;
+            row[di] = valueByHeaderKeyId.get(h.idHeaderKey) ?? null;
+            // null nếu không có giá trị
           });
 
           const scopeValue = (dataObj as any)?.scope ?? (dataObj as any)?.Scope;
@@ -312,6 +353,11 @@ const ThongKeHRC2 = () => {
 
         setColumns(headerColumns);
         setTableData(rows);
+        setPagination({
+          current: payload?.page ?? payload?.Page ?? currentPage,
+          pageSize: payload?.pageSize ?? payload?.PageSize ?? currentPageSize,
+          total: totalRecords || rows.length,
+        });
       } catch (error) {
         console.error("Lỗi thống kê HRC2:", error);
         message.error("Không thể tải dữ liệu thống kê.");
@@ -322,12 +368,15 @@ const ThongKeHRC2 = () => {
     [form, loaiBmKey]
   );
 
+  useEffect(() => {
+    void handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleReset = useCallback(() => {
     form.resetFields();
-    setHasSearched(false);
-    setColumns([]);
-    setTableData([]);
-  }, [form]);
+    void handleSearch(loaiBmKey, 1, pagination.pageSize);
+  }, [form, handleSearch, loaiBmKey, pagination.pageSize]);
 
   const handleExcel = useCallback(async () => {
     const values = form.getFieldsValue(true) as Record<string, unknown>;
@@ -338,9 +387,75 @@ const ThongKeHRC2 = () => {
       message.warning("Xuất Excel cần chọn Từ ngày và Đến ngày.");
       return;
     }
-    // TODO: nối API xuất excel. Hiện tại chỉ kiểm tra điều kiện ngày.
-    message.info("Chức năng xuất Excel sẽ được triển khai sau.");
-  }, [form]);
+    const ca = values.ca as number | undefined;
+    let scope = values.scope as number | undefined;
+
+    // LF: scope mặc định là 6 (giống handleSearch)
+    if (loaiBmKey === "LF") {
+      scope = 6;
+    }
+    const meThoiFilter = (values.meThoi as string | undefined)?.trim();
+
+    const payload: Record<string, unknown> = {
+      TuNgay: fromDate.format("YYYY-MM-DD"),
+      DenNgay: toDate.format("YYYY-MM-DD"),
+      Ca: ca ?? undefined,
+      LoaiBM: loaiBmKey,
+      Scope: scope ?? undefined,
+      SearchText: meThoiFilter ?? undefined,
+    };
+
+    try {
+      setLoading(true);
+      const baseUrl = import.meta.env.VITE_API_URL as string;
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${baseUrl}api/DLNMHRC2/export-thongke`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Xuất Excel thất bại.");
+      }
+
+      const blob = await res.blob();
+
+      let fileName = `ThongKe_HRC2_${loaiBmKey}_${fromDate.format(
+        "YYYYMMDD"
+      )}_${toDate.format("YYYYMMDD")}.xlsx`;
+      const contentDisposition = res.headers.get("Content-Disposition");
+      if (contentDisposition) {
+        const match = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(
+          contentDisposition
+        );
+        if (match && match[1]) {
+          fileName = decodeURIComponent(match[1].replace(/['"]/g, ""));
+        }
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: unknown) {
+      const msg =
+        (error as { message?: string })?.message ??
+        "Xuất Excel thất bại. Vui lòng thử lại.";
+      message.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [form, loaiBmKey]);
 
   const handleTabChange = useCallback(
     (key: string) => {
@@ -352,16 +467,9 @@ const ThongKeHRC2 = () => {
       } else {
         form.setFieldsValue({ scope: undefined });
       }
-      // Nếu đã từng search thì tự reload theo tab mới
-      if (hasSearched) {
-        void handleSearch(bmKey);
-      } else {
-        // Chưa search: giữ sample rows + header theo tab
-        setColumns([]);
-        setTableData([]);
-      }
+      void handleSearch(bmKey, 1, pagination.pageSize);
     },
-    [form, handleSearch, hasSearched]
+    [form, handleSearch, pagination.pageSize]
   );
 
   return (
@@ -450,9 +558,21 @@ const ThongKeHRC2 = () => {
           bordered
           size="small"
           loading={loading}
-          columns={columns.length > 0 ? columns : headerColumns}
-          dataSource={hasSearched ? tableData : sampleRows}
-          pagination={false}
+          columns={columns}
+          dataSource={tableData}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            pageSizeOptions: ["10", "20", "50", "100"],
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} bản ghi`,
+            onChange: (page, pageSize) => {
+              void handleSearch(undefined, page, pageSize);
+            },
+          }}
           scroll={{ x: "max-content", y: 500 }}
         />
       </div>

@@ -91,6 +91,7 @@ const Tao_STD = () => {
           Scope: scopeVal,
           ViTri: row.viTri ?? 0,
           Id_HeaderKey: row.idNguyenNhienLieu ?? 0,
+          IDSilo: row.siloId ?? null,
           TenNguyenLieu: row.nguyenNhienLieu ?? "",
           TonDauCa: row.tonDauCa ? Number(row.tonDauCa) : 0,
           TuongQuanDauCa: row.tuongQuanDauCa ?? "",
@@ -217,6 +218,8 @@ const Tao_STD = () => {
             nguyenNhienLieu: item.tenNguyenLieu || "",
             idNguyenNhienLieu: item.id_HeaderKey || null,
             isUnmapped: !item.id_HeaderKey, // Nếu có id_HeaderKey thì isUnmapped = false
+            siloId: item.idSilo ?? item.IDSilo ?? item.siloId ?? null,
+            tenSilo: item.tenSilo ?? item.TenSilo ?? null,
             tonDauCa: item.tonDauCa ?? null,
             tuongQuanDauCa: item.tuongQuanDauCa ?? "",
             mucLieu: item.mucLieu ?? null,
@@ -270,9 +273,17 @@ const Tao_STD = () => {
   }, [form, idphieu, config.layout1, navigate]);
 
   // Chuẩn bị payload cho action buttons (theo pattern TaoPhieuBOF)
-  const getFormData = useCallback(async () => {
+  // actionKey: "save" | "saveAndSend" | ... để phân biệt lưu vs gửi
+  const getFormData = useCallback(async (actionKey?: string) => {
     const userInfo = getUserInfo();
-    const values = await form.validateFields();
+    const isSend = actionKey === "saveAndSend" || actionKey === "gui";
+    // Khi lưu: chỉ validate header fields (Ngày, Ca). Khi gửi: validate thêm chữ ký.
+    const headerFieldKeys = config.headerFields.map((f: any) => f.key);
+    const signatureKeys = config.signatures.filter((s) => s.isChon).map((s) => s.key);
+    const fieldsToValidate = isSend ? [...headerFieldKeys, ...signatureKeys] : headerFieldKeys;
+    await form.validateFields(fieldsToValidate);
+    // Lấy toàn bộ giá trị form (kể cả idphieu, chữ ký) để build payload đầy đủ
+    const values = form.getFieldsValue(true);
 
     const table1Normalized = (table1Data || []).map((row) => ({
       ...row,
@@ -283,6 +294,31 @@ const Tao_STD = () => {
       tuongQuanCuoiCa: row.tuongQuanCuoiCa ?? "",
       tongThucTe: Number(row.tongThucTe || 0),
     }));
+
+    // Validation: Tất cả dòng phải chọn Silo
+    const missingSiloRows = table1Normalized.filter((row) => !row.siloId);
+    if (missingSiloRows.length > 0) {
+      const tenNguyenLieu = missingSiloRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+      message.error(`Vui lòng chọn Silo cho tất cả loại liệu trước khi lưu.\nCác dòng chưa chọn: ${tenNguyenLieu}`);
+      throw new Error("Validation failed: thiếu Silo");
+    }
+
+    // Validation: Khi SoSuDung = 0 và SoNhapVe = 0 thì SoTonCuoi phải bằng SoTonDau
+    const invalidRows = table1Normalized.filter((row) => {
+      const soSuDung = row.tongThucTe;
+      const soNhapVe = row.nhapTrongCa;
+      const soTonDau = row.tonDauCa;
+      const soTonCuoi = row.tonCuoiCa;
+      return soSuDung === 0 && soNhapVe === 0 && soTonCuoi !== soTonDau;
+    });
+
+    if (invalidRows.length > 0) {
+      const tenNguyenLieu = invalidRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+      message.error(
+        `Dữ liệu tồn kho không hợp lệ.\nKhi số sử dụng = 0 và số nhập về = 0 thì số tồn cuối phải bằng số tồn đầu.\nVui lòng kiểm tra lại: ${tenNguyenLieu}`
+      );
+      throw new Error("Validation failed: tồn cuối không bằng tồn đầu");
+    }
 
     const table2Normalized = (table2Data || []).map((row) => ({
       ...row,
@@ -332,7 +368,7 @@ const Tao_STD = () => {
       pheDuyet: pheDuyetFlow,
       nxtPayload: buildNxtUpsertPayload(values),
     };
-  }, [getUserInfo, form, config.code, config.prefix, table1Data, table2Data, config.signatures, buildNxtUpsertPayload]);
+  }, [getUserInfo, form, config.headerFields, config.signatures, config.code, config.prefix, table1Data, table2Data, buildNxtUpsertPayload]);
 
   const handleActionSuccess = useCallback(
     async (context: any) => {
@@ -538,6 +574,8 @@ const Tao_STD = () => {
             nguyenNhienLieu: item.tenNguyenLieu || "",
             idNguyenNhienLieu: item.id_HeaderKey || null,
             isUnmapped: !item.id_HeaderKey,
+            siloId: item.idSilo ?? item.IDSilo ?? item.siloId ?? null,
+            tenSilo: item.tenSilo ?? item.TenSilo ?? null,
             tonDauCa: item.tonDauCa ?? null,
             tuongQuanDauCa: item.tuongQuanDauCa ?? "",
             mucLieu: item.mucLieu ?? null,

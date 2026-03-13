@@ -6,6 +6,8 @@ export const dlnmHRC2Api = {
     apiService.get("/api/DLNMHRC2/search", { params }),
   searchGrouped: (params?: Record<string, unknown>) =>
     apiService.get("/api/DLNMHRC2/search-grouped", { params }),
+  searchThongKe: (payload?: Record<string, unknown>) =>
+    apiService.post("/api/DLNMHRC2/search-thongke", payload),
   getById: (id: number) => apiService.get(`/api/DLNMHRC2/${id}`),
   getByReportNo: (reportNo: number) => apiService.get(`/api/DLNMHRC2/report/${reportNo}`),
   getAll: (params?: Record<string, unknown>) =>

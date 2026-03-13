@@ -20,6 +20,8 @@ export type HRC2DetailRow = {
   idPhuLieu: number | null;
   tenPhuLieu: string | null;
   klPhuGia: number | null;
+  klPhuGia_Manual?: number | null;
+  isManual?: boolean | null;
   klPhuGiaTotal?: number | null; // Tổng KLPhuGia sau khi group
   keyGuid: string | null;
   tenHienThi: string | null;
@@ -93,6 +95,8 @@ export const normalizeHRC2GroupedResponse = (
       idPhuLieu: getValue<number>("iD_PhuLieu", "idPhuLieu", "ID_PhuLieu"),
       tenPhuLieu: getValue<string>("tenPhuLieu", "TenPhuLieu"),
       klPhuGia: getValue<number>("klPhuGia", "KLPhuGia"),
+      klPhuGia_Manual: getValue<number>("klPhuGia_Manual", "KLPhuGia_Manual"),
+      isManual: getValue<boolean>("isManual", "IsManual"),
       klPhuGiaTotal:
         getValue<number>("klPhuGiaTotal", "KLPhuGiaTotal") ??
         getValue<number>("klPhuGia", "KLPhuGia"),

@@ -47,7 +47,7 @@
         "params": { "ngaySX": "@ngaySX", "ca": "@ca" }
       },
       "columns": [
-        { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 150 ,"editable": false},
+        { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 120 ,"editable": false},
         { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false },
         { 
           "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
@@ -60,7 +60,7 @@
           "title": "Phụ gia và chất khử oxy", "dataIndex": "PG", "editable": false
         },
         {
-          "title": "Khác", "dataIndex": "others", "editable": false, "width": 100
+          "dataIndex": "dieuChinh"
         },
         {
           "title": "Khí",

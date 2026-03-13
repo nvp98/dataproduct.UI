@@ -31,9 +31,9 @@
       "key": "table1",
       "columns": [
         { "title": "Khu vực", "dataIndex": "khuVuc", "isLabel": true },
-        { "title": "Vị trí", "dataIndex": "viTri" },
+        { "title": "Vị trí", "dataIndex": "viTri", "hidden": true },
         { "title": "Nguyên nhiên liệu", "dataIndex": "nguyenNhienLieu" },
-        { "title": "Silo", "dataIndex": "tenSilo", "hidden": true },
+        { "title": "Silo", "dataIndex": "tenSilo" },
         {
           "title": "Tồn đầu ca",
           "children": [
