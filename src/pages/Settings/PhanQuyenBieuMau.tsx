@@ -22,7 +22,7 @@ import {
 } from "@ant-design/icons";
 import { BmQuyenXlApi } from "../../services/BmQuyenXlApi";
 import { TaiKhoanApi } from "../../services/TaiKhoanService";
-import bmQuyenConfig from "../../utils/configs/bmQuyenConfig.json";
+import { bmQuyenConfig } from "../../utils/configs/bmQuyenConfig";
 import {
   isAdminUser,
   canManagePermissions,

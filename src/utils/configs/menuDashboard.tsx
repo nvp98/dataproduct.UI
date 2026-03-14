@@ -1,3 +1,5 @@
+import { BM_CONFIG } from "./BieuMauConst";
+
 export const MenuDataDashboard = [
   {
     category: "NM.NL",
@@ -19,22 +21,22 @@ export const MenuDataDashboard = [
       {
         code: "bienbantheplong",
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
-        maBm: "HRC1_BB_Theplong",
+        maBm: BM_CONFIG.HRC1.HRC1_BB_Theplong,
       },
       {
         code: "tieuhaolothoi",
         title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
-        maBm: "HRC1_BB_Lothoi",
+        maBm: BM_CONFIG.HRC1.HRC1_BB_Lothoi,
       },
       {
         code: "bienbanphoinong",
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (GIAO PHÔI)",
-        maBm: "CTD_BB_Phoinong",
+        maBm: BM_CONFIG.CTD.CTD_BB_Phoinong,
       },
       {
         code: "bienbanphoinguoi",
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-        maBm: "CTD_BB_Phoinguoi",
+        maBm: BM_CONFIG.CTD.CTD_BB_Phoinguoi,
       },
     ],
   },
@@ -46,17 +48,17 @@ export const MenuDataDashboard = [
       {
         code: "tieuhaonauluyen_lf",
         title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
-        maBm: "HRC2_BB_NauLuyen_LF",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
       },
       {
         code: "tieuhaonauluyen_bof",
         title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
-        maBm: "HRC2_BB_NauLuyen_BOF",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
       },
       {
         code: "tieuhaonauluyen_rf",
         title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
-        maBm: "HRC2_BB_NauLuyen_RH",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
       },
     ],
   },
@@ -68,7 +70,7 @@ export const MenuDataDashboard = [
       {
         code: "viecdentoi/bienbanphoinong",
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (NHẬN PHÔI)",
-        maBm: "CTD_BB_Phoinong",
+        maBm: BM_CONFIG.CTD.CTD_BB_Phoinong,
       },
       // {
       //   code: "bienbanphoinguoi",

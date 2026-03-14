@@ -41,7 +41,8 @@ const getIcon = (type: string, color: string) => {
 const TaoYeuCau = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [userBmPermissions, setUserBmPermissions] = useState<string[]>([]);
+  /** Danh sách MaBM trong processing (QuyenChucNang = 1 hoặc 4) — giống "Việc tôi bắt đầu" */
+  const [processingForms, setProcessingForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,30 +51,27 @@ const TaoYeuCau = () => {
 
   const loadUserAndPermissions = async () => {
     try {
-      // Lấy user từ localStorage
       const userStr = localStorage.getItem("userinfo");
       if (userStr) {
         const userData = JSON.parse(userStr);
         setUser(userData);
 
-        // Nếu admin thì không cần load quyền (xem tất cả)
         if (isAdminUser(userData)) {
-          setUserBmPermissions([]);
+          setProcessingForms([]);
         } else {
-          // Gọi API để lấy danh sách BM mà user có quyền
-          const ID_TaiKhoan = userData.iD_TaiKhoan || userData.ID_TaiKhoan;
-          const res = await BmQuyenXlApi.getByTaiKhoan(ID_TaiKhoan);
-          const permissions = Array.isArray(res) ? res : res?.data || [];
-          console.log("Quyền BM của user:", permissions);
-          const bmList = permissions
-            .map((p: any) => p.maBm)
-            .filter((bm: string) => bm);
-          console.log("Danh sách mã BM được phép:", bmList);
-          setUserBmPermissions(bmList);
+          const raw = userData.iD_TaiKhoan ?? userData.ID_TaiKhoan ?? userData.idTaiKhoan ?? userData.IdTaiKhoan;
+          const idTaiKhoan = typeof raw === "number" ? raw : Number(raw);
+          if (!Number.isFinite(idTaiKhoan) || idTaiKhoan <= 0) {
+            setProcessingForms([]);
+          } else {
+            const res = await BmQuyenXlApi.getMenuPermissions(idTaiKhoan);
+            setProcessingForms(res?.processingForms ?? []);
+          }
         }
       }
     } catch (error) {
       console.error("Lỗi load user và quyền:", error);
+      setProcessingForms([]);
     } finally {
       setLoading(false);
     }
@@ -91,25 +89,27 @@ const TaoYeuCau = () => {
     );
   }
 
-  // Filter menu dựa trên quyền BM
+  // Chỉ hiển thị MaBM nằm trong processing (giống "Việc tôi bắt đầu": QuyenChucNang = 1 hoặc 4)
+  const allowAll = isAdminUser(user);
+  const processingSet = allowAll ? null : new Set(processingForms);
+
   const filteredMenuData = MenuDataDashboard.map((group: any) => {
     const filteredItems = group.items.filter((item: any) => {
-      // Admin xem tất cả
-      if (isAdminUser(user)) return true;
-      // User thường chỉ xem các BM được cấp quyền
-      return userBmPermissions.includes(item.maBm || item.code);
+      if (allowAll) return true;
+      const maBm = item.maBm || item.code;
+      return maBm && processingSet?.has(maBm);
     });
 
     return {
       ...group,
       items: filteredItems,
     };
-  }).filter((group: any) => group.items.length > 0); // Loại bỏ group không còn item nào
+  }).filter((group: any) => group.items.length > 0);
 
   return (
     <div>
       <h1 className="text-xl font-bold">Tạo yêu cầu </h1>
-      {!isAdminUser(user) && userBmPermissions.length === 0 && (
+      {!isAdminUser(user) && user && processingForms.length === 0 && (
         <Alert
           message="Thông báo"
           description="Bạn không có quyền tạo yêu cầu cho biểu mẫu nào. Vui lòng liên hệ quản trị viên để được cấp quyền."

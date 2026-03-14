@@ -355,6 +355,7 @@ export default function CustomFormTable({
               size="small"
               columns={tableColumns}
               dataSource={rows}
+              rowKey={(record, index) => String(record?.key ?? record?.id ?? index)}
               style={{ marginTop: 12 }}
               scroll={{ x: "max-content", y: scrollY }}
               sticky={stickyHeader}
