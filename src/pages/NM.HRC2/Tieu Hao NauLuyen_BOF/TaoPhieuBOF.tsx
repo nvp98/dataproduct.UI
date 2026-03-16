@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
-import { FilterOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined } from "@ant-design/icons";
+import { FilterOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -17,6 +17,8 @@ import {
   type AdjustColumnMeta,
 } from "../../../services/HRC2TableService";
 import HeaderMappingModal from "../../../components/HeaderMapping";
+import HeaderKeyAutocomplete from "../../../components/HeaderKeyAutocomplete";
+import type { HeaderKey } from "../../../models/HeaderKeyModel";
 import type { HeaderMappingRecord } from "../../../components/HeaderMapping";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
@@ -68,12 +70,93 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
     currentTinhTrang === TrangThaiPhieuConst.HieuChinh
   );
 
-  // Xóa logic thêm adjust column thủ công - giờ tự động từ dữ liệu phân bổ
+  // Thêm cột điều chỉnh mới — header sẽ là autocomplete chọn HeaderKey
   const addAdjustColumn = useCallback(() => {
-    message.info("Các cột điều chỉnh được tự động tạo từ dữ liệu phân bổ. Vui lòng lọc dữ liệu để xem.");
+    const dataIndex = `manual_col_${Date.now()}`;
+    setAdjustColumnMetas((prev) => [
+      ...prev,
+      {
+        key: dataIndex,
+        dataIndex,
+        headerKeyId: null,
+        headerKeyLabel: null,
+        width: 150,
+        isManuallyAdded: true,
+      },
+    ]);
+    setShowAdjustColumns(true);
   }, []);
 
-  // Các function thêm adjust column thủ công đã được xóa - giờ tự động từ dữ liệu phân bổ
+  const handleRemoveAdjustColumn = useCallback((dataIndex: string) => {
+    setAdjustColumnMetas((prev) => prev.filter((m) => m.dataIndex !== dataIndex));
+    setTableData((prev) => prev.map((row) => hrc2TableService.removeRowColumnKey(row, dataIndex)));
+  }, []);
+
+  // Cập nhật headerKeyId, label và dataIndex (manual_col_{ID_HeaderKey}) khi user chọn header key
+  const handleColumnHeaderChange = useCallback(
+    (oldDataIndex: string, opt: HeaderKey | null) => {
+      const headerKeyId = opt?.id ?? null;
+      const headerLabel = opt?.tenHienThi ?? null;
+
+      // Không có header được chọn → chỉ clear meta, không đổi dataIndex
+      if (!headerKeyId) {
+        setAdjustColumnMetas((prev) =>
+          prev.map((m) =>
+            m.dataIndex === oldDataIndex
+              ? { ...m, headerKeyId: null, headerKeyLabel: null }
+              : m
+          )
+        );
+        return;
+      }
+
+      const newDataIndex = `manual_col_${headerKeyId}`;
+
+      // 1) Cập nhật meta: dataIndex = manual_col_{ID_HeaderKey}
+      setAdjustColumnMetas((prev) =>
+        prev.map((m) =>
+          m.dataIndex === oldDataIndex
+            ? {
+                ...m,
+                key: newDataIndex,
+                dataIndex: newDataIndex,
+                headerKeyId,
+                headerKeyLabel: headerLabel,
+              }
+            : m
+        )
+      );
+
+      // 2) Đổi key trong tableData nếu cột đã có dữ liệu tạm trước đó
+      setTableData((prev) =>
+        prev.map((row) => {
+          if (!(oldDataIndex in row)) return row;
+          const next: HRCTableRow = { ...row };
+          next[newDataIndex] = row[oldDataIndex];
+
+          const oldOrigKey = `${oldDataIndex}__orig`;
+          const newOrigKey = `${newDataIndex}__orig`;
+          if (oldOrigKey in row) {
+            (next as any)[newOrigKey] = (row as any)[oldOrigKey];
+          }
+
+          const oldManualFlagKey = `${oldDataIndex}__IsManual`;
+          const newManualFlagKey = `${newDataIndex}__IsManual`;
+          if (oldManualFlagKey in row) {
+            (next as any)[newManualFlagKey] = (row as any)[oldManualFlagKey];
+          }
+
+          // Xoá key cũ sau khi copy
+          delete (next as any)[oldDataIndex];
+          delete (next as any)[oldOrigKey];
+          delete (next as any)[oldManualFlagKey];
+
+          return next;
+        })
+      );
+    },
+    []
+  );
 
   const openMappingModalWithRecord = useCallback((record: HeaderMappingRecord) => {
     setMappingRecord({
@@ -124,28 +207,60 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
   );
 
   const adjustChildColumns = useMemo<HRCChildColumn[]>(() => {
-    if (!adjustColumnMetas.length) {
-      return [];
-    }
+    if (!adjustColumnMetas.length) return [];
     return adjustColumnMetas.map((meta) => ({
-      title: meta.headerKeyLabel ?? "Điều chỉnh",
+      title: meta.isManuallyAdded ? (
+        <div style={{ position: "relative", minWidth: 140, paddingRight: 18 }}>
+          <HeaderKeyAutocomplete
+            value={meta.headerKeyId ?? null}
+            defaultLabel={meta.headerKeyLabel ?? undefined}
+            onSelectOption={(opt) => handleColumnHeaderChange(meta.dataIndex, opt)}
+            size="small"
+            placeholder="Chọn header key..."
+            style={{ minWidth: 120 }}
+            allowClear={false}
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<CloseOutlined />}
+            onClick={() => handleRemoveAdjustColumn(meta.dataIndex)}
+            style={{ position: "absolute", top: -6, right: -6, padding: 0, width: 18, height: 18 }}
+          />
+        </div>
+      ) : (meta.headerKeyLabel ?? "Điều chỉnh"),
       dataIndex: meta.dataIndex,
-      width: meta.width ?? 140,
-      editable: false, // ⭐ KHÔNG cho phép chỉnh sửa thủ công
-      variant: "adjust",
+      width: meta.width ?? 150,
+      editable: meta.isManuallyAdded ? true : false,
+      variant: meta.isManuallyAdded ? undefined : ("adjust" as const),
       metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
       headerKeyId: meta.headerKeyId ?? null,
     }));
-  }, [adjustColumnMetas]);
+  }, [adjustColumnMetas, handleColumnHeaderChange, handleRemoveAdjustColumn]);
 
   const fetchPhuLieus = useCallback(async (params: { NgaySX?: string | null; Ca?: number | null; Scope?: number | null }) => {
     try {
       setLoading(true);
       
-      // Lấy base columns từ config
-      const baseColumns = config.layout.find(
+      // Lấy base columns từ config và chuẩn hóa align (JSON trả về string, cần "left"|"center"|"right")
+      const alignType = (a: unknown): "left" | "center" | "right" | undefined =>
+        a === "left" || a === "center" || a === "right" ? a : undefined;
+      const rawBase = config.layout.find(
         (l) => l.sectionType === "table" && l.key === "table1"
       )?.columns || [];
+      const baseColumns: HRCParentColumn[] = rawBase.map((col: any) => {
+        if (Array.isArray(col.children)) {
+          return {
+            ...col,
+            align: alignType(col.align),
+            children: col.children.map((c: any) => ({
+              ...c,
+              align: alignType(c.align),
+            })),
+          };
+        }
+        return { ...col, align: alignType(col.align) };
+      });
 
       // Xác định các field editable (theo config JSON) để preserve giá trị từ getDetail
       const editableFieldSet = new Set<string>();
@@ -220,22 +335,37 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
           headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
           width: col.width || 140,
         }));
-        setAdjustColumnMetas(adjustMetas);
+        setAdjustColumnMetas((prev) => {
+          const manual = (prev ?? []).filter((m) => m.isManuallyAdded === true);
+          const merged = [...manual];
+          const seen = new Set(manual.map((m) => m.dataIndex));
+          adjustMetas.forEach((m) => {
+            if (!seen.has(m.dataIndex)) {
+              merged.push(m);
+            }
+          });
+          return hrc2TableService.dedupeAdjustMetas(merged);
+        });
         setShowAdjustColumns(true);
       } else {
-        setAdjustColumnMetas([]);
+        // Không xoá các cột thêm tay khi server không trả adjust columns
+        setAdjustColumnMetas((prev) => (prev ?? []).filter((m) => m.isManuallyAdded === true));
       }
 
       // Merge dữ liệu mới từ server với dữ liệu đang nhập theo meThoi
       // Các field editable (config trong JSON) sẽ được preserve từ dữ liệu getDetail
-      setTableData((prev) =>
-        hrc2TableService.mergeServerRows(
+      setTableData((prev) => {
+        const baseMerged = hrc2TableService.mergeServerRows(
           result.tableData || [],
           prev,
           "meThoi",
           editableFields
-        )
-      );
+        );
+        return hrc2TableService.applyManualOverrides(baseMerged, prev, {
+          rowIdField: "id",
+          fallbackKeyField: "meThoi",
+        });
+      });
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);
       message.error("Không thể tải danh sách dữ liệu nhà máy");
@@ -253,8 +383,24 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
     const tableLayout = config.layout.find(
       (l) => l.sectionType === "table" && l.key === "table1"
     ) as { columns?: HRCParentColumn[] } | undefined;
+    const alignType = (a: unknown): "left" | "center" | "right" | undefined =>
+      a === "left" || a === "center" || a === "right" ? a : undefined;
+    const normalizeAlign = (cols: any[]): HRCParentColumn[] =>
+      cols.map((col) => {
+        if (Array.isArray(col.children)) {
+          return {
+            ...col,
+            align: alignType(col.align),
+            children: col.children.map((c: any) => ({
+              ...c,
+              align: alignType(c.align),
+            })),
+          };
+        }
+        return { ...col, align: alignType(col.align) };
+      });
     const baseColumns: HRCParentColumn[] = tableLayout?.columns
-      ? (tableLayout.columns as HRCParentColumn[])
+      ? normalizeAlign(tableLayout.columns as any[])
       : [];
 
     return hrc2TableService.buildColumnsWithAdjust({
@@ -394,7 +540,11 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
             setPhuGiaColumns(restored.BOF_PhuGia ?? []);
             setKhacColumns(restored.others ?? []);
             if (dyn.adjust) {
-              setAdjustColumnMetas(hrc2TableService.adjustMetaFromDynamic(dyn.adjust));
+              setAdjustColumnMetas(
+                hrc2TableService.dedupeAdjustMetas(
+                  hrc2TableService.adjustMetaFromDynamic(dyn.adjust)
+                )
+              );
             } else {
               setAdjustColumnMetas([]);
             }
@@ -435,9 +585,15 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
   }, []);
 
   // Function để lấy formData mới nhất (được gọi mỗi khi click button)
-  const getFormData = useCallback(async () => {
+  // actionKey: "save" | "saveAndSend" | ... để phân biệt lưu vs gửi
+  const getFormData = useCallback(async (actionKey?: string) => {
     const userInfo = getUserInfo();
-    const formData = await form.validateFields();
+    const isSend = actionKey === "saveAndSend" || actionKey === "gui";
+    const headerFieldKeys = config.headerFields.map((f: any) => f.key);
+    const signatureKeys = config.signatures.filter((s) => s.isChon).map((s) => s.key);
+    const fieldsToValidate = isSend ? [...headerFieldKeys, ...signatureKeys] : headerFieldKeys;
+    await form.validateFields(fieldsToValidate);
+    const formData = form.getFieldsValue(true);
     
     const pheDuyetFlow = config.signatures
       .filter((s) => s.isChon)
@@ -471,6 +627,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
     // Đảm bảo các dòng có flag IsNM được gửi lên
     // Dòng từ NM: IsNM = true (hoặc undefined, mặc định là true)
     // Dòng thêm tay: IsNM = false
+    // Giữ nguyên toàn bộ key trong row (kể cả *__orig) để BE nhận đủ phụ liệu manual (IsManual, KLPhuGia_Manual)
     const processedTable1 = tableData.map((row) => {
       const processedRow = { ...row };
       // Nếu không có flag IsNM, mặc định là true (dòng từ NM)
@@ -507,6 +664,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
   }, [
     getUserInfo,
     form,
+    config.headerFields,
     config.signatures,
     config.code,
     phuGiaColumns,
@@ -668,7 +826,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
             ) : (
               layout.sectionType === "table" && (
                 <CustomFormTable
-                  columns={layout.columns || []}
+                  columns={(layout.columns || []) as any}
                   initialData={tableData}
                   onDataChange={(rows) => setTableData(rows as HRCTableRow[])}
                   addRowButtonText="+ Thêm dòng"
@@ -686,7 +844,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
           <div key={idx}>
             {layout.sectionType === "table" && (
               <CustomFormTable
-                columns={layout.columns || []}
+                columns={(layout.columns || []) as any}
                 initialData={table2Data}
                 onDataChange={(rows) => setTable2Data(rows as HRCTableRow[])}
                 className="w-full overflow-x-auto"

@@ -31,7 +31,6 @@ import { headerKeyApi } from "../../../services/HeaderKeyApi";
 import type {
   HeaderKeyPayload,
   HeaderKeyMapping,
-  HeaderMappingType,
 } from "../../../models/HeaderKeyModel";
 import HeaderMappingModal from "../../../components/HeaderMapping";
 import type { HeaderMappingRecord } from "../../../components/HeaderMapping";
@@ -41,6 +40,7 @@ type FilterState = {
   LoaiPhieu?: string;
   TrangThai?: string;
   IsUsedNXT?: boolean;
+  IsUsedThongKe?: boolean;
   FromDate?: string;
   ToDate?: string;
   SortThuTu?: string;
@@ -136,6 +136,8 @@ const HeaderMapping = () => {
       TrangThai: values.TrangThai || undefined,
       IsUsedNXT:
         typeof values.IsUsedNXT === "boolean" ? values.IsUsedNXT : undefined,
+      IsUsedThongKe: 
+        typeof values.IsUsedThongKe === "boolean" ? values.IsUsedThongKe : undefined,
       FromDate: fromDate,
       ToDate: toDate,
       SortThuTu: values.SortThuTu || undefined,
@@ -165,7 +167,9 @@ const HeaderMapping = () => {
       keyGuid: record.keyGuid,
       thuTu: record.thuTu,
       isUsedNXT: record.isUsedNXT ?? false,
+      isUsedThongKe: record.isUsedThongKe ?? false,
       tyTrong: record.tyTrong,
+      loaiThongKe: record.loaiThongKe,
     });
     setModalVisible(true);
   };
@@ -186,7 +190,9 @@ const HeaderMapping = () => {
         isActive: values.isActive ?? true,
         thuTu: values.thuTu ?? null,
         isUsedNXT: values.isUsedNXT ?? false,
+        isUsedThongKe: values.isUsedThongKe ?? false,
         tyTrong: values.tyTrong ?? null,
+        loaiThongKe: values.loaiThongKe ?? null,
       };
       if (editingRecord?.keyGuid) {
         payload.keyGuid = editingRecord.keyGuid;
@@ -352,6 +358,14 @@ const HeaderMapping = () => {
           value ? <Tag color="blue">Có</Tag> : <Tag>Không</Tag>,
       },
       {
+        title: "Dùng cho Thống kê",
+        dataIndex: "isUsedThongKe",
+        key: "isUsedThongKe",
+        width: 100,
+        render: (value: boolean | null | undefined) =>
+          value ? <Tag color="blue">Có</Tag> : <Tag>Không</Tag>,
+      },
+      {
         title: "Ngày tạo",
         dataIndex: "ngayTao",
         key: "ngayTao",
@@ -442,6 +456,14 @@ const HeaderMapping = () => {
             </Col>
             <Col xs={24} md={8}>
               <Form.Item label="Dùng cho STD NXT" name="IsUsedNXT">
+                <Select allowClear placeholder="Tất cả">
+                  <Select.Option value={true}>Có dùng</Select.Option>
+                  <Select.Option value={false}>Không dùng</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
+              <Form.Item label="Dùng cho Thống kê" name="IsUsedThongKe">
                 <Select allowClear placeholder="Tất cả">
                   <Select.Option value={true}>Có dùng</Select.Option>
                   <Select.Option value={false}>Không dùng</Select.Option>
@@ -622,7 +644,38 @@ const HeaderMapping = () => {
           >
             <Switch checkedChildren="Có" unCheckedChildren="Không" />
           </Form.Item>
-          
+          <Form.Item
+            name="isUsedThongKe"
+            label="Dùng cho Thống kê"
+            valuePropName="checked"
+            tooltip="Đánh dấu Header Key này sẽ được tự động chọn làm mặc định khi lọc dữ liệu Thống kê"
+          >
+            <Switch
+              checkedChildren="Có"
+              unCheckedChildren="Không"
+            />
+          </Form.Item>
+
+          <Form.Item shouldUpdate={(prev, cur) => prev.isUsedThongKe !== cur.isUsedThongKe}>
+            {({ getFieldValue }) =>
+              getFieldValue("isUsedThongKe") ? (
+                <Form.Item
+                  name="loaiThongKe"
+                  label="Loại thống kê"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn loại thống kê" }
+                  ]}
+                  tooltip="Đánh dấu Header Key này sẽ được tự động chọn làm mặc định khi lọc dữ liệu Thống kê"
+                >
+                  <Select placeholder="Chọn loại thống kê" allowClear>
+                    <Select.Option value={1}>Lò thổi</Select.Option>
+                    <Select.Option value={2}>Tinh luyện</Select.Option>
+                    <Select.Option value={3}>All</Select.Option>
+                  </Select>
+                </Form.Item>
+              ) : null
+            }
+          </Form.Item>
         </Form>
       </Modal>
     </div>

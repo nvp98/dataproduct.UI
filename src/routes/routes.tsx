@@ -55,6 +55,7 @@ import BienBanPhoiNapNguoi from "../pages/NMCTD/BienBanPhoiNapNguoi/BienBanPhoiN
 import TaoPhieuPhoiNapNguoi from "../pages/NMCTD/BienBanPhoiNapNguoi/TaoPhieuPhoiNapNguoi";
 import ChiTietPhoiNapNguoi from "../pages/NMCTD/BienBanPhoiNapNguoi/ChiTietPhoiNapNguoi";
 import QuanLySilo from "../pages/KhoDuLieu/NM.HRC2/Silo";
+import ThongKeHRC2 from "../pages/NM.HRC2/ThongKe/ThongKeHRC2";
 
 export const routes = [
   {
@@ -650,6 +651,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <QuanLySilo />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thongkehrc2",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThongKeHRC2 />
             </RequireRole>
           </RequireAuth>
         ),

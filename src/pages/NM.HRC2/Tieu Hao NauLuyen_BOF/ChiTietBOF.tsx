@@ -10,6 +10,7 @@ import {
   message,
 } from "antd";
 import dayjs from "dayjs";
+import { formatNumberGroup } from "../../../utils/formatters/numberFormat";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
@@ -68,6 +69,14 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
     const dynamicColumnsMap =
       (formData?.table1DynamicColumns as DynamicColumnsMap | undefined) || {};
 
+    const applyFormat = (col: any) => {
+      if (!col || !col.dataIndex || col.format !== "number-group") return col;
+      return {
+        ...col,
+        render: (value: unknown) => formatNumberGroup(value),
+      };
+    };
+
     const mapped = sourceColumns.map((col) => {
       const key = col.dataIndex || col.key;
       const dynamicChildren =
@@ -82,7 +91,13 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
           })),
         };
       }
-      return col;
+      if (Array.isArray(col.children) && col.children.length > 0) {
+        return {
+          ...col,
+          children: col.children.map((c: any) => applyFormat(c)),
+        };
+      }
+      return applyFormat(col);
     });
 
     if (dynamicColumnsMap.adjust && dynamicColumnsMap.adjust.length > 0) {
@@ -103,7 +118,25 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
     (section: any) =>
       section.sectionType === "table" && section.key === "table2"
   );
-  const columns2 = tableSection2?.columns || [];
+
+  const columns2 = useMemo(() => {
+    const raw = (tableSection2?.columns || []) as any[];
+    const alignType = (a: unknown): "left" | "center" | "right" | undefined =>
+      a === "left" || a === "center" || a === "right" ? a : undefined;
+    return raw.map((col) => {
+      if (Array.isArray(col.children)) {
+        return {
+          ...col,
+          align: alignType(col.align),
+          children: col.children.map((c: any) => ({
+            ...c,
+            align: alignType(c.align),
+          })),
+        };
+      }
+      return { ...col, align: alignType(col.align) };
+    });
+  }, [tableSection2?.columns]);
   const getUserInfo = useCallback(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};

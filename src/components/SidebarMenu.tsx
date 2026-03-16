@@ -22,52 +22,39 @@ const SidebarMenu = () => {
   }, []);
 
   useEffect(() => {
-    const idTaiKhoan =
-      (user?.iD_TaiKhoan ?? user?.ID_TaiKhoan ?? user?.idTaiKhoan ?? user?.IdTaiKhoan) as number | undefined;
-    if (idTaiKhoan == null || typeof idTaiKhoan !== "number") {
+    const raw =
+      user?.iD_TaiKhoan ?? user?.ID_TaiKhoan ?? user?.idTaiKhoan ?? user?.IdTaiKhoan;
+    const idTaiKhoan = typeof raw === "number" ? raw : Number(raw);
+    if (!Number.isFinite(idTaiKhoan) || idTaiKhoan <= 0) {
       setMenuPermissions(null);
       return;
     }
     BmQuyenXlApi.getMenuPermissions(idTaiKhoan)
       .then((res) => setMenuPermissions(res ?? { processingForms: [], approvingForms: [] }))
-      .catch(() => setMenuPermissions({ processingForms: [], approvingForms: [] }));
+      .catch(() => setMenuPermissions(null));
   }, [user]);
 
+  /** Lọc item theo maBM: item có maBM thì hiển thị khi maBM nằm trong allowedSet (hoặc allowAll). */
   const filterByMaBM = useCallback(
     (
       items: { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[],
-      processingSet: Set<string>,
-      approvingSet: Set<string>,
-      parentKey?: string
+      allowedSet: Set<string>,
+      allowAll: boolean
     ): typeof items => {
-      const allowAllProcessing = processingSet.has("*");
-      const allowAllApproving = approvingSet.has("*");
-      const isUnderProcessing =
-        parentKey === "sub2" || (typeof parentKey === "string" && parentKey.startsWith("sub2"));
-      const isUnderApproving =
-        parentKey === "sub3" || (typeof parentKey === "string" && (parentKey.startsWith("sub3") || parentKey.startsWith("sub4")));
       return items
         .filter((item) => {
           const roles = item.roles as string[] | undefined;
           if (Array.isArray(roles) && roles.includes("admin")) return isAdminUser(user);
           if (Array.isArray(roles) && roles.includes("PKH")) return user?.tenNgan === "P.KH";
-          if (isUnderProcessing) {
-            if (item.maBM != null) return allowAllProcessing || processingSet.has(item.maBM);
-            return true;
-          }
-          if (isUnderApproving) {
-            if (item.maBM != null) return allowAllApproving || approvingSet.has(item.maBM);
-            return true;
-          }
+          if (item.maBM != null && item.maBM !== "") return allowAll || allowedSet.has(item.maBM);
           return true;
         })
         .map((item) => {
           if (item.children && Array.isArray(item.children)) {
             const filteredChildren = filterByMaBM(
               item.children as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[],
-              processingSet,
-              approvingSet,
-              item.key ?? parentKey
+              allowedSet,
+              allowAll
             );
             return { ...item, children: filteredChildren };
           }
@@ -75,8 +62,6 @@ const SidebarMenu = () => {
         })
         .filter((item) => {
           if (item.children && Array.isArray(item.children) && item.children.length === 0)
-            return false;
-          if ((isUnderProcessing || isUnderApproving) && item.children?.length === 0)
             return false;
           return true;
         });
@@ -113,9 +98,8 @@ const SidebarMenu = () => {
               isSub2 || isSub3
                 ? filterByMaBM(
                     item.children as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[],
-                    isSub2 ? processingSet : new Set(),
-                    isSub3 ? approvingSet : new Set(),
-                    item.key
+                    isSub2 ? processingSet : approvingSet,
+                    isSub2 ? processingSet.has("*") : approvingSet.has("*")
                   )
                 : filterMenuItems(
                     item.children as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[]

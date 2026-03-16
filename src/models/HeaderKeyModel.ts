@@ -20,6 +20,8 @@ export interface HeaderKeyPayload {
   thuTu?: number | null;
   tyTrong?: number | null;
   isUsedNXT?: boolean | null;
+  isUsedThongKe?: boolean | null; // Dùng cho Thống kê
+  loaiThongKe?: number  | null; // Loại thống kê (ví dụ: BOF, LFRH)
 }
 
 export interface HeaderKeySearchResponse {
@@ -46,9 +48,11 @@ export interface HeaderKeyMapping {
   isActive?: boolean | null;
   ngayTao?: string | null;
   isUsedNXT?: boolean | null;
+  isUsedThongKe?: boolean | null;
   thuTu?: number | null;
   tyTrong?: number | null;
   iD_PhuLieu?: number | null; // có thể null nếu là HeaderKey chưa móc nối
   tenNguonDuLieu?: string | null;
   tenPhuLieu?: string | null;
+  loaiThongKe?: number | null; // Loại thống kê (ví dụ: BOF, LFRH)
 }
