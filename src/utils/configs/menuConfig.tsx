@@ -111,7 +111,9 @@ export const menuConfig = [
             key: "sub1-1.3",
             label: (
               <Tooltip title="HRC2 - Dữ liệu luyện thép">
-                <NavLink to="/dlnmhrc2luyenthep">HRC2 - Dữ liệu luyện thép</NavLink>
+                <NavLink to="/dlnmhrc2luyenthep">
+                  HRC2 - Dữ liệu luyện thép
+                </NavLink>
               </Tooltip>
             ),
           },
@@ -206,17 +208,16 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
-          // {
-          //   key: "7",
-          //   label: (
-          //     <Tooltip title="BM.07/QT.05.10 (Biên bản giao nhận phôi nguội)">
-          //       <NavLink to="/bienbanphoinguoi">
-          //         BM.06/QT.05.10 (Biên bản giao nhận phôi nguội)
-          //       </NavLink>
-          //     </Tooltip>
-          //   ),
-          // },
-          // { key: "6", label: "Option 6" },
+          {
+            key: "sub2-7-3",
+            label: (
+              <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
+                <NavLink to="/bienbanphoinapnguoi">
+                  BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       // {
@@ -314,30 +315,31 @@ export const menuConfig = [
             ),
           },
         ],
-      },{
+      },
+      {
         key: "sub2-7",
         label: "NM.HRC1",
         children: [
           {
-            key: "sub2-7-1",  
+            key: "sub2-7-1",
             label: (
-                <Tooltip title="BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)">
+              <Tooltip title="BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)">
                 <NavLink to="/bienbansanluongphoi">
                   BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)
                 </NavLink>
               </Tooltip>
             ),
-        },
-        {
-              key: "sub2-7-2",  
+          },
+          {
+            key: "sub2-7-2",
             label: (
-                <Tooltip title="BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)">
-                  <NavLink to="/bienbanphoinapkho">
-                    BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)
-                  </NavLink>
-                </Tooltip>
-              ),
-        },
+              <Tooltip title="BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)">
+                <NavLink to="/bienbanphoinapkho">
+                  BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -382,6 +384,16 @@ export const menuConfig = [
               <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
                 <NavLink to="/viecdentoi/bienbanphoinong">
                   BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-6-3",
+            label: (
+              <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
+                <NavLink to="/viecdentoi/bienbanphoinapnguoi">
+                  BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)
                 </NavLink>
               </Tooltip>
             ),
@@ -454,9 +466,9 @@ export const menuConfig = [
         label: "NM.HRC1",
         children: [
           {
-            key: "sub4-6-1",  
+            key: "sub4-6-1",
             label: (
-                <Tooltip title="BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)">
+              <Tooltip title="BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)">
                 <NavLink to="/viecdentoi/bienbansanluongphoi">
                   BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)
                 </NavLink>
@@ -464,8 +476,8 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub4-6-2",  
-             label: (
+            key: "sub4-6-2",
+            label: (
               <Tooltip title="BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)">
                 <NavLink to="/viecdentoi/bienbanphoinapkho">
                   BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)
@@ -501,11 +513,21 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub5-1-2",
+            maBM: "CTD_BB_Phoinapnguoi",
+            label: (
+              <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
+                <NavLink to="/viecdentoi/bienbanphoinapnguoi">
+                  BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
 
           // { key: "6", label: "Option 6" },
         ],
       },
-      
     ],
   },
   // {

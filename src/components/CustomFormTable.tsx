@@ -37,7 +37,7 @@ interface CustomFormTableProps {
     rowIndex: number,
     dataIndex: string,
     value: any,
-    row: any
+    row: any,
   ) => void;
   compactWhenEmpty?: boolean; // Nếu true, khi không có dòng sẽ không chiếm nhiều chiều cao
   summary?: (data: readonly any[]) => React.ReactNode;
@@ -73,7 +73,7 @@ export default function CustomFormTable({
   const getCellStyle = (
     dataIndex: string | number,
     value: any,
-    readonly?: boolean
+    readonly?: boolean,
   ) => {
     const style: any = {};
     if (readonly || !editable) style.backgroundColor = "#fffbe6";
@@ -106,12 +106,11 @@ export default function CustomFormTable({
   };
 
   // Xử lý xóa dòng
-  const handleDeleteRow = (key: string | number) => {
+  const handleDeleteRow = (rowIndex: number) => {
     if (rows.length <= minRows) {
       return; // Không cho xóa nếu đã đạt số dòng tối thiểu
     }
-    console.log("rows:", rows, key);
-    const newRows = rows.filter((row) => row.key !== key);
+    const newRows = rows.filter((_, idx) => idx !== rowIndex);
     setRows(newRows);
     onDataChange?.(newRows);
   };
@@ -138,7 +137,7 @@ export default function CustomFormTable({
   const handleCellChange = (
     value: string,
     rowIndex: number,
-    dataIndex: string
+    dataIndex: string,
   ) => {
     const newData = [...rows];
     newData[rowIndex][dataIndex] = value;
@@ -174,7 +173,7 @@ export default function CustomFormTable({
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
-                      true
+                      true,
                     )}
                   />
                 ) : (
@@ -185,18 +184,18 @@ export default function CustomFormTable({
                       handleCellChange(
                         e.target.value,
                         idx,
-                        child.dataIndex as string
+                        child.dataIndex as string,
                       );
                     }}
                     disabled={!editable}
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
-                      false
+                      false,
                     )}
                   />
                 ),
-            })
+            }),
           ),
         };
       } else {
@@ -234,7 +233,7 @@ export default function CustomFormTable({
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex || ""],
-                  true
+                  true,
                 )}
               />
             ) : (
@@ -245,14 +244,14 @@ export default function CustomFormTable({
                   handleCellChange(
                     e.target.value,
                     idx,
-                    col.dataIndex as string
+                    col.dataIndex as string,
                   );
                 }}
                 disabled={!editable}
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex ?? ""],
-                  false
+                  false,
                 )}
               />
             ),
@@ -271,8 +270,8 @@ export default function CustomFormTable({
                 t === 1
                   ? "Đã chuyển hết"
                   : t === 2
-                  ? "Đã chuyển 1 phần"
-                  : "Chưa chuyển";
+                    ? "Đã chuyển 1 phần"
+                    : "Chưa chuyển";
               const color = t === 1 ? "green" : t === 2 ? "orange" : "default";
               return <Tag color={color}>{text}</Tag>;
             },
@@ -286,13 +285,13 @@ export default function CustomFormTable({
             title: "Thao tác",
             key: "action",
             width: 80,
-            render: (_: any, record: any) => (
+            render: (_: any, _record: any, rowIndex: number) => (
               <Space>
                 <Popconfirm
                   title="Bạn có chắc chắn muốn xóa dòng này?"
                   okText="Xóa"
                   cancelText="Hủy"
-                  onConfirm={() => handleDeleteRow(record.key)}
+                  onConfirm={() => handleDeleteRow(rowIndex)}
                   disabled={rows.length <= minRows}
                 >
                   <Button

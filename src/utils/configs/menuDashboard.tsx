@@ -4,11 +4,11 @@ export const MenuDataDashboard = [
     icon: "nmnl",
     color: "#1890ff",
     items: [
-      {
-        code: "nhatkyquangtrunghoa",
-        title: "BM.06/QT.05.01 NHẬT KÝ THAO TÁC PHỐI TRỘN QUẶNG TRUNG HÒA",
-        maBm: "NL_BB_Quangtrunghoa",
-      },
+      // {
+      //   code: "nhatkyquangtrunghoa",
+      //   title: "BM.06/QT.05.01 NHẬT KÝ THAO TÁC PHỐI TRỘN QUẶNG TRUNG HÒA",
+      //   maBm: "NL_BB_Quangtrunghoa",
+      // },
     ],
   },
   {
@@ -31,11 +31,11 @@ export const MenuDataDashboard = [
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (GIAO PHÔI)",
         maBm: "CTD_BB_Phoinong",
       },
-      {
-        code: "bienbanphoinguoi",
-        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-        maBm: "CTD_BB_Phoinguoi",
-      },
+      // {
+      //   code: "bienbanphoinguoi",
+      //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      //   maBm: "CTD_BB_Phoinguoi",
+      // },
     ],
   },
   {
@@ -74,10 +74,10 @@ export const MenuDataDashboard = [
       //   code: "bienbanphoinguoi",
       //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
       // },
-      {
-        code: "bienbanphoinguoi",
-        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-      },
+      // {
+      //   code: "bienbanphoinguoi",
+      //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      // },
       {
         code: "bienbansanluongphoi",
         title: "BM.11/QT.05.11 BIÊN BẢN XÁC NHẬN SẢN LƯỢNG PHÔI THÉP",
@@ -85,6 +85,11 @@ export const MenuDataDashboard = [
       {
         code: "bienbanphoinapkho",
         title: "BM.12/QT.05.11 BIÊN BẢN GIAO NHẬN PHÔI NHẬP KHO",
+      },
+      {
+        code: "bienbanphoinapnguoi",
+        title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI",
+        maBm: "CTD_BB_Phoinapnguoi",
       },
     ],
   },

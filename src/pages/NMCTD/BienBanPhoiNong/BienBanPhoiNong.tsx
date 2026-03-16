@@ -229,10 +229,24 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
         return (
           <Tag color={statusXL[status]?.color || "default"}>
             {statusXL[status]?.text || status}
+            {" - "}
+            {ctdApproval?.hoVaTen?.toString()}
           </Tag>
         );
       },
     },
+    // {
+    //   title: "Người xử lý CTD",
+    //   dataIndex: "nguoiXLCTD",
+    //   key: "nguoiXLCTD",
+    //   width: 110,
+    //   render: (_: any, record: TableRecord) => {
+    //     const ctdApproval = record.pheDuyet?.find(
+    //       (item: any) => item.capDuyet === 2,
+    //     );
+    //     return ctdApproval?.hoVaTen?.toString()?.trim() || "-";
+    //   },
+    // },
 
     {
       title: "Trạng thái QLCL",
@@ -247,10 +261,24 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
         return (
           <Tag color={statusXL[status]?.color || "default"}>
             {statusXL[status]?.text || status}
+            {" - "}
+            {ctdApproval?.hoVaTen?.toString()}
           </Tag>
         );
       },
     },
+    // {
+    //   title: "Người xử lý QLCL",
+    //   dataIndex: "nguoiXLQLCL",
+    //   key: "nguoiXLQLCL",
+    //   width: 110,
+    //   render: (_: any, record: TableRecord) => {
+    //     const ctdApproval = record.pheDuyet?.find(
+    //       (item: any) => item.capDuyet === 1,
+    //     );
+    //     return ctdApproval?.hoVaTen?.toString()?.trim() || "-";
+    //   },
+    // },
     {
       title: "Ghi chú",
       dataIndex: "note",
