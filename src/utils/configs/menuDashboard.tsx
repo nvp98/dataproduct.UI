@@ -33,11 +33,11 @@ export const MenuDataDashboard = [
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (GIAO PHÔI)",
         maBm: BM_CONFIG.CTD.CTD_BB_Phoinong,
       },
-      {
-        code: "bienbanphoinguoi",
-        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-        maBm: BM_CONFIG.CTD.CTD_BB_Phoinguoi,
-      },
+      // {
+      //   code: "bienbanphoinguoi",
+      //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
+      //   maBm: BM_CONFIG.CTD.CTD_BB_Phoinguoi,
+      // },
     ],
   },
   {
@@ -91,7 +91,7 @@ export const MenuDataDashboard = [
       {
         code: "bienbanphoinapnguoi",
         title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI",
-        maBm: "CTD_BB_Phoinapnguoi",
+        maBm: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
       },
     ],
   },

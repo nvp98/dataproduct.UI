@@ -520,7 +520,7 @@ export const menuConfig = [
           },
           {
             key: "sub5-1-2",
-            maBM: "CTD_BB_Phoinapnguoi",
+            maBM: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
             label: (
               <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
                 <NavLink to="/viecdentoi/bienbanphoinapnguoi">

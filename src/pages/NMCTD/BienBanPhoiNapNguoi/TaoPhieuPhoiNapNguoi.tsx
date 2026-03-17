@@ -1,7 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import CTD_BB_Phoinapnguoi from "../../../utils/BM_config/CTD_BB_Phoinapnguoi.json";
-import { Button, Card, Form, Input, Typography, message, Table } from "antd";
-import { FilterOutlined, FilePdfOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Typography,
+  message,
+  Table,
+  Upload,
+} from "antd";
+import {
+  FilterOutlined,
+  FilePdfOutlined,
+  FileExcelOutlined,
+  DownloadOutlined,
+} from "@ant-design/icons";
+import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -279,6 +294,7 @@ const TaoPhieuPhoiNapNguoi = () => {
       ...formData,
       ...formattedDates,
       maBm: config.code,
+      scope: formData.xuong ?? null,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
       nguoiTaoId: userInfo.iD_TaiKhoan ?? null,
@@ -430,6 +446,65 @@ const TaoPhieuPhoiNapNguoi = () => {
     // phieuInfoRef không cần deps – dùng ref
   );
 
+  const handleDownloadTemplate = () => {
+    const headers = [
+      [
+        "Mẻ",
+        "Mác",
+        "Kích thước",
+        "Tổng số thanh",
+        "Tổng khối lượng",
+        "Ghi chú",
+      ],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(headers);
+    ws["!cols"] = [
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 20 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "PhoiNapNguoi");
+    XLSX.writeFile(wb, "Template_PhoiNapNguoi.xlsx");
+  };
+
+  const handleImportExcel = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        if (rows.length < 2) {
+          message.warning("File không có dữ liệu!");
+          return;
+        }
+        const dataRows = rows
+          .slice(1)
+          .filter((r) => r.some((c) => c !== undefined && c !== ""));
+        const imported: TableRow[] = dataRows.map((r, idx) => ({
+          key: `import-${Date.now()}-${idx}`,
+          me: r[0] ?? "",
+          mac: r[1] ?? "",
+          kichThuoc: r[2] ?? "",
+          tongThanh: Number(r[3]) || 0,
+          tongKL: Number(r[4]) || 0,
+          ghiChu: r[5] ?? "",
+        }));
+        setTableData(imported);
+        message.success(`Import thành công ${imported.length} dòng!`);
+      } catch {
+        message.error("Đọc file thất bại, vui lòng kiểm tra lại template!");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    return false; // prevent antd Upload auto-upload
+  };
+
   const handleExportPdf = async () => {
     if (!idphieu) {
       message.warning("Vui lòng lưu phiếu trước khi xuất PDF!");
@@ -437,19 +512,12 @@ const TaoPhieuPhoiNapNguoi = () => {
     }
     try {
       setLoading(true);
-      const response = await phoiNapNguoiApi.exportSanLuongPdf({
-        NgaySX: form.getFieldValue("NgaySX")
-          ? form.getFieldValue("NgaySX").format("YYYY-MM-DD")
-          : undefined,
-        Ca: form.getFieldValue("ca"),
-        Kip: form.getFieldValue("kip"),
-        idPhieu: idphieu,
-      });
+      const response = await PhieuApi.exportDynamicPDF(idphieu, {});
       const blob = new Blob([response as any], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Bien_ban_san_luong_phoi_${soPhieu || idphieu}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      link.download = `Bien_ban_phoi_nap_nguoi_${soPhieu || idphieu}_${new Date().toISOString().slice(0, 10)}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -553,6 +621,38 @@ const TaoPhieuPhoiNapNguoi = () => {
           >
             Tải dữ liệu
           </Button> */}
+          {!isFormLocked && (
+            <>
+              <Button
+                type="default"
+                style={{
+                  backgroundColor: "#faad14",
+                  borderColor: "#faad14",
+                  color: "#fff",
+                }}
+                icon={<DownloadOutlined />}
+                onClick={handleDownloadTemplate}
+              >
+                Tải template
+              </Button>
+              <Upload
+                accept=".xlsx,.xls"
+                showUploadList={false}
+                beforeUpload={handleImportExcel}
+              >
+                <Button
+                  icon={<FileExcelOutlined />}
+                  style={{
+                    backgroundColor: "#007906",
+                    borderColor: "#007906",
+                    color: "#fff",
+                  }}
+                >
+                  Import Excel
+                </Button>
+              </Upload>
+            </>
+          )}
           {idphieu &&
             (currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
               currentTinhTrang === TrangThaiPhieuConst.DaChot) && (
@@ -581,8 +681,9 @@ const TaoPhieuPhoiNapNguoi = () => {
                 editable={true}
                 showAddButton={true}
                 showDeleteButton={
-                  currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
-                  currentTinhTrang === TrangThaiPhieuConst.DaThuHoi
+                  currentTinhTrang == TrangThaiPhieuConst.DangLuu ||
+                  currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+                  currentTinhTrang === TrangThaiPhieuConst.HieuChinh
                 }
                 summary={(pageData) => {
                   const totals = {

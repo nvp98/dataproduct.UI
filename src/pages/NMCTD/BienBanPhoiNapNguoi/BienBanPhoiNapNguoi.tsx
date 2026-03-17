@@ -10,12 +10,15 @@ import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { sanLuongPhoiApi as phoiNapNguoiApi } from "../../../services/BMDucCTDApi";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
+import { PhieuApi } from "../../../services/PhieuApi";
 
 const BienBanPhoiNapNguoi = ({ type }: { type?: string }) => {
   const config = CTD_BB_Phoinapnguoi;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
+  const thongtinuser = getThongTinUser();
   const [currentFilter, setCurrentFilter] = useState<any>({});
 
   const handleFilterWithCapture = (filters: any) => {
@@ -23,8 +26,10 @@ const BienBanPhoiNapNguoi = ({ type }: { type?: string }) => {
     handleFilter(filters); // vẫn gọi tìm kiếm bình thường
   };
   const fixedFilters = useMemo(
-    () => ({ usercode: userObj?.maNV || "" }),
-    [userObj?.maNV],
+    () => ({
+      usercode: userObj?.maNV || "",
+    }),
+    [userObj?.maNV, thongtinuser.iD_TaiKhoan],
   );
 
   const {
@@ -201,8 +206,10 @@ const BienBanPhoiNapNguoi = ({ type }: { type?: string }) => {
     try {
       const fromDate = currentFilter?.ngaySXFrom;
       const toDate = currentFilter?.ngaySXTo;
+      const maBm = config?.code;
 
-      const res = await phoiNapNguoiApi.exportExcelSanLuongPhoi({
+      const res = await PhieuApi.exportDynamicExcelTH({
+        maBm,
         fromDate,
         toDate,
       });
@@ -241,7 +248,7 @@ const BienBanPhoiNapNguoi = ({ type }: { type?: string }) => {
       <Card
         extra={
           <Space>
-            {/* <Button onClick={handleExportExcel}>Xuất Excel</Button> */}
+            <Button onClick={handleExportExcel}>Xuất Excel</Button>
 
             <Button
               type="primary"
