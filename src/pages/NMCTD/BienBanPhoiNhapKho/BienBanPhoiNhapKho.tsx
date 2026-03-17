@@ -1,4 +1,4 @@
-import CTD_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/CTD_BB_GiaoNhanPhoiNhapKho.json";
+import HRC1_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/HRC1_BB_GiaoNhanPhoiNhapKho.json";
 import {
   Button,
   Card,
@@ -19,7 +19,7 @@ import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { phoiNhapKhoApi } from "../../../services/BMDucCTDApi";
 
 const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
-  const config = CTD_BB_GiaoNhanPhoiNhapKho;
+  const config = HRC1_BB_GiaoNhanPhoiNhapKho;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};

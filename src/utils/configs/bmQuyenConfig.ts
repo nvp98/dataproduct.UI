@@ -39,6 +39,16 @@ export const bmQuyenConfig = {
       tenBm: "Biên bản tiêu hao nấu luyện lò tinh luyện RH",
       nhom: "NM.HRC2",
     },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_GiaoNhanPhoiNhapKho,
+      tenBm: "Biên bản giao nhận phôi nhập kho",
+      nhom: "NM.HRC1",
+    },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_Sanluongphoi,
+      tenBm: "Biên bản sản lượng phôi",
+      nhom: "NM.HRC1",
+    },
   ] as BieuMauQuyenItem[],
   danhSachKhuVuc: [
     { maKhuVuc: "1", tenKhuVuc: "Xưởng cán 1", nhom: "NM.CTD" },
@@ -48,5 +58,6 @@ export const bmQuyenConfig = {
     { maKhuVuc: "RH", tenKhuVuc: "Lò RH", nhom: "NM.HRC2" },
     { maKhuVuc: "BOF", tenKhuVuc: "Lò BOF", nhom: "NM.HRC2" },
     { maKhuVuc: "ALL", tenKhuVuc: "Tất cả", nhom: "COMMON" },
+    { maKhuVuc: "4", tenKhuVuc: "NM.HRC1", nhom: "NM.HRC1" },
   ] as KhuVucQuyenItem[],
 };

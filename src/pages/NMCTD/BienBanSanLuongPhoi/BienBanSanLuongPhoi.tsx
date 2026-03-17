@@ -1,4 +1,4 @@
-import CTD_BB_Sanluongphoi from "../../../utils/BM_config/CTD_BB_Sanluongphoi.json";
+import HRC1_BB_Sanluongphoi from "../../../utils/BM_config/HRC1_BB_Sanluongphoi.json";
 import {
   Button,
   Card,
@@ -19,7 +19,7 @@ import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { sanLuongPhoiApi } from "../../../services/BMDucCTDApi";
 
 const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
-  const config = CTD_BB_Sanluongphoi;
+  const config = HRC1_BB_Sanluongphoi;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};

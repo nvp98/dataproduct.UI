@@ -10,12 +10,13 @@ export const BM_CONFIG = {
     CTD: {
         CTD_BB_Phoinong: 'CTD_BB_Phoinong',
         CTD_BB_Phoinguoi: 'CTD_BB_Phoinguoi',
-        CTD_BB_GiaoNhanPhoiNhapKho: 'CTD_BB_GiaoNhanPhoiNhapKho',
-        CTD_BB_Sanluongphoi: 'CTD_BB_Sanluongphoi',
+      
     },
     HRC1: {
         HRC1_BB_Theplong: 'HRC1_BB_Theplong',
-        HRC1_BB_Lothoi: 'HRC1_BB_Lothoi'
+        HRC1_BB_Lothoi: 'HRC1_BB_Lothoi',
+        HRC1_BB_GiaoNhanPhoiNhapKho: 'HRC1_BB_GiaoNhanPhoiNhapKho',
+        HRC1_BB_Sanluongphoi: 'HRC1_BB_Sanluongphoi',
     }
 }
 

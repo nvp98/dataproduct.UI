@@ -38,6 +38,16 @@ export const MenuDataDashboard = [
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
         maBm: BM_CONFIG.CTD.CTD_BB_Phoinguoi,
       },
+      {
+        code: "bienbansanluongphoi",
+        title: "BM.11/QT.05.11 BIÊN BẢN XÁC NHẬN SẢN LƯỢNG PHÔI THÉP",
+        maBm: BM_CONFIG.HRC1.HRC1_BB_Sanluongphoi,
+      },
+      {
+        code: "bienbanphoinapkho",
+        title: "BM.12/QT.05.11 BIÊN BẢN GIAO NHẬN PHÔI NHẬP KHO",
+        maBm: BM_CONFIG.HRC1.HRC1_BB_GiaoNhanPhoiNhapKho,
+      },
     ],
   },
   {
@@ -80,14 +90,7 @@ export const MenuDataDashboard = [
       //   code: "bienbanphoinguoi",
       //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
       // },
-      {
-        code: "bienbansanluongphoi",
-        title: "BM.11/QT.05.11 BIÊN BẢN XÁC NHẬN SẢN LƯỢNG PHÔI THÉP",
-      },
-      {
-        code: "bienbanphoinapkho",
-        title: "BM.12/QT.05.11 BIÊN BẢN GIAO NHẬN PHÔI NHẬP KHO",
-      },
+      
       {
         code: "bienbanphoinapnguoi",
         title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI",
