@@ -20,6 +20,7 @@ export interface STD_NXT_Table1Row {
   tonCuoiCa?: string | number; // Tồn cuối ca - Khối lượng (Kg)
   tuongQuanCuoiCa?: string; // Tồn cuối ca - Tương quan (bao, kiện, mức...)
   tongThucTe?: string | number; // Tổng thực tế sử dụng
+  luongSuDungKiemKe?: string | number; // Lượng sử dụng kiểm kê
   rawTenPhuLieu?: string; // Tên phụ liệu gốc (dùng cho unmapped items)
   isUnmapped?: boolean; // Flag để đánh dấu item chưa được map với HeaderKey
   idPhuLieu?: number | null; // ID của PhuLieu (dùng cho unmapped items)
@@ -87,6 +88,7 @@ export interface NXTDetailDto {
   TonCuoiCa: number; // Tồn cuối ca
   TuongQuanCuoiCa: string; // Tương quan cuối ca
   TongThucTe: number; // Tổng thực tế
+  LuongSuDungKiemKe?: number | null; // Lượng sử dụng kiểm kê
 }
 
 /**

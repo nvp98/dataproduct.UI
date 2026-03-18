@@ -94,7 +94,7 @@ export const MenuDataDashboard = [
       {
         code: "bienbanphoinapnguoi",
         title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI",
-        maBm: "CTD_BB_Phoinapnguoi",
+        maBm: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
       },
     ],
   },

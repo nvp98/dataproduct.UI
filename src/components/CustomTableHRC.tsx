@@ -387,7 +387,7 @@ const CustomTableHRC = ({
 
                 const tooltipTitle =
                   isCellChanged
-                    ? `Cũ: ${String(origValue ?? "")} | Mới: ${String(currentValue ?? "")}`
+                    ? `Tự động: ${String(origValue ?? "")} | Chỉnh sửa: ${String(currentValue ?? "")}`
                     : undefined;
 
                 const isKeyColumn = isMeThoiColumn || isMacThepColumn;
@@ -649,6 +649,7 @@ const CustomTableHRC = ({
             size="small"
             columns={tableColumns}
             dataSource={sortedRows}
+            rowKey={(record, index) => String(record?.key ?? record?.id ?? index)}
             style={{ marginTop: 20 }}
             scroll={{ x: scrollX, y: defaultScrollY }}
             sticky={stickyHeaders ? { offsetHeader: 0 } : undefined}

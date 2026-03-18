@@ -382,6 +382,7 @@ export const hrc2TableService = {
     adjustGroupTitle = "Điều chỉnh số liệu",
     showAdjustColumns = true,
     manualAdjustColumns,
+    phanBoColumns,
     generateAdjustColumnsFromBase = true,
   }: {
     baseColumns: HRCParentColumn[];
@@ -390,6 +391,7 @@ export const hrc2TableService = {
     adjustGroupTitle?: string;
     showAdjustColumns?: boolean;
     manualAdjustColumns?: HRCChildColumn[];
+    phanBoColumns?: HRCChildColumn[];
     generateAdjustColumnsFromBase?: boolean;
   }): HRCParentColumn[] {
     const adjustChildColumns: HRCChildColumn[] = manualAdjustColumns
@@ -461,7 +463,15 @@ export const hrc2TableService = {
           )
       );
 
-    // Không push adjust group cuối bảng nữa (đã render theo slot "dieuChinh" nếu có)
+    // Append group "Phân bổ" riêng nếu có phanBoColumns
+    if (phanBoColumns && phanBoColumns.length > 0) {
+      processedColumns.push({
+        title: "Phân bổ",
+        dataIndex: "phanBoGroup",
+        children: phanBoColumns,
+      } as HRCParentColumn);
+    }
+
     return processedColumns;
   },
 };

@@ -5,7 +5,8 @@ export const PhieuApi = {
   getData: (params?: Record<string, unknown>) =>
     apiService.get("/api/Phieus", { params }),
 
-  postData: (data: Record<string, unknown>) => apiService.post("/api/Phieus", data),
+  postData: (data: Record<string, unknown>) =>
+    apiService.post("/api/Phieus", data),
 
   getDetail: (id: string) => apiService.get(`/api/Phieus/${id}`),
   putData: (id: string, data: Record<string, unknown>) =>
@@ -30,4 +31,11 @@ export const PhieuApi = {
     apiService.post(`/api/Phieus/${id}/initialize`),
   syncNguoiTaoPhieu: (id: string, data: Record<string, unknown>) =>
     apiService.put(`/api/Phieus/${id}/sync-nguoi-tao`, data),
+  exportDynamicPDF: (id: string, data: Record<string, unknown>) =>
+    apiService.get(`/api/Phieus/${id}/export-pdf`, { responseType: "blob" }),
+  exportDynamicExcelTH: (params?: Record<string, unknown>) =>
+    apiService.get(`/api/Phieus/export-excel-tonghop`, {
+      params,
+      responseType: "blob",
+    }),
 };

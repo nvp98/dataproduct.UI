@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC2_STD_NXT from "../../../utils/BM_config/HRC2_STD_NXT.json";
-import { Card, Form, Input, Typography, message, Button } from "antd";
+import { Card, Form, Input, Typography, message, Button, Tabs } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -102,6 +102,7 @@ const Tao_STD = () => {
           TonCuoiCa: row.tonCuoiCa ? Number(row.tonCuoiCa) : 0,
           TuongQuanCuoiCa: row.tuongQuanCuoiCa ?? "",
           TongThucTe: row.tongThucTe ? Number(row.tongThucTe) : 0,
+          LuongSuDungKiemKe: row.luongSuDungKiemKe != null && row.luongSuDungKiemKe !== "" ? Number(row.luongSuDungKiemKe) : null,
         };
       });
 
@@ -207,12 +208,12 @@ const Tao_STD = () => {
         };
 
         // Map details từ BE sang format frontend
-        const mappedDetails: STD_NXT_Table1Row[] = (data?.details || []).map((item: any) => {
+        const mappedDetails: STD_NXT_Table1Row[] = (data?.details || []).map((item: any, index: number) => {
           const scope = Number(item.scope) || 0;
           const khuVuc = getKhuVucByScope(scope);
           
           return {
-            key: `${scope}_${item.id_HeaderKey}_${item.viTri}`,
+            key: `${scope}_${item.id_HeaderKey}_${item.viTri}_${index}`,
             khuVuc: khuVuc,
             viTri: Number(item.viTri) || 1,
             nguyenNhienLieu: item.tenNguyenLieu || "",
@@ -229,6 +230,7 @@ const Tao_STD = () => {
             tonCuoiCa: item.tonCuoiCa ?? null,
             tuongQuanCuoiCa: item.tuongQuanCuoiCa ?? "",
             tongThucTe: item.tongThucTe ?? null,
+            luongSuDungKiemKe: item.luongSuDungKiemKe ?? null,
           };
         });
 
@@ -293,14 +295,28 @@ const Tao_STD = () => {
       tonCuoiCa: Number(row.tonCuoiCa || 0),
       tuongQuanCuoiCa: row.tuongQuanCuoiCa ?? "",
       tongThucTe: Number(row.tongThucTe || 0),
+      luongSuDungKiemKe: row.luongSuDungKiemKe != null && row.luongSuDungKiemKe !== "" ? Number(row.luongSuDungKiemKe) : null,
     }));
 
     // Validation: Tất cả dòng phải chọn Silo
-    const missingSiloRows = table1Normalized.filter((row) => !row.siloId);
+    const missingSiloRows = table1Normalized.filter((row) => !row.siloId && row.viTri !== 2);
     if (missingSiloRows.length > 0) {
       const tenNguyenLieu = missingSiloRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
       message.error(`Vui lòng chọn Silo cho tất cả loại liệu trước khi lưu.\nCác dòng chưa chọn: ${tenNguyenLieu}`);
       throw new Error("Validation failed: thiếu Silo");
+    }
+
+    // Validation: luongSuDungKiemKe không được âm
+    const negativeKiemKeRows = table1Normalized.filter((row) => {
+      const v = row.luongSuDungKiemKe as unknown;
+      if (v === null || v === undefined) return false;
+      const num = typeof v === "number" ? v : Number(v);
+      return !Number.isNaN(num) && num < 0;
+    });
+    if (negativeKiemKeRows.length > 0) {
+      const tenNguyenLieu = negativeKiemKeRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+      message.error(`Lượng sử dụng kiểm kê không được âm. Vui lòng kiểm tra lại: ${tenNguyenLieu}`);
+      throw new Error("Validation failed: lượng sử dụng kiểm kê âm");
     }
 
     // Validation: Khi SoSuDung = 0 và SoNhapVe = 0 thì SoTonCuoi phải bằng SoTonDau
@@ -428,9 +444,13 @@ const Tao_STD = () => {
   const layout1 = layout1Raw
     ? {
         ...layout1Raw,
-        columns: (layout1Raw.columns || []).filter(
-          (col: any) => !col.hidden
-        ),
+        columns: (layout1Raw.columns || [])
+          .filter((col: any) => !col.hidden)
+          .map((col: any) =>
+            col.children
+              ? { ...col, children: col.children.filter((c: any) => !c.hidden) }
+              : col
+          ),
       }
     : undefined;
   const layout2 = config.layout2?.[0];
@@ -564,11 +584,11 @@ const Tao_STD = () => {
       if (idphieuVal) {
         const detailRes: any = await STD_NXT_HRC2ServiceApi.getDetail(idphieuVal);
         const data = detailRes?.data;
-        const mappedDetails: STD_NXT_Table1Row[] = (data?.details || []).map((item: any) => {
+        const mappedDetails: STD_NXT_Table1Row[] = (data?.details || []).map((item: any, index: number) => {
           const scope = Number(item.scope) || 0;
           const khuVuc = getKhuVucByScope(scope);
           return {
-            key: `${scope}_${item.id_HeaderKey}_${item.viTri}`,
+            key: `${scope}_${item.id_HeaderKey}_${item.viTri}_${index}`,
             khuVuc,
             viTri: Number(item.viTri) || 1,
             nguyenNhienLieu: item.tenNguyenLieu || "",
@@ -585,6 +605,7 @@ const Tao_STD = () => {
             tonCuoiCa: item.tonCuoiCa ?? null,
             tuongQuanCuoiCa: item.tuongQuanCuoiCa ?? "",
             tongThucTe: item.tongThucTe ?? null,
+            luongSuDungKiemKe: item.luongSuDungKiemKe ?? null,
           };
         });
         const ngaySxStr = (data?.ngaySX ?? data?.NgaySX) != null ? (typeof (data?.ngaySX ?? data?.NgaySX) === "string" ? (data?.ngaySX ?? data?.NgaySX) : (data?.ngaySX ?? data?.NgaySX)?.format?.("YYYY-MM-DD")) : undefined;
@@ -604,7 +625,15 @@ const Tao_STD = () => {
           Ca: caVal,
         }));
 
-        const currentRows = mappedDetails.map((r) => ({ ...r, tongThucTe: 0 }));
+        // Giữ lại các dòng thêm tay (isManualNew) chưa lưu lên BE
+        const manualNewRows = table1Data
+          .filter((r: any) => r.isManualNew === true)
+          .map((r: any) => ({ ...r, tongThucTe: 0 }));
+
+        const currentRows = [
+          ...mappedDetails.map((r) => ({ ...r, tongThucTe: 0 })),
+          ...manualNewRows,
+        ];
         const newUnmappedRows: STD_NXT_Table1Row[] = [];
 
         resultData.forEach((item: any) => {
@@ -794,51 +823,73 @@ const Tao_STD = () => {
           </div>
         </div>
 
-        {/* TABLE 1 - Bảng nhóm theo khu vực */}
-        {layout1 && layout1.sectionType === "groupedTable" && (
-          <div style={{ marginTop: 24 }}>
-            <Typography.Title level={5}>{layout1.title}</Typography.Title>
-            {(() => {
-              const kvList = layout1.khuVucList || [];
-              const kvLabels = kvList
-                .map((k: any) => k?.label || k?.value || "")
-                .filter((x: string) => !!x);
-              return (
-            <GroupedTableSTD
-              columns={layout1.columns || []}
-              initialData={table1Data}
-              onDataChange={setTable1Data}
-              khuVucList={kvLabels}
-              defaultNguyenNhienLieu={[]}
-              defaultViTri={layout1.defaultViTri || 1}
-              editable={!isFormLocked}
-              loading={loading}
-              ngaySX={form.getFieldValue("NgaySX")}
-              khuVucConfig={kvList}
-              nhaMay={2} // HRC2
-            />
-              );
-            })()}
-          </div>
-        )}
+        {/* TABS: summaryTable + mỗi khuVuc 1 tab */}
+        {(() => {
+          const kvList = layout1?.khuVucList || [];
+          const kvLabels: string[] = kvList
+            .map((k: any) => k?.label || k?.value || "")
+            .filter((x: string) => !!x);
 
-        {/* TABLE 2 - Bảng tổng hợp */}
-        {layout2 && layout2.sectionType === "summaryTable" && (
-          <div style={{ marginTop: 24 }}>
-            <Typography.Title level={5}>{layout2.title}</Typography.Title>
-            <SummaryTableSTD
-              columns={layout2.columns || []}
-              table1Data={table1Data}
-              initialData={table2Data}
-              onDataChange={setTable2Data}
-              onPhanBo={handlePhanBoSummary}
-              onThuHoi={handleThuHoiSummary}
-              idPhieu={idphieu ?? undefined}
-              editable={!isFormLocked}
-              loading={loading}
+          const tabItems = [
+            // Tab 0: Tổng hợp (summaryTable)
+            ...(layout2 && layout2.sectionType === "summaryTable"
+              ? [
+                  {
+                    key: "summary",
+                    label: layout2.title || "Tổng hợp",
+                    children: (
+                      <SummaryTableSTD
+                        columns={layout2.columns || []}
+                        table1Data={table1Data}
+                        initialData={table2Data}
+                        onDataChange={setTable2Data}
+                        onPhanBo={handlePhanBoSummary}
+                        onThuHoi={handleThuHoiSummary}
+                        idPhieu={idphieu ?? undefined}
+                        editable={!isFormLocked}
+                        loading={loading}
+                      />
+                    ),
+                  },
+                ]
+              : []),
+            // Tab per khuVuc
+            ...(layout1 && layout1.sectionType === "groupedTable"
+              ? kvLabels.map((kvLabel) => ({
+                  key: `kv_${kvLabel}`,
+                  label: kvLabel,
+                  children: (
+                    <GroupedTableSTD
+                      columns={layout1.columns || []}
+                      initialData={table1Data.filter((r: any) => r.khuVuc === kvLabel)}
+                      onDataChange={(kvRows: any[]) =>
+                        setTable1Data((prev: any[]) => [
+                          ...prev.filter((r: any) => r.khuVuc !== kvLabel),
+                          ...kvRows,
+                        ])
+                      }
+                      khuVucList={[kvLabel]}
+                      defaultNguyenNhienLieu={[]}
+                      defaultViTri={layout1.defaultViTri || 1}
+                      editable={!isFormLocked}
+                      loading={loading}
+                      ngaySX={form.getFieldValue("NgaySX")}
+                      khuVucConfig={kvList}
+                      nhaMay={2}
+                    />
+                  ),
+                }))
+              : []),
+          ];
+
+          return (
+            <Tabs
+              style={{ marginTop: 24 }}
+              items={tabItems}
+              type="card"
             />
-          </div>
-        )}
+          );
+        })()}
 
         {/* SIGNATURES - ký tên */}
         <div
