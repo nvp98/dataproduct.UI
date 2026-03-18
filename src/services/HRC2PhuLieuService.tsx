@@ -21,7 +21,8 @@ export interface ProcessedPhuLieusResult {
   phuGiaColumns: HRCChildColumn[]; // Phụ liệu loại PG (Phụ gia và chất khử oxy)
   chatHopKimColumns: HRCChildColumn[]; // Phụ liệu loại KL (Chất hợp kim hóa)
   khacColumns: HRCChildColumn[]; // Phụ liệu chưa mapped
-  adjustColumns: HRCChildColumn[]; // Cột điều chỉnh từ dữ liệu phân bổ
+  phanBoColumns: HRCChildColumn[]; // Cột phân bổ (tách riêng, title = "Phân bổ")
+  adjustColumns: HRCChildColumn[]; // Cột điều chỉnh tay (isManual)
   tableData: HRCTableRow[];
 }
 
@@ -336,22 +337,24 @@ export const hrc2PhuLieuService = {
         }
       });
 
-      // Map các phụ liệu phân bổ (IsPhanBo = true)
-      // - Nếu record có IsManual/KLPhuGia_Manual => coi là manual_col_{IDHeaderKey} (cột thêm tay)
-      // - Ngược lại => adjust_{IDHeaderKey}_adjust (phân bổ auto)
+      // Map phân bổ → phanBo_{id}, manual → manual_col_{id}
       if (item.phanBoPhulieus && item.phanBoPhulieus.length > 0) {
         item.phanBoPhulieus.forEach((phanBo: HeaderKeyResponse) => {
-          if (phanBo.idHeaderKey) {
-            const isManual = phanBo.isManual === true;
-            const manualValue = phanBo.klPhuGia_Manual ?? null;
-            if (isManual && manualValue != null) {
-              const dataIndex = `manual_col_${phanBo.idHeaderKey}`;
-              row[dataIndex] = manualValue;
-              return;
-            }
-            const dataIndex = `adjust_${phanBo.idHeaderKey}_adjust`;
-            row[dataIndex] = phanBo.klPhuGiaTotal ?? phanBo.klPhuGia ?? "";
-          }
+          if (!phanBo.idHeaderKey) return;
+          // Cột phân bổ luôn tạo riêng
+          row[`phanBo_${phanBo.idHeaderKey}`] = phanBo.klPhuGiaTotal ?? phanBo.klPhuGia ?? "";
+        });
+      }
+
+      // Điều chỉnh tay trả về từ API (manualAdjustPhulieus). Fallback: dùng phanBoPhulieus có isManual (cho BE cũ).
+      const manualAdjustList =
+        (item as any).manualAdjustPhulieus ??
+        (item.phanBoPhulieus ?? []).filter((x) => x?.isManual === true);
+      if (manualAdjustList && manualAdjustList.length > 0) {
+        manualAdjustList.forEach((adj: HeaderKeyResponse) => {
+          if (!adj.idHeaderKey) return;
+          if (adj.klPhuGia_Manual == null) return;
+          row[`manual_col_${adj.idHeaderKey}`] = adj.klPhuGia_Manual;
         });
       }
 
@@ -380,54 +383,53 @@ export const hrc2PhuLieuService = {
       : phuGiaColumns;
 
     // ========== Tạo columns từ dữ liệu phân bổ ==========
-    // Tập hợp tất cả phụ liệu phân bổ từ tất cả các item (mẻ) và loại bỏ trùng lặp
+    // Thu thập unique phanBoPhulieus và manual cols (không trùng idHeaderKey)
     const allPhanBoPhuLieus: Record<number, HeaderKeyResponse> = {};
     const allManualCols: Record<number, HeaderKeyResponse> = {};
     data.forEach(item => {
-      if (item.phanBoPhulieus && item.phanBoPhulieus.length > 0) {
-        item.phanBoPhulieus.forEach(phuLieu => {
-          if (!phuLieu.idHeaderKey) return;
-          const isManual = phuLieu.isManual === true && phuLieu.klPhuGia_Manual != null;
-          if (isManual) {
-            if (!allManualCols[phuLieu.idHeaderKey]) {
-              allManualCols[phuLieu.idHeaderKey] = phuLieu;
-            }
-            return;
-          }
-          if (!allPhanBoPhuLieus[phuLieu.idHeaderKey]) {
-            allPhanBoPhuLieus[phuLieu.idHeaderKey] = phuLieu;
-          }
-        });
-      }
+      item.phanBoPhulieus?.forEach(phuLieu => {
+        if (!phuLieu.idHeaderKey) return;
+        if (!allPhanBoPhuLieus[phuLieu.idHeaderKey]) {
+          allPhanBoPhuLieus[phuLieu.idHeaderKey] = phuLieu;
+        }
+      });
+
+      const manualAdjustList =
+        (item as any).manualAdjustPhulieus ??
+        (item.phanBoPhulieus ?? []).filter((x) => x?.isManual === true);
+      manualAdjustList?.forEach((phuLieu: HeaderKeyResponse) => {
+        if (!phuLieu.idHeaderKey) return;
+        if (phuLieu.klPhuGia_Manual == null) return;
+        if (!allManualCols[phuLieu.idHeaderKey]) {
+          allManualCols[phuLieu.idHeaderKey] = phuLieu;
+        }
+      });
     });
 
-    const phanBoPhuLieus = Object.values(allPhanBoPhuLieus);
-    const manualCols = Object.values(allManualCols);
-    
-    // Tạo adjust columns (phân bổ auto) từ dữ liệu phân bổ
-    const adjustColumns: HRCChildColumn[] = phanBoPhuLieus.map(phuLieu => {
-      const label = phuLieu.tenHienThi || `Phân bổ #${phuLieu.idHeaderKey}`;
+    // Cột phân bổ — tách riêng, title = tên phụ liệu; group header "Phân bổ" do caller render
+    const phanBoColumns: HRCChildColumn[] = Object.values(allPhanBoPhuLieus).map(phuLieu => {
+      const label = phuLieu.tenHienThi || phuLieu.tenPhuLieu || `PB #${phuLieu.idHeaderKey}`;
       return {
         title: label,
-        dataIndex: `adjust_${phuLieu.idHeaderKey}_adjust`,
-        width: 140,
+        dataIndex: `phanBo_${phuLieu.idHeaderKey}`,
+        width: 100,
         metaLabel: label,
-        editable: false, // ⭐ KHÔNG cho phép chỉnh sửa thủ công
-        variant: "adjust",
+        editable: false,
+        variant: "adjust" as const,
         headerKeyId: phuLieu.idHeaderKey ?? null,
       };
     });
 
-    // Tạo manual columns (cột thêm tay) từ record IsManual trong phanBoPhulieus
-    const manualAdjustColumns: HRCChildColumn[] = manualCols.map((phuLieu) => {
-      const label = phuLieu.tenHienThi || `Manual #${phuLieu.idHeaderKey}`;
+    // Cột điều chỉnh tay — chỉ khi có isManual
+    const adjustColumns: HRCChildColumn[] = Object.values(allManualCols).map(phuLieu => {
+      const label = phuLieu.tenHienThi || `Điều chỉnh #${phuLieu.idHeaderKey}`;
       return {
         title: label,
         dataIndex: `manual_col_${phuLieu.idHeaderKey}`,
         width: 150,
         metaLabel: label,
         editable: true,
-        variant: "default",
+        variant: "default" as const,
         headerKeyId: phuLieu.idHeaderKey ?? null,
       };
     });
@@ -438,7 +440,8 @@ export const hrc2PhuLieuService = {
       phuGiaColumns: mergedColumns,
       chatHopKimColumns: mergeMappedPhuLieus ? [] : chatHopKimColumns,
       khacColumns,
-      adjustColumns: [...manualAdjustColumns, ...adjustColumns],
+      phanBoColumns,
+      adjustColumns,
       tableData,
     };
   },

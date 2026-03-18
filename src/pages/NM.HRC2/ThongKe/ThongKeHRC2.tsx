@@ -26,17 +26,34 @@ import {
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
-type HkCellData = { value: number | null; manualValue?: number | null; isManual?: boolean };
+type HkCellData = {
+  value: number | null;
+  manualValue?: number | null;
+  klPhanBo?: number | null;
+  totalKLPhuGia?: number | null;
+  isManual?: boolean;
+};
 
 const renderHkCell = (cellData: HkCellData | null | unknown) => {
   if (cellData === null || cellData === undefined) return "";
-  const { value, manualValue, isManual } = cellData as HkCellData;
-  const displayValue = isManual && manualValue != null ? manualValue : value;
+  const { value, manualValue, klPhanBo, totalKLPhuGia, isManual } = cellData as HkCellData;
+
+  const displayValue = totalKLPhuGia ?? (manualValue != null ? manualValue : value);
   const formatted = formatNumberVN(displayValue);
-  if (isManual && manualValue != null) {
+
+  const hasPhanBo = klPhanBo != null;
+  const hasManual = manualValue != null;
+
+  if (hasPhanBo || hasManual) {
+    const tooltipParts: string[] = [];
+    tooltipParts.push(`Tự động: ${formatNumberVN(value)}`);
+    if (hasManual) tooltipParts.push(`Chỉnh tay: ${formatNumberVN(manualValue)}`);
+    if (hasPhanBo) tooltipParts.push(`Phân bổ: ${formatNumberVN(klPhanBo)}`);
+
+    const bg = hasPhanBo && hasManual ? "#d4edda" : hasPhanBo ? "#d6f0ff" : "#fff7b3";
     return (
-      <Tooltip title={`Giá trị tự động: ${formatNumberVN(value)} | Giá trị chỉnh sửa: ${formatNumberVN(manualValue)}`}>
-        <span style={{ backgroundColor: "#fff7b3", display: "block", padding: "0 4px" }}>
+      <Tooltip title={tooltipParts.join(" | ")}>
+        <span style={{ backgroundColor: bg, display: "block", padding: "0 4px" }}>
           {formatted}
         </span>
       </Tooltip>
@@ -103,9 +120,16 @@ const SCOPE_OPTIONS_BY_BM: Record<LoaiBMKey, { value: number; label: string }[]>
     LF: [{ value: 6, label: "Lò 6" }],
   };
 
+type SumRowMap = Record<string, number | null>;
+
+const flattenLeafColumns = (cols: any[]): any[] =>
+  cols.flatMap((c) => (Array.isArray(c.children) ? flattenLeafColumns(c.children) : [c]));
+
 const ThongKeHRC2 = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [sumLoading, setSumLoading] = useState(false);
+  const [sumRow, setSumRow] = useState<SumRowMap>({});
   const [columns, setColumns] = useState<any[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
   const [loaiBmKey, setLoaiBmKey] = useState<LoaiBMKey>("BOF");
@@ -157,13 +181,42 @@ const ThongKeHRC2 = () => {
         const currentPage = page ?? 1;
         const currentPageSize = pageSize ?? pagination.pageSize;
         const toDate = dateRange?.[1] ?? null;
-        const res = await dlnmHRC2Api.searchThongKe({
+
+        const basePayload = {
           TuNgay: fromDate ? fromDate.format("YYYY-MM-DD") : null,
           DenNgay: toDate ? toDate.format("YYYY-MM-DD") : null,
           Ca: ca ?? undefined,
           LoaiBM: currentLoaiBm,
           Scope: scope ?? undefined,
           SearchText: meThoiFilter ?? undefined,
+        };
+
+        // Nếu có đủ TuNgay + DenNgay → BE tính sum toàn range, fire độc lập
+        // Nếu không → FE tự tính từ trang hiện tại sau khi rows sẵn sàng
+        const hasDateRange = !!(fromDate && toDate);
+        setSumLoading(true);
+        setSumRow({});
+        if (hasDateRange) {
+          dlnmHRC2Api.sumThongKe(basePayload).then((sumRes) => {
+            const sp = sumRes as any;
+            // BE trả trực tiếp array hoặc wrap trong SumValues
+            const sumList: any[] = Array.isArray(sp)
+              ? sp
+              : (sp?.SumValues ?? sp?.sumValues ?? sp?.data ?? sp?.Data ?? []);
+            const map: SumRowMap = {};
+            sumList.forEach((sv: any) => {
+              const hkId = sv?.idHeaderKey ?? sv?.IDHeaderKey ?? sv?.iDHeaderKey;
+              const total = sv?.totalKLPhuGia ?? sv?.TotalKLPhuGia ?? sv?.KLPhuGia ?? sv?.kLPhuGia ?? sv?.klPhuGia;
+              if (hkId != null) {
+                map[`hk_${hkId}`] = total != null ? Number(total) : null;
+              }
+            });
+            setSumRow(map);
+          }).catch((err) => console.error("Lỗi sum thống kê:", err)).finally(() => setSumLoading(false));
+        }
+
+        const res = await dlnmHRC2Api.searchThongKe({
+          ...basePayload,
           Page: currentPage,
           PageSize: currentPageSize,
         });
@@ -316,17 +369,19 @@ const ThongKeHRC2 = () => {
               v?.ID_HeaderKey;
             if (!hkId) return;
 
-            const rawVal = v?.kLPhuGia ?? v?.KLPhuGia ?? v?.klPhuGia ?? null;
-            const val = rawVal === null || rawVal === undefined ? null : Number(rawVal);
-            const value = Number.isFinite(val ?? NaN) ? (val as number) : null;
+            const toNum = (raw: unknown): number | null => {
+              if (raw === null || raw === undefined) return null;
+              const n = Number(raw);
+              return Number.isFinite(n) ? n : null;
+            };
 
-            const rawManual = v?.klPhuGia_Manual ?? v?.KLPhuGia_Manual ?? null;
-            const manualVal = rawManual === null || rawManual === undefined ? null : Number(rawManual);
-            const manualValue = Number.isFinite(manualVal ?? NaN) ? (manualVal as number) : null;
+            const value     = toNum(v?.kLPhuGia ?? v?.KLPhuGia ?? v?.klPhuGia);
+            const manualValue = toNum(v?.klPhuGia_Manual ?? v?.KLPhuGia_Manual);
+            const klPhanBo  = toNum(v?.kLPhanBo ?? v?.KLPhanBo ?? v?.klPhanBo);
+            const totalKLPhuGia = toNum(v?.totalKLPhuGia ?? v?.TotalKLPhuGia);
+            const isManual  = v?.isManual === true || v?.IsManual === true;
 
-            const isManual = v?.isManual === true || v?.IsManual === true;
-
-            valueByHeaderKeyId.set(Number(hkId), { value, manualValue, isManual });
+            valueByHeaderKeyId.set(Number(hkId), { value, manualValue, klPhanBo, totalKLPhuGia, isManual });
           });
 
           // Set các field cố định
@@ -350,6 +405,22 @@ const ThongKeHRC2 = () => {
 
           return row;
         });
+
+        // FE tính sum từ trang hiện tại khi không có dateRange
+        if (!hasDateRange) {
+          const localSum: SumRowMap = {};
+          rows.forEach((row) => {
+            Object.keys(row).forEach((key) => {
+              if (!key.startsWith("hk_")) return;
+              const cell = row[key] as HkCellData | null;
+              if (!cell) return;
+              const val = cell.totalKLPhuGia ?? (cell.manualValue != null ? cell.manualValue : cell.value);
+              if (val != null) localSum[key] = (localSum[key] ?? 0) + val;
+            });
+          });
+          setSumRow(localSum);
+          setSumLoading(false);
+        }
 
         setColumns(headerColumns);
         setTableData(rows);
@@ -478,16 +549,31 @@ const ThongKeHRC2 = () => {
         BẢNG TỔNG HỢP DỮ LIỆU TIÊU HAO HRC2
       </Title>
 
-      {/* Tabs chọn loại BM */}
-      <Tabs
-        activeKey={loaiBmKey}
-        onChange={handleTabChange}
-        items={[
-          { key: "BOF", label: "BOF" },
-          { key: "LF", label: "LF" },
-          { key: "RH", label: "RH" },
-        ]}
-      />
+      {/* Tabs chọn loại BM + chú thích màu sắc */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <Tabs
+          activeKey={loaiBmKey}
+          onChange={handleTabChange}
+          style={{ flex: 1 }}
+          items={[
+            { key: "BOF", label: "BOF" },
+            { key: "LF", label: "LF" },
+            { key: "RH", label: "RH" },
+          ]}
+        />
+        <div style={{ display: "flex", gap: 12, alignItems: "center", paddingTop: 10, flexShrink: 0 }}>
+          {[
+            { bg: "#fff7b3", label: "Chỉnh tay" },
+            { bg: "#d6f0ff", label: "Phân bổ" },
+            { bg: "#d4edda", label: "Phân bổ + Chỉnh tay" },
+          ].map(({ bg, label }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#555" }}>
+              <span style={{ display: "inline-block", width: 14, height: 14, backgroundColor: bg, border: "1px solid #ccc", borderRadius: 2, flexShrink: 0 }} />
+              {label}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Khu vực search (các ô tô đỏ trong Excel) */}
       <Form form={form} layout="inline" style={{ marginTop: 8 }}>
@@ -574,6 +660,43 @@ const ThongKeHRC2 = () => {
             },
           }}
           scroll={{ x: "max-content", y: 500 }}
+          summary={() => {
+            const leafCols = flattenLeafColumns(columns);
+            if (!leafCols.length) return null;
+            return (
+              <Table.Summary fixed>
+                <Table.Summary.Row style={{ background: "#e6f4ff", fontWeight: 600 }}>
+                  {leafCols.map((col, idx) => {
+                    if (idx === 0) {
+                      return (
+                        <Table.Summary.Cell key={idx} index={idx} align="right">
+                          Tổng
+                        </Table.Summary.Cell>
+                      );
+                    }
+                    const di: string = col.dataIndex ?? "";
+                    const isHkCol = di.startsWith("hk_");
+                    if (!isHkCol) {
+                      return <Table.Summary.Cell key={idx} index={idx} />;
+                    }
+                    if (sumLoading) {
+                      return (
+                        <Table.Summary.Cell key={idx} index={idx} align="right">
+                          <span style={{ color: "#aaa" }}>...</span>
+                        </Table.Summary.Cell>
+                      );
+                    }
+                    const val = sumRow[di];
+                    return (
+                      <Table.Summary.Cell key={idx} index={idx} align="right">
+                        {val != null ? formatNumberVN(val) : ""}
+                      </Table.Summary.Cell>
+                    );
+                  })}
+                </Table.Summary.Row>
+              </Table.Summary>
+            );
+          }}
         />
       </div>
     </Card>

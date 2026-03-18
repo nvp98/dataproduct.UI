@@ -18,6 +18,10 @@ import { SiloServiceApi } from "../services/SiloServiceApi";
 import type { Silo, SiloByHeaderKey } from "../models/SiloModel";
 import dayjs from "dayjs";
 
+/* ======================= CONSTANTS ======================= */
+const NGOAI_SILO_ID = -1;
+const NGOAI_SILO_OPTION = { id: NGOAI_SILO_ID, tenSilo: "Ngoài silo" };
+
 /* ======================= UTILITY FUNCTIONS ======================= */
 
 /**
@@ -33,7 +37,7 @@ export const canUnlockMonthly = (date = new Date()) => {
 /* ======================= EDITABLE CELLS ======================= */
 
 const EditableInput = memo(
-  ({ value, disabled, onChange, onBlur, readOnly = false }: any) => {
+  ({ value, disabled, onChange, onBlur, readOnly = false, style }: any) => {
     const [local, setLocal] = useState(value ?? "");
 
     useEffect(() => {
@@ -46,6 +50,7 @@ const EditableInput = memo(
         disabled={disabled}
         bordered={true}
         readOnly={readOnly}
+        style={style}
         onChange={(e) => {
           setLocal(e.target.value);
           onChange(e.target.value);
@@ -87,8 +92,8 @@ export default function GroupedTableSTD({
   khuVucConfig, // Config khu vực để lấy BieuMau: [{label, bieuMau, scope}]
   nhaMay = 2, // HRC2 = 2, HRC1 = 1
 }: any) {
-  const [rows, setRows] = useState<any[]>([]);
-  const rowsRef = useRef<any[]>([]);
+  const [rows, setRows] = useState<any[]>(initialData);
+  const rowsRef = useRef<any[]>(initialData);
   const rowIdRef = useRef(0);
 
   // ⭐ Không cần cache và options nữa vì đã dùng HeaderKeyAutocomplete
@@ -160,6 +165,7 @@ export default function GroupedTableSTD({
               khuVuc: kv,
               viTri: defaultViTri,
               nguyenNhienLieu: "",
+              isManualNew: true,
             },
           ];
           rowsRef.current = next;
@@ -190,11 +196,21 @@ export default function GroupedTableSTD({
     );
   }, []);
 
+  const KIEMKE_CALC_FIELDS = ["tonDauCa", "nhapTrongCa", "tonCuoiCa"];
+
   const commitCell = useCallback((key: string, field: string, value: any) => {
     setRows((prev) => {
-      const next = prev.map((r) =>
-        r.key === key ? { ...r, [field]: value } : r
-      );
+      const next = prev.map((r) => {
+        if (r.key !== key) return r;
+        const updated = { ...r, [field]: value };
+        if (KIEMKE_CALC_FIELDS.includes(field)) {
+          const tonDau = Number(field === "tonDauCa" ? value : r.tonDauCa) || 0;
+          const nhap = Number(field === "nhapTrongCa" ? value : r.nhapTrongCa) || 0;
+          const tonCuoi = Number(field === "tonCuoiCa" ? value : r.tonCuoiCa) || 0;
+          updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+        }
+        return updated;
+      });
       rowsRef.current = next;
       emitData(next);
       return next;
@@ -291,12 +307,13 @@ export default function GroupedTableSTD({
                 align: "center",
                 width: child.dataIndex?.includes("tuongQuan") ? 90 : 100,
                 render: (_: any, r: any) => {
-                  const childReadOnlyBase = child.readOnly === true;
                   // Đối với cột tonDauCa, ưu tiên kiểm tra canUnlockMonthly
                   // Nếu không trong khung giờ cho phép (8:00-20:00 ngày 1) thì readOnly (override readOnly từ config)
-                  const childReadOnly = child.dataIndex === "tonDauCa"
-                    ? !canUnlockMonthly()
-                    : childReadOnlyBase;
+                  // const childReadOnlyBase = child.readOnly === true;
+                  // const childReadOnly = child.dataIndex === "tonDauCa"
+                  //   ? !canUnlockMonthly()
+                  //   : childReadOnlyBase;
+                    const childReadOnly = false
                   return (
                     <EditableInput
                       value={r[child.dataIndex]}
@@ -419,14 +436,22 @@ export default function GroupedTableSTD({
               }
 
               if (c.dataIndex === "tenSilo") {
-                // Render cột Silo với CommonAutocomplete - autocomplete search tất cả silo thuộc nhaMay
+                // Khi viTri === 2 (Ngoài silo), hiển thị sentinel -1 thay vì siloId
+                const siloDisplayValue = r.viTri === 2 ? NGOAI_SILO_ID : (r.siloId ?? null);
                 return (
                   <CommonAutocomplete<Silo>
-                    value={r.siloId ?? null}
+                    value={siloDisplayValue}
                     searchApi={async ({ searchKey } = {}) => {
-                      // Search tất cả silo thuộc nhaMay, lọc theo từ khóa người dùng nhập
                       const res = await SiloServiceApi.search({ nhaMay, searchKey, tinhTrang: true });
-                      return res;
+                      // Prepend "Ngoài silo" nếu không có từ khóa hoặc từ khóa khớp
+                      const keyword = (searchKey || "").toLowerCase();
+                      const shouldPrepend = !keyword || "ngoài silo".includes(keyword);
+                      return {
+                        ...res,
+                        data: shouldPrepend
+                          ? [NGOAI_SILO_OPTION as unknown as Silo, ...(res.data || [])]
+                          : res.data,
+                      };
                     }}
                     mapOption={(item) => ({
                       value: item.id,
@@ -438,23 +463,49 @@ export default function GroupedTableSTD({
                     allowClear
                     style={{ width: "100%" }}
                     size="small"
-                    fallbackLabelBuilder={(value) => r.tenSilo || `Silo ID: ${value}`}
+                    fallbackLabelBuilder={(value) =>
+                      value === NGOAI_SILO_ID ? "Ngoài silo" : (r.tenSilo || `Silo ID: ${value}`)
+                    }
                     onChange={(siloId, option) => {
-                      // Wrap trong setTimeout để tránh setState trong render
                       setTimeout(() => {
-                        commitCell(r.key, "siloId", siloId);
-                        if (option) {
+                        if (siloId === NGOAI_SILO_ID) {
+                          // Chọn "Ngoài silo": đặt viTri=2, xóa siloId thực
+                          commitCell(r.key, "viTri", 2);
+                          commitCell(r.key, "siloId", null);
+                          commitCell(r.key, "tenSilo", "Ngoài silo");
+                        } else if (siloId !== null && option) {
+                          // Chọn silo thực: reset viTri về mặc định
+                          commitCell(r.key, "viTri", defaultViTri);
+                          commitCell(r.key, "siloId", siloId);
                           commitCell(r.key, "tenSilo", option.tenSilo);
-                          // Tự động fill theTich khi chọn silo
                           if (option.theTich !== undefined && option.theTich !== null) {
                             commitCell(r.key, "theTich", option.theTich);
                           }
                         } else {
+                          // Clear: reset về mặc định
+                          commitCell(r.key, "viTri", defaultViTri);
+                          commitCell(r.key, "siloId", null);
                           commitCell(r.key, "tenSilo", "");
                           commitCell(r.key, "theTich", null);
                         }
                       }, 0);
                     }}
+                  />
+                );
+              }
+
+              // Cột luongSuDungKiemKe: auto-calculated, readOnly, highlight đỏ nếu âm
+              if (c.dataIndex === "luongSuDungKiemKe") {
+                const kiemKeVal = r.luongSuDungKiemKe;
+                const isNegative = kiemKeVal != null && kiemKeVal !== "" && Number(kiemKeVal) < 0;
+                return (
+                  <EditableInput
+                    value={kiemKeVal}
+                    disabled={!editable || c.editable === false}
+                    readOnly={true}
+                    style={isNegative ? { borderColor: "#ff4d4f", backgroundColor: "#fff2f0", color: "#ff4d4f" } : undefined}
+                    onChange={() => {}}
+                    onBlur={() => {}}
                   />
                 );
               }
