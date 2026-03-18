@@ -37,8 +37,8 @@
         {
           "title": "Tồn đầu ca",
           "children": [
-            { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa", "readOnly": true },
-            { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanDauCa" }
+            { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa" },
+            { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanDauCa" , "hidden": true}
           ]
         },
         { "title": "Nhập vào trong ca (Kg)", "dataIndex": "nhapTrongCa"},
@@ -49,10 +49,11 @@
           "title": "Tồn cuối ca thực tế",
           "children": [
             { "title": "Khối lượng (Kg)", "dataIndex": "tonCuoiCa" },
-            { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanCuoiCa" }
+            { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanCuoiCa", "hidden": true }
           ]
         },
-        { "title": "Tổng thực tế sử dụng", "dataIndex": "tongThucTe" }
+        { "title": "Lượng sử dụng kiểm kê", "dataIndex": "luongSuDungKiemKe" },
+        { "title": "Lượng sử dụng thực tế theo cân", "dataIndex": "tongThucTe" }
       ],
       "khuVucList": [
         {"label": "Lò thổi 6", "value": "1", "bieuMau":"BOF", "scope": 6},

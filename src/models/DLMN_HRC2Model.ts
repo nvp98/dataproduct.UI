@@ -66,6 +66,7 @@ export interface HRC2GroupedByReportNoModel {
   mappedPhulieus: HeaderKeyResponse[];
   unmappedPhulieus: HeaderKeyResponse[];
   phanBoPhulieus?: HeaderKeyResponse[]; // Dữ liệu phân bổ (IsPhanBo = true)
+  manualAdjustPhulieus?: HeaderKeyResponse[]; // Điều chỉnh tay (IsManual = true, IsPhanBo != true)
 }
 
 // Raw response type từ API (có thể có các biến thể tên field)
@@ -74,6 +75,7 @@ type RawHRC2GroupedResponse = {
   mappedPhulieus?: HRC2RawData[] | null;
   unmappedPhulieus?: HRC2RawData[] | null;
   phanBoPhulieus?: HRC2RawData[] | null; // Dữ liệu phân bổ
+  manualAdjustPhulieus?: HRC2RawData[] | null; // Điều chỉnh tay
 };
 
 // Helper function để normalize dữ liệu từ API response
@@ -172,6 +174,9 @@ export const normalizeHRC2GroupedResponse = (
       : [],
     phanBoPhulieus: Array.isArray(rawObj.phanBoPhulieus)
       ? rawObj.phanBoPhulieus.map(normalizePhuLieu)
+      : [],
+    manualAdjustPhulieus: Array.isArray(rawObj.manualAdjustPhulieus)
+      ? rawObj.manualAdjustPhulieus.map(normalizePhuLieu)
       : [],
   };
 };

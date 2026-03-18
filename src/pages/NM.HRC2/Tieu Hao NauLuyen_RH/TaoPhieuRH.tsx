@@ -188,38 +188,51 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     [openMappingModalWithRecord]
   );
 
+  const phanBoChildColumns = useMemo<HRCChildColumn[]>(() => {
+    return adjustColumnMetas
+      .filter((meta) => meta.dataIndex.startsWith("phanBo_"))
+      .map((meta) => ({
+        title: meta.headerKeyLabel ?? "Phân bổ",
+        dataIndex: meta.dataIndex,
+        width: meta.width ?? 100,
+        editable: false,
+        variant: "adjust" as const,
+        metaLabel: meta.headerKeyLabel ?? "Phân bổ",
+        headerKeyId: meta.headerKeyId ?? null,
+      }));
+  }, [adjustColumnMetas]);
+
   const adjustChildColumns = useMemo<HRCChildColumn[]>(() => {
-    if (!adjustColumnMetas.length) {
-      return [];
-    }
-    return adjustColumnMetas.map((meta) => ({
-      title: meta.isManuallyAdded ? (
-        <div style={{ position: "relative", minWidth: 140, paddingRight: 18 }}>
-          <HeaderKeyAutocomplete
-            value={meta.headerKeyId ?? null}
-            defaultLabel={meta.headerKeyLabel ?? undefined}
-            onSelectOption={(opt) => handleColumnHeaderChange(meta.dataIndex, opt)}
-            size="small"
-            placeholder="Chọn header key..."
-            style={{ minWidth: 120 }}
-            allowClear={false}
-          />
-          <Button
-            type="text"
-            size="small"
-            icon={<CloseOutlined />}
-            onClick={() => handleRemoveAdjustColumn(meta.dataIndex)}
-            style={{ position: "absolute", top: -6, right: -6, padding: 0, width: 18, height: 18 }}
-          />
-        </div>
-      ) : (meta.headerKeyLabel ?? "Điều chỉnh"),
-      dataIndex: meta.dataIndex,
-      width: meta.width ?? 140,
-      editable: meta.isManuallyAdded ? true : false,
-      variant: meta.isManuallyAdded ? undefined : ("adjust" as const),
-      metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
-      headerKeyId: meta.headerKeyId ?? null,
-    }));
+    return adjustColumnMetas
+      .filter((meta) => !meta.dataIndex.startsWith("phanBo_"))
+      .map((meta) => ({
+        title: meta.isManuallyAdded ? (
+          <div style={{ position: "relative", minWidth: 140, paddingRight: 18 }}>
+            <HeaderKeyAutocomplete
+              value={meta.headerKeyId ?? null}
+              defaultLabel={meta.headerKeyLabel ?? undefined}
+              onSelectOption={(opt) => handleColumnHeaderChange(meta.dataIndex, opt)}
+              size="small"
+              placeholder="Chọn header key..."
+              style={{ minWidth: 120 }}
+              allowClear={false}
+            />
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() => handleRemoveAdjustColumn(meta.dataIndex)}
+              style={{ position: "absolute", top: -6, right: -6, padding: 0, width: 18, height: 18 }}
+            />
+          </div>
+        ) : (meta.headerKeyLabel ?? "Điều chỉnh"),
+        dataIndex: meta.dataIndex,
+        width: meta.width ?? 140,
+        editable: meta.isManuallyAdded ? true : false,
+        variant: meta.isManuallyAdded ? undefined : ("adjust" as const),
+        metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
+        headerKeyId: meta.headerKeyId ?? null,
+      }));
   }, [adjustColumnMetas, handleColumnHeaderChange, handleRemoveAdjustColumn]);
 
   const restoreDynamicColumns = useCallback(
@@ -307,16 +320,24 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       setChatHopKimColumns(result.chatHopKimColumns);
       setKhacColumns(result.khacColumns);
 
-      // Tự động tạo adjust columns từ dữ liệu phân bổ
-      if (result.adjustColumns && result.adjustColumns.length > 0) {
-        const adjustMetas = result.adjustColumns.map((col) => ({
-          key: col.dataIndex || `adjust_${col.headerKeyId}`,
-          dataIndex: col.dataIndex || `adjust_${col.headerKeyId}_adjust`,
-          headerKeyId: col.headerKeyId ?? null,
-          headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
-          width: col.width || 140,
-        }));
-        setAdjustColumnMetas((prev) => hrc2TableService.mergeAdjustMetas(prev ?? [], adjustMetas));
+      // Tự động tạo columns từ dữ liệu phân bổ (tách riêng) và cột điều chỉnh tay
+      const phanBoMetas = (result.phanBoColumns ?? []).map((col) => ({
+        key: col.dataIndex || `phanBo_${col.headerKeyId}`,
+        dataIndex: col.dataIndex || `phanBo_${col.headerKeyId}`,
+        headerKeyId: col.headerKeyId ?? null,
+        headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
+        width: col.width || 100,
+      }));
+      const manualMetas = (result.adjustColumns ?? []).map((col) => ({
+        key: col.dataIndex || `manual_col_${col.headerKeyId}`,
+        dataIndex: col.dataIndex || `manual_col_${col.headerKeyId}`,
+        headerKeyId: col.headerKeyId ?? null,
+        headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
+        width: col.width || 150,
+      }));
+      const incomingMetas = [...phanBoMetas, ...manualMetas];
+      if (incomingMetas.length > 0) {
+        setAdjustColumnMetas((prev) => hrc2TableService.mergeAdjustMetas(prev ?? [], incomingMetas));
         setShowAdjustColumns(true);
       } else {
         setAdjustColumnMetas((prev) => (prev ?? []).filter((m) => m.isManuallyAdded === true));
@@ -387,6 +408,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       excludedAdjustKeys: DEFAULT_EXCLUDED_KEYS,
       showAdjustColumns,
       manualAdjustColumns: adjustChildColumns,
+      phanBoColumns: phanBoChildColumns,
       generateAdjustColumnsFromBase: false,
     });
   }, [
@@ -396,6 +418,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     khacColumns,
     showAdjustColumns,
     adjustChildColumns,
+    phanBoChildColumns,
   ]);
 
   /** Hàm xử lý khi bấm nút Filter */
@@ -552,7 +575,11 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       KL: chatHopKimColumns,
       others: khacColumns,
     });
-    dynamicColumnMap.adjust = hrc2TableService.adjustMetaToDynamic(adjustColumnMetas);
+    // Chỉ lưu meta các cột điều chỉnh do user thêm (isManuallyAdded === true).
+    // Các cột phân bổ/điều chỉnh phát sinh từ API (phanBo_*, manual_col_{id} do phân bổ) không lưu vào json phiếu.
+    dynamicColumnMap.adjust = hrc2TableService.adjustMetaToDynamic(
+      adjustColumnMetas.filter((m) => m.isManuallyAdded === true)
+    );
 
     // Giữ nguyên toàn bộ key trong row (kể cả *__orig) để BE nhận đủ phụ liệu manual (IsManual, KLPhuGia_Manual)
     const processedTable1 = tableData.map((row) => {
@@ -592,6 +619,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     config.headerFields,
     config.signatures,
     config.code,
+    config.prefix,
     phuGiaColumns,
     chatHopKimColumns,
     khacColumns,
