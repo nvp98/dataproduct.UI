@@ -16,7 +16,9 @@ export const BM_CONFIG = {
     },
     HRC1: {
         HRC1_BB_Theplong: 'HRC1_BB_Theplong',
-        HRC1_BB_Lothoi: 'HRC1_BB_Lothoi'
+        HRC1_BB_Lothoi: 'HRC1_BB_Lothoi',
+        HRC1_BB_GiaoNhanPhoiNhapKho: 'HRC1_BB_GiaoNhanPhoiNhapKho',
+        HRC1_BB_Sanluongphoi: 'HRC1_BB_Sanluongphoi',
     }
 }
 

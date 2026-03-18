@@ -1,4 +1,4 @@
-import CTD_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/CTD_BB_GiaoNhanPhoiNhapKho.json";
+import HRC1_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/HRC1_BB_GiaoNhanPhoiNhapKho.json";
 import {
   Button,
   Card,
@@ -11,19 +11,57 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { phoiNhapKhoApi } from "../../../services/BMDucCTDApi";
+import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
+import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 
 const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
-  const config = CTD_BB_GiaoNhanPhoiNhapKho;
+  const config = HRC1_BB_GiaoNhanPhoiNhapKho;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
   const [currentFilter, setCurrentFilter] = useState<any>({});
+  const [canCreatePhieu, setCanCreatePhieu] = useState(false);
+
+  useEffect(() => {
+    const loadPermission = async () => {
+      try {
+        const userInfoStr = localStorage.getItem("userinfo");
+        const userInfo = userInfoStr ? JSON.parse(userInfoStr) : userObj;
+
+        if (isAdminUser(userInfo)) {
+          setCanCreatePhieu(true);
+          return;
+        }
+
+        const raw =
+          userInfo?.iD_TaiKhoan ??
+          userInfo?.ID_TaiKhoan ??
+          userInfo?.idTaiKhoan ??
+          userInfo?.IdTaiKhoan ??
+          userObj?.id;
+
+        const idTaiKhoan = typeof raw === "number" ? raw : Number(raw);
+        if (!Number.isFinite(idTaiKhoan) || idTaiKhoan <= 0) {
+          setCanCreatePhieu(false);
+          return;
+        }
+
+        const permissions = await BmQuyenXlApi.getMenuPermissions(idTaiKhoan);
+        const processingSet = new Set(permissions?.processingForms ?? []);
+        setCanCreatePhieu(processingSet.has(config.code as string));
+      } catch {
+        setCanCreatePhieu(false);
+      }
+    };
+
+    loadPermission();
+  }, [config.code, userObj]);
 
   const handleFilterWithCapture = (filters: any) => {
     setCurrentFilter(filters);
@@ -239,13 +277,15 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
             <Button onClick={handleExportExcel}>
               Xuất Excel
             </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => navigate("/taophieubienbanphoinapkho")}
-            >
-              Tạo phiếu mới
-            </Button>
+            {type !== "viecdentoi" && canCreatePhieu && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => navigate("/taophieubienbanphoinapkho")}
+              >
+                Tạo phiếu mới
+              </Button>
+            )}
           </Space>
         }
       >

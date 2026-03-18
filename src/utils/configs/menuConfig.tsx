@@ -323,7 +323,7 @@ export const menuConfig = [
         children: [
           {
             key: "sub2-7-1",
-            maBM: BM_CONFIG.CTD.CTD_BB_Sanluongphoi,
+            maBM: BM_CONFIG.HRC1.HRC1_BB_Sanluongphoi,
             label: (
               <Tooltip title="BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)">
                 <NavLink to="/bienbansanluongphoi">
@@ -334,7 +334,7 @@ export const menuConfig = [
           },
           {
             key: "sub2-7-2",
-            maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoiNhapKho,
+            maBM: BM_CONFIG.HRC1.HRC1_BB_GiaoNhanPhoiNhapKho,
             label: (
               <Tooltip title="BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)">
                 <NavLink to="/bienbanphoinapkho">
@@ -470,7 +470,7 @@ export const menuConfig = [
         children: [
           {
             key: "sub4-6-1",
-            maBM: BM_CONFIG.CTD.CTD_BB_Sanluongphoi,
+            maBM: BM_CONFIG.HRC1.HRC1_BB_Sanluongphoi,
             label: (
               <Tooltip title="BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)">
                 <NavLink to="/viecdentoi/bienbansanluongphoi">
@@ -481,7 +481,7 @@ export const menuConfig = [
           },
           {
             key: "sub4-6-2",
-            maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoiNhapKho,
+            maBM: BM_CONFIG.HRC1.HRC1_BB_GiaoNhanPhoiNhapKho,
             label: (
               <Tooltip title="BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)">
                 <NavLink to="/viecdentoi/bienbanphoinapkho">

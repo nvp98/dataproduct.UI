@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import CTD_BB_Sanluongphoi from "../../../utils/BM_config/CTD_BB_Sanluongphoi.json";
+import HRC1_BB_Sanluongphoi from "../../../utils/BM_config/HRC1_BB_Sanluongphoi.json";
 import { Button, Card, Form, Input, Typography, message, Table } from "antd";
 import { FilterOutlined, FilePdfOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -23,7 +23,7 @@ const TaoPhieuSanLuongPhoi = () => {
   const navigate = useNavigate();
   const idphieu = id;
 
-  const config = CTD_BB_Sanluongphoi;
+  const config = HRC1_BB_Sanluongphoi;
   const [form] = Form.useForm();
 
   const [tableData, setTableData] = useState<TableRow[]>([]);

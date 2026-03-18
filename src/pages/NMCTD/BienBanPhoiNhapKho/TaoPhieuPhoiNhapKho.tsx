@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import CTD_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/CTD_BB_GiaoNhanPhoiNhapKho.json";
+import HRC1_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/HRC1_BB_GiaoNhanPhoiNhapKho.json";
 import { Button, Card, Form, Input, Typography, message, Table } from "antd";
 import { FilePdfOutlined, FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -23,7 +23,7 @@ const TaoPhieuPhoiNhapKho = () => {
   const navigate = useNavigate();
   const idphieu = id;
 
-  const config = CTD_BB_GiaoNhanPhoiNhapKho;
+  const config = HRC1_BB_GiaoNhanPhoiNhapKho;
   const [form] = Form.useForm();
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
