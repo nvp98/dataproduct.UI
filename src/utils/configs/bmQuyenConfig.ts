@@ -15,6 +15,11 @@ export interface KhuVucQuyenItem {
 export const bmQuyenConfig = {
   danhSachBieuMau: [
     {
+      maBm: BM_CONFIG.CTD.CTD_STD_Sanxuat,
+      tenBm: "Sổ theo dõi sản xuất hàng ngày",
+      nhom: "NM.CTD",
+    },
+    {
       maBm: BM_CONFIG.CTD.CTD_BB_Phoinong,
       tenBm: "Biên bản phôi nóng",
       nhom: "NM.CTD",

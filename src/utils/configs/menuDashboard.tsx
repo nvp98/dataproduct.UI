@@ -18,25 +18,25 @@ export const MenuDataDashboard = [
     icon: "hrc1",
     color: "#720101ff",
     items: [
-      {
-        code: "bienbantheplong",
-        title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
-        maBm: BM_CONFIG.HRC1.HRC1_BB_Theplong,
-      },
-      {
-        code: "tieuhaolothoi",
-        title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
-        maBm: BM_CONFIG.HRC1.HRC1_BB_Lothoi,
-      },
+      // {
+      //   code: "bienbantheplong",
+      //   title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+      //   maBm: BM_CONFIG.HRC1.HRC1_BB_Theplong,
+      // },
+      // {
+      //   code: "tieuhaolothoi",
+      //   title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+      //   maBm: BM_CONFIG.HRC1.HRC1_BB_Lothoi,
+      // },
       {
         code: "bienbanphoinong",
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (GIAO PHÔI)",
         maBm: BM_CONFIG.CTD.CTD_BB_Phoinong,
       },
       {
-        code: "bienbanphoinguoi",
-        title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-        maBm: BM_CONFIG.CTD.CTD_BB_Phoinguoi,
+        code: "bienbanphoinapnguoi",
+        title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI (GIAO PHÔI)",
+        maBm: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
       },
       {
         code: "bienbansanluongphoi",
@@ -55,21 +55,21 @@ export const MenuDataDashboard = [
     icon: "nmhrc2",
     color: "#019221ff",
     items: [
-      {
-        code: "tieuhaonauluyen_lf",
-        title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
-        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
-      },
-      {
-        code: "tieuhaonauluyen_bof",
-        title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
-        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
-      },
-      {
-        code: "tieuhaonauluyen_rf",
-        title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
-        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
-      },
+      // {
+      //   code: "tieuhaonauluyen_lf",
+      //   title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
+      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
+      // },
+      // {
+      //   code: "tieuhaonauluyen_bof",
+      //   title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
+      // },
+      // {
+      //   code: "tieuhaonauluyen_rf",
+      //   title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
+      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
+      // },
     ],
   },
   {
@@ -78,22 +78,18 @@ export const MenuDataDashboard = [
     color: "#722ed1",
     items: [
       {
+        code: "sotheodoisanxuat",
+        title: "BM.09/QT.05.13 SỔ THEO DÕI SẢN XUẤT HÀNG NGÀY",
+        maBm: BM_CONFIG.CTD.CTD_STD_Sanxuat,
+      },
+      {
         code: "viecdentoi/bienbanphoinong",
         title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NÓNG (NHẬN PHÔI)",
         maBm: BM_CONFIG.CTD.CTD_BB_Phoinong,
       },
-      // {
-      //   code: "bienbanphoinguoi",
-      //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-      // },
-      // {
-      //   code: "bienbanphoinguoi",
-      //   title: "BM.06/QT.05.10 BIÊN BẢN GIAO NHẬN PHÔI NGUỘI",
-      // },
-      
       {
         code: "bienbanphoinapnguoi",
-        title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI",
+        title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI (NHẬN PHÔI)",
         maBm: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
       },
     ],
@@ -103,18 +99,18 @@ export const MenuDataDashboard = [
     icon: "nmlg",
     color: "#019221ff",
     items: [
-      {
-        code: "naplieulocao",
-        title: "BM.05/QT.05.09 SỔ THEO DÕI NẠP LIỆU LÒ CAO",
-      },
-      {
-        code: "khoiluongsilo",
-        title: "BM.07/QT.05.09 CHỐT KHỐI LƯỢNG SILO LÒ CAO",
-      },
-      {
-        code: "vanhanhthanphun",
-        title: "BM.10/QT.05.09 NHẬT KÝ VẬN HÀNH THAN PHUN LÒ CAO",
-      },
+      // {
+      //   code: "naplieulocao",
+      //   title: "BM.05/QT.05.09 SỔ THEO DÕI NẠP LIỆU LÒ CAO",
+      // },
+      // {
+      //   code: "khoiluongsilo",
+      //   title: "BM.07/QT.05.09 CHỐT KHỐI LƯỢNG SILO LÒ CAO",
+      // },
+      // {
+      //   code: "vanhanhthanphun",
+      //   title: "BM.10/QT.05.09 NHẬT KÝ VẬN HÀNH THAN PHUN LÒ CAO",
+      // },
     ],
   },
 

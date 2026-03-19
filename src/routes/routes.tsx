@@ -54,6 +54,9 @@ import BienBanSanLuongPhoi from "../pages/NMCTD/BienBanSanLuongPhoi/BienBanSanLu
 import BienBanPhoiNapNguoi from "../pages/NMCTD/BienBanPhoiNapNguoi/BienBanPhoiNapNguoi";
 import TaoPhieuPhoiNapNguoi from "../pages/NMCTD/BienBanPhoiNapNguoi/TaoPhieuPhoiNapNguoi";
 import ChiTietPhoiNapNguoi from "../pages/NMCTD/BienBanPhoiNapNguoi/ChiTietPhoiNapNguoi";
+import SoTheoDoiSanXuat from "../pages/NMCTD/SoTheoDoiSanXuat/SoTheoDoiSanXuat";
+import TaoSoTheoDoiSanXuat from "../pages/NMCTD/SoTheoDoiSanXuat/TaoSoTheoDoiSanXuat";
+import ChiTietSoTheoDoiSanXuat from "../pages/NMCTD/SoTheoDoiSanXuat/ChiTietSoTheoDoiSanXuat";
 import QuanLySilo from "../pages/KhoDuLieu/NM.HRC2/Silo";
 import ThongKeHRC2 from "../pages/NM.HRC2/ThongKe/ThongKeHRC2";
 
@@ -590,6 +593,56 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <ChiTietPhoiNapNguoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "sotheodoisanxuat",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <SoTheoDoiSanXuat />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/sotheodoisanxuat",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <SoTheoDoiSanXuat type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieusotheodoisanxuat",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoSoTheoDoiSanXuat />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieusotheodoisanxuat/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoSoTheoDoiSanXuat />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietsotheodoisanxuat/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietSoTheoDoiSanXuat />
             </RequireRole>
           </RequireAuth>
         ),

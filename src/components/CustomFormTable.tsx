@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { Table, Button, Input, Popconfirm, Space, Spin, Tag } from "antd";
+import {
+  Table,
+  Button,
+  Input,
+  Popconfirm,
+  Select,
+  Space,
+  Spin,
+  Tag,
+} from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 
 interface CustomFormTableProps {
@@ -14,7 +23,9 @@ interface CustomFormTableProps {
       title: string;
       dataIndex: string | number;
       format?: string; // ví dụ: "number-group"
+      options?: Array<{ label: string; value: string | number }>;
     }>;
+    options?: Array<{ label: string; value: string | number }>;
   }>;
   initialData?: any[];
   onDataChange?: (data: any[]) => void;
@@ -190,13 +201,27 @@ export default function CustomFormTable({
                 readonlyFields.includes(String(child.dataIndex)) ? (
                   <Input
                     placeholder={child.title}
-                    value={formatIfNeeded((child as any)?.format, record[child.dataIndex])}
+                    value={formatIfNeeded(
+                      (child as any)?.format,
+                      record[child.dataIndex],
+                    )}
                     readOnly
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
                       true,
                     )}
+                  />
+                ) : (child as any).options ? (
+                  <Select
+                    placeholder={child.title}
+                    value={record[child.dataIndex] ?? undefined}
+                    onChange={(value) => {
+                      handleCellChange(value, idx, child.dataIndex as string);
+                    }}
+                    options={(child as any).options}
+                    disabled={!editable}
+                    style={{ width: "100%" }}
                   />
                 ) : (
                   <Input
@@ -250,13 +275,27 @@ export default function CustomFormTable({
             readonlyFields.includes(String(col.dataIndex)) ? (
               <Input
                 placeholder={col.title}
-                value={formatIfNeeded((col as any)?.format, record[col.dataIndex || ""])}
+                value={formatIfNeeded(
+                  (col as any)?.format,
+                  record[col.dataIndex || ""],
+                )}
                 readOnly
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex || ""],
                   true,
                 )}
+              />
+            ) : (col as any).options ? (
+              <Select
+                placeholder={col.title}
+                value={record[col.dataIndex ?? ""] ?? undefined}
+                onChange={(value) => {
+                  handleCellChange(value, idx, col.dataIndex as string);
+                }}
+                options={(col as any).options}
+                disabled={!editable}
+                style={{ width: "100%" }}
               />
             ) : (
               <Input
@@ -354,7 +393,9 @@ export default function CustomFormTable({
               size="small"
               columns={tableColumns}
               dataSource={rows}
-              rowKey={(record, index) => String(record?.key ?? record?.id ?? index)}
+              rowKey={(record, index) =>
+                String(record?.key ?? record?.id ?? index)
+              }
               style={{ marginTop: 12 }}
               scroll={{ x: "max-content", y: scrollY }}
               sticky={stickyHeader}
