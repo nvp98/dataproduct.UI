@@ -272,24 +272,38 @@ const TaoSoTheoDoiSanXuat = () => {
       return;
     }
 
-    // Exclude "Loại phôi" column (isLabel: true) from template
+    const labelColumn = table1Section.columns.find((col: any) => col.isLabel);
     const templateColumns = table1Section.columns.filter(
-      (col: any) => !col.isLabel,
+      (col: any) => !col.isLabel && col.dataIndex !== "loaiPhoi",
     );
+    const labelKey = labelColumn?.dataIndex || "MacPhoiLoai";
+    const initialRows: TableRow[] = table1Section.initialData || [];
+
     const headers = [
       [
+        labelColumn?.title || "Loại mác phôi",
         ...templateColumns.map((col: any) => col.title),
         "Phôi nóng (Tích x)",
         "Phôi nguội (Tích x)",
       ],
     ];
-    const ws = XLSX.utils.aoa_to_sheet(headers);
+    const dataRows = initialRows.map((row: TableRow) => [
+      row[labelKey] ?? "",
+      ...templateColumns.map(() => ""),
+      "",
+      "",
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([...headers, ...dataRows]);
     ws["!cols"] = [
-      { wch: 8 },
-      { wch: 16 },
+      {
+        wch: Math.min(labelColumn?.width ? labelColumn.width / 10 : 15, 30),
+      },
       ...templateColumns.map((col: any) => ({
         wch: Math.min(col.width ? col.width / 10 : 15, 30),
       })),
+      { wch: 16 },
+      { wch: 16 },
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "SoTheoDoiSanXuat");
@@ -324,9 +338,12 @@ const TaoSoTheoDoiSanXuat = () => {
           (col: any) => col.isLabel,
         );
         const templateColumns = table1Section.columns.filter(
-          (col: any) => !col.isLabel,
+          (col: any) => !col.isLabel && col.dataIndex !== "loaiPhoi",
         );
         const columnKeys = templateColumns.map((col: any) => col.dataIndex);
+        const loaiPhoiKey =
+          table1Section.columns.find((col: any) => col.dataIndex === "loaiPhoi")
+            ?.dataIndex || "loaiPhoi";
 
         // Get the header row to detect column mapping
         const headerRow = rows[0] || [];
@@ -343,11 +360,19 @@ const TaoSoTheoDoiSanXuat = () => {
 
         // Detect indices of checkbox columns
         const phoiNongColIndex = headerTitles.findIndex(
-          (h) => h.includes("phôi nóng (tích x)") || h.includes("phoi nong"),
+          (h) => h.includes("phôi nóng") || h.includes("phoi nong"),
         );
         const phoiNguoiColIndex = headerTitles.findIndex(
-          (h) => h.includes("phôi nguội (tích x)") || h.includes("phoi nguoi"),
+          (h) => h.includes("phôi nguội") || h.includes("phoi nguoi"),
         );
+        const labelColIndex = headerTitles.findIndex(
+          (h) =>
+            h.includes("loại mác phôi") ||
+            h.includes("loai mac phoi") ||
+            h.includes("mác phôi") ||
+            h.includes("mac phoi"),
+        );
+        const dataStartCol = labelColIndex >= 0 ? labelColIndex + 1 : 0;
 
         const dataRows = rows
           .slice(1)
@@ -370,14 +395,16 @@ const TaoSoTheoDoiSanXuat = () => {
           };
 
           // Set MacPhoiLoai for label column
-          if (isMacPhoiType && labelColumns.length > 0) {
+          if (labelColumns.length > 0) {
             const labelKey = labelColumns[0].dataIndex || "MacPhoiLoai";
-            row[labelKey] = fixedMacPhoiLoai[idx] ?? "";
+            const importedLabel =
+              labelColIndex >= 0 ? String(r[labelColIndex] ?? "").trim() : "";
+            row[labelKey] = importedLabel || fixedMacPhoiLoai[idx] || "";
           }
 
           // Map template columns to row data
           columnKeys.forEach((key, colIdx) => {
-            const value = r[colIdx];
+            const value = r[colIdx + dataStartCol];
             if (
               [
                 "soPhoiRaKhoiLo",
@@ -399,19 +426,14 @@ const TaoSoTheoDoiSanXuat = () => {
             const phoiNguoiValue = String(r[phoiNguoiColIndex] ?? "")
               .trim()
               .toLowerCase();
-            const isNongMarked =
-              phoiNongValue === "x" ||
-              phoiNongValue === "X" ||
-              phoiNongValue === "1";
+            const isNongMarked = phoiNongValue === "x" || phoiNongValue === "1";
             const isNguoiMarked =
-              phoiNguoiValue === "x" ||
-              phoiNguoiValue === "X" ||
-              phoiNguoiValue === "1";
+              phoiNguoiValue === "x" || phoiNguoiValue === "1";
 
             if (isNongMarked) {
-              row["loaiPhoi"] = 1; // Phôi nóng
+              row[loaiPhoiKey] = 1; // Phôi nóng
             } else if (isNguoiMarked) {
-              row["loaiPhoi"] = 2; // Phôi nguội
+              row[loaiPhoiKey] = 2; // Phôi nguội
             }
           }
 

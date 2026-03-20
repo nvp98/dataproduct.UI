@@ -90,6 +90,7 @@
       "label": "NV vận hành",
       "type": "selectNguoiKy",
       "key": "nguoiKy_NVVanHanh",
+      "maphongBan": "NM.CTD",
       "capDuyet": 0,
       "isChon": true,
       "required": true
