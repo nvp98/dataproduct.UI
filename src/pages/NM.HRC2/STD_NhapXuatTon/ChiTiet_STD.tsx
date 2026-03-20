@@ -13,7 +13,8 @@ import {
   Input,
 } from "antd";
 import dayjs from "dayjs";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_STD_NXT from "../../../utils/BM_config/HRC2_STD_NXT.json";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
@@ -25,9 +26,11 @@ const { Title, Text } = Typography;
 
 const ChiTiet_STD = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { idphieu } = location.state || {};
   const { pheduyet } = location.state || {};
+  const { idphieu, safeGetDetail } = usePhieuNavigation(
+    "std_nxt_hrc2_idphieu",
+    "/std_nhapxuatton"
+  );
 
   const config = HRC2_STD_NXT;
 
@@ -49,22 +52,18 @@ const ChiTiet_STD = () => {
           setDataPheDuyet(pheduyet);
         }
         setLoading(true);
-        const res = await PhieuApi.getDetail(idphieu);
+        const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
+        if (!res) return;
         setData(res);
       } catch (err: any) {
         console.error("Lỗi tải dữ liệu phiếu:", err);
-        if (err?.status === 404) {
-          message.warning("Phiếu không tồn tại hoặc đã bị xóa. Chuyển về danh sách.");
-          navigate("/std_nhapxuatton", { replace: true });
-        } else {
-          message.error("Không thể tải phiếu.");
-        }
+        message.error("Không thể tải phiếu.");
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [idphieu, pheduyet, navigate]);
+  }, [idphieu, pheduyet, safeGetDetail]);
 
   //   if (!data) return null;
 

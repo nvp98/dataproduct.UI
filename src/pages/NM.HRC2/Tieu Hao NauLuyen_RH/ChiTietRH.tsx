@@ -15,6 +15,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
+import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_BB_NauLuyen_RH from "../../../utils/BM_config/HRC2_BB_NauLuyen_RH.json";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
@@ -32,8 +33,11 @@ type DynamicColumnsMap = Record<string, DynamicColumnMeta[]>;
 
 const ChiTietTieuHaoNauLuyen_LF = () => {
   const location = useLocation();
-  const { idphieu } = location.state || {};
   const { pheduyet } = location.state || {};
+  const { idphieu, safeGetDetail } = usePhieuNavigation(
+    "phieu_rh_id",
+    "/tieuhaonauluyen_rh"
+  );
 
   const config = HRC2_BB_NauLuyen_RH;
 
@@ -54,9 +58,10 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           setDataPheDuyet(pheduyet);
         }
         setLoading(true);
-        const res = await PhieuApi.getDetail(idphieu);
-
-        setData(res);
+        if (!idphieu) return;
+        const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
+        if (!res) return;
+        setData((res as any)?.data ?? res);
       } catch (error) {
         console.error("Lỗi tải dữ liệu phiếu:", error);
       } finally {
@@ -64,7 +69,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       }
     };
     loadData();
-  }, [idphieu, pheduyet]);
+  }, [idphieu, pheduyet, safeGetDetail]);
 
   //   if (!data) return null;
 

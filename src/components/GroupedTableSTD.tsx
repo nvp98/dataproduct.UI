@@ -24,21 +24,33 @@ const NGOAI_SILO_OPTION = { id: NGOAI_SILO_ID, tenSilo: "Ngoài silo" };
 
 /* ======================= UTILITY FUNCTIONS ======================= */
 
-/**
- * Kiểm tra xem có cho phép unlock (nhập liệu) trong khung giờ 8:00-20:00 ngày 1 hằng tháng không
- */
 export const canUnlockMonthly = (date = new Date()) => {
   const day = date.getDate();
   const hour = date.getHours();
 
-  return day === 1 && hour >= 8 && hour < 20;
+  // Lấy ngày cuối tháng
+  const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+  // Ca 2 ngày cuối tháng: 20h ngày cuối → 8h sáng ngày 1 tháng sau
+  const isLastDayEvening = day === lastDayOfMonth && hour >= 20;
+  const isFirstDayMorning = day === 1 && hour < 8;
+
+  return isLastDayEvening || isFirstDayMorning;
 };
 
 /* ======================= EDITABLE CELLS ======================= */
 
+const formatVi = (val: any): string => {
+  if (val === null || val === undefined || val === "") return "";
+  const num = parseFloat(String(val));
+  if (isNaN(num)) return String(val);
+  return num.toLocaleString("fr-FR", { maximumFractionDigits: 10 });
+};
+
 const EditableInput = memo(
   ({ value, disabled, onChange, onBlur, readOnly = false, style }: any) => {
     const [local, setLocal] = useState(value ?? "");
+    const [focused, setFocused] = useState(false);
 
     useEffect(() => {
       setLocal(value ?? "");
@@ -46,7 +58,7 @@ const EditableInput = memo(
 
     return (
       <Input
-        value={local}
+        value={focused ? local : formatVi(local)}
         disabled={disabled}
         bordered={true}
         readOnly={readOnly}
@@ -55,7 +67,11 @@ const EditableInput = memo(
           setLocal(e.target.value);
           onChange(e.target.value);
         }}
-        onBlur={() => onBlur(local)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          onBlur(local);
+        }}
       />
     );
   }
@@ -198,6 +214,9 @@ export default function GroupedTableSTD({
 
   const KIEMKE_CALC_FIELDS = ["tonDauCa", "nhapTrongCa", "tonCuoiCa"];
 
+  const isNegativeNumber = (val: any) =>
+    val != null && val !== "" && !Number.isNaN(Number(val)) && Number(val) < 0;
+
   const commitCell = useCallback((key: string, field: string, value: any) => {
     setRows((prev) => {
       const next = prev.map((r) => {
@@ -313,12 +332,15 @@ export default function GroupedTableSTD({
                   // const childReadOnly = child.dataIndex === "tonDauCa"
                   //   ? !canUnlockMonthly()
                   //   : childReadOnlyBase;
-                    const childReadOnly = false
+                    const childReadOnly = false;
+                    const childVal = r[child.dataIndex];
+                    const childIsNeg = isNegativeNumber(childVal);
                   return (
                     <EditableInput
-                      value={r[child.dataIndex]}
+                      value={childVal}
                       disabled={!editable || child.editable === false}
                       readOnly={childReadOnly}
+                      style={childIsNeg ? { borderColor: "#ff4d4f", backgroundColor: "#fff2f0", color: "#ff4d4f" } : undefined}
                       onChange={(v: any) => updateCell(r.key, child.dataIndex, v)}
                       onBlur={(v: any) => commitCell(r.key, child.dataIndex, v)}
                     />
@@ -494,16 +516,28 @@ export default function GroupedTableSTD({
                 );
               }
 
-              // Cột luongSuDungKiemKe: auto-calculated, readOnly, highlight đỏ nếu âm
+              // Cột luongSuDungKiemKe: auto-calculated, readOnly, highlight đỏ nếu âm, vàng nếu không nhất quán với tongThucTe
               if (c.dataIndex === "luongSuDungKiemKe") {
                 const kiemKeVal = r.luongSuDungKiemKe;
-                const isNegative = kiemKeVal != null && kiemKeVal !== "" && Number(kiemKeVal) < 0;
+                const kiemKeNum = kiemKeVal != null && kiemKeVal !== "" ? Number(kiemKeVal) : null;
+                const thucTeNum = Number(r.tongThucTe);
+                const isNegative = kiemKeNum !== null && kiemKeNum < 0;
+                // Vàng: tongThucTe=0 mà kiemKe>0, hoặc tongThucTe!=0 mà kiemKe=0/null
+                const isInconsistent =
+                  !isNegative &&
+                  ((thucTeNum === 0 && kiemKeNum !== null && kiemKeNum > 0) ||
+                   (thucTeNum !== 0 && (kiemKeNum === null || kiemKeNum === 0)));
+                const kiemKeStyle = isNegative
+                  ? { borderColor: "#ff4d4f", backgroundColor: "#fff2f0", color: "#ff4d4f" }
+                  : isInconsistent
+                  ? { borderColor: "#faad14", backgroundColor: "#fffbe6", color: "#d46b08" }
+                  : undefined;
                 return (
                   <EditableInput
                     value={kiemKeVal}
                     disabled={!editable || c.editable === false}
                     readOnly={true}
-                    style={isNegative ? { borderColor: "#ff4d4f", backgroundColor: "#fff2f0", color: "#ff4d4f" } : undefined}
+                    style={kiemKeStyle}
                     onChange={() => {}}
                     onBlur={() => {}}
                   />
@@ -511,11 +545,14 @@ export default function GroupedTableSTD({
               }
 
               // Các cột input khác
+              const colVal = r[c.dataIndex];
+              const colIsNeg = isNegativeNumber(colVal);
               return (
                 <EditableInput
-                  value={r[c.dataIndex]}
+                  value={colVal}
                   disabled={!editable || c.editable === false}
                   readOnly={inputReadOnly}
+                  style={colIsNeg ? { borderColor: "#ff4d4f", backgroundColor: "#fff2f0", color: "#ff4d4f" } : undefined}
                   onChange={(v: any) => updateCell(r.key, c.dataIndex, v)}
                   onBlur={(v: any) => commitCell(r.key, c.dataIndex, v)}
                 />
@@ -630,6 +667,24 @@ export default function GroupedTableSTD({
             </div>
           );
         })}
+      </div>
+
+      {/* Chú thích màu sắc */}
+      <div style={{ display: "flex", gap: 16, padding: "6px 12px", marginTop: 4, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{
+            display: "inline-block", width: 28, height: 18, borderRadius: 3,
+            border: "1px solid #ff4d4f", backgroundColor: "#fff2f0",
+          }} />
+          <span style={{ fontSize: 12, color: "#595959" }}>Giá trị âm (không hợp lệ)</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{
+            display: "inline-block", width: 28, height: 18, borderRadius: 3,
+            border: "1px solid #faad14", backgroundColor: "#fffbe6",
+          }} />
+          <span style={{ fontSize: 12, color: "#595959" }}>Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng</span>
+        </div>
       </div>
 
       <HeaderMappingModal

@@ -349,14 +349,14 @@ const HeaderMapping = () => {
           return <Tag color="orange">Chưa móc nối</Tag>;
         },
       },
-      // {
-      //   title: "Dùng cho STD NXT",
-      //   dataIndex: "isUsedNXT",
-      //   key: "isUsedNXT",
-      //   width: 100,
-      //   render: (value: boolean | null | undefined) =>
-      //     value ? <Tag color="blue">Có</Tag> : <Tag>Không</Tag>,
-      // },
+      {
+        title: "Dùng cho STD NXT",
+        dataIndex: "isUsedNXT",
+        key: "isUsedNXT",
+        width: 100,
+        render: (value: boolean | null | undefined) =>
+          value ? <Tag color="blue">Có</Tag> : <Tag>Không</Tag>,
+      },
       {
         title: "Dùng cho Thống kê",
         dataIndex: "isUsedThongKe",
@@ -636,14 +636,14 @@ const HeaderMapping = () => {
           >
             <Switch checkedChildren="Đang dùng" unCheckedChildren="Ngưng" />
           </Form.Item>
-          {/* <Form.Item
+          <Form.Item
             name="isUsedNXT"
             label="Dùng cho STD NXT"
             valuePropName="checked"
             tooltip="Đánh dấu Header Key này sẽ được tự động chọn làm mặc định khi lọc dữ liệu STD NXT"
           >
             <Switch checkedChildren="Có" unCheckedChildren="Không" />
-          </Form.Item> */}
+          </Form.Item>
           <Form.Item
             name="isUsedThongKe"
             label="Dùng cho Thống kê"

@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
-import { useLocation, useNavigate } from "react-router-dom";
+import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 // import GroupedTableSTD from "../../../components/GroupedTableSTD";
 import GroupedTableSTD from "../../../components/GroupedTableSTD";
 import SummaryTableSTD from "../../../components/SummaryTableSTD";
@@ -22,10 +22,9 @@ import { STD_NXT_HRC2ServiceApi } from "../../../services/STD_NXT_HRC2ServiceApi
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
 
 const Tao_STD = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { idphieu } = location.state || {};
-  // const hasExistingPhieu = Boolean(idphieu); // hiện chưa dùng
+  const { idphieu, navigateToDetail, safeGetDetail } =
+    usePhieuNavigation("std_nxt_hrc2_idphieu", "/std_nhapxuatton");
+
   const config = HRC2_STD_NXT;
   const [form] = Form.useForm();
 
@@ -164,7 +163,7 @@ const Tao_STD = () => {
         Summary: summary,
       };
     },
-    [config.code, scopeMap, table1Data, table2Data]
+    [config.code, scopeMap, table1Data]
   );
 
   // Hàm khởi tạo dữ liệu ban đầu
@@ -172,27 +171,37 @@ const Tao_STD = () => {
     try {
       setLoading(true);
       if (idphieu) {
-        let res: any;
-        try {
-          res = await PhieuApi.getDetail(idphieu);
-        } catch (getErr: any) {
-          if (getErr?.status === 404) {
-            message.warning("Phiếu không tồn tại hoặc đã bị xóa. Chuyển về danh sách.");
-            navigate("/std_nhapxuatton", { replace: true });
-            return;
-          }
-          throw getErr;
-        }
-        const formData = res?.jsonData || {};
+        const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
+        if (!res) return;
+
+        const phieuPayload = (res as any)?.data ?? res;
+        const formData = phieuPayload?.jsonData || {};
 
         // Khôi phục form values (ưu tiên jsonData). Tách NgaySX/ca để tránh bị override bởi spread.
         const { NgaySX, ca, ...restFormData } = formData;
+        const tinhTrang = phieuPayload?.tinhTrang ?? 0;
         form.setFieldsValue({
-          idphieu: (res as any)?.idphieu,
+          idphieu: phieuPayload?.idphieu,
           NgaySX: NgaySX ? dayjs(NgaySX) : null,
-          ca: ca ?? (res as any)?.ca,
+          ca: ca ?? phieuPayload?.ca,
           ...restFormData,
         });
+
+        // Nếu trạng thái là DangLuu và field capduyet=0 chưa có giá trị → mặc định currentUser
+        if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
+          const overrideFields: Record<string, any> = {};
+          config.signatures
+            .filter((sig: any) => sig.isChon && sig.capduyet === 0)
+            .forEach((sig: any) => {
+              const existing = form.getFieldValue(sig.key);
+              if (existing == null) {
+                overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
+              }
+            });
+          if (Object.keys(overrideFields).length > 0) {
+            form.setFieldsValue(overrideFields);
+          }
+        }
 
         const detailRes: any = await STD_NXT_HRC2ServiceApi.getDetail(idphieu);
         const data = detailRes?.data;
@@ -257,13 +266,26 @@ const Tao_STD = () => {
 
         // Lưu thông tin phiếu cho action buttons
         setPhieuInfo({
-          tinhTrang: (res as any)?.tinhTrang ?? 0,
-          nguoiTaoId: (res as any)?.nguoiTaoId ?? null,
-          idphongBan: (res as any)?.idphongBan ?? null,
-          pheDuyet: (res as any)?.pheDuyet || formData.pheDuyet || [],
-          isClone: (res as any)?.isClone ?? false,
+          tinhTrang: phieuPayload?.tinhTrang ?? 0,
+          nguoiTaoId: phieuPayload?.nguoiTaoId ?? null,
+          idphongBan: phieuPayload?.idphongBan ?? null,
+          pheDuyet: phieuPayload?.pheDuyet || formData.pheDuyet || [],
+          isClone: phieuPayload?.isClone ?? false,
         });
       } else {
+        // Phiếu mới: chỉ set capduyet=0 về currentUser nếu field chưa có giá trị
+        const newOverride: Record<string, any> = {};
+        config.signatures
+          .filter((sig: any) => sig.isChon && sig.capduyet === 0)
+          .forEach((sig: any) => {
+            const existing = form.getFieldValue(sig.key);
+            if (existing == null) {
+              newOverride[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
+            }
+          });
+        if (Object.keys(newOverride).length > 0) {
+          form.setFieldsValue(newOverride);
+        }
         setPhieuInfo({});
       }
     } catch (err: any) {
@@ -272,7 +294,8 @@ const Tao_STD = () => {
     } finally {
       setLoading(false);
     }
-  }, [form, idphieu, config.layout1, navigate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, idphieu, safeGetDetail, currentUserInfo?.iD_TaiKhoan]);
 
   // Chuẩn bị payload cho action buttons (theo pattern TaoPhieuBOF)
   // actionKey: "save" | "saveAndSend" | ... để phân biệt lưu vs gửi
@@ -298,25 +321,66 @@ const Tao_STD = () => {
       luongSuDungKiemKe: row.luongSuDungKiemKe != null && row.luongSuDungKiemKe !== "" ? Number(row.luongSuDungKiemKe) : null,
     }));
 
-    // Validation: Tất cả dòng phải chọn Silo
-    const missingSiloRows = table1Normalized.filter((row) => !row.siloId && row.viTri !== 2);
-    if (missingSiloRows.length > 0) {
-      const tenNguyenLieu = missingSiloRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
-      message.error(`Vui lòng chọn Silo cho tất cả loại liệu trước khi lưu.\nCác dòng chưa chọn: ${tenNguyenLieu}`);
-      throw new Error("Validation failed: thiếu Silo");
+    // Validation (chỉ khi Gửi): Tất cả dòng phải chọn Silo
+    if (isSend) {
+      const missingSiloRows = table1Normalized.filter((row) => !row.siloId && row.viTri !== 2);
+      if (missingSiloRows.length > 0) {
+        const byTab = missingSiloRows.reduce<Record<string, string[]>>((acc, r: any) => {
+          const tab = String(r?.khuVuc ?? "Không xác định");
+          const name = String(r?.nguyenNhienLieu ?? "").trim() || "(không tên)";
+          (acc[tab] ||= []).push(name);
+          return acc;
+        }, {});
+
+        const detailLines = Object.entries(byTab)
+          .map(([tab, names]) => `- Tab ${tab}: ${names.join(", ")}`)
+          .join("\n");
+
+        message.error(
+          `Vui lòng chọn Silo cho tất cả loại liệu trước khi gửi.\nCác dòng chưa chọn theo tab:\n${detailLines}`
+        );
+        throw new Error("Validation failed: thiếu Silo");
+      }
+
+      // Validation (chỉ khi Gửi): luongSuDungKiemKe phải nhất quán với tongThucTe
+      // - tongThucTe = 0 → luongSuDungKiemKe phải = 0
+      // - tongThucTe != 0 → luongSuDungKiemKe phải != 0
+      const inconsistentKiemKeRows = table1Normalized.filter((row) => {
+        const thucTe = Number(row.tongThucTe);
+        const kiemKe = row.luongSuDungKiemKe;
+        const kiemKeNum = kiemKe === null || kiemKe === undefined ? 0 : Number(kiemKe);
+        if (Number.isNaN(kiemKeNum)) return false;
+        return (thucTe === 0 && kiemKeNum !== 0) || (thucTe !== 0 && kiemKeNum === 0);
+      });
+      if (inconsistentKiemKeRows.length > 0) {
+        const tenNguyenLieu = inconsistentKiemKeRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+        message.error(
+          `Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng. Vui lòng kiểm tra lại: ${tenNguyenLieu}`
+        );
+        throw new Error("Validation failed: luongSuDungKiemKe không nhất quán với tongThucTe");
+      }
     }
 
-    // Validation: luongSuDungKiemKe không được âm
-    const negativeKiemKeRows = table1Normalized.filter((row) => {
-      const v = row.luongSuDungKiemKe as unknown;
-      if (v === null || v === undefined) return false;
+    // Validation: các cột số không được âm
+    const isNeg = (v: unknown) => {
+      if (v === null || v === undefined || v === "") return false;
       const num = typeof v === "number" ? v : Number(v);
       return !Number.isNaN(num) && num < 0;
-    });
-    if (negativeKiemKeRows.length > 0) {
-      const tenNguyenLieu = negativeKiemKeRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
-      message.error(`Lượng sử dụng kiểm kê không được âm. Vui lòng kiểm tra lại: ${tenNguyenLieu}`);
-      throw new Error("Validation failed: lượng sử dụng kiểm kê âm");
+    };
+    const numericFields: { field: keyof typeof table1Normalized[0]; label: string }[] = [
+      { field: "tonDauCa", label: "Tồn đầu ca" },
+      { field: "nhapTrongCa", label: "Nhập trong ca" },
+      { field: "tonCuoiCa", label: "Tồn cuối ca" },
+      { field: "tongThucTe", label: "Tổng thực tế" },
+      { field: "luongSuDungKiemKe", label: "Lượng sử dụng kiểm kê" },
+    ];
+    for (const { field, label } of numericFields) {
+      const negRows = table1Normalized.filter((row) => isNeg(row[field]));
+      if (negRows.length > 0) {
+        const tenNguyenLieu = negRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+        message.error(`${label} không được âm. Vui lòng kiểm tra lại: ${tenNguyenLieu}`);
+        throw new Error(`Validation failed: ${field} âm`);
+      }
     }
 
     // Validation: Khi SoSuDung = 0 và SoNhapVe = 0 thì SoTonCuoi phải bằng SoTonDau
@@ -344,6 +408,8 @@ const Tao_STD = () => {
       totalSuDung: Number(row.totalSuDung || 0),
       totalSDTrongSoSach: Number(row.totalSDTrongSoSach || 0),
       totalChenhLech: Number(row.totalChenhLech || 0),
+      tyLeBOF: row.tyLeBOF != null ? Number(row.tyLeBOF) : null,
+      tyLeTinhLuyen: row.tyLeTinhLuyen != null ? Number(row.tyLeTinhLuyen) : null,
     }));
 
     // Flow phê duyệt giống BOF
@@ -389,15 +455,12 @@ const Tao_STD = () => {
   const handleActionSuccess = useCallback(
     async (context: any) => {
       if (context?.newPhieuId) {
-        navigate(`/tao-std`, {
-          replace: true,
-          state: { idphieu: context.newPhieuId },
-        });
+        navigateToDetail(context.newPhieuId, "/tao-std");
         return;
       }
       await initData();
     },
-    [navigate, initData]
+    [navigateToDetail, initData]
   );
 
   const actionButtons = useMemo(() => {
@@ -413,6 +476,7 @@ const Tao_STD = () => {
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
       pheDuyet: phieuInfo.pheDuyet ?? [],
+      noApproval: true,
       // Gọi API upsert sau khi PhieuApi.postData hoặc PhieuApi.putData thành công
       customPutApi: async (phieuIdParam, formData) => {
         // Lấy nxtPayload từ formData
@@ -475,6 +539,8 @@ const Tao_STD = () => {
           Id_HeaderKey: dto.Id_HeaderKey,
           ChenhLech: dto.ChenhLech,
           IdPhieu: idphieu,
+          TyLeBOF: dto.TyLeBOF ?? null,
+          TyLeTinhLuyen: dto.TyLeTinhLuyen ?? null,
         };
         setLoading(true);
         const res = await STD_NXT_HRC2ServiceApi.phanBo(payload);
@@ -517,6 +583,8 @@ const Tao_STD = () => {
           Id_HeaderKey: dto.Id_HeaderKey,
           ChenhLech: dto.ChenhLech,
           IdPhieu: idphieu,
+          TyLeBOF: dto.TyLeBOF ?? null,
+          TyLeTinhLuyen: dto.TyLeTinhLuyen ?? null,
         };
         setLoading(true);
         const res = await STD_NXT_HRC2ServiceApi.thuHoiPhanBo(payload);

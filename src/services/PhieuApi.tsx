@@ -26,9 +26,6 @@ export const PhieuApi = {
 
   search: (payload: SearchPhieuRequest) =>
     apiService.post("/api/Phieus/search", payload),
-
-  initializePhieu: (id: string) =>
-    apiService.post(`/api/Phieus/${id}/initialize`),
   syncNguoiTaoPhieu: (id: string, data: Record<string, unknown>) =>
     apiService.put(`/api/Phieus/${id}/sync-nguoi-tao`, data),
   exportDynamicPDF: (id: string, data: Record<string, unknown>) =>
