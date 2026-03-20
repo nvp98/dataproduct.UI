@@ -393,9 +393,7 @@ export default function CustomFormTable({
               size="small"
               columns={tableColumns}
               dataSource={rows}
-              rowKey={(record, index) =>
-                String(record?.key ?? record?.id ?? index)
-              }
+              rowKey={(record, index) => record?.key ?? record?.id ?? index}
               style={{ marginTop: 12 }}
               scroll={{ x: "max-content", y: scrollY }}
               sticky={stickyHeader}
@@ -405,7 +403,11 @@ export default function CustomFormTable({
                   ? {
                       selectedRowKeys: selectedRowKeys as any,
                       onChange: (keys, selected) => {
-                        onSelectionChange?.(keys as any, selected as any);
+                        // Keep selected keys in the original data type (number/string)
+                        const typedKeys = (selected as any[]).map(
+                          (record, idx) => record?.key ?? record?.id ?? keys[idx],
+                        );
+                        onSelectionChange?.(typedKeys as any, selected as any);
                       },
                       getCheckboxProps: (record: any) => ({
                         disabled: isRowSelectable
