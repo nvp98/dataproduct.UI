@@ -8,7 +8,7 @@ import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
-import { useLocation, useNavigate } from "react-router-dom";
+import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import CustomTableHRC from "../../../components/CustomTableHRC";
 import type { HRCChildColumn, HRCTableRow, HRCParentColumn } from "../../../components/CustomTableHRC";
 import CustomFormTable from "../../../components/CustomFormTable";
@@ -22,9 +22,10 @@ import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuCons
 const DEFAULT_EXCLUDED_KEYS = ["meThoi", "macThep","queLayMau","queDoNhiet", "ghiChu", "stt", "STT"];
 
 const TaoPhieuTieuHaoNauLuyen_RH = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { idphieu } = location.state || {};
+  const { idphieu, navigateToDetail, safeGetDetail } = usePhieuNavigation(
+    "phieu_rh_id",
+    "/tieuhaonauluyen_rh"
+  );
   const hasExistingPhieu = Boolean(idphieu);
 
   const config = HRC2_BB_NauLuyen_RH;
@@ -436,7 +437,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       setLoading(true);
       const idPhieu = idphieu || "";
       if (idPhieu) {
-        const res = await PhieuApi.getDetail(idPhieu);
+        const res = await safeGetDetail(() => PhieuApi.getDetail(idPhieu));
 
         if (res) {
           setSoPhieu((res as any)?.soPhieu);
@@ -631,15 +632,12 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
       if (context?.newPhieuId) {
-        navigate("/taophieutieuhaonauluyen_rh", {
-          replace: true,
-          state: { idphieu: context.newPhieuId },
-        });
+        navigateToDetail(context.newPhieuId, "/taophieutieuhaonauluyen_rh");
         return;
       }
       await initData();
     },
-    [navigate, initData]
+    [navigateToDetail, initData]
   );
 
   const actionButtons = useMemo(() => {

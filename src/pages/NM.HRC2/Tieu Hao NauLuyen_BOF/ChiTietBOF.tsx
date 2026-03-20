@@ -11,7 +11,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import { formatNumberGroup } from "../../../utils/formatters/numberFormat";
-import { useLocation, useNavigate } from "react-router-dom";
+import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
 import { phieuActionService } from "../../../services/PhieuActionService";
@@ -27,9 +27,10 @@ type DynamicColumnMeta = {
 type DynamicColumnsMap = Record<string, DynamicColumnMeta[]>;
 
 const ChiTietTieuHaoNauLuyen_BOF = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { idphieu } = location.state || {};
+  const { idphieu, navigateToDetail, safeGetDetail } = usePhieuNavigation(
+    "phieu_bof_id",
+    "/tieuhaonauluyen_bof"
+  );
 
   const config = HRC2_BB_NauLuyen_BOF;
 
@@ -39,15 +40,17 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await PhieuApi.getDetail(idphieu);
-      setData(res);
+      if (!idphieu) return;
+      const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
+      if (!res) return;
+      setData((res as any)?.data ?? res);
     } catch (error) {
       console.error("Lỗi tải dữ liệu phiếu:", error);
       message.error("Không thể tải dữ liệu phiếu");
     } finally {
       setLoading(false);
     }
-  }, [idphieu]);
+  }, [idphieu, safeGetDetail]);
 
   useEffect(() => {
     loadData();
@@ -145,15 +148,12 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
       if (context?.newPhieuId) {
-        navigate("/taophieutieuhaonauluyen_bof", {
-          replace: true,
-          state: { idphieu: context.newPhieuId },
-        });
+        navigateToDetail(context.newPhieuId, "/taophieutieuhaonauluyen_bof");
         return;
       }
       await loadData();
     },
-    [loadData, navigate]
+    [loadData, navigateToDetail]
   );
 
   const actionButtons = useMemo(() => {

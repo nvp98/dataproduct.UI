@@ -1,7 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useMemo } from "react";
-import { Table, Input, Button } from "antd";
+import { useMemo, useState, useCallback, memo } from "react";
+import { Table, Input, Button, InputNumber } from "antd";
 import type { STD_NXT_HRC2_PhanBoDto } from "../models/STD_NXT_Model";
+
+const formatVi = (val: any): string => {
+  if (val === null || val === undefined || val === "") return "";
+  const num = parseFloat(String(val));
+  if (isNaN(num)) return String(val);
+  return num.toLocaleString("fr-FR", { maximumFractionDigits: 10 });
+};
+
+const EditableCell = memo(({ value, disabled, onChange }: { value: any; disabled: boolean; onChange: (v: string) => void }) => {
+  const [focused, setFocused] = useState(false);
+  const [local, setLocal] = useState(value ?? "");
+
+  useState(() => { setLocal(value ?? ""); });
+
+  return (
+    <Input
+      value={focused ? local : formatVi(local)}
+      disabled={disabled}
+      style={{ border: "none", padding: 0, textAlign: "right" }}
+      onChange={(e) => { setLocal(e.target.value); onChange(e.target.value); }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  );
+});
 
 interface SummaryTableSTDProps {
   columns: Array<{
@@ -99,6 +124,8 @@ export default function SummaryTableSTD({
           null;
         baseRow.NgaySX = meta.ngaySX ?? meta.NgaySX ?? undefined;
         baseRow.Ca = meta.ca ?? meta.Ca ?? undefined;
+        baseRow.tyLeBOF = meta.tyLeBOF ?? meta.TyLeBOF ?? null;
+        baseRow.tyLeTinhLuyen = meta.tyLeTinhLuyen ?? meta.TyLeTinhLuyen ?? null;
       }
 
       summaryRows.push(baseRow);
@@ -124,6 +151,22 @@ export default function SummaryTableSTD({
     });
   }, [summaryData]);
 
+  // State riêng cho tyLeBOF / tyLeTinhLuyen vì không derive từ table1Data
+  const [tyLeMap, setTyLeMap] = useState<Record<string, { tyLeBOF?: number | null; tyLeTinhLuyen?: number | null }>>({});
+
+  const handleTyLeChange = useCallback((key: string, field: "tyLeBOF" | "tyLeTinhLuyen", value: number | null) => {
+    setTyLeMap((prev) => {
+      const other = field === "tyLeBOF" ? "tyLeTinhLuyen" : "tyLeBOF";
+      const otherVal = Math.max(0, Math.min(100, parseFloat(((100 - (value ?? 0)).toFixed(10)).replace(/\.?0+$/, ""))));
+      const next = { ...prev, [key]: { ...prev[key], [field]: value, [other]: otherVal } };
+      const updatedRows = dataWithChenhLech.map((row) =>
+        row.key === key ? { ...row, ...next[key] } : row
+      );
+      onDataChange?.(updatedRows);
+      return next;
+    });
+  }, [dataWithChenhLech, onDataChange]);
+
   const handleCellChange = (key: string, dataIndex: string, value: any) => {
     // Cập nhật dữ liệu và tính lại chênh lệch
     const updatedData = dataWithChenhLech.map((row) => {
@@ -144,26 +187,13 @@ export default function SummaryTableSTD({
     onDataChange?.(updatedData);
   };
 
-  // Format số với dấu chấm ngăn cách hàng nghìn và dấu phẩy cho phần thập phân
   const formatNumber = (value: string | number, showNegativeInParentheses = false) => {
-    if (value === null || value === undefined || value === "") return "";
-    const num = typeof value === "string" ? parseFloat(value) : value;
-    if (isNaN(num)) return value.toString();
-    
-    // Xử lý số âm
-    const isNegative = num < 0;
-    const absNum = Math.abs(num);
-    
-    // Format với dấu chấm ngăn cách hàng nghìn, dấu phẩy cho thập phân
-    const formatted = absNum.toLocaleString("de-DE", { 
-      minimumFractionDigits: 3, 
-      maximumFractionDigits: 3 
-    });
-    
-    if (showNegativeInParentheses && isNegative) {
-      return `(${formatted})`;
+    const formatted = formatVi(value);
+    if (!formatted) return "";
+    if (showNegativeInParentheses && String(value).startsWith("-")) {
+      return `(${formatted.replace("-", "")})`;
     }
-    return isNegative ? `-${formatted}` : formatted;
+    return formatted;
   };
 
   const renderCell = (record: any, col: any) => {
@@ -171,6 +201,21 @@ export default function SummaryTableSTD({
     const isReadonly = col.isLabel === true || dataIndex === "totalChenhLech" || dataIndex === "totalText";
     const value = record[dataIndex] ?? "";
     const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech"].includes(dataIndex);
+    const isTyLeColumn = dataIndex === "tyLeBOF" || dataIndex === "tyLeTinhLuyen";
+
+    if (isTyLeColumn && !record._isTotalRow) {
+      const tyLeVal = tyLeMap[record.key]?.[dataIndex as "tyLeBOF" | "tyLeTinhLuyen"] ?? (record[dataIndex] ?? null);
+      return (
+        <InputNumber
+          value={tyLeVal}
+          min={0}
+          max={100}
+          disabled={!editable}
+          style={{ width: "100%" }}
+          onChange={(v) => handleTyLeChange(record.key, dataIndex as "tyLeBOF" | "tyLeTinhLuyen", v)}
+        />
+      );
+    }
     const isChenhLechColumn = dataIndex === "totalChenhLech";
     const isTotalTextColumn = dataIndex === "totalText";
 
@@ -203,11 +248,10 @@ export default function SummaryTableSTD({
     }
 
     return (
-      <Input
+      <EditableCell
         value={value}
-        onChange={(e) => handleCellChange(record.key, dataIndex, e.target.value)}
         disabled={!editable}
-        style={{ border: "none", padding: 0, textAlign: isNumberColumn ? "right" : "left" }}
+        onChange={(v) => handleCellChange(record.key, dataIndex, v)}
       />
     );
   };
@@ -215,10 +259,17 @@ export default function SummaryTableSTD({
   const tableColumns = columns.map((col) => {
     const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech"].includes(col.dataIndex || "");
     const isTotalTextColumn = col.dataIndex === "totalText";
+    const isTyLeCol = col.dataIndex === "tyLeBOF" || col.dataIndex === "tyLeTinhLuyen";
+    const isMaterialCol = col.dataIndex === "totalNguyenNhienLieu";
     return {
       title: col.title,
       dataIndex: col.dataIndex,
-      width: col.width || (isTotalTextColumn ? 200 : isNumberColumn ? 180 : 150),
+      width: col.width || (
+        isTotalTextColumn ? 140 :
+        isMaterialCol ? 110 :
+        isTyLeCol ? 70 :
+        isNumberColumn ? 100 : 90
+      ),
       align: isNumberColumn ? "right" as const : (isTotalTextColumn ? "left" as const : "center" as const),
       render: (value: any, record: any) => renderCell(record, col),
     };
@@ -228,9 +279,8 @@ export default function SummaryTableSTD({
   tableColumns.push({
     title: "Phân bổ",
     dataIndex: "phanBo",
-    width: 100,
+    width: 72,
     align: "center" as const,
-    fixed: "right" as const,
     render: (_: any, record: any) => {
       if (record._isTotalRow) {
         return <span></span>;
@@ -244,12 +294,15 @@ export default function SummaryTableSTD({
           type={hasPhanBo ? "default" : "primary"}
           size="small"
           onClick={() => {
+            const rowTyLe = tyLeMap[record.key] ?? {};
             const payload: STD_NXT_HRC2_PhanBoDto = {
               NgaySX: record.NgaySX ?? record.ngaySX,
               Ca: record.Ca ?? record.ca,
               Id_HeaderKey: record.Id_HeaderKey ?? record.id_HeaderKey,
               ChenhLech: Number(record.totalChenhLech ?? 0),
               IdPhieu: idPhieu ?? "",
+              TyLeBOF: rowTyLe.tyLeBOF ?? record.tyLeBOF ?? 0,
+              TyLeTinhLuyen: rowTyLe.tyLeTinhLuyen ?? record.tyLeTinhLuyen ?? 0,
             };
             if (hasPhanBo) {
               onThuHoi?.(payload);
@@ -277,7 +330,7 @@ export default function SummaryTableSTD({
         columns={tableColumns}
         dataSource={dataWithChenhLech}
         pagination={false}
-        scroll={{ x: "max-content" }}
+        tableLayout="fixed"
         rowKey="key"
       />
     </div>

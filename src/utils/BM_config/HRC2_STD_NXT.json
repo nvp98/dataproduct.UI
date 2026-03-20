@@ -105,6 +105,14 @@
         {
           "title": "Chênh lệch",
           "dataIndex": "totalChenhLech"
+        },
+        {
+          "title": "Tỷ lệ PB BOF %",
+          "dataIndex": "tyLeBOF"
+        },
+        {
+          "title": "Tỷ lệ PB tinh luyện %",
+          "dataIndex": "tyLeTinhLuyen"
         }
       ],
       "initialData": [
@@ -116,15 +124,6 @@
   ],
 
   "signatures": [
-    {
-      "label": "Người giao ca",
-      "type": "selectNguoiKy",
-      "key": "nguoinhanca_HRC2", 
-      "maphongBan": "NM.HRC2",
-      "capduyet": 1,
-      "isChon": true,
-      "required": true
-    },
     {
       "label": "Người nhận ca",
       "type": "selectNguoiKy",

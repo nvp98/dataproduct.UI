@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * Model cho dữ liệu bảng 1 - Số liệu kiểm kê
  */
@@ -39,6 +37,8 @@ export interface STD_NXT_Table2Row {
   totalSuDung?: string | number;
   totalSDTrongSoSach?: string | number;
   totalChenhLech?: string | number;
+  tyLeBOF?: string | number | null;
+  tyLeTinhLuyen?: string | number | null;
   /** Từ BE: đã phân bổ chênh lệch hay chưa (để hiển thị nút Thu hồi/Phân bổ) */
   HasPhanBo?: boolean | null;
   Id_HeaderKey?: number | null;
@@ -135,4 +135,6 @@ export interface STD_NXT_HRC2_PhanBoDto {
   Id_HeaderKey: number;
   ChenhLech: number;
   IdPhieu: string;
+  TyLeBOF?: number | null;
+  TyLeTinhLuyen?: number | null;
 }

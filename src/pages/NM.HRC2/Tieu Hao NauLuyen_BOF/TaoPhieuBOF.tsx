@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
-import { useLocation, useNavigate } from "react-router-dom";
+import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import CustomTableHRC from "../../../components/CustomTableHRC";
 import type { HRCChildColumn, HRCTableRow, HRCParentColumn } from "../../../components/CustomTableHRC";
 import CustomFormTable from "../../../components/CustomFormTable";
@@ -24,9 +24,10 @@ import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuAc
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 
 const TaoPhieuTieuHaoNauLuyen_BOF = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { idphieu } = location.state || {};
+  const { idphieu, navigateToDetail, safeGetDetail } = usePhieuNavigation(
+    "phieu_bof_id",
+    "/tieuhaonauluyen_bof"
+  );
   const hasExistingPhieu = Boolean(idphieu);
   const config = HRC2_BB_NauLuyen_BOF;
   const [form] = Form.useForm();
@@ -472,7 +473,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
       // Gọi API lấy phiếu theo số phiếu
       const idPhieu = idphieu || ""; // Lấy từ state nếu có
       if (idPhieu) {
-        const res = await PhieuApi.getDetail(idPhieu);
+        const res = await safeGetDetail(() => PhieuApi.getDetail(idPhieu));
 
         if (res) {
           setSoPhieu((res as any)?.soPhieu);
@@ -707,15 +708,12 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
       if (context?.newPhieuId) {
-        navigate("/taophieutieuhaonauluyen_bof", {
-          replace: true,
-          state: { idphieu: context.newPhieuId },
-        });
+        navigateToDetail(context.newPhieuId, "/taophieutieuhaonauluyen_bof");
         return;
       }
       await initData();
     },
-    [navigate, initData]
+    [navigateToDetail, initData]
   );
 
   const actionButtons = useMemo(() => {
