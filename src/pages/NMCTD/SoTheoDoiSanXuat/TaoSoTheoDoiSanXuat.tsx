@@ -178,6 +178,30 @@ const TaoSoTheoDoiSanXuat = () => {
     initData();
   }, [initData]);
 
+  const normalizeMacPhoiLoai = (value: any): 1 | 2 | 3 | null => {
+    if (value == null || value === "") return null;
+    if (typeof value === "number") {
+      return value === 1 || value === 2 || value === 3 ? value : null;
+    }
+
+    const normalized = String(value)
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[.)]/g, "")
+      .replace(/\s+/g, " ");
+
+    if (["1", "i", "loai i", "loai 1", "a loai i"].includes(normalized))
+      return 1;
+    if (["2", "ii", "loai ii", "loai 2", "b loai ii"].includes(normalized))
+      return 2;
+    if (["3", "iii", "loai iii", "loai 3", "c loai iii"].includes(normalized))
+      return 3;
+
+    return null;
+  };
+
   const getFormData = useCallback(async () => {
     const userInfo = getUserInfo();
     const formData = await form.validateFields();
@@ -208,6 +232,28 @@ const TaoSoTheoDoiSanXuat = () => {
         return clone;
       });
 
+    const table1Section = config.layout.find(
+      (section: any) =>
+        section.sectionType === "table" && section.key === "table1",
+    );
+    const table1LabelKey =
+      (table1Section as any)?.columns?.find((col: any) => col.isLabel)
+        ?.dataIndex || "MacPhoiLoai";
+
+    const normalizedTable1 = normalizeRows(table1Data).map((row, idx) => {
+      const code = normalizeMacPhoiLoai((row as any)[table1LabelKey]);
+      if (code === null) {
+        message.warning(
+          `Dòng ${idx + 1} có giá trị ${table1LabelKey} không hợp lệ. Chỉ chấp nhận Loại I/II/III.`,
+        );
+        throw new Error("MacPhoiLoai invalid");
+      }
+      return {
+        ...row,
+        [table1LabelKey]: code,
+      };
+    });
+
     return {
       ...formData,
       ...formattedDates,
@@ -217,7 +263,7 @@ const TaoSoTheoDoiSanXuat = () => {
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
       nguoiTaoId: userInfo.iD_TaiKhoan ?? null,
-      table1: normalizeRows(table1Data),
+      table1: normalizedTable1,
       table2: normalizeRows(table2Data),
       pheDuyet: pheDuyetFlow,
     };
@@ -378,16 +424,19 @@ const TaoSoTheoDoiSanXuat = () => {
           .slice(1)
           .filter((r) => r.some((c) => c !== undefined && c !== ""));
 
-        // For template with 3 fixed rows, allow only 3 rows; otherwise flexible
-        if (isMacPhoiType && dataRows.length !== 3) {
-          message.warning(
-            "File phải chứa đúng 3 dòng dữ liệu (Loại I, II, III)!",
-          );
-          return;
-        }
+        // // For template with 3 fixed rows, allow only 3 rows; otherwise flexible
+        // if (isMacPhoiType && dataRows.length !== 3) {
+        //   message.warning(
+        //     "File phải chứa đúng 3 dòng dữ liệu (Loại I, II, III)!",
+        //   );
+        //   return;
+        // }
 
-        // Fixed MacPhoiLoai labels for type-based import
-        const fixedMacPhoiLoai = ["a. Loại I", "b. Loại II", "c. Loại III"];
+        const loaiTextByCode: Record<1 | 2 | 3, string> = {
+          1: "Loại I",
+          2: "Loại II",
+          3: "Loại III",
+        };
 
         const imported: TableRow[] = dataRows.map((r, idx) => {
           const row: TableRow = {
@@ -399,7 +448,18 @@ const TaoSoTheoDoiSanXuat = () => {
             const labelKey = labelColumns[0].dataIndex || "MacPhoiLoai";
             const importedLabel =
               labelColIndex >= 0 ? String(r[labelColIndex] ?? "").trim() : "";
-            row[labelKey] = importedLabel || fixedMacPhoiLoai[idx] || "";
+            const fallbackCode = ((idx % 3) + 1) as 1 | 2 | 3;
+            const code = normalizeMacPhoiLoai(importedLabel) || fallbackCode;
+
+            if (importedLabel && normalizeMacPhoiLoai(importedLabel) === null) {
+              message.warning(
+                `Dòng ${idx + 1} có Mác phôi loại không hợp lệ: "${importedLabel}".`,
+              );
+              throw new Error("MacPhoiLoai import invalid");
+            }
+
+            // Giữ text trên UI, sẽ đổi sang 1/2/3 ở bước gửi dữ liệu
+            row[labelKey] = loaiTextByCode[code];
           }
 
           // Map template columns to row data

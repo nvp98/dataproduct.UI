@@ -57,9 +57,9 @@
         }
       ],
       "initialData": [
-        { "key": "L1", "MacPhoiLoai": "a. Loại I" },
-        { "key": "L2", "MacPhoiLoai": "b. Loại II" },
-        { "key": "L3", "MacPhoiLoai": "c. Loại III" }
+        { "key": "1", "MacPhoiLoai": "Loại I" },
+        { "key": "2", "MacPhoiLoai": "Loại II" },
+        { "key": "3", "MacPhoiLoai": "Loại III" }
       ]
     },
     {
