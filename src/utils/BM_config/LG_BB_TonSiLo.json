@@ -1,0 +1,128 @@
+{
+    "code": "NMLG_BM_TonSiLoLoCao",
+    "title": "SỔ GIAO NHẬN KHỐI LƯỢNG TỒN SILO - LÒ CAO",
+    "prefix": "NMLG_BB_TSLC",
+    "headerInfo": {
+        "company": "HÒA PHÁT DUNG QUẤT",
+        "subCompany": "CÔNG TY CỔ PHẦN THÉP"
+    },
+    "isoInfo": {
+        "code": "BM.07/QT.05.09",
+        "effectiveDate": "01/06/2023"
+    },
+    "headerFields": [
+         {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+        },
+        {
+            "label": "Ngày sản xuất",
+            "type": "date",
+            "key": "NgaySX",
+            "required": true
+        },
+        {
+            "label": "Lò Cao",
+            "type": "select",
+            "required": true,
+            "key": "scope",
+            "options": [
+                {
+                    "label": "1",
+                    "value": 1
+                },
+                {
+                    "label": "2",
+                    "value": 2
+                },
+                {
+                    "label": "3",
+                    "value": 3
+                },
+                {
+                    "label": "4",
+                    "value": 4
+                },
+                {
+                    "label": "5",
+                    "value": 5
+                },
+                {
+                    "label": "6",
+                    "value": 6
+                }
+            ]
+        }
+    ],
+    "layout": [
+        {
+            "sectionType": "table",
+            "key": "table1",
+            "columns": [
+                {
+                    "title": "STT",
+                    "dataIndex": "stt",
+                    "width": 70,
+                    "editable": false,
+                    "align": "center"
+                },
+                {
+                    "title": "Silo",
+                    "dataIndex": "silo",
+                    "width": 180
+                },
+                {
+                    "title": "Loại nguyên/nhiên liệu",
+                    "dataIndex": "loaiNguyenNhienLieu",
+                    "width": 280
+                },
+                {
+                    "title": "KL tồn cuối kíp (Tấn)",
+                    "dataIndex": "klTonCuoiKip",
+                    "width": 180,
+                    "inputType": "number"
+                },
+                {
+                    "title": "Ghi chú",
+                    "dataIndex": "ghiChu",
+                    "width": 260
+                }
+            ],
+            "summary": {
+                "type": "sum",
+                "columns": [
+                    "klTonCuoiKip"
+                ]
+            }
+        }
+    ],
+    "footerNotes": [
+        "Khối lượng NNL tồn silo trong kíp phải được ghi chép đầy đủ, Người giao kíp có trách nhiệm lập BB này để xác nhận giao."
+    ],
+    "signatures": [
+        {
+            "label": "Người giao kíp",
+            "type": "selectNguoiKy",
+            "key": "nguoiGiaoKip_NM.LG",
+            "maphongBan": "NM.LG",
+            "capDuyet": 0,
+            "isChon": true,
+            "required": true
+        },
+        {
+            "label": "Người nhận kíp",
+            "type": "selectNguoiKy",
+            "key": "nguoiNhanKip_NM.LG",
+            "maphongBan": "NM.LG",
+            "capDuyet": 1,
+            "isChon": true,
+            "required": true
+        }
+    ]
+}

@@ -54,6 +54,11 @@ export const bmQuyenConfig = {
       tenBm: "Biên bản sản lượng phôi",
       nhom: "NM.HRC1",
     },
+    {
+      maBm: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
+      tenBm: "Biên bản tồn silo lò cao",
+      nhom: "NM.NMLG",
+    }
   ] as BieuMauQuyenItem[],
   danhSachKhuVuc: [
     { maKhuVuc: "1", tenKhuVuc: "Xưởng cán 1", nhom: "NM.CTD" },
@@ -64,5 +69,6 @@ export const bmQuyenConfig = {
     { maKhuVuc: "BOF", tenKhuVuc: "Lò BOF", nhom: "NM.HRC2" },
     { maKhuVuc: "ALL", tenKhuVuc: "Tất cả", nhom: "COMMON" },
     { maKhuVuc: "4", tenKhuVuc: "NM.HRC1", nhom: "NM.HRC1" },
+    { maKhuVuc: "5", tenKhuVuc: "NM.NMLG", nhom: "NM.NMLG" },
   ] as KhuVucQuyenItem[],
 };

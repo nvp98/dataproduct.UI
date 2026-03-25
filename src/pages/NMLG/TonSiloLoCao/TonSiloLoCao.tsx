@@ -1,4 +1,4 @@
-import LG_BB_NapLieuLoCao from "../../../utils/BM_config/LG_BB_NapLieuLoCao.json";
+import LG_BB_TonSiLo from "../../../utils/BM_config/LG_BB_TonSiLo.json";
 import { Button, Card, Space, Table, Tag } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import PhieuFilterCard, {
@@ -10,8 +10,8 @@ import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 
-const NapLieuLoCao = ({ type }: { type?: string }) => {
-  const config = LG_BB_NapLieuLoCao;
+const TonSiloLoCao = ({ type }: { type?: string }) => {
+  const config = LG_BB_TonSiLo;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
@@ -52,14 +52,14 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
             if (type === "viecdentoi") {
-              return navigate(`/chitietbienbannaplieulocao/${record.idphieu}`);
+              return navigate(`/chitiettonsilolocao/${record.idphieu}`);
             }
 
             if (record.tinhTrang === 0 || record.tinhTrang === 3 || record.tinhTrang === 7) {
-              return navigate(`/taophieubienbannaplieulocao/${record.idphieu}`);
+              return navigate(`/taophieutonsilolocao/${record.idphieu}`);
             }
 
-            return navigate(`/chitietbienbannaplieulocao/${record.idphieu}`);
+            return navigate(`/chitiettonsilolocao/${record.idphieu}`);
           }}
         >
           {text}
@@ -75,16 +75,24 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
       ellipsis: true,
     },
     {
-      title: "Lò cao",
-      dataIndex: "scope",
-      key: "scope",
-      width: 120,
-      render: (value: number | string) => (value ? `Lò Cao ${value}` : "-"),
-    },
-    {
       title: "Kíp",
       dataIndex: "kip",
       key: "kip",
+      width: 120,
+      ellipsis: true,
+    },
+     {
+      title: "Ca",
+      dataIndex: "ca",
+      key: "ca",
+      width: 120,
+      ellipsis: true,
+    },
+    
+     {
+      title: "Lò cao",
+      dataIndex: "ca",
+      key: "ca",
       width: 120,
       ellipsis: true,
     },
@@ -122,7 +130,7 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
           <Button
             type="text"
             icon={<EyeOutlined twoToneColor="#1890ff" />}
-            onClick={() => navigate(`/chitietbienbannaplieulocao/${record.idphieu}`)}
+            onClick={() => navigate(`/chitietbienbantonsilolocao/${record.idphieu}`)}
           />
         </Space>
       ),
@@ -153,20 +161,6 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
         { label: "Kíp C", value: "C" },
       ],
     },
-    {
-      key: "scope",
-      label: "Lò cao",
-      type: "select",
-      placeholder: "Chọn lò cao",
-      options: [
-        { label: "Lò Cao 1", value: 1 },
-        { label: "Lò Cao 2", value: 2 },
-        { label: "Lò Cao 3", value: 3 },
-        { label: "Lò Cao 4", value: 4 },
-        { label: "Lò Cao 5", value: 5 },
-        { label: "Lò Cao 6", value: 6 },
-      ],
-    },
   ];
 
   return (
@@ -184,7 +178,7 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => navigate("/taophieubienbannaplieulocao")}
+              onClick={() => navigate("/taophieubienbantonsilolocao")}
             >
               Tạo phiếu mới
             </Button>
@@ -218,4 +212,4 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
   );
 };
 
-export default NapLieuLoCao;
+export default TonSiloLoCao;

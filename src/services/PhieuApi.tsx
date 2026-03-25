@@ -35,4 +35,5 @@ export const PhieuApi = {
       params,
       responseType: "blob",
     }),
+  getDsLoCao: () => apiService.get("/api/Phieus/DsLoCao"),
 };

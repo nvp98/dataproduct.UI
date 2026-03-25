@@ -5,3 +5,4 @@ export const nguyenlieuApi = {
 
   //   getDetail: (id: string) => apiService.get(`/api/phoigionhan/${id}`),
 };
+

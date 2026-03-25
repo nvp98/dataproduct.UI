@@ -20,6 +20,11 @@ export const BM_CONFIG = {
         HRC1_BB_Lothoi: 'HRC1_BB_Lothoi',
         HRC1_BB_GiaoNhanPhoiNhapKho: 'HRC1_BB_GiaoNhanPhoiNhapKho',
         HRC1_BB_Sanluongphoi: 'HRC1_BB_Sanluongphoi',
+    },
+    NMLG: {
+        NMLG_BM_NapLieuLoCao: 'NMLG_BM_NapLieuLoCao',
+        NMLG_BM_TonSiloLoCao: 'NMLG_BM_TonSiloLoCao',
+
     }
 }
 
