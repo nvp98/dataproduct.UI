@@ -9,6 +9,7 @@ import {
   UndoOutlined,
   LockOutlined,
   UnlockOutlined,
+  FilePdfOutlined,
 } from "@ant-design/icons";
 import { PhieuApi } from "./PhieuApi";
 import { PheDuyetApi } from "./PheDuyetApi";
@@ -604,6 +605,34 @@ export const phieuActionService = {
       // Trạng thái 5 - Đã chốt: Không hiện button nào
     // }
     
+
+    // ========== NÚT XUẤT PDF (cho tất cả mọi người khi phiếu ở trạng thái Hoàn thành hoặc Đã chốt) ==========
+    if (tinhTrang === TrangThaiPhieuConst.HoanThanh || tinhTrang === TrangThaiPhieuConst.DaChot) {
+      buttons.push({
+        key: "exportPdf",
+        label: "Xuất PDF",
+        icon: <FilePdfOutlined />,
+        type: "default",
+        onClick: async (phieuIdParam) => {
+          try {
+            const response = await PhieuApi.exportDynamicPDF(phieuIdParam, {});
+            const blob = new Blob([response as any], { type: "application/pdf" });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `Phieu_${phieuIdParam}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            message.success("Xuất PDF thành công!");
+          } catch (error) {
+            message.error((error as any)?.message ?? "Xuất PDF thất bại!");
+            onError?.(error);
+          }
+        },
+      });
+    }
 
     // ========== BUTTONS CHO CẤP PHÊ DUYỆT (trừ cấp 0): Xác nhận luôn; Không xác nhận chỉ khi phiếu là clone ==========
     const canApprovePhieu =
