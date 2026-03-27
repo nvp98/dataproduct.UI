@@ -231,6 +231,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub2-4-4",
+            maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
+            label: (
+              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+                <NavLink to="/phieuxulykph">
+                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       // {
@@ -425,6 +436,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "3-4-4",
+            maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
+            label: (
+              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+                <NavLink to="/viecdentoi/phieuxulykph">
+                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -471,6 +493,17 @@ export const menuConfig = [
               <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
                 <NavLink to="/viecdentoi/bienbanphoinapnguoi">
                   BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "5-1-4",
+            maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
+            label: (
+              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+                <NavLink to="/viecdentoi/phieuxulykph">
+                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
                 </NavLink>
               </Tooltip>
             ),

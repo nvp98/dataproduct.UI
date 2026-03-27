@@ -92,6 +92,11 @@ export const MenuDataDashboard = [
         title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI (NHẬN PHÔI)",
         maBm: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
       },
+      {
+        code: "phieuxulykph",
+        title: "BM.01C/QT.11 PHIẾU XỬ LÝ THÀNH PHẨM/ SẢN PHẨM KHÔNG PHÙ HỢP",
+        maBm: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
+      },
     ],
   },
   {

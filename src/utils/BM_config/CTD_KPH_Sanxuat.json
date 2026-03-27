@@ -1,0 +1,129 @@
+{
+  "code": "CTD_KPH_Sanxuat",
+  "prefix": "KPHSX",
+  "title": "PHIẾU XỬ LÝ BẢN THÀNH PHẨM/SẢN PHẨM KHÔNG PHỤ HỢP",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.01/QT.11",
+    "effectiveDate": "01/06/2023",
+    "revision": "01"
+  },
+  "headerFields": [
+     { "label": "Ngày SX", "type": "date", "key": "NgaySX", "required": true },
+    {
+      "label": "Ca SX",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+   
+    { "label": "Ngày XL", "type": "date", "key": "NgayXL", "required": true },
+        {
+      "label": "Ca XL",
+      "type": "select",
+      "key": "caXL",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    {
+      "label": "Xưởng cán",
+      "type": "select",
+      "required": true,
+      "key": "xuong",
+      "options": [
+        { "label": "Xưởng cán 1", "value": 1 },
+        { "label": "Xưởng cán 2", "value": 2 },
+        { "label": "Xưởng cán 3", "value": 3 }
+      ]
+    }
+  ],
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "PHIẾU XỬ LÝ",
+      "key": "table1",
+      "columns": [
+        { "title": "STT", "dataIndex": "stt", "width": 50, "type": "number" },
+        {
+          "title": "Sản phẩm trước xử lý",
+          "children": [
+            { "title": "Sản phẩm", "dataIndex": "inSanPham", "width": 80 },
+            { "title": "Mác thép", "dataIndex": "inMacThep", "width": 100 },
+            { "title": "Chiều dài", "dataIndex": "inChieuDai", "width": 70 },
+            { "title": "Bó số/ Mẻ số", "dataIndex": "inSoMe", "width": 140 },
+            { "title": "Số thanh", "dataIndex": "inSoThanh", "width": 80, "type": "number" },
+            { "title": "Khối lượng (kg)", "dataIndex": "inKhoiLuong", "width": 100, "type": "number" },
+             { "title": "Ca/ Ngày sản xuất", "dataIndex": "inCaNgaySX", "width": 120 },
+            { "title": "Phân loại", "dataIndex": "inLoai", "width": 80 }
+          ]
+        },
+        { "title": "Nguyên nhân", "dataIndex": "reason", "width": 120 },
+        { "title": "Biện pháp xử lý", "dataIndex": "measures", "width": 120 },
+        {
+          "title": "Sản phẩm sau xử lý",
+          "children": [
+            { "title": "Sản phẩm", "dataIndex": "newSanPham", "width": 100 },
+            { "title": "Mác thép", "dataIndex": "newMacThep", "width": 100 },
+            { "title": "Chiều dài", "dataIndex": "newChieuDai", "width": 100 },
+            { "title": "Bó số/ Mẻ số", "dataIndex": "newSoMe", "width": 140 },
+            { "title": "Số thanh", "dataIndex": "newSoThanh", "width": 80, "type": "number" },
+            { "title": "Khối lượng (kg)", "dataIndex": "newKhoiLuong", "width": 100, "type": "number" },
+            { "title": "Phân loại", "dataIndex": "newLoai", "width": 80 }
+          ]
+        }
+      ]
+    }
+  ],
+  "footerNotes": [
+    "Phiếu xử lý sản phẩm không phù hợp phải được lập trong 24 giờ sau khi phát hiện.",
+    "Có xác nhận của P.QLCL trước khi xử lý."
+  ],
+  "signatures": [
+    {
+      "label": "P.QLCL",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_QLCL",
+      "maphongBan": "P.QLCL",
+      "capDuyet": 3,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "BP.LOG",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_BPLOG",
+      "maphongBan": "BP.LOG",
+      "capDuyet": 2,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "BP liên quan",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_BPLienQuan",
+      "maphongBan": "All",
+      "capDuyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Người lập",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_NguoiLap",
+      "maphongBan": "All",
+      "capDuyet": 0,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

@@ -26,12 +26,14 @@ export default function CustomChonNguoiKy({
 
       setLoading(true);
       try {
-        const res = await TaiKhoanApi.getData({ maphongBan }); // truyền dạng object params
+        // If maphongBan is "All", fetch all users (without maphongBan filter)
+        const params = maphongBan === "All" ? {} : { maphongBan };
+        const res = await TaiKhoanApi.getData(params);
         setOptions(
           ((res as any) || []).map((x: any) => ({
             label: x.tenTaiKhoan + "-" + x.hoVaTen,
             value: x.iD_TaiKhoan,
-          }))
+          })),
         );
       } catch (error) {
         console.error("Lỗi tải danh sách người ký:", error);

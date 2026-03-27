@@ -14,6 +14,7 @@ export const BM_CONFIG = {
         CTD_BB_Sanluongphoi: 'CTD_BB_Sanluongphoi',
         CTD_BB_PhoiNapnguoi: 'CTD_BB_Phoinapnguoi',
         CTD_STD_Sanxuat: 'CTD_STD_Sanxuat',
+        CTD_KPH_Sanxuat: 'CTD_KPH_Sanxuat',
     },
     HRC1: {
         HRC1_BB_Theplong: 'HRC1_BB_Theplong',
