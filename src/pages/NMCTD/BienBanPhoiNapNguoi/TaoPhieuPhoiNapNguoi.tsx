@@ -653,18 +653,6 @@ const TaoPhieuPhoiNapNguoi = () => {
               </Upload>
             </>
           )}
-          {idphieu &&
-            (currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
-              currentTinhTrang === TrangThaiPhieuConst.DaChot) && (
-              <Button
-                type="default"
-                icon={<FilePdfOutlined />}
-                onClick={handleExportPdf}
-                loading={loading}
-              >
-                Xuất PDF
-              </Button>
-            )}
           {actionButtons}
         </div>
 

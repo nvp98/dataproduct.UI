@@ -29,6 +29,11 @@ export const bmQuyenConfig = {
       tenBm: "Phiếu xử lý sản phẩm không phù hợp",
       nhom: "NM.CTD",
     },
+     {
+      maBm: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
+      tenBm: "Biên bản phôi nạp nguội",
+      nhom: "NM.CTD",
+    },
     {
       maBm: BM_CONFIG.HRC2.HRC2_STD_NXT,
       tenBm: "STD - Nhập xuất tồn",
