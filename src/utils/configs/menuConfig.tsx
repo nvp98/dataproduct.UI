@@ -242,6 +242,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub2-4-5",
+            maBM: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
+            label: (
+              <Tooltip title="BM.08/QT.05.13 (Biên bản xác nhận sản lượng)">
+                <NavLink to="/sanluongkcs">
+                  BM.08/QT.05.13 Biên bản xác nhận sản lượng
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       // {
@@ -447,6 +458,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub3-4-5",
+            maBM: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
+            label: (
+              <Tooltip title="BM.08/QT.05.13 (Biên bản xác nhận sản lượng)">
+                <NavLink to="/viecdentoi/sanluongkcs">
+                  BM.08/QT.05.13 Biên bản xác nhận sản lượng
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -504,6 +526,17 @@ export const menuConfig = [
               <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
                 <NavLink to="/viecdentoi/phieuxulykph">
                   BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub5-5",
+            maBM: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
+            label: (
+              <Tooltip title="BM.08/QT.05.13 (Biên bản xác nhận sản lượng)">
+                <NavLink to="/sanluongkcs">
+                  BM.08/QT.05.13 Biên bản xác nhận sản lượng
                 </NavLink>
               </Tooltip>
             ),

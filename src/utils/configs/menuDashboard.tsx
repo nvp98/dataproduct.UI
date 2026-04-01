@@ -97,6 +97,11 @@ export const MenuDataDashboard = [
         title: "BM.01C/QT.11 PHIẾU XỬ LÝ THÀNH PHẨM/ SẢN PHẨM KHÔNG PHÙ HỢP",
         maBm: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
       },
+      {
+        code: "sanluongkcs",
+        title: "BM.08/QT.05.13 BIÊN BẢN XÁC NHẬN SẢN LƯỢNG",
+        maBm: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
+      },
     ],
   },
   {

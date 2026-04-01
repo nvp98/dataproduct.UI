@@ -10,4 +10,13 @@ export const bkcankphapi = {
     order?: string;
     xuongCan?: number;
   }) => apiService.get("/api/BKKcscanBbxlSanxuat", { params }),
+  getDataSanLuong: (params?: any) =>
+    apiService.get("/api/BkKcsBbxnSanLuong", { params }),
+
+  getDetailSanLuong: (params: {
+    ngaySX?: string;
+    ngayXL?: string;
+    order?: string;
+    xuongCan?: number;
+  }) => apiService.get("/api/BkKcsBbxnSanLuong", { params }),
 };

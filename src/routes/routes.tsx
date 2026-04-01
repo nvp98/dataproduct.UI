@@ -60,6 +60,9 @@ import ChiTietSoTheoDoiSanXuat from "../pages/NMCTD/SoTheoDoiSanXuat/ChiTietSoTh
 import PhieuXuLyKPH from "../pages/NMCTD/PhieuXuLyKPH/PhieuXuLyKPH";
 import TaoPhieuXuLyKPH from "../pages/NMCTD/PhieuXuLyKPH/TaoPhieuXuLyKPH";
 import ChiTietPhieuXuLyKPH from "../pages/NMCTD/PhieuXuLyKPH/ChiTietPhieuXuLyKPH";
+import BienBanSanLuongKCS from "../pages/NMCTD/BienBanSanLuongKCS/BienBanSanLuongKCS";
+import TaoPhieuBienBanSanLuongKCS from "../pages/NMCTD/BienBanSanLuongKCS/TaoPhieuBienBanSanLuongKCS";
+import ChiTietBienBanSanLuongKCS from "../pages/NMCTD/BienBanSanLuongKCS/ChiTietBienBanSanLuongKCS";
 import QuanLySilo from "../pages/KhoDuLieu/NM.HRC2/Silo";
 import ThongKeHRC2 from "../pages/NM.HRC2/ThongKe/ThongKeHRC2";
 
@@ -700,6 +703,58 @@ export const routes = [
           </RequireAuth>
         ),
       },
+      // ========== ROUTES BIÊN BAN SẢN LƯỢNG KCS ==========
+      {
+        path: "sanluongkcs",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanSanLuongKCS />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/sanluongkcs",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanSanLuongKCS type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieusanluongkcs",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuBienBanSanLuongKCS />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieusanluongkcs/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuBienBanSanLuongKCS />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietsanluongkcs/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietBienBanSanLuongKCS />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      // ========== HẾT ROUTES BIÊN BAN SẢN LƯỢNG KCS ==========
       {
         path: "bienbanphoinapkho",
         element: (
