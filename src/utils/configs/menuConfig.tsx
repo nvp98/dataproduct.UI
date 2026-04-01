@@ -148,6 +148,14 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub1-4-1",
+            label: (
+              <Tooltip title="Cấu hình cột nạp liệu theo lò cao">
+                <NavLink to="/column-mapping-lg">Cấu hình cột nạp liệu</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       }
     ],

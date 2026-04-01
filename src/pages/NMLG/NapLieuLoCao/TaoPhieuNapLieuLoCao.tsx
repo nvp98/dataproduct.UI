@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_NapLieuLoCao from "../../../utils/BM_config/LG_BB_NapLieuLoCao.json";
-import { Button, Card, Form, Input, Table, Typography, message } from "antd";
+import { Button, Card, Form, Input, Typography, message } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomFormItem from "../../../components/CustomFormItem";
-import CustomFormTable from "../../../components/CustomFormTable";
+import CustomTableLG, { type CustomTableLGRef } from "../../../components/CustomTableLG";
+import { napLieuLoCaoApi } from "../../../services/NapLieuLoCaoApi";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
@@ -24,8 +25,10 @@ const TaoPhieuNapLieuLoCao = () => {
 
   const config = LG_BB_NapLieuLoCao;
   const [form] = Form.useForm();
+  const tableRef = useRef<CustomTableLGRef>(null);
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
+  const [materialColumnsOverride, setMaterialColumnsOverride] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
@@ -37,7 +40,7 @@ const TaoPhieuNapLieuLoCao = () => {
     idPhieuGoc?: string | null;
   }>({});
 
-  const kip = Form.useWatch("kip", form);
+  const ca = Form.useWatch("ca", form);
   const scope = Form.useWatch("scope", form);
   Form.useWatch("NgaySX", form);
 
@@ -66,17 +69,54 @@ const TaoPhieuNapLieuLoCao = () => {
     return stored ? JSON.parse(stored) : {};
   }, []);
 
+  // Lấy config section table1 từ JSON
+  const tableSection = useMemo(
+    () =>
+      config.layout.find(
+        (s: any) => s.sectionType === "table" && s.key === "table1"
+      ) as any,
+    [config.layout]
+  );
+
+  // Tách prefix / suffix / fallback material columns từ JSON
+  const prefixColumns = useMemo(
+    () => (tableSection?.prefixColumns as any[]) ?? [],
+    [tableSection]
+  );
+  const suffixColumns = useMemo(
+    () => (tableSection?.suffixColumns as any[]) ?? [],
+    [tableSection]
+  );
+  // Fallback: lấy các cột không nằm trong prefix/suffix từ "columns" tĩnh
+  const fallbackMaterialColumns = useMemo(() => {
+    const allCols: any[] = tableSection?.columns ?? [];
+    const prefixSet = new Set(prefixColumns.map((c: any) => c.dataIndex).filter(Boolean));
+    const suffixSet = new Set(suffixColumns.map((c: any) => c.dataIndex).filter(Boolean));
+    return allCols.filter((c: any) => {
+      if (c.children) return true; // group columns luôn là material
+      return !prefixSet.has(c.dataIndex) && !suffixSet.has(c.dataIndex);
+    });
+  }, [tableSection, prefixColumns, suffixColumns]);
+
+  const dynamicColumnsConfig = useMemo(
+    () =>
+      (tableSection?.dynamicColumns as {
+        url: string;
+        param: string;
+        sumFormat?: string;
+      }) ?? { url: "/api/column-mapping/columns", param: "loCao" },
+    [tableSection]
+  );
+
   const loadDataFromAPI = useCallback(async () => {
-    if (!kip) {
+    if (!ca) {
       message.warning("Vui lòng chọn Kíp");
       return;
     }
-
     if (!scope) {
       message.warning("Vui lòng chọn Lò cao");
       return;
     }
-
     const ngaySXValue = form.getFieldValue("NgaySX");
     if (!ngaySXValue) {
       message.warning("Vui lòng chọn Ngày sản xuất");
@@ -89,26 +129,30 @@ const TaoPhieuNapLieuLoCao = () => {
         ? ngaySXValue.format("YYYY-MM-DD")
         : ngaySXValue;
 
-    //   const response = await napLieuLoCaoApi.getByFilter({
-    //     kip,
-    //     scope: Number(scope),
-    //     ngaySX: ngaySXFormatted,
-    //   });
-        const response = {
-        data: []
-        };
+      const response = await napLieuLoCaoApi.getMapped({
+        loCao: Number(scope),
+        ngay: ngaySXFormatted,
+        ca: ca,
+      });
 
-        // xử lý tiếp
+      setMaterialColumnsOverride(response.columns ?? null);
 
-      if (response && Array.isArray(response)) {
-        const rows = response.map((row: any, index: number) => ({
+      const rows = (response.rows ?? []).map((row: any, index: number) => {
+        const { time, ...rest } = row;
+        const thoiGianNapLieu = time
+          ? new Date(time).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" ,second: "2-digit"})
+          : "";
+        return {
           key: row?.id ?? `row-${index}`,
-          ...row,
-        }));
-        setTableData(rows);
+          thoiGianNapLieu,
+          ...rest,
+        };
+      });
+      setTableData(rows);
+
+      if (rows.length > 0) {
         message.success(`Cập nhật dữ liệu thành công! Có ${rows.length} bản ghi`);
       } else {
-        setTableData([]);
         message.info("Không có dữ liệu");
       }
     } catch {
@@ -117,28 +161,15 @@ const TaoPhieuNapLieuLoCao = () => {
     } finally {
       setLoading(false);
     }
-  }, [kip, scope, form]);
+  }, [ca, scope, form]);
 
   const handleFilter = useCallback(() => {
     const ngaySXValue = form.getFieldValue("NgaySX");
-
-    if (!kip) {
-      message.warning("Vui lòng chọn Kíp");
-      return;
-    }
-
-    if (!scope) {
-      message.warning("Vui lòng chọn Lò cao");
-      return;
-    }
-
-    if (!ngaySXValue) {
-      message.warning("Vui lòng chọn Ngày sản xuất");
-      return;
-    }
-
+    if (!ca) { message.warning("Vui lòng chọn Kíp"); return; }
+    if (!scope) { message.warning("Vui lòng chọn Lò cao"); return; }
+    if (!ngaySXValue) { message.warning("Vui lòng chọn Ngày sản xuất"); return; }
     loadDataFromAPI();
-  }, [kip, scope, form, loadDataFromAPI]);
+  }, [ca, scope, form, loadDataFromAPI]);
 
   const initData = useCallback(async () => {
     try {
@@ -206,7 +237,6 @@ const TaoPhieuNapLieuLoCao = () => {
               .forEach((sig: any) => {
                 overrides[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
               });
-
             if (Object.keys(overrides).length > 0) {
               form.setFieldsValue(overrides);
             }
@@ -235,7 +265,6 @@ const TaoPhieuNapLieuLoCao = () => {
             .forEach((sig: any) => {
               overrides[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
             });
-
           if (Object.keys(overrides).length > 0) {
             form.setFieldsValue(overrides);
           }
@@ -282,9 +311,11 @@ const TaoPhieuNapLieuLoCao = () => {
       }
     });
 
-    return {
+    const result = {
       ...formData,
       ...formattedDates,
+      ca: formData.ca != null ? Number(formData.ca) : null,
+      scope: formData.scope != null ? Number(formData.scope) : null,
       maBm: config.code,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
@@ -293,6 +324,11 @@ const TaoPhieuNapLieuLoCao = () => {
       pheDuyet: pheDuyetFlow,
       prefix: (config as any).prefix,
     };
+
+    // Lưu quy khô song song, không block luồng chính
+    tableRef.current?.saveQuyKho().catch(() => {});
+
+    return result;
   }, [getUserInfo, form, config, tableData, getCapDuyet]);
 
   const handleStatusChange = useCallback(async () => {
@@ -311,7 +347,6 @@ const TaoPhieuNapLieuLoCao = () => {
         });
         return;
       }
-
       await initData();
     },
     [navigate, initData]
@@ -339,24 +374,6 @@ const TaoPhieuNapLieuLoCao = () => {
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
   }, [getUserInfo, idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess]);
-
-  const tableSection = config.layout.find(
-    (section: any) => section.sectionType === "table" && section.key === "table1"
-  );
-
-  const flatColumns = useMemo(() => {
-    const flatten = (cols: any[]): any[] =>
-      cols.flatMap((c) =>
-        Array.isArray(c.children) && c.children.length > 0 ? flatten(c.children) : [c]
-      );
-
-    return flatten(tableSection?.columns || []);
-  }, [tableSection]);
-
-  const summaryColumns = useMemo(
-    () => (tableSection?.summary?.columns as string[] | undefined) || [],
-    [tableSection]
-  );
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -416,63 +433,24 @@ const TaoPhieuNapLieuLoCao = () => {
           {actionButtons}
         </div>
 
-        {config.layout.map((layout: any, idx: number) => (
-          <div key={idx}>
-            {layout.sectionType === "table" && (
-              <CustomFormTable
-                columns={tableSection?.columns || []}
-                initialData={tableData}
-                onDataChange={(rows) => setTableData(rows as TableRow[])}
-                addRowButtonText="+ Thêm dòng"
-                minRows={0}
-                loading={loading}
-                editable={!isFormLocked}
-                showAddButton={!isFormLocked}
-                showDeleteButton={!isFormLocked}
-                summary={(pageData) => {
-                  const totals: Record<string, number> = {};
-                  summaryColumns.forEach((field) => {
-                    totals[field] = 0;
-                  });
-
-                  pageData.forEach((row: any) => {
-                    summaryColumns.forEach((field) => {
-                      totals[field] += Number(row[field]) || 0;
-                    });
-                  });
-
-                  return (
-                    <Table.Summary fixed>
-                      <Table.Summary.Row style={{ backgroundColor: "#fafafa", fontWeight: "bold" }}>
-                        {flatColumns.map((col: any, colIndex: number) => {
-                          const dataIndex = col?.dataIndex;
-
-                          if (colIndex === 0) {
-                            return (
-                              <Table.Summary.Cell key="summary-label" index={0} align="center">
-                                TỔNG CỘNG
-                              </Table.Summary.Cell>
-                            );
-                          }
-
-                          if (dataIndex && summaryColumns.includes(dataIndex)) {
-                            return (
-                              <Table.Summary.Cell key={`summary-${dataIndex}`} index={colIndex} align="right">
-                                {totals[dataIndex].toLocaleString("en-US")}
-                              </Table.Summary.Cell>
-                            );
-                          }
-
-                          return <Table.Summary.Cell key={`summary-empty-${colIndex}`} index={colIndex} />;
-                        })}
-                      </Table.Summary.Row>
-                    </Table.Summary>
-                  );
-                }}
-              />
-            )}
-          </div>
-        ))}
+        <CustomTableLG
+          loCao={scope ?? null}
+          ref={tableRef}
+          ngay={form.getFieldValue("NgaySX")?.format?.("YYYY-MM-DD") ?? null}
+          ca={ca != null ? Number(ca) : null}
+          prefixColumns={prefixColumns}
+          suffixColumns={suffixColumns}
+          fallbackMaterialColumns={fallbackMaterialColumns}
+          dynamicColumnsConfig={dynamicColumnsConfig}
+          materialColumnsOverride={materialColumnsOverride}
+          initialData={tableData}
+          onDataChange={(rows) => setTableData(rows as TableRow[])}
+          loading={loading}
+          editable={!isFormLocked}
+          showAddButton={!isFormLocked}
+          showDeleteButton={!isFormLocked}
+          minRows={0}
+        />
 
         <div
           style={{

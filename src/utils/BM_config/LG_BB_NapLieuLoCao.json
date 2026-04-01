@@ -14,14 +14,13 @@
 
   "headerFields": [
     {
-      "label": "Kíp",
+      "label": "Ca",
       "type": "select",
-      "key": "kip",
+      "key": "ca",
       "required": true,
       "options": [
-        { "label": "Kíp A", "value": "A" },
-        { "label": "Kíp B", "value": "B" },
-        { "label": "Kíp C", "value": "C" }
+        { "label": "Ca ngày", "value": "1" },
+        { "label": "Ca đêm", "value": "2" }
       ]
     },
      {
@@ -56,76 +55,69 @@
         "url": "BKNapLieuLoCao"
       },
 
+      "prefixColumns": [
+        { "title": "Số mẻ", "dataIndex": "soMe", "width": 80 },
+        { "title": "Mẻ/giờ", "dataIndex": "meGio", "width": 80 },
+        { "title": "Thời gian nạp liệu", "dataIndex": "thoiGianNapLieu", "width": 100 },
+        { "title": "Chế độ nạp liệu", "dataIndex": "cheDoNapLieu", "width": 80 },
+        { "title": "Thước thăm liệu 1 (m)", "dataIndex": "thuocThamLieu1", "width": 80 },
+        { "title": "Thước thăm liệu 2 (m)", "dataIndex": "thuocThamLieu2", "width": 80 }
+      ],
+
+      "suffixColumns": [
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 200 }
+      ],
+
+      "dynamicColumns": {
+        "url": "/api/column-mapping/columns",
+        "param": "loCao"
+      },
+
       "columns": [
         { "title": "Số mẻ", "dataIndex": "soMe", "width": 80 },
         { "title": "Mẻ/giờ", "dataIndex": "meGio", "width": 80 },
         { "title": "Thời gian nạp liệu", "dataIndex": "thoiGianNapLieu", "width": 140 },
         { "title": "Chế độ nạp liệu", "dataIndex": "cheDoNapLieu", "width": 120 },
-
         { "title": "Thước thăm liệu 1 (m)", "dataIndex": "thuocThamLieu1", "width": 100 },
         { "title": "Thước thăm liệu 2 (m)", "dataIndex": "thuocThamLieu2", "width": 100 },
-
         {
           "title": "Quặng thiêu kết (Kg)",
           "children": [
-            { "title": "Máy", "dataIndex": "quangThieuKet_may", "width": 110 },
-            { "title": "Bãi", "dataIndex": "quangThieuKet_bai", "width": 110 }
+            { "title": "Máy", "dataIndex": "quangThieuKet_may", "width": 110, "format": "decimal" },
+            { "title": "Bãi", "dataIndex": "quangThieuKet_bai", "width": 110, "format": "decimal" }
           ]
         },
-
         {
           "title": "Quặng vê viên (Kg)",
           "children": [
-            { "title": "Máy", "dataIndex": "quangVeVien_may", "width": 110 },
-            { "title": "Bãi", "dataIndex": "quangVeVien_bai", "width": 110 }
+            { "title": "Máy", "dataIndex": "quangVeVien_may", "width": 110, "format": "decimal" },
+            { "title": "Bãi", "dataIndex": "quangVeVien_bai", "width": 110, "format": "decimal" }
           ]
         },
-
         {
           "title": "Quặng sống (Kg)",
           "children": [
-            { "title": "1", "dataIndex": "quangSong_1", "width": 100 },
-            { "title": "2", "dataIndex": "quangSong_2", "width": 100 }
+            { "title": "1", "dataIndex": "quangSong_1", "width": 100, "format": "decimal" },
+            { "title": "2", "dataIndex": "quangSong_2", "width": 100, "format": "decimal" }
           ]
         },
-
         {
           "title": "Than cốc (Kg)",
           "children": [
-            { "title": "1", "dataIndex": "thanCoc_1", "width": 100 },
-            { "title": "2", "dataIndex": "thanCoc_2", "width": 100 }
+            { "title": "1", "dataIndex": "thanCoc_1", "width": 100, "format": "decimal" },
+            { "title": "2", "dataIndex": "thanCoc_2", "width": 100, "format": "decimal" }
           ]
         },
-
-        { "title": "Cốc vụn (Kg)", "dataIndex": "cocVun", "width": 110 },
-
+        { "title": "Cốc vụn (Kg)", "dataIndex": "cocVun", "width": 110, "format": "decimal" },
         {
           "title": "Loại khác (Kg)",
           "children": [
-            { "title": "1", "dataIndex": "loaiKhac_1", "width": 100 },
-            { "title": "2", "dataIndex": "loaiKhac_2", "width": 100 }
+            { "title": "1", "dataIndex": "loaiKhac_1", "width": 100, "format": "decimal" },
+            { "title": "2", "dataIndex": "loaiKhac_2", "width": 100, "format": "decimal" }
           ]
         },
-
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 200 }
-      ],
-
-      "summary": {
-        "type": "sum",
-        "columns": [
-          "quangThieuKet_may",
-          "quangThieuKet_bai",
-          "quangVeVien_may",
-          "quangVeVien_bai",
-          "quangSong_1",
-          "quangSong_2",
-          "thanCoc_1",
-          "thanCoc_2",
-          "cocVun",
-          "loaiKhac_1",
-          "loaiKhac_2"
-        ]
-      }
+      ]
     }
   ],
 
