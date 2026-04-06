@@ -1,5 +1,6 @@
 {
   "code": "HRC2_BB_NauLuyen_LF",
+  "loaiBm": "LF",
   "prefix": "BBTL_LF",
   "title": "BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
   "headerInfo": {
@@ -7,7 +8,7 @@
     "subCompany": "HÒA PHÁT GANG THÉP"
   },
   "isoInfo": {
-    "code": "BM.14/QT.05.155",
+    "code": "BM.14/QT.05.15",
     "effectiveDate": "10/01/2025",
     "revision": "00"
   },
@@ -46,28 +47,29 @@
         "url": "TieuHaoNauLuyen_LF",
         "params": { "ngaySX": "@ngaySX", "ca": "@ca" }
       },
+      "lyDo": { "label": "Lý do điều chỉnh" },
       "columns": [
-        { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 120 ,"editable": false},
-        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false },
+        { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 120 ,"editable": false, "readonly": true },
+        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false, "readonly": true },
         { 
           "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
-          "dataIndex": "klThepLong", "width": 100
+          "dataIndex": "klThepLong", "width": 100, "sum": true, "readonly": true
         },
         {
-          "title": "Chất hợp kim hóa", "dataIndex": "KL", "editable": false
+          "title": "Chất hợp kim hóa", "dataIndex": "KL", "editable": false, "sum": true
         },
         {
-          "title": "Phụ gia và chất khử oxy", "dataIndex": "PG", "editable": false
+          "title": "Phụ gia và chất khử oxy", "dataIndex": "PG", "editable": false, "sum": true
         },
         {
           "dataIndex": "dieuChinh"
         },
         {
           "title": "Khí",
-          "children": [{ "title": "Argon (m³)", "dataIndex": "ar_LF", "width": 100  }]
+          "children": [{ "title": "Argon (m³)", "dataIndex": "ar_LF", "width": 100, "sum": true, "readonly": true }]
         },
-        { "title": "Que lấy mẫu (Cái)", "dataIndex": "queLayMau", "width": 100  },
-        { "title": "Que đo nhiệt (Cái)", "dataIndex": "queDoNhiet", "width": 100  },
+        { "title": "Que lấy mẫu (Cái)", "dataIndex": "queLayMau", "width": 100, "sum": true },
+        { "title": "Que đo nhiệt (Cái)", "dataIndex": "queDoNhiet", "width": 100, "sum": true },
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 120 }
       ]
     }
@@ -105,9 +107,9 @@
 
   "signatures": [
     {
-      "label": "Tổ trưởng",
+      "label": "Trưởng/Phó kíp",
       "type": "selectNguoiKy",
-      "key": "toTruong_HRC2", 
+      "key": "nguoiKy_Duyet",
       "maphongBan": "NM.HRC2",
       "capduyet": 1,
       "isChon": true,
@@ -116,7 +118,7 @@
     {
       "label": "Người lập",
       "type": "selectNguoiKy",
-      "key": "nguoiLap_HRC2",
+      "key": "nguoiKy_Kip",
       "maphongBan": "NM.HRC2",
       "capduyet": 0,
       "isChon": true,

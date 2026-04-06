@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useMemo, useState, useCallback, memo } from "react";
-import { Table, Input, Button, InputNumber } from "antd";
+import React, { useMemo, useState, useCallback, memo, useRef, useEffect } from "react";
+import { Table, Input, Button, InputNumber, message, Tag, Tooltip } from "antd";
 import type { STD_NXT_HRC2_PhanBoDto } from "../models/STD_NXT_Model";
 
 const formatVi = (val: any): string => {
@@ -33,6 +33,7 @@ interface SummaryTableSTDProps {
     title: string;
     dataIndex?: string;
     isLabel?: boolean;
+    readOnly?: boolean;
     width?: number | string;
   }>;
   table1Data: any[]; // Dữ liệu từ bảng 1
@@ -40,10 +41,15 @@ interface SummaryTableSTDProps {
   onDataChange?: (data: any[]) => void;
   onPhanBo?: (data: STD_NXT_HRC2_PhanBoDto) => void;
   onThuHoi?: (data: STD_NXT_HRC2_PhanBoDto) => void;
+  onKhongPhanBo?: (data: STD_NXT_HRC2_PhanBoDto) => void;
+  /** Chỉ cho phép bấm "Phân bổ" khi tất cả phiếu ở tab nấu luyện đã Hoàn thành */
+  canPhanBo?: boolean;
   idPhieu?: string | null; // Phiếu đang mở (để gửi kèm payload phân bổ/thu hồi)
   editable?: boolean;
   loading?: boolean;
   className?: string;
+  /** Khi set, toàn bộ action buttons bị disable + hiện tooltip này khi hover */
+  lockedTooltip?: string;
 }
 
 export default function SummaryTableSTD({
@@ -53,10 +59,13 @@ export default function SummaryTableSTD({
   onDataChange,
   onPhanBo,
   onThuHoi,
+  onKhongPhanBo,
+  canPhanBo = true,
   idPhieu,
   editable = true,
   loading = false,
   className = "",
+  lockedTooltip,
 }: SummaryTableSTDProps) {
   // Tính tổng theo nguyên nhiên liệu duy nhất (theo thứ tự xuất hiện ở bảng trên)
   const summaryData = useMemo(() => {
@@ -118,10 +127,8 @@ export default function SummaryTableSTD({
           })
         : undefined;
       if (meta) {
-        baseRow.HasPhanBo =
-          meta.hasPhanBo ??
-          meta.HasPhanBo ??
-          null;
+        // IsPhanBo: null=chưa xử lý | true=đã phân bổ | false=không phân bổ
+        baseRow.IsPhanBo = meta.isPhanBo ?? meta.IsPhanBo ?? meta.hasPhanBo ?? meta.HasPhanBo ?? null;
         baseRow.NgaySX = meta.ngaySX ?? meta.NgaySX ?? undefined;
         baseRow.Ca = meta.ca ?? meta.Ca ?? undefined;
         baseRow.tyLeBOF = meta.tyLeBOF ?? meta.TyLeBOF ?? null;
@@ -154,18 +161,139 @@ export default function SummaryTableSTD({
   // State riêng cho tyLeBOF / tyLeTinhLuyen vì không derive từ table1Data
   const [tyLeMap, setTyLeMap] = useState<Record<string, { tyLeBOF?: number | null; tyLeTinhLuyen?: number | null }>>({});
 
+  const tyLeDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   const handleTyLeChange = useCallback((key: string, field: "tyLeBOF" | "tyLeTinhLuyen", value: number | null) => {
+    const other = field === "tyLeBOF" ? "tyLeTinhLuyen" : "tyLeBOF";
+    const timerKey = `${key}::${field}`;
+
+    // Reset timer mỗi khi user thay đổi input để chỉ tính sau khi ngừng thao tác.
+    const existingTimer = tyLeDebounceTimers.current[timerKey];
+    if (existingTimer) clearTimeout(existingTimer);
+
     setTyLeMap((prev) => {
-      const other = field === "tyLeBOF" ? "tyLeTinhLuyen" : "tyLeBOF";
-      const otherVal = Math.max(0, Math.min(100, parseFloat(((100 - (value ?? 0)).toFixed(10)).replace(/\.?0+$/, ""))));
-      const next = { ...prev, [key]: { ...prev[key], [field]: value, [other]: otherVal } };
+      const currentRow = { ...prev[key] };
+
+      // Khi xóa input (null), chỉ xóa field hiện tại và KHÔNG tự tính field còn lại.
+      if (value === null) {
+        const nextRow = { ...currentRow, [field]: null };
+        const next = { ...prev, [key]: nextRow };
+        const updatedRows = dataWithChenhLech.map((row) =>
+          row.key === key ? { ...row, ...next[key] } : row
+        );
+        onDataChange?.(updatedRows);
+        return next;
+      }
+
+      // Khi đang nhập (value != null): chỉ cập nhật field hiện tại.
+      // Field còn lại sẽ được auto-tính sau 300ms (nếu user không tiếp tục sửa).
+      const nextRow = { ...currentRow, [field]: value };
+      const next = { ...prev, [key]: nextRow };
       const updatedRows = dataWithChenhLech.map((row) =>
         row.key === key ? { ...row, ...next[key] } : row
       );
       onDataChange?.(updatedRows);
       return next;
     });
+
+    if (value === null) return;
+
+    // Sau 300ms không đổi nữa thì mới tính field còn lại = 100 - value.
+    tyLeDebounceTimers.current[timerKey] = setTimeout(() => {
+      const otherVal = Math.max(
+        0,
+        Math.min(
+          100,
+          parseFloat(((100 - value).toFixed(10)).replace(/\.?0+$/, ""))
+        )
+      );
+
+      setTyLeMap((prev) => {
+        const currentRow = { ...prev[key] };
+        const nextRow = { ...currentRow, [other]: otherVal, [field]: value };
+        const next = { ...prev, [key]: nextRow };
+        const updatedRows = dataWithChenhLech.map((row) =>
+          row.key === key ? { ...row, ...next[key] } : row
+        );
+        onDataChange?.(updatedRows);
+        return next;
+      });
+    }, 300);
   }, [dataWithChenhLech, onDataChange]);
+
+  // State local cho IsPhanBo sau mock API
+  const [phanBoMap, setPhanBoMap] = useState<Record<string, boolean | null>>({});
+  const [loadingMap, setLoadingMap] = useState<Record<string, string | null>>({});
+
+  // Reset phanBoMap khi initialData thay đổi (filter reload) để đọc lại từ BE
+  useEffect(() => {
+    setPhanBoMap({});
+  }, [initialData]);
+
+  const getIsPhanBo = useCallback((record: any): boolean | null => {
+    if (Object.prototype.hasOwnProperty.call(phanBoMap, record.key)) return phanBoMap[record.key];
+    return record.IsPhanBo ?? null;
+  }, [phanBoMap]);
+
+  const mockApiCall = useCallback((_action: string): Promise<boolean | null> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (_action === 'phan-bo') resolve(true);
+        else if (_action === 'khong-phan-bo') resolve(false);
+        else resolve(null); // huy-phan-bo, thu-hoi, huy-khong-phan-bo
+      }, 600);
+    });
+  }, []);
+
+  const handlePhanBoClick = useCallback(async (record: any) => {
+    const current = getIsPhanBo(record);
+    const action = current === true ? 'huy-phan-bo' : 'phan-bo';
+    setLoadingMap(prev => ({ ...prev, [record.key]: action }));
+    try {
+      const next = await mockApiCall(action);
+      setPhanBoMap(prev => ({ ...prev, [record.key]: next }));
+      if (action === 'phan-bo') {
+        const rowTyLe = tyLeMap[record.key] ?? {};
+        const tyLeBOF = rowTyLe.tyLeBOF ?? record.tyLeBOF ?? 0;
+        const tyLeTinhLuyen = rowTyLe.tyLeTinhLuyen ?? record.tyLeTinhLuyen ?? 0;
+        onPhanBo?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: tyLeBOF, TyLeTinhLuyen: tyLeTinhLuyen });
+      } else {
+        onThuHoi?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: 0, TyLeTinhLuyen: 0 });
+      }
+    } catch {
+      message.error("Có lỗi xảy ra");
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [record.key]: null }));
+    }
+  }, [getIsPhanBo, mockApiCall, tyLeMap, idPhieu, onPhanBo, onThuHoi]);
+
+  const handleThuHoiClick = useCallback(async (record: any) => {
+    setLoadingMap(prev => ({ ...prev, [record.key]: 'thu-hoi' }));
+    try {
+      await mockApiCall('thu-hoi');
+      setPhanBoMap(prev => ({ ...prev, [record.key]: null }));
+      onThuHoi?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: 0, TyLeTinhLuyen: 0 });
+    } catch {
+      message.error("Có lỗi xảy ra");
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [record.key]: null }));
+    }
+  }, [mockApiCall, idPhieu, onThuHoi]);
+
+  const handleKhongPhanBoClick = useCallback(async (record: any) => {
+    const current = getIsPhanBo(record);
+    const action = current === false ? 'huy-khong-phan-bo' : 'khong-phan-bo';
+    setLoadingMap(prev => ({ ...prev, [record.key]: action }));
+    try {
+      const next = await mockApiCall(action);
+      setPhanBoMap(prev => ({ ...prev, [record.key]: next }));
+      onKhongPhanBo?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "" });
+    } catch {
+      message.error("Có lỗi xảy ra");
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [record.key]: null }));
+    }
+  }, [getIsPhanBo, mockApiCall, idPhieu, onKhongPhanBo]);
 
   const handleCellChange = (key: string, dataIndex: string, value: any) => {
     // Cập nhật dữ liệu và tính lại chênh lệch
@@ -198,19 +326,20 @@ export default function SummaryTableSTD({
 
   const renderCell = (record: any, col: any) => {
     const dataIndex = col.dataIndex;
-    const isReadonly = col.isLabel === true || dataIndex === "totalChenhLech" || dataIndex === "totalText";
+    const isReadonly = col.readOnly === true || col.isLabel === true;
     const value = record[dataIndex] ?? "";
     const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech"].includes(dataIndex);
     const isTyLeColumn = dataIndex === "tyLeBOF" || dataIndex === "tyLeTinhLuyen";
 
     if (isTyLeColumn && !record._isTotalRow) {
+      const hasPhanBo = getIsPhanBo(record) === true;
       const tyLeVal = tyLeMap[record.key]?.[dataIndex as "tyLeBOF" | "tyLeTinhLuyen"] ?? (record[dataIndex] ?? null);
       return (
         <InputNumber
           value={tyLeVal}
           min={0}
           max={100}
-          disabled={!editable}
+          disabled={!editable || hasPhanBo}
           style={{ width: "100%" }}
           onChange={(v) => handleTyLeChange(record.key, dataIndex as "tyLeBOF" | "tyLeTinhLuyen", v)}
         />
@@ -275,45 +404,104 @@ export default function SummaryTableSTD({
     };
   });
 
-  // Thêm cột "Phân bổ / Thu hồi" ở cuối
+  // Cột "Tình trạng"
   tableColumns.push({
-    title: "Phân bổ",
-    dataIndex: "phanBo",
-    width: 72,
+    title: "Tình trạng",
+    dataIndex: "tinhTrang",
+    width: 110,
     align: "center" as const,
     render: (_: any, record: any) => {
-      if (record._isTotalRow) {
-        return <span></span>;
+      if (record._isTotalRow) return null;
+      const isPhanBo = getIsPhanBo(record);
+      if (isPhanBo === true) return <Tag color="success">Đã phân bổ</Tag>;
+      if (isPhanBo === false) return <Tag color="error">Không phân bổ</Tag>;
+      return <Tag color="default">Chưa xử lý</Tag>;
+    },
+  } as any);
+
+  // Cột "Thao tác" — gộp Phân bổ + Không phân bổ
+  tableColumns.push({
+    title: "Thao tác",
+    dataIndex: "thaotac",
+    width: 220,
+    align: "center" as const,
+    render: (_: any, record: any) => {
+      if (record._isTotalRow) return null;
+      const isPhanBo = getIsPhanBo(record);
+      const isLoading = loadingMap[record.key];
+      const isLocked = !!lockedTooltip;
+
+      const wrapLocked = (btn: React.ReactNode) =>
+        isLocked ? <Tooltip title={lockedTooltip}><span style={{ display: "inline-block" }}>{btn}</span></Tooltip> : btn;
+
+      // Nút Phân bổ / Đã phân bổ + Thu hồi
+      let btnPhanBo: React.ReactNode;
+      if (isPhanBo === true) {
+        btnPhanBo = wrapLocked(
+          <Button
+            size="small"
+            loading={isLoading === 'thu-hoi'}
+            disabled={!editable || isLocked}
+            onClick={() => handleThuHoiClick(record)}
+          >
+            Thu hồi
+          </Button>
+        );
+      } else {
+        btnPhanBo = wrapLocked(
+          <Button
+            type="primary"
+            size="small"
+            loading={isLoading === 'phan-bo'}
+            disabled={isPhanBo === false || !editable || isLocked || (canPhanBo === false && isPhanBo === null)}
+            onClick={() => {
+              const rowTyLe = tyLeMap[record.key] ?? {};
+              const tyLeBOF = rowTyLe.tyLeBOF ?? record.tyLeBOF ?? null;
+              const tyLeTinhLuyen = rowTyLe.tyLeTinhLuyen ?? record.tyLeTinhLuyen ?? null;
+              if (tyLeBOF === null || tyLeBOF === undefined || tyLeTinhLuyen === null || tyLeTinhLuyen === undefined) {
+                message.warning("Vui lòng nhập tỷ lệ phân bổ trước khi thực hiện phân bổ.");
+                return;
+              }
+              handlePhanBoClick(record);
+            }}
+          >
+            Phân bổ
+          </Button>
+        );
       }
-      // console.log(record)
-      // BE trả về HasPhanBo (PascalCase), meta gán baseRow.HasPhanBo — cần đọc cả hai kiểu
-      const hasPhanBo = record.hasPhanBo === true || record.HasPhanBo === true;
-      const label = hasPhanBo ? "Thu hồi" : "Phân bổ";
+
+      // Nút Không phân bổ
+      const btnKhongPhanBo = isPhanBo === false
+        ? wrapLocked(
+            <Button
+              danger
+              type="primary"
+              size="small"
+              loading={isLoading === 'huy-khong-phan-bo'}
+              disabled={!editable || isLocked}
+              onClick={() => handleKhongPhanBoClick(record)}
+            >
+              Reset
+            </Button>
+          )
+        : wrapLocked(
+            <Button
+              danger
+              type="default"
+              size="small"
+              loading={isLoading === 'khong-phan-bo'}
+              disabled={!editable || isLocked || isPhanBo === true}
+              onClick={() => handleKhongPhanBoClick(record)}
+            >
+              Không PB
+            </Button>
+          );
+
       return (
-        <Button
-          type={hasPhanBo ? "default" : "primary"}
-          size="small"
-          onClick={() => {
-            const rowTyLe = tyLeMap[record.key] ?? {};
-            const payload: STD_NXT_HRC2_PhanBoDto = {
-              NgaySX: record.NgaySX ?? record.ngaySX,
-              Ca: record.Ca ?? record.ca,
-              Id_HeaderKey: record.Id_HeaderKey ?? record.id_HeaderKey,
-              ChenhLech: Number(record.totalChenhLech ?? 0),
-              IdPhieu: idPhieu ?? "",
-              TyLeBOF: rowTyLe.tyLeBOF ?? record.tyLeBOF ?? 0,
-              TyLeTinhLuyen: rowTyLe.tyLeTinhLuyen ?? record.tyLeTinhLuyen ?? 0,
-            };
-            if (hasPhanBo) {
-              onThuHoi?.(payload);
-            } else {
-              onPhanBo?.(payload);
-            }
-          }}
-          disabled={!editable}
-        >
-          {label}
-        </Button>
+        <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" }}>
+          {btnPhanBo}
+          {btnKhongPhanBo}
+        </div>
       );
     },
   } as any);

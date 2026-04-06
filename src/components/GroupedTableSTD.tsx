@@ -222,11 +222,30 @@ export default function GroupedTableSTD({
       const next = prev.map((r) => {
         if (r.key !== key) return r;
         const updated = { ...r, [field]: value };
+
         if (KIEMKE_CALC_FIELDS.includes(field)) {
-          const tonDau = Number(field === "tonDauCa" ? value : r.tonDauCa) || 0;
-          const nhap = Number(field === "nhapTrongCa" ? value : r.nhapTrongCa) || 0;
-          const tonCuoi = Number(field === "tonCuoiCa" ? value : r.tonCuoiCa) || 0;
-          updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+          const rawTonDau = field === "tonDauCa" ? value : r.tonDauCa;
+          const rawNhap = field === "nhapTrongCa" ? value : r.nhapTrongCa;
+          const rawTonCuoi = field === "tonCuoiCa" ? value : r.tonCuoiCa;
+
+          const hasTonDau = rawTonDau !== null && rawTonDau !== undefined && rawTonDau !== "";
+          const hasTonCuoi = rawTonCuoi !== null && rawTonCuoi !== undefined && rawTonCuoi !== "";
+
+          // Luồng mới:
+          // - tonDauCa và tonCuoiCa: bắt buộc phải có giá trị mới tính
+          // - nhapTrongCa: nếu trống thì mặc định = 0 để tính
+          if (hasTonDau && hasTonCuoi) {
+            const tonDau = Number(rawTonDau);
+            const tonCuoi = Number(rawTonCuoi);
+
+            // Nếu nhapTrongCa trống/null/undefined/"", coi như 0
+            const nhap =
+              rawNhap === null || rawNhap === undefined || rawNhap === "" ? 0 : Number(rawNhap);
+
+            if (!Number.isNaN(tonDau) && !Number.isNaN(nhap) && !Number.isNaN(tonCuoi)) {
+              updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+            }
+          }
         }
         return updated;
       });
@@ -328,11 +347,11 @@ export default function GroupedTableSTD({
                 render: (_: any, r: any) => {
                   // Đối với cột tonDauCa, ưu tiên kiểm tra canUnlockMonthly
                   // Nếu không trong khung giờ cho phép (8:00-20:00 ngày 1) thì readOnly (override readOnly từ config)
-                  // const childReadOnlyBase = child.readOnly === true;
-                  // const childReadOnly = child.dataIndex === "tonDauCa"
-                  //   ? !canUnlockMonthly()
-                  //   : childReadOnlyBase;
-                    const childReadOnly = false;
+                  const childReadOnlyBase = child.readOnly === true;
+                  const childReadOnly = child.dataIndex === "tonDauCa"
+                    ? !canUnlockMonthly()
+                    : childReadOnlyBase;
+                    // const childReadOnly = false;
                     const childVal = r[child.dataIndex];
                     const childIsNeg = isNegativeNumber(childVal);
                   return (

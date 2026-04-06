@@ -138,3 +138,38 @@ export interface STD_NXT_HRC2_PhanBoDto {
   TyLeBOF?: number | null;
   TyLeTinhLuyen?: number | null;
 }
+
+export interface STD_NXT_HRC2_KhongPhanBoDto{
+  NgaySX: string;
+  Ca: number;
+  IdPhieu: string;
+  Id_HeaderKey: number;
+}
+
+export interface STD_NXT_RelatedPhieuTarget {
+  tabKey: string;
+  label: string;
+  bieuMau: string;
+  scope: number;
+}
+
+export interface STD_NXT_RelatedPhieuStatusRequest {
+  NgaySX: string;
+  Ca: number;
+  Targets: STD_NXT_RelatedPhieuTarget[];
+}
+
+export interface STD_NXT_RelatedPhieuStatusItem {
+  tabKey?: string | null;
+  label?: string | null;
+  bieuMau?: string | null;
+  scope?: number | null;
+  idPhieu?: string | null;
+  tinhTrang?: number | null;
+}
+
+export interface STD_NXT_RelatedPhieuStatusResponse {
+  items: STD_NXT_RelatedPhieuStatusItem[];
+  canPhanBo: boolean;
+  incompleteCount: number;
+}

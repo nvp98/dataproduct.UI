@@ -247,59 +247,17 @@ const ThongKeHRC2 = () => {
           (Array.isArray(payload?.Data) && payload.Data) ||
           [];
 
-        // Nhóm phụ liệu theo 2 list (LF/RH): KL & PG, giữ nguyên thứ tự trong từng nhóm
-        let headerColumns: any[];
-        if (currentLoaiBm === "LF" || currentLoaiBm === "RH") {
-          const klHeaders = headerList.filter(
-            (h: any) => Number(h.loaiThongKe ?? 0) === 2
-          );
-          const pgHeaders = headerList.filter(
-            (h: any) => Number(h.loaiThongKe ?? 0) === 3
-          );
-
-          const phuLieuGroups: any[] = [];
-          if (klHeaders.length > 0) {
-            phuLieuGroups.push({
-              title: "Chất hợp kim hóa",
-              children: klHeaders.map((h: any) => ({
-                key: `hk_${h.idHeaderKey}`,
-                dataIndex: `hk_${h.idHeaderKey}`,
-                title: h.tenPhuLieu,
-                width: 90,
-                align: "right" as const,
-                render: (value: unknown) => renderHkCell(value),
-              })),
-            });
-          }
-          if (pgHeaders.length > 0) {
-            phuLieuGroups.push({
-              title: "Phụ gia và chất khử oxy",
-              children: pgHeaders.map((h: any) => ({
-                key: `hk_${h.idHeaderKey}`,
-                dataIndex: `hk_${h.idHeaderKey}`,
-                title: h.tenPhuLieu,
-                width: 90,
-                align: "right" as const,
-                render: (value: unknown) => renderHkCell(value),
-              })),
-            });
-          }
-
-          headerColumns = [...fixedColumns, ...phuLieuGroups];
-        } else {
-          // BOF: giữ layout phẳng như hiện tại
-          headerColumns = [
-            ...fixedColumns,
-            ...headerList.map((h: any) => ({
-              key: `hk_${h.idHeaderKey}`,
-              dataIndex: `hk_${h.idHeaderKey}`,
-              title: h.tenPhuLieu,
-              width: 90,
-              align: "right" as const,
-              render: (value: unknown) => renderHkCell(value),
-            })),
-          ];
-        }
+        const headerColumns: any[] = [
+          ...fixedColumns,
+          ...headerList.map((h: any) => ({
+            key: `hk_${h.idHeaderKey}`,
+            dataIndex: `hk_${h.idHeaderKey}`,
+            title: h.tenPhuLieu,
+            width: 90,
+            align: "right" as const,
+            render: (value: unknown) => renderHkCell(value),
+          })),
+        ];
 
         if (!rawList.length) {
           message.info("Không có dữ liệu phù hợp với điều kiện lọc.");

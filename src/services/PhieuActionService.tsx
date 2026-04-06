@@ -63,7 +63,86 @@ export interface PhieuActionServiceParams {
   // Callbacks
   onSuccess?: (context?: ActionSuccessContext) => void | Promise<void>;
   onError?: (error: unknown) => void;
+  redirectToList?: (msg?: string) => void;
 }
+
+const STALE_PHIEU_ERROR_MARKERS = [
+  "Phiếu đã bị khóa",
+  "Phiếu đã bị xóa",
+  "Vui lòng quay về danh sách",
+];
+
+const extractErrorMessage = (error: unknown): string | undefined => {
+  if (!error) return undefined;
+  if (typeof error === "string") return error;
+  const err = error as any;
+  return err?.message || err?.error || err?.response?.data?.message;
+};
+
+const resolveListPathFromCurrentUrl = (): string => {
+  const pathname = window.location.pathname || "";
+  const normalizedPath = pathname.replace(/\/+$/, "");
+  const hasSanXuatBase = normalizedPath.startsWith("/sanxuat/");
+  const withoutBase = hasSanXuatBase
+    ? normalizedPath.slice("/sanxuat".length)
+    : normalizedPath;
+  const segments = withoutBase.split("/").filter(Boolean);
+  if (segments.length === 0) return "/sanxuat";
+
+  const first = segments[0].toLowerCase();
+  if (first.startsWith("taophieu") || first.startsWith("chitiet")) {
+    const listSegments = segments.slice(1);
+    if (listSegments.length > 0) {
+      return `/sanxuat/${listSegments.join("/")}`;
+    }
+  }
+
+  return "/sanxuat";
+};
+
+const shouldRedirectToList = (error: unknown): boolean => {
+  const messageText = extractErrorMessage(error);
+  if (!messageText) return false;
+  return STALE_PHIEU_ERROR_MARKERS.some((marker) => messageText.includes(marker));
+};
+
+const handleActionError = (
+  error: unknown,
+  onError?: (error: unknown) => void,
+  redirectToList?: (msg?: string) => void,
+  fallbackMessage?: string
+) => {
+  const errMsg = extractErrorMessage(error);
+  const displayMsg = errMsg || fallbackMessage || "Thao tác thất bại";
+  message.error(displayMsg);
+
+  if (shouldRedirectToList(error)) {
+    if (redirectToList) {
+      window.setTimeout(() => redirectToList(displayMsg), 150);
+    } else {
+      const listPath = resolveListPathFromCurrentUrl();
+      window.setTimeout(() => {
+        window.location.href = listPath;
+      }, 150);
+    }
+  }
+
+  onError?.(error);
+};
+
+// Dùng cho các action chỉ gọi changeStatus (không save/put/post khác):
+// nếu lỗi thì xử lý lỗi như cũ + reload lại trang hiện tại.
+const handleStatusOnlyActionError = (
+  error: unknown,
+  onError?: (error: unknown) => void,
+  redirectToList?: (msg?: string) => void,
+  fallbackMessage?: string
+) => {
+  handleActionError(error, onError, redirectToList, fallbackMessage);
+  window.setTimeout(() => {
+    window.location.reload();
+  }, 150);
+};
 
 /**
  * Helper functions để kiểm tra quyền
@@ -184,6 +263,7 @@ export const phieuActionService = {
       noApproval = false,
       onSuccess,
       onError,
+      redirectToList,
     } = params;
     const buttons: PhieuActionButton[] = [];
     const isAssigned = checkPermission.isAssignedUser(currentUserId, pheDuyet);
@@ -214,14 +294,16 @@ export const phieuActionService = {
           },
           onClick: async () => {
             try {
-              await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.DaChot);
+              await PhieuApi.changeStatus(
+                phieuId,
+                TrangThaiPhieuConst.DaChot,
+                currentUserId ?? null
+              );
               message.success("Chốt phiếu thành công!");
               await onStatusChange?.(phieuId, TrangThaiPhieuConst.DaChot);
               onSuccess?.();
             } catch (error) {
-              // message.error("Không thể chốt phiếu");
-              message.error((error as any)?.message);
-              onError?.(error);
+              handleStatusOnlyActionError(error, onError, redirectToList, "Không thể chốt phiếu");
             }
           },
         });
@@ -237,14 +319,16 @@ export const phieuActionService = {
           },
           onClick: async () => {
             try {
-              await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.HoanThanh);
+              await PhieuApi.changeStatus(
+                phieuId,
+                TrangThaiPhieuConst.HoanThanh,
+                currentUserId ?? null
+              );
               message.success("Hủy chốt phiếu thành công!");
               await onStatusChange?.(phieuId, TrangThaiPhieuConst.HoanThanh);
               onSuccess?.();
             } catch (error) {
-              // message.error("Không thể hủy chốt phiếu");
-              message.error((error as any)?.message);
-              onError?.(error);
+              handleStatusOnlyActionError(error, onError, redirectToList, "Không thể hủy chốt phiếu");
             }
           },
         });
@@ -257,7 +341,7 @@ export const phieuActionService = {
         // Button Lưu
         buttons.push({
           key: "save",
-          label: "TaoMoi",
+          label: "Tạo mới",
           icon: <EditOutlined />,
           type: "default",
           onClick: async (_phieuIdParam, formDataParam) => {
@@ -277,8 +361,7 @@ export const phieuActionService = {
               message.success(`Tạo phiếu thành công: ${resData?.soPhieu || ""}`);
               onSuccess?.();
             } catch (error) {
-              message.error("Không thể tạo phiếu");
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Không thể tạo phiếu");
             }
           },
         });
@@ -302,14 +385,17 @@ export const phieuActionService = {
             const res = await PhieuApi.postData(formDataParam);
             const resData = res as { idphieu?: string; soPhieu?: string } | undefined;
             if (resData?.idphieu) {
-              await PhieuApi.changeStatus(resData.idphieu, sendTargetStatus);
+              await PhieuApi.changeStatus(
+                resData.idphieu,
+                sendTargetStatus,
+                currentUserId ?? null
+              );
               await onStatusChange?.(resData.idphieu, sendTargetStatus);
             }
             message.success(`Tạo và gửi phiếu thành công: ${resData?.soPhieu || ""}`);
             onSuccess?.();
           } catch (error) {
-            message.error("Không thể tạo và gửi phiếu");
-            onError?.(error);
+            handleActionError(error, onError, redirectToList, "Không thể tạo và gửi phiếu");
           }
         },
       });
@@ -341,9 +427,7 @@ export const phieuActionService = {
               message.success("Lưu phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              // message.error("Không thể lưu phiếu");
-              message.error((error as any)?.message);
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Không thể lưu phiếu");
             }
           },
         });
@@ -368,17 +452,16 @@ export const phieuActionService = {
               if (customPutApi) {
                 await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }
-              await PhieuApi.changeStatus(phieuIdParam, sendTargetStatus);
+              await PhieuApi.changeStatus(
+                phieuIdParam,
+                sendTargetStatus,
+                currentUserId ?? null
+              );
               await onStatusChange?.(phieuIdParam, sendTargetStatus);
               message.success("Lưu và gửi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              if((error as any)?.message){
-                message.error((error as any)?.message);
-              } else {
-                message.error("Phiếu đã được gửi, vui lòng kiểm tra lại");
-              }
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Phiếu đã được gửi, vui lòng kiểm tra lại");
             }
           },
         });
@@ -396,13 +479,16 @@ export const phieuActionService = {
           },
           onClick: async () => {
             try {
-              await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.DaThuHoi);
+              await PhieuApi.changeStatus(
+                phieuId,
+                TrangThaiPhieuConst.DaThuHoi,
+                currentUserId ?? null
+              );
               await onStatusChange?.(phieuId, TrangThaiPhieuConst.DaThuHoi);
               message.success("Thu hồi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              message.error((error as any)?.message);
-              onError?.(error);
+              handleStatusOnlyActionError(error, onError, redirectToList, "Không thể thu hồi phiếu");
             }
           },
         });
@@ -421,13 +507,16 @@ export const phieuActionService = {
           },
           onClick: async () => {
             try {
-              await PhieuApi.changeStatus(phieuId, TrangThaiPhieuConst.DangLuu);
+              await PhieuApi.changeStatus(
+                phieuId,
+                TrangThaiPhieuConst.DangLuu,
+                currentUserId ?? null
+              );
               await onStatusChange?.(phieuId, TrangThaiPhieuConst.DangLuu);
               message.success("Thu hồi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              message.error((error as any)?.message);
-              onError?.(error);
+              handleStatusOnlyActionError(error, onError, redirectToList, "Không thể thu hồi phiếu");
             }
           },
         });
@@ -470,8 +559,7 @@ export const phieuActionService = {
               message.success("Đề nghị hiệu chỉnh thành công! Đang chuyển sang phiếu mới.");
               onSuccess?.({ newPhieuId: String(newPhieuId) });
             } catch (error) {
-              message.error((error as any)?.message ?? "Không thể đề nghị hiệu chỉnh.");
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Không thể đề nghị hiệu chỉnh.");
             }
           },
         });
@@ -497,8 +585,7 @@ export const phieuActionService = {
               message.success("Lưu phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              message.error((error as any)?.message);
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Không thể lưu phiếu");
             }
           },
         });
@@ -521,17 +608,16 @@ export const phieuActionService = {
               if (customPutApi) {
                 await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }
-              await PhieuApi.changeStatus(phieuIdParam, sendTargetStatus);
+              await PhieuApi.changeStatus(
+                phieuIdParam,
+                sendTargetStatus,
+                currentUserId ?? null
+              );
               await onStatusChange?.(phieuIdParam, sendTargetStatus);
               message.success("Lưu và gửi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              if ((error as any)?.message) {
-                message.error((error as any)?.message);
-              } else {
-                message.error("Phiếu đã được gửi, vui lòng kiểm tra lại");
-              }
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Phiếu đã được gửi, vui lòng kiểm tra lại");
             }
           },
         });
@@ -559,8 +645,7 @@ export const phieuActionService = {
               message.success("Lưu phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              message.error((error as any)?.message);
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Không thể lưu phiếu");
             }
           },
         });
@@ -585,17 +670,16 @@ export const phieuActionService = {
               if (customPutApi) {
                 await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }
-              await PhieuApi.changeStatus(phieuIdParam, sendTargetStatus);
+              await PhieuApi.changeStatus(
+                phieuIdParam,
+                sendTargetStatus,
+                currentUserId ?? null
+              );
               await onStatusChange?.(phieuIdParam, sendTargetStatus);
               message.success("Lưu và gửi phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              if((error as any)?.message){
-                message.error((error as any)?.message);
-              } else {
-                message.error("Phiếu đã được gửi, vui lòng kiểm tra lại");
-              }
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Phiếu đã được gửi, vui lòng kiểm tra lại");
             }
           },
         });
@@ -635,8 +719,7 @@ export const phieuActionService = {
             message.success("Xác nhận phiếu thành công!");
             onSuccess?.();
           } catch (error) {
-            message.error((error as any)?.message ?? "Không thể xác nhận phiếu");
-            onError?.(error);
+            handleActionError(error, onError, redirectToList, "Không thể xác nhận phiếu");
           }
         },
       });
@@ -667,8 +750,7 @@ export const phieuActionService = {
               message.success("Từ chối phiếu thành công!");
               onSuccess?.();
             } catch (error) {
-              message.error((error as any)?.message ?? "Không thể từ chối phiếu");
-              onError?.(error);
+              handleActionError(error, onError, redirectToList, "Không thể từ chối phiếu");
             }
           },
         });
