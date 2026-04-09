@@ -541,17 +541,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
-          {
-            key: "sub4-5-5",
-            maBM: BM_CONFIG.HRC2.HRC2_BB_GN_ThepLong,
-            label: (
-              <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
-                <NavLink to="/viecdentoi/giaonhantheplong">
-                  BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
-                </NavLink>
-              </Tooltip>
-            ),
-          },
+          // {
+          //   key: "sub4-5-5",
+          //   maBM: BM_CONFIG.HRC2.HRC2_BB_GN_ThepLong,
+          //   label: (
+          //     <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
+          //       <NavLink to="/viecdentoi/giaonhantheplong">
+          //         BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
+          //       </NavLink>
+          //     </Tooltip>
+          //   ),
+          // },
         ],
       },
     ],
@@ -665,6 +665,15 @@ export const menuConfig = [
                 <NavLink to="/thongkephieuhrc2">
                   Thống kê Phiếu HRC2
                 </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-6-0",
+            maBM: BM_CONFIG.HRC2.HRC2_STD_NXT,
+            label: (
+              <Tooltip title="STD - Nhập xuất tồn">
+                <NavLink to="/std_nhapxuatton">Thống kê - STD - Nhập xuất tồn</NavLink>
               </Tooltip>
             ),
           },
