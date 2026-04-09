@@ -29,6 +29,22 @@ export type AdjustColumnMeta = {
 
 const DEFAULT_EXCLUDED_KEYS = ["meThoi", "macThep", "ghiChu", "stt", "STT"];
 
+const canCurrentUserMap = (): boolean => {
+  try {
+    if (typeof window === "undefined") return false;
+    const raw = window.localStorage.getItem("userinfo");
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as {
+      iD_Quyen?: number;
+      tenNgan?: string;
+    };
+    if (!parsed) return false;
+    return parsed.iD_Quyen === 1 || parsed.tenNgan === "P.KH";
+  } catch {
+    return false;
+  }
+};
+
 const resolveLabel = (title: ReactNode, fallback?: string) => {
   if (typeof title === "string") return title;
   if (fallback) return fallback;
@@ -69,6 +85,7 @@ const mapChildWithAdjust = (
 };
 
 export const hrc2TableService = {
+  canCurrentUserMap,
   mergeAdjustMetas(
     prev: AdjustColumnMeta[] = [],
     incoming: AdjustColumnMeta[] = []
@@ -191,6 +208,7 @@ export const hrc2TableService = {
     if (!items?.length) {
       return [];
     }
+    const canMap = canCurrentUserMap();
     return items.map((item) => ({
       title: renderTitle(item.label, item),
       dataIndex: item.dataIndex,
@@ -198,8 +216,8 @@ export const hrc2TableService = {
       highlight: item.highlight ?? item.metaGroup === "others",
       metaLabel: item.label,
       editable: false,
-      // Luôn set allowMapping = true để hiển thị button móc nối cho tất cả phụ liệu
-      allowMapping: item.allowMapping ?? true,
+      // Chỉ cho phép mapping khi user có quyền và meta cho phép
+      allowMapping: canMap && (item.allowMapping ?? true),
       mappingPayload: item.mappingPayload,
       metaGroup: item.metaGroup,
       variant: item.variant ?? "source",

@@ -155,7 +155,7 @@ export const hrc2PhuLieuService = {
       </div>
     );
 
-    const allowMappingButtons = !!onOpenMappingModal;
+    const allowMappingButtons = hrc2TableService.canCurrentUserMap() && !!onOpenMappingModal;
 
     const phuGiaColumns: HRCChildColumn[] = sortedPhuGiaPhuLieus.map(phuLieu => {
       const label = phuLieu.tenHienThi || phuLieu.tenNguonDuLieu || phuLieu.tenPhuLieu || "";

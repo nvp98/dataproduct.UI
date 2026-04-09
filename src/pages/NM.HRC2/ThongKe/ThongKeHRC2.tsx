@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Card,
   Table,
@@ -36,7 +36,7 @@ type HkCellData = {
 
 const renderHkCell = (cellData: HkCellData | null | unknown) => {
   if (cellData === null || cellData === undefined) return "";
-  const { value, manualValue, klPhanBo, totalKLPhuGia, isManual } = cellData as HkCellData;
+  const { value, manualValue, klPhanBo, totalKLPhuGia } = cellData as HkCellData;
 
   const displayValue = totalKLPhuGia ?? (manualValue != null ? manualValue : value);
   const formatted = formatNumberVN(displayValue);
@@ -81,6 +81,26 @@ const toAntdColumns = (cols: ThongKeHeaderColumn[]): any[] => {
 
     if (c.dataIndex === "klGangLongCCT" || c.dataIndex === "klThepPhe") {
       mapped.render = (value: unknown) => formatNumberVN(value);
+    }
+
+    if (c.dataIndex === "meThoi") {
+      mapped.render = (value: unknown, record: any) => {
+        const isTrungMeThoi = record?.isTrungMeThoi === true;
+        if (!isTrungMeThoi) return String(value ?? "");
+        return (
+          <span
+            style={{
+              display: "block",
+              backgroundColor: "#fff1f0",
+              color: "#cf1322",
+              padding: "0 4px",
+              borderRadius: 2,
+            }}
+          >
+            {String(value ?? "")}
+          </span>
+        );
+      };
     }
 
     if (Array.isArray(c.children) && c.children.length > 0) {
@@ -281,6 +301,9 @@ const ThongKeHRC2 = () => {
               dataObj?.id ??
               dataObj?.ID ??
               idx,
+            isTrungMeThoi:
+              dataObj?.isTrungMeThoi === true ||
+              dataObj?.IsTrungMeThoi === true,
           };
 
           const getFieldValue = (dataIndex: string): unknown => {
@@ -574,8 +597,8 @@ const ThongKeHRC2 = () => {
             />
           </Form.Item>
 
-          <Form.Item name="meThoi" label="Mã mẻ thép">
-            <Input placeholder="Nhập mã mẻ thép" style={{ minWidth: 160 }} />
+          <Form.Item name="meThoi" label="Mã mẻ/ mác thép">
+            <Input placeholder="Nhập mã mẻ/ mác thép" style={{ minWidth: 160 }} />
           </Form.Item>
 
           <Form.Item>

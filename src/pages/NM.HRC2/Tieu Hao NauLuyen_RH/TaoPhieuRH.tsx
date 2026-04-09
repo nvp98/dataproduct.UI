@@ -56,10 +56,6 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
   const ngaySX = Form.useWatch("NgaySX", form);
   const ca = Form.useWatch("ca", form);
   const scope = Form.useWatch("scope", form);
-  const currentUserInfo = useMemo(() => {
-    const stored = localStorage.getItem("userinfo");
-    return stored ? JSON.parse(stored) : {};
-  }, []);
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
   const isSignatureReadonly = [
     TrangThaiPhieuConst.HoanThanh,
@@ -498,6 +494,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
                 overrideFields[sig.key] = nguoiTaoIdFromRes;
               });
             } else if (tinhTrangFromRes === TrangThaiPhieuConst.DangLuu) {
+              const currentUserInfo = getUserInfo();
               cap0Signatures.forEach((sig: any) => {
                 overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
               });
@@ -554,7 +551,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       // Sau khi khôi phục phiếu, tự động load dữ liệu NM (nếu đủ filter)
       await loadFromNM();
     }
-  }, [form, idphieu, restoreDynamicColumns, config.signatures, loadFromNM, safeGetDetail, currentUserInfo]);
+  }, [form, idphieu, restoreDynamicColumns, config.signatures, loadFromNM, safeGetDetail, getUserInfo]);
 
   /** Gọi khi load lần đầu */
   useEffect(() => {
@@ -910,7 +907,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
 
               const cap0InitialValue = isLevelZero
                 ? shouldUseCurrentUser
-                  ? currentUserInfo?.iD_TaiKhoan ?? null
+                  ? getUserInfo()?.iD_TaiKhoan ?? null
                   : hasNguoiTaoIdFromPhiếu
                     ? nguoiTaoIdFromPhiếu
                     : undefined
@@ -920,7 +917,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
                   <CustomFormItem
                     field={sig}
                     idx={i}
-                    disabled={isSignatureReadonly || isFormLocked}
+                    disabled={isLevelZero || isSignatureReadonly || isFormLocked}
                     initialValue={cap0InitialValue}
                   />
                 </div>

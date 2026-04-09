@@ -57,11 +57,6 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
   const ngaySX = Form.useWatch("NgaySX", form);
   const ca = Form.useWatch("ca", form);
   const scope = Form.useWatch("scope", form);
-  const currentUserInfo = useMemo(() => {
-    const stored = localStorage.getItem("userinfo");
-    return stored ? JSON.parse(stored) : {};
-  }, []);
-
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
   const isSignatureReadonly = [
     TrangThaiPhieuConst.HoanThanh,
@@ -196,11 +191,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span>{label}</span>
           {meta?.allowMapping && (
-            <Button
-              size="small"
-              type="link"
-              onClick={handleOpenMapping}
-            >
+            <Button size="small" type="link" onClick={handleOpenMapping}>
               Map
             </Button>
           )}
@@ -469,6 +460,12 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
     await loadFromNM();
   }, [loadFromNM]);
 
+  // Helper để lấy userInfo
+  const getUserInfo = useCallback(() => {
+    const stored = localStorage.getItem("userinfo");
+    return stored ? JSON.parse(stored) : {};
+  }, []);
+
   // Hàm khởi tạo dữ liệu ban đầu
   const initData = useCallback(async () => {
     try {
@@ -536,6 +533,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
                 overrideFields[sig.key] = nguoiTaoIdFromRes;
               });
             } else if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
+              const currentUserInfo = getUserInfo();
               cap0Signatures.forEach((sig: any) => {
                 overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
               });
@@ -615,18 +613,12 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
       // Khi vào component, luôn tự động load dữ liệu từ NM (nếu đủ filter)
       await loadFromNM();
     }
-  }, [form, idphieu, loadFromNM, config.signatures, renderDynamicColumnTitle, currentUserInfo, safeGetDetail]);
+  }, [form, idphieu, loadFromNM, config.signatures, renderDynamicColumnTitle, getUserInfo, safeGetDetail]);
 
   /** Gọi khi load lần đầu */
   useEffect(() => {
     initData();
   }, [initData]);
-
-  // Helper để lấy userInfo
-  const getUserInfo = useCallback(() => {
-    const stored = localStorage.getItem("userinfo");
-    return stored ? JSON.parse(stored) : {};
-  }, []);
 
   // Function để lấy formData mới nhất (được gọi mỗi khi click button)
   // actionKey: "save" | "saveAndSend" | ... để phân biệt lưu vs gửi
@@ -965,7 +957,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
 
               const cap0InitialValue = isLevelZero
                 ? shouldUseCurrentUser
-                  ? currentUserInfo?.iD_TaiKhoan ?? null
+                ? getUserInfo()?.iD_TaiKhoan ?? null
                   : hasNguoiTaoIdFromPhiếu
                     ? nguoiTaoIdFromPhiếu
                     : undefined
@@ -976,7 +968,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
                   <CustomFormItem
                     field={sig}
                     idx={i}
-                    disabled={isSignatureReadonly || isFormLocked}
+                    disabled={isLevelZero || isSignatureReadonly || isFormLocked}
                     initialValue={cap0InitialValue}
                   />
                 </div>

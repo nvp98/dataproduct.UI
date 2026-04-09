@@ -495,7 +495,9 @@ const CustomTableHRC = forwardRef(({
                   : cellValue !== undefined && cellValue !== null
                     ? String(cellValue)
                     : "";
-                const isTrungMeThoi = record.isTrungMeThoi === true;
+                const isTrungMeThoi =
+                  record.isTrungMeThoi === true ||
+                  (record as Record<string, unknown>).IsTrungMeThoi === true;
                 const isNegative = isPhuLieuDataIndex(child.dataIndex) && isNegativeValue(currentValue);
 
                 const tooltipTitle = isNegative
@@ -537,7 +539,10 @@ const CustomTableHRC = forwardRef(({
                     disabled={isAdjustColumn}
                     style={{
                       textAlign: child.align ?? "right",
-                      backgroundColor: isCellChanged ? "#fff7b3" : "#f5f5f5",
+                      backgroundColor:
+                        isMeThoiColumn && isTrungMeThoi
+                          ? "tomato"
+                          : (isCellChanged ? "#fff7b3" : "#f5f5f5"),
                       cursor: "not-allowed",
                     }}
                   />
@@ -617,7 +622,9 @@ const CustomTableHRC = forwardRef(({
             : cellValue !== undefined && cellValue !== null
               ? String(cellValue)
               : "";
-          const isTrungMeThoi = record.isTrungMeThoi === true;
+          const isTrungMeThoi =
+            record.isTrungMeThoi === true ||
+            (record as Record<string, unknown>).IsTrungMeThoi === true;
           const isNegative = isPhuLieuDataIndex(dataIndex) && isNegativeValue(currentValue);
 
           const isKeyColumn = isMeThoiColumn || isMacThepColumn;
@@ -649,7 +656,10 @@ const CustomTableHRC = forwardRef(({
               disabled={isAdjustColumn}
               style={{
                 textAlign: col.align ?? "right",
-                backgroundColor: isCellChanged ? "#fff7b3" : "#f5f5f5",
+                backgroundColor:
+                  isMeThoiColumn && isTrungMeThoi
+                    ? "tomato"
+                    : (isCellChanged ? "#fff7b3" : "#f5f5f5"),
                 cursor: "not-allowed",
               }}
             />
