@@ -37,7 +37,7 @@
         {
           "title": "Tồn đầu ca",
           "children": [
-            { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa" },
+            { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa" ,"readOnly": true},
             { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanDauCa" , "hidden": true}
           ]
         },
@@ -53,7 +53,7 @@
           ]
         },
         { "title": "Lượng sử dụng kiểm kê", "dataIndex": "luongSuDungKiemKe" },
-        { "title": "Lượng sử dụng thực tế theo cân", "dataIndex": "tongThucTe" }
+        { "title": "Lượng sử dụng thực tế theo cân", "dataIndex": "tongThucTe","readOnly": true }
       ],
       "khuVucList": [
         {"label": "Lò thổi 6", "value": "1", "bieuMau":"BOF", "scope": 6},
@@ -76,35 +76,35 @@
         {
           "title": "",
           "dataIndex": "totalText",
-          "isLabel": true
+          "isLabel": true, "readOnly": true
         },
         {
           "title": "Nguyên nhiên liệu",
-          "dataIndex": "totalNguyenNhienLieu"
+          "dataIndex": "totalNguyenNhienLieu", "readOnly": true
         },
         {
           "title": "Khối lượng tồn đầu ca (tấn)",
-          "dataIndex": "totalTonDauCa"
+          "dataIndex": "totalTonDauCa", "readOnly": true
         },
         {
           "title": "Khối lượng nhập trong ca (tấn)",
-          "dataIndex": "totalNhapTrongCa"
+          "dataIndex": "totalNhapTrongCa", "readOnly": true
         },
         {
           "title": "Khối lượng tồn cuối ca (tấn)",
-          "dataIndex": "totalTonCuoiCa"
+          "dataIndex": "totalTonCuoiCa", "readOnly": true
         },
         {
           "title": "Tổng sử dụng",
-          "dataIndex": "totalSuDung"
+          "dataIndex": "totalSuDung", "readOnly": true
         },
         {
           "title": "Tổng sử dụng trên sổ sách",
-          "dataIndex": "totalSDTrongSoSach"
+          "dataIndex": "totalSDTrongSoSach", "readOnly": true
         },
         {
           "title": "Chênh lệch",
-          "dataIndex": "totalChenhLech"
+          "dataIndex": "totalChenhLech", "readOnly": true
         },
         {
           "title": "Tỷ lệ PB BOF %",
@@ -125,9 +125,9 @@
 
   "signatures": [
     {
-      "label": "Người nhận ca",
+      "label": "Người lập",
       "type": "selectNguoiKy",
-      "key": "nguoigiaoca_HRC2",
+      "key": "nguoiLap_HRC2",
       "maphongBan": "NM.HRC2",
       "capduyet": 0,
       "isChon": true,

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC2_STD_NXT from "../../../utils/BM_config/HRC2_STD_NXT.json";
-import { Card, Form, Input, Typography, message, Button, Tabs } from "antd";
+import { Card, Form, Input, Typography, message, Button, Tabs, Tag } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -9,17 +9,19 @@ import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 // import GroupedTableSTD from "../../../components/GroupedTableSTD";
 import GroupedTableSTD from "../../../components/GroupedTableSTD";
 import SummaryTableSTD from "../../../components/SummaryTableSTD";
-import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
-import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import type {
   STD_NXT_Table1Row,
   STD_NXT_Table2Row,
   STD_NXT_HRC2_UpsertDto,
   NXTSummaryDto,
   STD_NXT_HRC2_PhanBoDto,
+  STD_NXT_RelatedPhieuTarget,
+  STD_NXT_RelatedPhieuStatusItem,
+  STD_NXT_HRC2_KhongPhanBoDto,
 } from "../../../models/STD_NXT_Model";
 import { STD_NXT_HRC2ServiceApi } from "../../../services/STD_NXT_HRC2ServiceApi";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
+import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 
 const Tao_STD = () => {
   const { idphieu, navigateToDetail, safeGetDetail } =
@@ -31,33 +33,19 @@ const Tao_STD = () => {
   const [table1Data, setTable1Data] = useState<STD_NXT_Table1Row[]>([]);
   const [table2Data, setTable2Data] = useState<STD_NXT_Table2Row[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // State để lưu thông tin phiếu cho action buttons
-  const [phieuInfo, setPhieuInfo] = useState<{
-    tinhTrang?: number;
-    nguoiTaoId?: number | null;
-    idphongBan?: number | null;
-    pheDuyet?: PheDuyetItem[];
-    isClone?: boolean;
-  }>({});
+  const [relatedStatusMap, setRelatedStatusMap] = useState<Record<string, STD_NXT_RelatedPhieuStatusItem>>({});
+  const [canPhanBo, setCanPhanBo] = useState(true);
+  const [isLockedByChot, setIsLockedByChot] = useState(false);
+  /** Tăng khi BE trả canPhanBo = false để remount SummaryTableSTD, đồng bộ UI với trạng thái khóa phân bổ */
+  const [summaryTableRemountKey, setSummaryTableRemountKey] = useState(0);
+  const watchedNgaySX = Form.useWatch("NgaySX", form);
+  const watchedCa = Form.useWatch("ca", form);
 
   const getUserInfo = useCallback(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
   }, []);
 
-  const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
-  const isSignatureReadonly = [
-    TrangThaiPhieuConst.HoanThanh,
-    TrangThaiPhieuConst.DangPheDuyet,
-    TrangThaiPhieuConst.DaChot,
-  ].includes(currentTinhTrang);
-  // Cho phép edit khi ĐangLuu (0), Đã thu hồi (3) hoặc Hiệu chỉnh (7 = phiếu clone)
-  const isFormLocked = !(
-    currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
-    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
-    currentTinhTrang === TrangThaiPhieuConst.HieuChinh
-  );
   const currentUserInfo = useMemo(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
@@ -179,29 +167,12 @@ const Tao_STD = () => {
 
         // Khôi phục form values (ưu tiên jsonData). Tách NgaySX/ca để tránh bị override bởi spread.
         const { NgaySX, ca, ...restFormData } = formData;
-        const tinhTrang = phieuPayload?.tinhTrang ?? 0;
         form.setFieldsValue({
           idphieu: phieuPayload?.idphieu,
           NgaySX: NgaySX ? dayjs(NgaySX) : null,
           ca: ca ?? phieuPayload?.ca,
           ...restFormData,
         });
-
-        // Nếu trạng thái là DangLuu và field capduyet=0 chưa có giá trị → mặc định currentUser
-        if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
-          const overrideFields: Record<string, any> = {};
-          config.signatures
-            .filter((sig: any) => sig.isChon && sig.capduyet === 0)
-            .forEach((sig: any) => {
-              const existing = form.getFieldValue(sig.key);
-              if (existing == null) {
-                overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
-              }
-            });
-          if (Object.keys(overrideFields).length > 0) {
-            form.setFieldsValue(overrideFields);
-          }
-        }
 
         const detailRes: any = await STD_NXT_HRC2ServiceApi.getDetail(idphieu);
         const data = detailRes?.data;
@@ -259,35 +230,24 @@ const Tao_STD = () => {
           Id_HeaderKey: item.id_HeaderKey ?? item.Id_HeaderKey ?? null,
           NgaySX: ngaySxStr,
           Ca: caVal,
+          tyLeBOF: item.tyLeBOF ?? item.TyLeBOF ?? null,
+          tyLeTinhLuyen: item.tyLeTinhLuyen ?? item.TyLeTinhLuyen ?? null,
         }));
 
         setTable1Data(mappedDetails);
         setTable2Data(mappedSummary);
 
-        // Lưu thông tin phiếu cho action buttons
-        setPhieuInfo({
-          tinhTrang: phieuPayload?.tinhTrang ?? 0,
-          nguoiTaoId: phieuPayload?.nguoiTaoId ?? null,
-          idphongBan: phieuPayload?.idphongBan ?? null,
-          pheDuyet: phieuPayload?.pheDuyet || formData.pheDuyet || [],
-          isClone: phieuPayload?.isClone ?? false,
-        });
-      } else {
-        // Phiếu mới: chỉ set capduyet=0 về currentUser nếu field chưa có giá trị
-        const newOverride: Record<string, any> = {};
-        config.signatures
-          .filter((sig: any) => sig.isChon && sig.capduyet === 0)
-          .forEach((sig: any) => {
-            const existing = form.getFieldValue(sig.key);
-            if (existing == null) {
-              newOverride[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
-            }
-          });
-        if (Object.keys(newOverride).length > 0) {
-          form.setFieldsValue(newOverride);
-        }
-        setPhieuInfo({});
       }
+
+      // Sau khi setFieldsValue (hoặc phiếu mới): nếu capduyet=0 chưa có giá trị thì set current user
+      const sigOverrides: Record<string, any> = {};
+      config.signatures
+        .filter((sig: any) => sig.isChon && sig.capduyet === 0)
+        .forEach((sig: any) => {
+          const val = form.getFieldValue(sig.key);
+          if (val == null) sigOverrides[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
+        });
+      if (Object.keys(sigOverrides).length > 0) form.setFieldsValue(sigOverrides);
     } catch (err: any) {
       console.error("Lỗi khởi tạo dữ liệu:", err);
       message.error("Không thể tải dữ liệu ban đầu!");
@@ -297,16 +257,10 @@ const Tao_STD = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, idphieu, safeGetDetail, currentUserInfo?.iD_TaiKhoan]);
 
-  // Chuẩn bị payload cho action buttons (theo pattern TaoPhieuBOF)
-  // actionKey: "save" | "saveAndSend" | ... để phân biệt lưu vs gửi
-  const getFormData = useCallback(async (actionKey?: string) => {
+  const getFormData = useCallback(async () => {
     const userInfo = getUserInfo();
-    const isSend = actionKey === "saveAndSend" || actionKey === "gui";
-    // Khi lưu: chỉ validate header fields (Ngày, Ca). Khi gửi: validate thêm chữ ký.
     const headerFieldKeys = config.headerFields.map((f: any) => f.key);
-    const signatureKeys = config.signatures.filter((s) => s.isChon).map((s) => s.key);
-    const fieldsToValidate = isSend ? [...headerFieldKeys, ...signatureKeys] : headerFieldKeys;
-    await form.validateFields(fieldsToValidate);
+    await form.validateFields(headerFieldKeys);
     // Lấy toàn bộ giá trị form (kể cả idphieu, chữ ký) để build payload đầy đủ
     const values = form.getFieldsValue(true);
 
@@ -321,8 +275,8 @@ const Tao_STD = () => {
       luongSuDungKiemKe: row.luongSuDungKiemKe != null && row.luongSuDungKiemKe !== "" ? Number(row.luongSuDungKiemKe) : null,
     }));
 
-    // Validation (chỉ khi Gửi): Tất cả dòng phải chọn Silo
-    if (isSend) {
+    // Validation: Tất cả dòng phải chọn Silo
+    {
       const missingSiloRows = table1Normalized.filter((row) => !row.siloId && row.viTri !== 2);
       if (missingSiloRows.length > 0) {
         const byTab = missingSiloRows.reduce<Record<string, string[]>>((acc, r: any) => {
@@ -412,30 +366,6 @@ const Tao_STD = () => {
       tyLeTinhLuyen: row.tyLeTinhLuyen != null ? Number(row.tyLeTinhLuyen) : null,
     }));
 
-    // Flow phê duyệt giống BOF
-    const pheDuyetFlow = config.signatures
-      .filter((s) => s.isChon)
-      .map((s) => ({
-        capDuyet: s.capduyet,
-        maKyDuyet: s.key,
-        nguoiDuyetId: form.getFieldValue(s.key),
-        tinhTrang: 0,
-        ghiChu: "",
-      }));
-
-    // Thêm người tạo phiếu ở cấp 1 nếu cấu hình
-    const hasCreator = config.signatures.find(
-      (x) => x.isChon === false && x.capduyet === 1
-    );
-    if (hasCreator) {
-      pheDuyetFlow.unshift({
-        capDuyet: 1,
-        maKyDuyet: hasCreator?.key || "",
-        nguoiDuyetId: userInfo.iD_TaiKhoan ?? null,
-        tinhTrang: 1,
-        ghiChu: "Người tạo phiếu",
-      });
-    }
     return {
       ...values,
       NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
@@ -447,57 +377,40 @@ const Tao_STD = () => {
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: table1Normalized,
       table2: table2Normalized,
-      pheDuyet: pheDuyetFlow,
       nxtPayload: buildNxtUpsertPayload(values),
     };
-  }, [getUserInfo, form, config.headerFields, config.signatures, config.code, config.prefix, table1Data, table2Data, buildNxtUpsertPayload]);
+  }, [getUserInfo, form, config.headerFields, config.code, config.prefix, table1Data, table2Data, buildNxtUpsertPayload]);
 
-  const handleActionSuccess = useCallback(
-    async (context: any) => {
-      if (context?.newPhieuId) {
-        navigateToDetail(context.newPhieuId, "/tao-std");
-        return;
-      }
-      await initData();
-    },
-    [navigateToDetail, initData]
-  );
-
-  const actionButtons = useMemo(() => {
-    const userInfo = getUserInfo();
-    
-    const buttons = phieuActionService.getActionButtons({
-      phieuId: idphieu || "",
-      tinhTrang: phieuInfo.tinhTrang ?? 0,
-      isClone: phieuInfo.isClone ?? false,
-      currentUserId: userInfo.iD_TaiKhoan ?? null,
-      currentUserPhongBanId: userInfo.iD_PhongBan ?? null,
-      currentUserTenNgan: userInfo.tenNgan ?? null,
-      nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
-      phieuPhongBanId: phieuInfo.idphongBan ?? null,
-      pheDuyet: phieuInfo.pheDuyet ?? [],
-      noApproval: true,
-      // Gọi API upsert sau khi PhieuApi.postData hoặc PhieuApi.putData thành công
-      customPutApi: async (phieuIdParam, formData) => {
-        // Lấy nxtPayload từ formData
-        const nxtPayload = (formData as any)?.nxtPayload as STD_NXT_HRC2_UpsertDto | undefined;
-        if (!nxtPayload) {
-          console.warn("nxtPayload không tồn tại trong formData");
-          return;
+  const handleSave = useCallback(async () => {
+    try {
+      setLoading(true);
+      const formData = await getFormData();
+      const nxtPayload = (formData as any)?.nxtPayload as STD_NXT_HRC2_UpsertDto | undefined;
+      if (idphieu) {
+        await PhieuApi.putData(idphieu, formData as Record<string, unknown>);
+        if (nxtPayload) {
+          nxtPayload.IdPhieu = idphieu;
+          await STD_NXT_HRC2ServiceApi.upsert(nxtPayload);
         }
-        // Cập nhật IdPhieu từ phieuIdParam
-        nxtPayload.IdPhieu = phieuIdParam;
-        await STD_NXT_HRC2ServiceApi.upsert(nxtPayload);
-      },
-      onSuccess: handleActionSuccess,
-      onError: (error) => {
-        console.error("Action error:", error);
-      },
-    });
-
-    if (buttons.length === 0) return null;
-    return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleActionSuccess]);
+        message.success("Lưu thành công!");
+        await initData();
+      } else {
+        const res = await PhieuApi.postData(formData as Record<string, unknown>);
+         const newId = (res as any)?.idphieu || (res as any)?.data?.idphieu;
+        // if (nxtPayload && newId) {
+        //   nxtPayload.IdPhieu = newId;
+        //   await STD_NXT_HRC2ServiceApi.upsert(nxtPayload);
+        // }
+        message.success("Lưu thành công!");
+        if (newId) navigateToDetail(newId, "/tao-std");
+      }
+    } catch (err: any) {
+      if (err?.message?.startsWith("Validation")) return;
+      message.error("Lưu thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  }, [getFormData, idphieu, navigateToDetail, initData]);
 
   /** Gọi khi load lần đầu */
   useEffect(() => {
@@ -519,6 +432,94 @@ const Tao_STD = () => {
     : undefined;
   const layout2 = config.layout2?.[0];
 
+  const getRelatedTargets = useCallback((): STD_NXT_RelatedPhieuTarget[] => {
+    const kvList = config.layout1?.[0]?.khuVucList || [];
+    return kvList
+      .filter((kv: any) => kv?.bieuMau && kv?.scope != null)
+      .map((kv: any) => ({
+        tabKey: `kv_${String(kv?.label || kv?.value || "")}`,
+        label: String(kv?.label || kv?.value || ""),
+        bieuMau: String(kv?.bieuMau || ""),
+        scope: Number(kv?.scope),
+      }));
+  }, [config.layout1]);
+
+  const tinhTrangLabel = useCallback((status: number | null | undefined) => {
+    switch (status) {
+      case 0:
+        return "Đang lưu";
+      case 1:
+        return "Đã gửi";
+      case 2:
+        return "Hoàn thành";
+      case 5:
+        return "Đã chốt";
+      case 7:
+        return "Đang hiệu chỉnh";
+      default:
+        return status == null ? "Chưa có phiếu" : `Trạng thái ${status}`;
+    }
+  }, []);
+
+  const loadRelatedPhieuStatuses = useCallback(async (): Promise<boolean> => {
+    try {
+      const ngayValue = form.getFieldValue("NgaySX");
+      const caValue = form.getFieldValue("ca");
+      const ngay = ngayValue ? dayjs(ngayValue).format("YYYY-MM-DD") : null;
+      const ca = caValue != null ? Number(caValue) : null;
+      if (!ngay || !ca) {
+        setRelatedStatusMap({});
+        setCanPhanBo(true);
+        setIsLockedByChot(false);
+        return true;
+      }
+
+      const targets = getRelatedTargets();
+      const res: any = await STD_NXT_HRC2ServiceApi.getRelatedPhieuStatuses({
+        NgaySX: ngay,
+        Ca: ca,
+        Targets: targets,
+      });
+
+      const payload = (res as any)?.data ?? res;
+      const data = payload?.data ?? payload;
+      const items = (data?.items ?? data?.Items ?? []) as STD_NXT_RelatedPhieuStatusItem[];
+      const canPhanBoFromServer =
+        (data?.canPhanBo ?? data?.CanPhanBo ?? true) as boolean;
+
+      const nextMap: Record<string, STD_NXT_RelatedPhieuStatusItem> = {};
+      items.forEach((x) => {
+        const key = String(x?.tabKey ?? (x as any)?.TabKey ?? "");
+        if (key) nextMap[key] = x;
+      });
+      setRelatedStatusMap(nextMap);
+      setCanPhanBo(Boolean(canPhanBoFromServer));
+      const hasChot = items.some((x) => (x?.tinhTrang ?? (x as any)?.TinhTrang) === 5);
+      setIsLockedByChot(hasChot);
+      if (!canPhanBoFromServer) {
+        setSummaryTableRemountKey((k) => k + 1);
+      }
+      return Boolean(canPhanBoFromServer);
+    } catch (error) {
+      console.error("Không thể tải trạng thái phiếu theo tab:", error);
+      setRelatedStatusMap({});
+      setCanPhanBo(true);
+      setIsLockedByChot(false);
+      return true;
+    }
+  }, [form, getRelatedTargets]);
+
+  useEffect(() => {
+    loadRelatedPhieuStatuses();
+  }, [loadRelatedPhieuStatuses, watchedNgaySX, watchedCa]);
+
+  const refreshSummaryAndStatus = useCallback(async () => {
+    if (idphieu) {
+      await initData();
+    }
+    await loadRelatedPhieuStatuses();
+  }, [idphieu, initData, loadRelatedPhieuStatuses]);
+
   const handlePhanBoSummary = useCallback(
     async (dto: STD_NXT_HRC2_PhanBoDto) => {
       try {
@@ -533,6 +534,11 @@ const Tao_STD = () => {
           message.warning("Vui lòng chọn Ngày và Ca trước khi phân bổ.");
           return;
         }
+        const canPhanBo = await loadRelatedPhieuStatuses();
+        if (!canPhanBo) {
+          message.warning("Không thể phân bổ vì có ít nhất 1 phiếu ở tab nấu luyện chưa hoàn thành.");
+          return;
+        }
         const payload: STD_NXT_HRC2_PhanBoDto = {
           NgaySX: ngay,
           Ca: Number(caVal),
@@ -543,24 +549,32 @@ const Tao_STD = () => {
           TyLeTinhLuyen: dto.TyLeTinhLuyen ?? null,
         };
         setLoading(true);
-        const res = await STD_NXT_HRC2ServiceApi.phanBo(payload);
-        const ok = (res as any)?.data ?? res;
-        if (ok === true) {
-          message.success("Phân bổ chênh lệch thành công.");
-          if (idphieu) {
-            await initData();
+        try {
+          const res = await STD_NXT_HRC2ServiceApi.phanBo(payload);
+          const ok = (res as any)?.data ?? res;
+          if (ok === true) {
+            message.success("Phân bổ chênh lệch thành công.");
+            await refreshSummaryAndStatus();
+          } else {
+            message.warning("Phân bổ không thành công.");
+            await refreshSummaryAndStatus();
           }
-        } else {
-          message.warning("Phân bổ không thành công.");
+        } catch (apiError: any) {
+          console.error("Phân bổ thất bại:", apiError);
+          message.error(apiError?.message || apiError || "Không thể phân bổ. Vui lòng thử lại.");
+          await refreshSummaryAndStatus();
+        } finally {
+          setLoading(false);
         }
       } catch (error: any) {
+        if (error?.errorFields) {
+          return;
+        }
         console.error("Phân bổ thất bại:", error);
-        message.error(error?.message || "Không thể phân bổ. Vui lòng thử lại.");
-      } finally {
-        setLoading(false);
+        message.error(error?.message || error || "Không thể phân bổ. Vui lòng thử lại.");
       }
     },
-    [form, idphieu, initData]
+    [form, idphieu, loadRelatedPhieuStatuses, refreshSummaryAndStatus]
   );
 
   const handleThuHoiSummary = useCallback(
@@ -587,24 +601,81 @@ const Tao_STD = () => {
           TyLeTinhLuyen: dto.TyLeTinhLuyen ?? null,
         };
         setLoading(true);
-        const res = await STD_NXT_HRC2ServiceApi.thuHoiPhanBo(payload);
-        const ok = (res as any)?.data ?? res;
-        if (ok === true) {
-          message.success("Thu hồi phân bổ thành công.");
-          if (idphieu) {
-            await initData();
+        try {
+          const res = await STD_NXT_HRC2ServiceApi.thuHoiPhanBo(payload);
+          const ok = (res as any)?.data ?? res;
+          if (ok === true) {
+            message.success("Thu hồi phân bổ thành công.");
+            await refreshSummaryAndStatus();
+          } else {
+            message.warning("Thu hồi phân bổ không thành công.");
+            await refreshSummaryAndStatus();
           }
-        } else {
-          message.warning("Thu hồi phân bổ không thành công.");
+        } catch (apiError: any) {
+          console.error("Thu hồi phân bổ thất bại:", apiError);
+          message.error(apiError?.message || "Không thể thu hồi phân bổ. Vui lòng thử lại.");
+          await refreshSummaryAndStatus();
+        } finally {
+          setLoading(false);
         }
       } catch (error: any) {
+        if (error?.errorFields) {
+          return;
+        }
         console.error("Thu hồi phân bổ thất bại:", error);
         message.error(error?.message || "Không thể thu hồi phân bổ. Vui lòng thử lại.");
-      } finally {
-        setLoading(false);
       }
     },
-    [form, idphieu, initData]
+    [form, idphieu, refreshSummaryAndStatus]
+  );
+  
+  const handleKhongPhanBoSummary = useCallback(
+    async (dto: STD_NXT_HRC2_PhanBoDto) => {
+      try {
+        if (!idphieu) {
+          message.warning("Vui lòng lưu phiếu trước khi không phân bổ.");
+          return;
+        }
+        const values = await form.validateFields(["NgaySX", "ca"]);
+        const ngay = values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null;
+        const caVal = values.ca;
+        if (!ngay || !caVal) {
+          message.warning("Vui lòng chọn Ngày và Ca trước khi không phân bổ.");
+          return;
+        }
+        const payload: STD_NXT_HRC2_KhongPhanBoDto = {
+          NgaySX: ngay,
+          Ca: Number(caVal),
+          Id_HeaderKey: dto.Id_HeaderKey,
+          IdPhieu: idphieu,
+        };
+        setLoading(true);
+        try {
+          const res = await STD_NXT_HRC2ServiceApi.khongPhanBo(payload);
+          const ok = (res as any)?.data ?? res;
+          if (ok === true) {
+            message.success("Không phân bổ thành công.");
+            await refreshSummaryAndStatus();
+          } else {
+            message.warning("Không phân bổ không thành công.");
+            await refreshSummaryAndStatus();
+          }
+        } catch (apiError: any) {
+          console.error("Không phân bổ thất bại:", apiError);
+          message.error(apiError?.message || "Không thể không phân bổ. Vui lòng thử lại.");
+          await refreshSummaryAndStatus();
+        } finally {
+          setLoading(false);
+        }
+      } catch (error: any) {
+        if (error?.errorFields) {
+          return;
+        }
+        console.error("Không phân bổ thất bại:", error);
+        message.error(error?.message || "Không thể không phân bổ. Vui lòng thử lại.");
+      }
+    },
+    [form, idphieu, refreshSummaryAndStatus]
   );
 
   const handleFilterData = useCallback(async () => {
@@ -691,6 +762,8 @@ const Tao_STD = () => {
           Id_HeaderKey: item.id_HeaderKey ?? item.Id_HeaderKey ?? null,
           NgaySX: ngaySxStr,
           Ca: caVal,
+          tyLeBOF: item.tyLeBOF ?? item.TyLeBOF ?? null,
+          tyLeTinhLuyen: item.tyLeTinhLuyen ?? item.TyLeTinhLuyen ?? null,
         }));
 
         // Giữ lại các dòng thêm tay (isManualNew) chưa lưu lên BE
@@ -806,11 +879,14 @@ const Tao_STD = () => {
       } else {
         message.success("Đã lọc dữ liệu phụ liệu theo ngày/ca");
       }
+
+      // Sau khi lọc dữ liệu, cập nhật lại trạng thái phiếu theo tab
+      await loadRelatedPhieuStatuses();
     } catch (error: any) {
       console.error("Lọc dữ liệu thất bại:", error);
       message.error(error?.message || "Không thể lọc dữ liệu");
     }
-  }, [form, config.layout1, setTable1Data, table1Data, idphieu]);
+  }, [form, config.layout1, setTable1Data, table1Data, idphieu, loadRelatedPhieuStatuses]);
 
   return (
     <Card className="mt-6 shadow-md">
@@ -886,7 +962,7 @@ const Tao_STD = () => {
                 borderRadius: 8,
               }}
             >
-              Lọc dữ liệu
+              Làm mới
             </Button>
           </div>
         </div>
@@ -907,15 +983,19 @@ const Tao_STD = () => {
                     label: layout2.title || "Tổng hợp",
                     children: (
                       <SummaryTableSTD
+                        key={`summary-std-${idphieu ?? "new"}-${summaryTableRemountKey}`}
                         columns={layout2.columns || []}
                         table1Data={table1Data}
                         initialData={table2Data}
                         onDataChange={setTable2Data}
                         onPhanBo={handlePhanBoSummary}
                         onThuHoi={handleThuHoiSummary}
+                        onKhongPhanBo={handleKhongPhanBoSummary}
+                        canPhanBo={canPhanBo}
                         idPhieu={idphieu ?? undefined}
-                        editable={!isFormLocked}
+                        editable={true}
                         loading={loading}
+                        lockedTooltip={isLockedByChot ? "Đã có phiếu được chốt" : undefined}
                       />
                     ),
                   },
@@ -925,11 +1005,49 @@ const Tao_STD = () => {
             ...(layout1 && layout1.sectionType === "groupedTable"
               ? kvLabels.map((kvLabel) => ({
                   key: `kv_${kvLabel}`,
-                  label: kvLabel,
+                  label: (
+                    <span>
+                      {kvLabel}
+                      {(() => {
+                        const key = `kv_${kvLabel}`;
+                        const statusItem = relatedStatusMap[key];
+                        const status =
+                          statusItem?.tinhTrang ??
+                          (statusItem as any)?.TinhTrang;
+                        const statusKey =
+                          status !== undefined && status !== null
+                            ? String(status)
+                            : undefined;
+                        const cfg = statusKey
+                          ? PHIEU_STATUS_CONFIG[statusKey]
+                          : undefined;
+                        return cfg ? (
+                          <Tag
+                            color={cfg.color}
+                            style={{ marginLeft: 6, fontSize: 12 }}
+                          >
+                            {cfg.text}
+                          </Tag>
+                        ) : (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              fontSize: 12,
+                              opacity: 0.85,
+                            }}
+                          >
+                            ({tinhTrangLabel(status)})
+                          </span>
+                        );
+                      })()}
+                    </span>
+                  ),
                   children: (
                     <GroupedTableSTD
                       columns={layout1.columns || []}
-                      initialData={table1Data.filter((r: any) => r.khuVuc === kvLabel)}
+                      initialData={table1Data.filter(
+                        (r: any) => r.khuVuc === kvLabel
+                      )}
                       onDataChange={(kvRows: any[]) =>
                         setTable1Data((prev: any[]) => [
                           ...prev.filter((r: any) => r.khuVuc !== kvLabel),
@@ -939,7 +1057,7 @@ const Tao_STD = () => {
                       khuVucList={[kvLabel]}
                       defaultNguyenNhienLieu={[]}
                       defaultViTri={layout1.defaultViTri || 1}
-                      editable={!isFormLocked}
+                      editable={true}
                       loading={loading}
                       ngaySX={form.getFieldValue("NgaySX")}
                       khuVucConfig={kvList}
@@ -971,43 +1089,28 @@ const Tao_STD = () => {
           {config.signatures
             .filter((x) => x.isChon)
             ?.map((sig, i) => {
-              const isLevelZero = sig.capduyet === 0;
-              // Khi trạng thái là DangLuu và cấp duyệt = 0, luôn lấy currentUser, không quan tâm form có giá trị hay không
-              const shouldUseCurrentUser = currentTinhTrang === TrangThaiPhieuConst.DangLuu && isLevelZero;
-              
               return (
                 <div key={sig.key || i}>
                   <CustomFormItem
                     field={sig}
                     idx={i}
-                    disabled={isSignatureReadonly || isFormLocked}
-                    initialValue={
-                      shouldUseCurrentUser
-                        ? currentUserInfo?.iD_TaiKhoan ?? null
-                        : form.getFieldValue(sig.key)
-                    }
                   />
                 </div>
               );
             })}
         </div>
-        {/* ACTION BUTTONS */}
-
-        {/* Action buttons theo workflow */}
-        {actionButtons && (
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: 12,
-              display: "flex",
-              justifyContent: "center",
-              gap: 8,
-              flexWrap: "wrap",
-            }}
-          >
-            {actionButtons}
-          </div>
-        )}
+        <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
+          {!idphieu && (
+            <Button type="primary" onClick={handleSave} loading={loading}>
+              Tạo phiếu
+            </Button>
+          )}
+          {idphieu && (
+            <Button type="primary" onClick={handleSave} loading={loading}>
+              Lưu
+            </Button>
+          )}
+        </div>
       </Form>
     </Card>
   );

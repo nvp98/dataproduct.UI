@@ -24,9 +24,10 @@ export function usePhieuNavigation(sessionKey: string, listPath: string) {
 
   const { idphieu: idphieuFromState } = (location.state as { idphieu?: string }) || {};
 
-  // Resolve: ưu tiên state, fallback sessionStorage
+  // Resolve: ưu tiên state, fallback sessionStorage CHỈ KHI có location.state (trường hợp reload trang detail).
+  // Nếu navigate không truyền state (tạo phiếu mới) thì không dùng cache cũ.
   const idphieu: string | undefined =
-    idphieuFromState || sessionStorage.getItem(sessionKey) || undefined;
+    idphieuFromState ?? (location.state ? (sessionStorage.getItem(sessionKey) ?? undefined) : undefined);
 
   // Đồng bộ sessionStorage khi state thay đổi
   useEffect(() => {

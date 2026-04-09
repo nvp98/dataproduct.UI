@@ -14,9 +14,11 @@ export interface SearchPhieuRequest {
   scope?: number | null;
   mayDuc?: number | null ;
   maBm?: string | null;
+  maBmList?: string[] | null;
   searchText?: string | null;
+  tinhTrang?: number | null;
   nguoiDuyetId?: number | null;
-  [key: string]: string | number | null | undefined;
+  [key: string]: string | number | null | undefined | string[];
 }
 export interface SearchPhieuResponseModel {
   idphieu: string;

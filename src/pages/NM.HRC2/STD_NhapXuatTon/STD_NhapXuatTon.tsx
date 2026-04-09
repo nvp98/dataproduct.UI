@@ -7,7 +7,11 @@ import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/Phi
 import { useMemo } from "react";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
-import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+/** Trạng thái phân bổ STD (BE chỉ trả 1 | 2) */
+const STD_PHAN_BO_STATUS: Record<string, { text: string; color: string }> = {
+  "1": { text: "Chưa hoàn thành phân bổ", color: "pink" },
+  "2": { text: "Đã hoàn thành phân bổ", color: "success" },
+};
 
 const STD_NhapXuatTon = ({ type }: { type?: string }) => {
   const config = HRC2_STD_NXT;
@@ -31,8 +35,6 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
     maBm: config.code as string,
     fixedFilters,
   });
-
-  const statusConfig = PHIEU_STATUS_CONFIG;
 
   type TableRecord = SearchPhieuResponseModel & {
     pheDuyet?: Array<Record<string, unknown>>;
@@ -105,11 +107,15 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
       dataIndex: "tinhTrang",
       key: "tinhTrang",
       width: 250,
-      render: (status: string) => (
-        <Tag color={statusConfig[status]?.color || "default"}>
-          {statusConfig[status]?.text || status}
-        </Tag>
-      ),
+      render: (status: number | string | null | undefined) => {
+        const key = String(status ?? "");
+        const cfg = STD_PHAN_BO_STATUS[key];
+        return (
+          <Tag color={cfg?.color ?? "default"}>
+            {cfg?.text ?? (status !== null && status !== undefined && status !== "" ? String(status) : "-")}
+          </Tag>
+        );
+      },
     },
    
     // {

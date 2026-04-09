@@ -1,6 +1,7 @@
 {
   "code": "HRC2_BB_NauLuyen_BOF",
   "prefix": "BBNL_BOF",
+  "loaiBm": "BOF",
   "title": "BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
   "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
@@ -58,18 +59,21 @@
       "sectionType": "table",
       "title": "Chi tiết tiêu hao nấu luyện lò thổi",
       "key": "table1",
+      "lyDo": { "label": "Lý do điều chỉnh" },
       "columns": [
         {
           "title": "Mẻ nấu số",
           "dataIndex": "meThoi",
           "width": 115,
-          "editable": false
+          "editable": false,
+          "readonly": true
         },
         {
           "title": "Mác thép",
           "dataIndex": "macThep",
           "width": 130,
-          "editable": false
+          "editable": false,
+          "readonly": true
         },
         {
           "title": "Nguyên liệu đầu vào (tấn)",
@@ -80,7 +84,9 @@
               "editable": false,
               "width": 90,
               "format": "number-group",
-              "align": "right"
+              "align": "right",
+              "sum": true,
+              "readonly": true
             },
             {
               "title": "Thép phế",
@@ -88,14 +94,17 @@
               "editable": false,
               "width": 90,
               "format": "number-group",
-              "align": "right"
+              "align": "right",
+              "sum": true,
+              "readonly": true
             }
           ]
         },
         {
           "title": "Phụ gia công nghệ (Kg)",
           "dataIndex": "BOF_PhuGia",
-          "editable": false
+          "editable": false,
+          "sum": true
         },
         {
           "dataIndex": "dieuChinh"
@@ -108,14 +117,18 @@
               "dataIndex": "o2",
               "width": 100,
               "format": "number-group",
-              "align": "right"
+              "align": "right",
+              "readonly": true,
+              "sum": true
             },
             {
               "title": "Nitơ",
               "dataIndex": "n2",
               "width": 100,
               "format": "number-group",
-              "align": "right"
+              "align": "right",
+              "readonly": true,
+              "sum": true
             }
           ]
         },
@@ -167,9 +180,9 @@
 
   "signatures": [
     {
-      "label": "Trưởng kíp",
+      "label": "Trưởng/Phó kíp",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_TruongKip",
+      "key": "nguoiKy_Duyet",
       "maphongBan": "NM.HRC2",
       "capduyet": 1,
       "isChon": true,
@@ -178,7 +191,7 @@
     {
       "label": "Người lập",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_Nhan",
+      "key": "nguoiKy_Kip",
       "maphongBan": "NM.HRC2",
       "capduyet": 0,
       "isChon": true,

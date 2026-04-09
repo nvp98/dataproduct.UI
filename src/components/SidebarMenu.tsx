@@ -115,7 +115,16 @@ const SidebarMenu = () => {
         });
     };
 
-    return filterMenuItems(menuConfig as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[]) as React.ComponentProps<typeof Menu>["items"];
+    const filtered = filterMenuItems(menuConfig as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[]);
+
+    // Xóa custom props (maBM, roles) để tránh React warning khi antd spread xuống DOM
+    const stripCustomProps = (items: typeof filtered): typeof filtered =>
+      items?.map(({ maBM: _maBM, roles: _roles, children, ...rest }) => ({
+        ...rest,
+        ...(children ? { children: stripCustomProps(children as typeof filtered) } : {}),
+      }));
+
+    return stripCustomProps(filtered) as React.ComponentProps<typeof Menu>["items"];
   }, [user, menuPermissions, filterByMaBM]);
 
   if (!user) return null;

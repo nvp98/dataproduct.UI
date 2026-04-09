@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PhieuApi } from "../services/PhieuApi";
 import type { SearchPhieuRequest, SearchPhieuResponseModel } from "../models/Phieu";
 import type { PhieuFilterValues } from "../components/PhieuFilterCard";
+import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
 
 interface PagedResponse<T> {
   data?: T[];
@@ -17,7 +18,8 @@ interface PagedResponse<T> {
 }
 
 export interface UsePhieuSearchListOptions {
-  maBm: string;
+  maBm?: string;
+  maBmList?: string[];
   initialPageSize?: number;
   fixedFilters?: Partial<SearchPhieuRequest>;
   autoLoad?: boolean;
@@ -41,11 +43,30 @@ const defaultTransform = (filters: PhieuFilterValues): Partial<SearchPhieuReques
 
 export const usePhieuSearchList = ({
   maBm,
+  maBmList,
   initialPageSize = 10,
   fixedFilters = {},
   autoLoad = true,
   transformFilters = defaultTransform,
 }: UsePhieuSearchListOptions) => {
+  // Kiểm tra user có phải PKH không (tenNgan = "P.KH" hoặc iD_PhongBan = 70)
+  const isPKH = useMemo(() => {
+    const user = getThongTinUser();
+    return user.tenNgan === "P.KH" || user.iD_PhongBan === 70;
+  }, []);
+
+  // PKH: bỏ usercode (xem tất cả phiếu), không giới hạn theo tình trạng
+  const effectiveFixedFilters = useMemo(() => {
+    if (isPKH) {
+      const rest = { ...(fixedFilters as Record<string, unknown>) };
+      delete rest.usercode;
+      delete rest.nguoiTaoId;
+      delete rest.nguoiDuyetId;
+      return rest;
+    }
+    return fixedFilters;
+  }, [isPKH, fixedFilters]);
+
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SearchPhieuResponseModel[]>([]);
   const [pagination, setPagination] = useState({
@@ -59,17 +80,18 @@ export const usePhieuSearchList = ({
     (page: number, pageSize: number, overrides?: Partial<SearchPhieuRequest>): SearchPhieuRequest => ({
       page,
       pageSize,
-      maBm,
+      maBm: maBmList ? undefined : maBm,
+      maBmList: maBmList ?? undefined,
       tuNgay: null,
       denNgay: null,
       ca: null,
       scope: null,
       mayDuc: null,
       searchText: null,
-      ...fixedFilters,
+      ...effectiveFixedFilters,
       ...overrides,
     }),
-    [fixedFilters, maBm]
+    [effectiveFixedFilters, maBm, maBmList]
   );
 
   const fetchData = useCallback(async (request: SearchPhieuRequest) => {
@@ -83,7 +105,16 @@ export const usePhieuSearchList = ({
         ? payload.Data
         : [];
 
-      setData(responseData);
+      const normalizedData = isPKH
+        ? responseData.filter((item: SearchPhieuResponseModel) => {
+            const row = item as unknown as Record<string, unknown>;
+            const isDelete = row.isDelete === true || row.IsDelete === true || row.isDelete === 1 || row.IsDelete === 1;
+            const isLock = row.isLock === true || row.IsLock === true || row.isLock === 1 || row.IsLock === 1;
+            return !(isDelete && isLock);
+          })
+        : responseData;
+
+      setData(normalizedData);
       setCurrentFilter(request);
 
       const totalRecords = payload?.totalRecords ?? payload?.TotalRecords ?? responseData.length;
@@ -98,7 +129,7 @@ export const usePhieuSearchList = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isPKH]);
 
   const handleFilter = useCallback(
     (filters: PhieuFilterValues) => {

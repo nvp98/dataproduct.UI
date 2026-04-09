@@ -68,6 +68,10 @@ import TaoPhieuBienBanSanLuongKCS from "../pages/NMCTD/BienBanSanLuongKCS/TaoPhi
 import ChiTietBienBanSanLuongKCS from "../pages/NMCTD/BienBanSanLuongKCS/ChiTietBienBanSanLuongKCS";
 import QuanLySilo from "../pages/KhoDuLieu/NM.HRC2/Silo";
 import ThongKeHRC2 from "../pages/NM.HRC2/ThongKe/ThongKeHRC2";
+import GiaoNhanThepLong from "../pages/NM.HRC2/GiaoNhanThepLong/GiaoNhanThepLong";
+import TaoPhieuGN from "../pages/NM.HRC2/GiaoNhanThepLong/TaoPhieuGN";
+import ChiTietGN from "../pages/NM.HRC2/GiaoNhanThepLong/ChiTietGN";
+import ThongKePhieuHRC2 from "../pages/NM.HRC2/ThongKe/ThongKePhieuHRC2";
 
 export const routes = [
   {
@@ -875,6 +879,46 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <ThongKeHRC2 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thongkephieuhrc2",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThongKePhieuHRC2 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "giaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanThepLong />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieugiaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuGN />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietgiaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietGN />
             </RequireRole>
           </RequireAuth>
         ),

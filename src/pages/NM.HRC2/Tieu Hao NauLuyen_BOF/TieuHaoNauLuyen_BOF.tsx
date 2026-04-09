@@ -34,6 +34,8 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
     };
     if (type === "viecdentoi") {
       base.nguoiDuyetId = currentUserId;
+    } else {
+      base.nguoiTaoId = currentUserId;
     }
     return base;
   }, [currentUserId, type, userObj?.maNV]);
@@ -222,7 +224,7 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={true}
+        showCreateButton={false}
         onCreateClick={() => {
           navigate("/taophieutieuhaonauluyen_bof");
         }}

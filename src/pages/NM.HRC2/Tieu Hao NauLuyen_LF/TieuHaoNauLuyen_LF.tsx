@@ -14,11 +14,31 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
+  const userInfoStr = localStorage.getItem("userinfo");
+  const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
 
-  const fixedFilters = useMemo(
-    () => ({ usercode: userObj?.maNV || "" }),
-    [userObj?.maNV]
-  );
+  const currentUserId: number | null =
+    userInfoObj?.iD_TaiKhoan ??
+    userInfoObj?.ID_TaiKhoan ??
+    userInfoObj?.idTaiKhoan ??
+    userInfoObj?.IdTaiKhoan ??
+    userObj?.iD_TaiKhoan ??
+    userObj?.ID_TaiKhoan ??
+    userObj?.idTaiKhoan ??
+    userObj?.IdTaiKhoan ??
+    null;
+
+  const fixedFilters = useMemo(() => {
+    const base: Record<string, string | number | null | undefined> = {
+      usercode: userObj?.maNV || "",
+    };
+    if (type === "viecdentoi") {
+      base.nguoiDuyetId = currentUserId;
+    } else {
+      base.nguoiTaoId = currentUserId;
+    }
+    return base;
+  }, [currentUserId, type, userObj?.maNV]);
 
   const {
     data,
@@ -202,7 +222,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={true}
+        showCreateButton={false}
         onCreateClick={() => {
           navigate("/taophieutieuhaonauluyen_lf");
         }}
