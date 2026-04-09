@@ -1,4 +1,4 @@
-import HRC2_BB_GN_ThepLong from "../../../utils/BM_config/HRC2_BB_GN_ThepLong.json";
+import BBGN_ThepLong from "../../../utils/BM_config/BBGN_ThepLong.json";
 import { Button, Card, Space, Table, Tag } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -10,7 +10,7 @@ import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 
 const GiaoNhanThepLong = ({ type }: { type?: string }) => {
-  const config = HRC2_BB_GN_ThepLong;
+  const config = BBGN_ThepLong;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, Descriptions, Table, Typography, message } from "antd";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
-import HRC2_BB_GN_ThepLong from "../../../utils/BM_config/HRC2_BB_GN_ThepLong.json";
+import BBGN_ThepLong from "../../../utils/BM_config/BBGN_ThepLong.json";
 import { phieuActionService } from "../../../services/PhieuActionService";
 
 const { Title } = Typography;
@@ -14,7 +14,7 @@ const ChiTietGN = () => {
     "phieu_gn_theplong_id",
     "/giaonhantheplong"
   );
-  const config = HRC2_BB_GN_ThepLong;
+  const config = BBGN_ThepLong;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);

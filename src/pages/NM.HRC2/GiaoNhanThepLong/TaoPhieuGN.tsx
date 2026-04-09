@@ -1,22 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Card, Form, Input, Typography, message } from "antd";
+import { Button, Card, Form, Input, Typography, message } from "antd";
 import CustomFormItem from "../../../components/CustomFormItem";
 import CustomFormTable from "../../../components/CustomFormTable";
 import type { HRCTableRow } from "../../../components/CustomTableHRC";
-import HRC2_BB_GN_ThepLong from "../../../utils/BM_config/HRC2_BB_GN_ThepLong.json";
+import BBGN_ThepLong from "../../../utils/BM_config/BBGN_ThepLong.json";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
+import { FilterOutlined } from "@ant-design/icons";
+import { bbgbThepLongApi } from "../../../services/BBGNThepLongApi";
 
 const TaoPhieuGN = () => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } = usePhieuNavigation(
     "phieu_gn_theplong_id",
     "/giaonhantheplong"
   );
-  const config = HRC2_BB_GN_ThepLong;
+  const config = BBGN_ThepLong;
   const [form] = Form.useForm();
 
   const hasExistingPhieu = Boolean(idphieu);
@@ -108,6 +110,7 @@ const TaoPhieuGN = () => {
         NgaySX: values?.NgaySX ? dayjs(values.NgaySX).format("YYYY-MM-DD") : null,
         maBm: config.code,
         prefix: config.prefix,
+        scope: 2,
         xuongId: userInfo.iD_PhanXuong ?? null,
         idphongBan: userInfo.iD_PhongBan ?? null,
         table1: tableData,
@@ -127,6 +130,35 @@ const TaoPhieuGN = () => {
     },
     [idphieu, loadDetail, navigateToDetail]
   );
+
+  const handleFetch = useCallback(async () => {
+    const ngaySX = form.getFieldValue("NgaySX")?.format("YYYY-MM-DD");
+    const ca = form.getFieldValue("ca");
+    if (!ngaySX || !ca) {
+      message.warning("Vui lòng chọn Ngày và Ca trước khi làm mới dữ liệu");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await bbgbThepLongApi.load({
+        IdPhieu: idphieu || null,
+        NgaySX: ngaySX,
+        Ca: ca,
+        NhaMay: 2,
+      });
+      const data = (res as any)?.data ?? res;
+      if (Array.isArray(data)) {
+        setTableData(data);
+        message.success("Lấy dữ liệu thành công");
+      } else {
+        message.error("Lấy dữ liệu thất bại");
+      }
+    } catch {
+      message.error("Lấy dữ liệu thất bại");
+    } finally {
+      setLoading(false);
+    }
+  }, [form, idphieu]);
 
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
@@ -178,7 +210,17 @@ const TaoPhieuGN = () => {
             <CustomFormItem key={f.key || idx} field={f} idx={idx} disabled={hasExistingPhieu || isFormLocked} />
           ))}
         </div>
-
+        <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8 }}>
+          <Button
+            type="primary"
+            icon={<FilterOutlined />}
+            onClick={handleFetch}
+            disabled={isFormLocked }
+            loading={loading}
+          >
+            Làm mới dữ liệu
+          </Button>
+        </div>
         <div style={{ marginTop: 16 }}>
           <CustomFormTable
             columns={(config.layout?.[0]?.columns || []) as any}

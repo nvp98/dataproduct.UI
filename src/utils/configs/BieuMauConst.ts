@@ -3,7 +3,7 @@ export const BM_CONFIG = {
         HRC2_BB_NauLuyen_BOF: 'HRC2_BB_NauLuyen_BOF',
         HRC2_BB_NauLuyen_LF: 'HRC2_BB_NauLuyen_LF',
         HRC2_BB_NauLuyen_RH: 'HRC2_BB_NauLuyen_RH',
-        HRC2_BB_GN_ThepLong: 'HRC2_BB_GN_ThepLong',
+        BBGN_ThepLong: 'BBGN_ThepLong',
         HRC2_BBGN_PhoiTam: 'HRC2_BBGN_PhoiTam',
         HRC2_STD_NXT: 'HRC2_STD_NXT',
         THONGKE_HRC2: 'THONGKE_HRC2',
