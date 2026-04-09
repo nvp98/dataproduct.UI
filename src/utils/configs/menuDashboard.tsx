@@ -88,6 +88,11 @@ export const MenuDataDashboard = [
         maBm: BM_CONFIG.CTD.CTD_BB_Phoinong,
       },
       {
+        code: "viecdentoi/bienbangiaoNhanphoi",
+        title: "BM.05/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI",
+        maBm: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
+      },
+      {
         code: "bienbanphoinapnguoi",
         title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI (NHẬN PHÔI)",
         maBm: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,

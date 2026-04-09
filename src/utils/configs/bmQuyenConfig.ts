@@ -40,6 +40,11 @@ export const bmQuyenConfig = {
       nhom: "NM.CTD",
     },
     {
+      maBm: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
+      tenBm: "Biên bản giao nhận phôi",
+      nhom: "NM.CTD",
+    },
+    {
       maBm: BM_CONFIG.HRC2.HRC2_STD_NXT,
       tenBm: "STD - Nhập xuất tồn",
       nhom: "NM.HRC2",

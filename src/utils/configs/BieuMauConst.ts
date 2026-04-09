@@ -10,6 +10,7 @@ export const BM_CONFIG = {
     CTD: {
         CTD_BB_Phoinong: 'CTD_BB_Phoinong',
         CTD_BB_Phoinguoi: 'CTD_BB_Phoinguoi',
+        CTD_BB_GiaoNhanPhoi: 'CTD_BB_GNP',
         CTD_BB_GiaoNhanPhoiNhapKho: 'CTD_BB_GiaoNhanPhoiNhapKho',
         CTD_BB_Sanluongphoi: 'CTD_BB_Sanluongphoi',
         CTD_BB_PhoiNapnguoi: 'CTD_BB_Phoinapnguoi',

@@ -222,6 +222,17 @@ export const menuConfig = [
           },
           {
             key: "sub2-4-3",
+            maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
+            label: (
+              <Tooltip title="BM.05/QT.05.13 (Biên bản giao nhận phôi)">
+                <NavLink to="/bienbangiaoNhanphoi">
+                  BM.05/QT.05.13 (Biên bản giao nhận phôi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-4-4",
             maBM: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
             label: (
               <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
@@ -232,7 +243,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub2-4-4",
+            key: "sub2-4-5",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
               <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
@@ -427,11 +438,11 @@ export const menuConfig = [
           },
           {
             key: "3-4-2",
-            maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
+            maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
             label: (
-              <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
-                <NavLink to="/viecdentoi/bienbanphoinong">
-                  BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)
+              <Tooltip title="BM.05/QT.05.13 (Biên bản giao nhận phôi)">
+                <NavLink to="/viecdentoi/bienbangiaoNhanphoi">
+                  BM.05/QT.05.13 (Biên bản giao nhận phôi)
                 </NavLink>
               </Tooltip>
             ),
@@ -499,11 +510,11 @@ export const menuConfig = [
           },
           {
             key: "5-1-2",
-            maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
+            maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
             label: (
-              <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
-                <NavLink to="/viecdentoi/bienbanphoinong">
-                  BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)
+              <Tooltip title="BM.05/QT.05.13 (Biên bản giao nhận phôi)">
+                <NavLink to="/viecdentoi/bienbangiaoNhanphoi">
+                  BM.05/QT.05.13 (Biên bản giao nhận phôi)
                 </NavLink>
               </Tooltip>
             ),
