@@ -222,7 +222,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={true}
+        showCreateButton={false}
         onCreateClick={() => {
           navigate("/taophieutieuhaonauluyen_lf");
         }}
