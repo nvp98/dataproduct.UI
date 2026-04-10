@@ -13,6 +13,7 @@ import {
   Button,
   Tabs,
   Space,
+  Checkbox,
 } from "antd";
 import dayjs from "dayjs";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
@@ -202,6 +203,7 @@ const ThongKeHRC2 = () => {
         const currentPageSize = pageSize ?? pagination.pageSize;
         const toDate = dateRange?.[1] ?? null;
 
+        const isTrungMeThoi = values.isTrungMeThoi === true || values.IsTrungMeThoi === true ? true : undefined;
         const basePayload = {
           TuNgay: fromDate ? fromDate.format("YYYY-MM-DD") : null,
           DenNgay: toDate ? toDate.format("YYYY-MM-DD") : null,
@@ -209,6 +211,7 @@ const ThongKeHRC2 = () => {
           LoaiBM: currentLoaiBm,
           Scope: scope ?? undefined,
           SearchText: meThoiFilter ?? undefined,
+          IsTrungMeThoi: isTrungMeThoi,
         };
 
         // Nếu có đủ TuNgay + DenNgay → BE tính sum toàn range, fire độc lập
@@ -571,7 +574,7 @@ const ThongKeHRC2 = () => {
               allowClear
               options={CA_OPTIONS}
               placeholder="-- Ca --"
-              style={{ minWidth: 120 }}
+              style={{ minWidth: 80 }}
             />
           </Form.Item>
 
@@ -580,7 +583,7 @@ const ThongKeHRC2 = () => {
               allowClear
               options={SCOPE_OPTIONS_BY_BM[loaiBmKey]}
               placeholder={loaiBmKey === "LF" ? "Lò 6 (mặc định)" : "-- Lò --"}
-              style={{ minWidth: 150 }}
+              style={{ minWidth: 100 }}
             />
           </Form.Item>
 
@@ -593,12 +596,15 @@ const ThongKeHRC2 = () => {
                 { value: "B", label: "Kíp B" },
                 { value: "C", label: "Kíp C" },
               ]}
-              style={{ minWidth: 140 }}
+              style={{ minWidth: 100 }}
             />
           </Form.Item>
 
           <Form.Item name="meThoi" label="Mã mẻ/ mác thép">
-            <Input placeholder="Nhập mã mẻ/ mác thép" style={{ minWidth: 160 }} />
+            <Input placeholder="Nhập mã mẻ/ mác thép" style={{ minWidth: 100 }} />
+          </Form.Item>
+          <Form.Item name="isTrungMeThoi" valuePropName="checked" label="Mẻ trùng">
+            <Checkbox />
           </Form.Item>
 
           <Form.Item>

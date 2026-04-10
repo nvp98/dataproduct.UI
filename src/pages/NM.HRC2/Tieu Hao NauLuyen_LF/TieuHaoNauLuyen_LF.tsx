@@ -101,7 +101,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       width: 220,
       ellipsis: true,
       render: (value: number) => {
-        return value === 6 ? "Lò thổi 6" : "Lò thổi 7";
+        return value === 6 ? "Tinh luyện 6" : "Tinh luyện 7";
       },
     },
     {
@@ -222,7 +222,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={false}
+        showCreateButton={true}
         onCreateClick={() => {
           navigate("/taophieutieuhaonauluyen_lf");
         }}

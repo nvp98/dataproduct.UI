@@ -490,6 +490,14 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       nguoiTaoId: data.nguoiTaoId ?? null,
       phieuPhongBanId: data.idphongBan ?? null,
       pheDuyet: data.pheDuyet ?? [],
+      preConfirmCheck: async () => {
+        const isChot = await hrc2TableService.checkChotPhieuTieuHao(formData?.NgaySX, formData?.ca);
+        if (isChot) {
+          return true;
+        }
+        message.error("Sổ theo dõi nhập xuất tồn chưa được chốt.");
+        return false;
+      },
       redirectToList,
       onSuccess: handleActionSuccess,
       onError: (error) => {

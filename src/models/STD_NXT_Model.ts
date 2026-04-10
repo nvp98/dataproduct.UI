@@ -46,6 +46,9 @@ export interface STD_NXT_Table2Row {
   NgaySX?: string;
   /** Ca (1/2) — dùng cho payload phân bổ/thu hồi */
   Ca?: number;
+  /** Khối lượng phân bổ theo 1 mẻ (từ BE) */
+  KLPB_BOF?: string | number | null;
+  KLPB_TL?: string | number | null;
 }
 
 /**
@@ -104,6 +107,8 @@ export interface NXTSummaryDto {
   TongSDTrenSoSach: number; // Tổng sử dụng trên sổ sách
   ChenhLech: number; // Chênh lệch
   HasPhanBo?: boolean | null; // Đã phân bổ hay chưa (từ BE)
+  KLPB_BOF?: number | null;
+  KLPB_TL?: number | null;
 }
 
 /**

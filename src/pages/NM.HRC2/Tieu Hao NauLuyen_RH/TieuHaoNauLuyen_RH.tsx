@@ -112,7 +112,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       width: 220,
       ellipsis: true,
       render: (value: number) => {
-        return value === 1 ? "Lò thổi 1" : "Lò thổi 2";
+        return value === 1 ? "RH 1" : "RH 2";
       },
     },
     {
@@ -202,8 +202,8 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       type: "select",
       placeholder: "Chọn lò",
       options: [
-        { label: "Lò thổi 1", value: 1 },
-        { label: "Lò thổi 2", value: 2 },
+        { label: "RH 1", value: 1 },
+        { label: "RH 2", value: 2 },
       ],
     },
     // {

@@ -53,7 +53,7 @@
         { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false, "readonly": true},
         {
           "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
-          "dataIndex": "klThepLong", "width": 100, "readonly": true
+          "dataIndex": "klThepLong", "width": 100
         },
         {
           "title": "Chất hợp kim hóa", "dataIndex": "KL", "editable": false
