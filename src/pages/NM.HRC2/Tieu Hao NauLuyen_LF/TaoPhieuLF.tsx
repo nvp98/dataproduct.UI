@@ -216,6 +216,8 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
               placeholder="Chọn header key..."
               style={{ minWidth: 120 }}
               allowClear={false}
+              allowCreateFromSearch
+              loaiPhieu={config.code}
             />
             <Button
               type="text"
@@ -233,7 +235,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
         metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
       headerKeyId: meta.headerKeyId ?? null,
     }));
-  }, [adjustColumnMetas, handleColumnHeaderChange, handleRemoveAdjustColumn]);
+  }, [adjustColumnMetas, config.code, handleColumnHeaderChange, handleRemoveAdjustColumn]);
 
   const restoreDynamicColumns = useCallback(
     (map?: Record<string, DynamicColumnMeta[]>) => {
@@ -680,6 +682,14 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
       pheDuyet: phieuInfo.pheDuyet ?? [],
+      preConfirmCheck: async () => {
+        const isChot = await hrc2TableService.checkChotPhieuTieuHao(dayjs(ngaySX).format("YYYY-MM-DD"), ca);
+        if (isChot) {
+          return true;
+        }
+        message.error("Sổ theo dõi nhập xuất tồn chưa được chốt.");
+        return false;
+      },
       redirectToList,
       onSuccess: handleActionSuccess,
       onError: (error) => {

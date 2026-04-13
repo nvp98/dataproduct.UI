@@ -30,7 +30,7 @@ const SidebarMenu = () => {
       return;
     }
     BmQuyenXlApi.getMenuPermissions(idTaiKhoan)
-      .then((res) => setMenuPermissions(res ?? { processingForms: [], approvingForms: [] }))
+      .then((res) => setMenuPermissions(res ?? { processingForms: [], approvingForms: [] ,viewingForms: [] }))
       .catch(() => setMenuPermissions(null));
   }, [user]);
 
@@ -79,7 +79,14 @@ const SidebarMenu = () => {
     const approvingSet = showAllByMaBM
       ? new Set<string>(["*"])
       : new Set(menuPermissions?.approvingForms ?? []);
-
+    const viewingSet = showAllByMaBM
+      ? new Set<string>(["*"])
+      : new Set(menuPermissions?.viewingForms ?? []);
+    // Quyền "Xem" chỉ áp dụng cho nhóm "Việc đến tôi" (sub3)
+    const approvingAndViewingSet = new Set<string>([
+      ...Array.from(approvingSet),
+      ...Array.from(viewingSet),
+    ]);
     const filterMenuItems = (
       items: { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[]
     ): typeof items => {
@@ -98,8 +105,8 @@ const SidebarMenu = () => {
               isSub2 || isSub3
                 ? filterByMaBM(
                     item.children as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[],
-                    isSub2 ? processingSet : approvingSet,
-                    isSub2 ? processingSet.has("*") : approvingSet.has("*")
+                    isSub2 ? processingSet : approvingAndViewingSet,
+                    isSub2 ? processingSet.has("*") : approvingAndViewingSet.has("*")
                   )
                 : filterMenuItems(
                     item.children as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[]
@@ -119,10 +126,16 @@ const SidebarMenu = () => {
 
     // Xóa custom props (maBM, roles) để tránh React warning khi antd spread xuống DOM
     const stripCustomProps = (items: typeof filtered): typeof filtered =>
-      items?.map(({ maBM: _maBM, roles: _roles, children, ...rest }) => ({
-        ...rest,
-        ...(children ? { children: stripCustomProps(children as typeof filtered) } : {}),
-      }));
+      items?.map((item) => {
+        const { children, ...rest } = item as Record<string, unknown>;
+        const clean = { ...rest } as Record<string, unknown>;
+        delete clean.maBM;
+        delete clean.roles;
+        return {
+          ...clean,
+          ...(children ? { children: stripCustomProps(children as typeof filtered) } : {}),
+        };
+      });
 
     return stripCustomProps(filtered) as React.ComponentProps<typeof Menu>["items"];
   }, [user, menuPermissions, filterByMaBM]);

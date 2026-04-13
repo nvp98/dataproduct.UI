@@ -34,5 +34,13 @@ export const dlnmHRC2Api = {
       responseType: "blob",
       headers: { Accept: "application/pdf" },
     }),
-};
+  exportExcelTieuHaoTheoCa: (params?: Record<string, unknown>) =>
+    apiService.get("/api/DLNMHRC2/export-excel-tieuhao", {
+      params,
+      responseType: "blob",
+      headers: {
+        Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    }),
+  };
 

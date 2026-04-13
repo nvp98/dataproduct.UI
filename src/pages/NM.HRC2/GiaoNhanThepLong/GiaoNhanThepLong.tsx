@@ -6,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
 import { useMemo } from "react";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
-import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 
 const GiaoNhanThepLong = ({ type }: { type?: string }) => {
   const config = HRC2_BB_GN_ThepLong;
@@ -28,17 +28,26 @@ const GiaoNhanThepLong = ({ type }: { type?: string }) => {
     userObj?.IdTaiKhoan ??
     null;
 
+  // [API cũ] phân biệt "việc tôi tạo" vs "việc đến tôi" bằng 2 param riêng
+  // const fixedFilters = useMemo(() => {
+  //   const base: Record<string, string | number | null | undefined> = {
+  //     usercode: userObj?.maNV || "",
+  //   };
+  //   if (type === "viecdentoi") {
+  //     base.nguoiDuyetId = currentUserId;
+  //   } else {
+  //     base.nguoiTaoId = currentUserId;
+  //   }
+  //   return base;
+  // }, [currentUserId, type, userObj?.maNV]);
+
+  // [API mới] dùng userId + loaiVung — backend tách vùng 1 / vùng 2
   const fixedFilters = useMemo(() => {
-    const base: Record<string, string | number | null | undefined> = {
-      usercode: userObj?.maNV || "",
+    return {
+      userId: currentUserId,
+      loaiVung: type === "viecdentoi" ? 2 : 1,
     };
-    if (type === "viecdentoi") {
-      base.nguoiDuyetId = currentUserId;
-    } else {
-      base.nguoiTaoId = currentUserId;
-    }
-    return base;
-  }, [currentUserId, type, userObj?.maNV]);
+  }, [currentUserId, type]);
 
   const {
     data,
@@ -47,7 +56,7 @@ const GiaoNhanThepLong = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
-  } = usePhieuSearchList({
+  } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
   });

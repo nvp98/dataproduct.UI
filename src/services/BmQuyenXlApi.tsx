@@ -14,6 +14,7 @@ export interface BmQuyenXlModel {
 export interface MenuPermissionsResponse {
   processingForms: string[];
   approvingForms: string[];
+  viewingForms: string[];
 }
 
 export const BmQuyenXlApi = {
@@ -33,6 +34,7 @@ export const BmQuyenXlApi = {
     return {
       processingForms: data?.processingForms ?? data?.ProcessingForms ?? [],
       approvingForms: data?.approvingForms ?? data?.ApprovingForms ?? [],
+      viewingForms: data?.viewingForms ?? data?.ViewingForms ?? [],
     };
   },
 

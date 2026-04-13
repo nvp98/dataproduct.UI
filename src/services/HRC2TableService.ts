@@ -5,6 +5,7 @@ import type {
   HRCTableRow,
 } from "../components/CustomTableHRC";
 import type { HeaderMappingRecord } from "../components/HeaderMapping";
+import { PhieuApi } from "./PhieuApi";
 
 export type DynamicColumnMeta = {
   dataIndex: string;
@@ -491,6 +492,11 @@ export const hrc2TableService = {
     }
 
     return processedColumns;
+  },
+
+  checkChotPhieuTieuHao: async (ngaySX: string, ca: number): Promise<boolean> => {
+    const res = await PhieuApi.checkChotPhieuTieuHao(ngaySX, ca);
+    return res.data === 2 ? true : false;
   },
 };
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PhieuApi } from "../services/PhieuApi";
-import type { SearchPhieuRequest, SearchPhieuResponseModel } from "../models/Phieu";
+import type { SearchPhieuByUserRequest, SearchPhieuResponseModel } from "../models/Phieu";
 import type { PhieuFilterValues } from "../components/PhieuFilterCard";
 import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
 
@@ -21,9 +21,9 @@ export interface UsePhieuSearchListOptions {
   maBm?: string;
   maBmList?: string[];
   initialPageSize?: number;
-  fixedFilters?: Partial<SearchPhieuRequest>;
+  fixedFilters?: Partial<SearchPhieuByUserRequest>;
   autoLoad?: boolean;
-  transformFilters?: (filters: PhieuFilterValues) => Partial<SearchPhieuRequest>;
+  transformFilters?: (filters: PhieuFilterValues) => Partial<SearchPhieuByUserRequest>;
 }
 
 const normalizeNumber = (value: string | number | undefined): number | null => {
@@ -32,7 +32,7 @@ const normalizeNumber = (value: string | number | undefined): number | null => {
   return Number.isNaN(num) ? null : num;
 };
 
-const defaultTransform = (filters: PhieuFilterValues): Partial<SearchPhieuRequest> => ({
+const defaultTransform = (filters: PhieuFilterValues): Partial<SearchPhieuByUserRequest> => ({
   tuNgay: (filters.ngaySXFrom || filters.fromDate || null) as string | null,
   denNgay: (filters.ngaySXTo || filters.toDate || null) as string | null,
   ca: normalizeNumber(filters.ca),
@@ -41,7 +41,7 @@ const defaultTransform = (filters: PhieuFilterValues): Partial<SearchPhieuReques
   searchText: (filters.soPhieu || filters.searchText || null) as string | null,
 });
 
-export const usePhieuSearchList = ({
+export const usePhieuSearchListHRC = ({
   maBm,
   maBmList,
   initialPageSize = 10,
@@ -55,13 +55,17 @@ export const usePhieuSearchList = ({
     return user.tenNgan === "P.KH" || user.iD_PhongBan === 70;
   }, []);
 
-  // PKH: bỏ usercode (xem tất cả phiếu), không giới hạn theo tình trạng
+  // PKH: bỏ userId để backend trả hết (không lọc quyền), xem tất cả phiếu
+  // [API cũ] delete rest.nguoiTaoId / rest.nguoiDuyetId
+  // [API mới] delete rest.userId - backend không lọc khi không có userId
   const effectiveFixedFilters = useMemo(() => {
     if (isPKH) {
       const rest = { ...(fixedFilters as Record<string, unknown>) };
-      delete rest.usercode;
-      delete rest.nguoiTaoId;
-      delete rest.nguoiDuyetId;
+      // [API cũ - đã thay bằng userId]
+      // delete rest.usercode;
+      // delete rest.nguoiTaoId;
+      // delete rest.nguoiDuyetId;
+      delete rest.userId; // [API mới] PKH không truyền userId → backend trả hết
       return rest;
     }
     return fixedFilters;
@@ -74,27 +78,38 @@ export const usePhieuSearchList = ({
     pageSize: initialPageSize,
     total: 0,
   });
-  const [currentFilter, setCurrentFilter] = useState<SearchPhieuRequest | null>(null);
+  const [currentFilter, setCurrentFilter] = useState<SearchPhieuByUserRequest | null>(null);
 
   const buildRequest = useCallback(
-    (page: number, pageSize: number, overrides?: Partial<SearchPhieuRequest>): SearchPhieuRequest => ({
-      page,
-      pageSize,
-      maBm: maBmList ? undefined : maBm,
-      maBmList: maBmList ?? undefined,
-      tuNgay: null,
-      denNgay: null,
-      ca: null,
-      scope: null,
-      mayDuc: null,
-      searchText: null,
-      ...effectiveFixedFilters,
-      ...overrides,
-    }),
+    (page: number, pageSize: number, overrides?: Partial<SearchPhieuByUserRequest>): SearchPhieuByUserRequest => {
+      const merged = { ...effectiveFixedFilters, ...overrides } as Record<string, unknown>;
+      const rawLv = merged.loaiVung;
+      const loaiVung =
+        rawLv === null || rawLv === undefined || rawLv === ""
+          ? 1
+          : Number.isFinite(Number(rawLv))
+            ? Number(rawLv)
+            : 1;
+      return {
+        page,
+        pageSize,
+        maBm: maBmList ? undefined : maBm,
+        maBmList: maBmList ?? undefined,
+        tuNgay: null,
+        denNgay: null,
+        ca: null,
+        scope: null,
+        mayDuc: null,
+        searchText: null,
+        ...effectiveFixedFilters,
+        ...overrides,
+        loaiVung,
+      };
+    },
     [effectiveFixedFilters, maBm, maBmList]
   );
 
-  const fetchData = useCallback(async (request: SearchPhieuRequest) => {
+  const fetchData = useCallback(async (request: SearchPhieuByUserRequest) => {
     setLoading(true);
     try {
       const res = await PhieuApi.searchByUser(request);
