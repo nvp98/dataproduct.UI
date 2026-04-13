@@ -23,6 +23,7 @@ import { formatNumberGroup } from "../../../utils/formatters/numberFormat";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_BB_NauLuyen_RH from "../../../utils/BM_config/HRC2_BB_NauLuyen_RH.json";
+import { getBmQuyenUiFlags } from "../../../utils/helpers/checkAdminRole";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { hrc2PhuLieuService } from "../../../services/HRC2PhuLieuService";
 import HRC2ExportBienBanButtons from "../../../components/HRC2ExportBienBanButtons";
@@ -479,6 +480,7 @@ const ChiTietTieuHaoNauLuyen_RH = () => {
   const actionButtons = useMemo(() => {
     if (!data || !idphieu) return null;
     const userInfo = getUserInfo();
+    if (getBmQuyenUiFlags(config.code, userInfo).isView) return null;
     const buttons = phieuActionService.getActionButtons({
       phieuId: idphieu,
       tinhTrang: data.tinhTrang ?? 0,
@@ -506,7 +508,7 @@ const ChiTietTieuHaoNauLuyen_RH = () => {
     });
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "");
-  }, [data, idphieu, getUserInfo, handleActionSuccess, redirectToList]);
+  }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
 
   return (
     <Card bordered style={{ padding: 24, background: "#fff" }} loading={loading}>

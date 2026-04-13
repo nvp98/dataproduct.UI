@@ -216,6 +216,8 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
               placeholder="Chọn header key..."
               style={{ minWidth: 120 }}
               allowClear={false}
+              allowCreateFromSearch
+              loaiPhieu={config.code}
             />
             <Button
               type="text"
@@ -233,7 +235,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
         metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
       headerKeyId: meta.headerKeyId ?? null,
     }));
-  }, [adjustColumnMetas, handleColumnHeaderChange, handleRemoveAdjustColumn]);
+  }, [adjustColumnMetas, config.code, handleColumnHeaderChange, handleRemoveAdjustColumn]);
 
   const restoreDynamicColumns = useCallback(
     (map?: Record<string, DynamicColumnMeta[]>) => {

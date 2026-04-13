@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Get-Content 'E:\\\\_Projects\\\\BIEUMAU_SANXUAT\\\\Source\\\\dataproduct.UI\\\\promt.md' -Raw\")"
+    ]
+  }
+}

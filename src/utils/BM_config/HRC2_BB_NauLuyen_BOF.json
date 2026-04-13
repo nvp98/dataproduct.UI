@@ -62,6 +62,13 @@
       "lyDo": { "label": "Lý do điều chỉnh" },
       "columns": [
         {
+          "title": "STT",
+          "dataIndex": "stt",
+          "width": 60,
+          "editable": false,
+          "readonly": true
+        },
+        {
           "title": "Mẻ nấu số",
           "dataIndex": "meThoi",
           "width": 115,

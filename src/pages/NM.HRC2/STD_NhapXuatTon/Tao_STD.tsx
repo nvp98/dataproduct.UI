@@ -22,6 +22,7 @@ import type {
 import { STD_NXT_HRC2ServiceApi } from "../../../services/STD_NXT_HRC2ServiceApi";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { FileExcelOutlined } from "@ant-design/icons";
 
 const Tao_STD = () => {
   const { idphieu, navigateToDetail, safeGetDetail } =
@@ -892,7 +893,56 @@ const Tao_STD = () => {
     }
   }, [form, config.layout1, setTable1Data, table1Data, idphieu, loadRelatedPhieuStatuses]);
 
+  const handleExportExcelTieuHaoTheoCa = useCallback(async () => {
+    try {
+      const ngay = watchedNgaySX.format("YYYY-MM-DD");
+      // apiService trả thẳng response.data — với responseType: "blob" đây là Blob, không có .data
+      const raw = await dlnmHRC2Api.exportExcelTieuHaoTheoCa({ ngay, ca: watchedCa });
+      if (raw == null) {
+        message.error("Không nhận được dữ liệu Excel từ server.");
+        return;
+      }
+      const blob =
+        raw instanceof Blob
+          ? raw
+          : new Blob([raw as unknown as BlobPart], {
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+      if (blob.size === 0) {
+        message.error("File Excel tải về rỗng.");
+        return;
+      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dateStr = watchedNgaySX.format("DDMMYYYY");
+      a.download = `TieuHao_HRC2_Ca${watchedCa}_${dateStr}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      message.success("Đã tải file Excel");
+    } catch (error: unknown) {
+      console.error("Xuất Excel thất bại:", error);
+      const msg =
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string"
+          ? (error as { message: string }).message
+          : "Xuất Excel thất bại";
+      message.error(msg);
+    }
+  }, [watchedNgaySX, watchedCa]);
   return (
+
+    <>
+    <Button type="primary" icon={<FileExcelOutlined />}
+        style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
+        onClick={handleExportExcelTieuHaoTheoCa}
+        loading={loading}
+      >
+      Xuất Excel
+    </Button>
+    
     <Card className="mt-6 shadow-md">
       {/* Tiêu đề biên bản */}
       <div className="mb-6 flex items-start justify-between">
@@ -1117,6 +1167,7 @@ const Tao_STD = () => {
         </div>
       </Form>
     </Card>
+    </>
   );
 };
 

@@ -23,6 +23,7 @@ import {
   type ThongKeHeaderColumn,
   type ThongKeLoaiBMKey,
 } from "../../../utils/configs/thongKeHRC2HeaderConfig";
+import { FileExcelOutlined } from "@ant-design/icons";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -617,7 +618,8 @@ const ThongKeHRC2 = () => {
                 Tìm
               </Button>
               <Button onClick={handleReset}>Reset</Button>
-              <Button onClick={() => void handleExcel()}>
+              <Button icon={<FileExcelOutlined />}
+                    style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }} onClick={() => void handleExcel()}>
                 Excel
               </Button>
             </Space>

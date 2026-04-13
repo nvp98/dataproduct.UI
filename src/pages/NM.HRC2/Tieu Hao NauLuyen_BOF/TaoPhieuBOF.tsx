@@ -231,6 +231,8 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
               placeholder="Chọn header key..."
               style={{ minWidth: 120 }}
               allowClear={false}
+              allowCreateFromSearch
+              loaiPhieu={config.code}
             />
             <Button
               type="text"
@@ -248,7 +250,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
         metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
         headerKeyId: meta.headerKeyId ?? null,
       }));
-  }, [adjustColumnMetas, handleColumnHeaderChange, handleRemoveAdjustColumn]);
+  }, [adjustColumnMetas, config.code, handleColumnHeaderChange, handleRemoveAdjustColumn]);
 
   const fetchPhuLieus = useCallback(async (params: { NgaySX?: string | null; Ca?: number | null; Scope?: number | null }) => {
     try {

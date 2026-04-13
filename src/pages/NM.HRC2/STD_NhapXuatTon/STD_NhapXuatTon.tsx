@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
 import { useMemo } from "react";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
-import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
+import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 /** Trạng thái phân bổ STD (BE chỉ trả 1 | 2) */
 const STD_PHAN_BO_STATUS: Record<string, { text: string; color: string }> = {
   "1": { text: "Chưa hoàn thành phân bổ", color: "pink" },
@@ -18,10 +18,26 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
+  const userInfoStr = localStorage.getItem("userinfo");
+  const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
+
+  const currentUserId: number | null =
+    userInfoObj?.iD_TaiKhoan ??
+    userInfoObj?.ID_TaiKhoan ??
+    userInfoObj?.idTaiKhoan ??
+    userInfoObj?.IdTaiKhoan ??
+    userObj?.iD_TaiKhoan ??
+    userObj?.ID_TaiKhoan ??
+    userObj?.idTaiKhoan ??
+    userObj?.IdTaiKhoan ??
+    null;
 
   const fixedFilters = useMemo(
-    () => ({ usercode: userObj?.maNV || "" }),
-    [userObj?.maNV]
+    () => ({
+      userId: currentUserId,
+      loaiVung: type === "viecdentoi" ? 2 : 1,
+    }),
+    [currentUserId, type]
   );
 
   const {
@@ -31,7 +47,7 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
-  } = usePhieuSearchList({
+  } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
   });

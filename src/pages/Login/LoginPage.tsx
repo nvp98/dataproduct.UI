@@ -45,12 +45,14 @@ const LoginPage = () => {
         username: (res as any).tenTaiKhoan || "",
         name: (res as any).hoVaTen || "",
         role: (res as any).role || "admin",
+        bmQuyenXlList: (res as any).bmQuyenXlList || [],
       };
       dispatch(loginSuccess({ token: "token", user }));
       localStorage.setItem("token", (res as any)?.token || "token");
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("username", user.name);
       localStorage.setItem("userinfo", JSON.stringify(res));
+      localStorage.setItem("bmQuyenXlList", JSON.stringify(user.bmQuyenXlList));
 
       dispatch(
         showNotification({

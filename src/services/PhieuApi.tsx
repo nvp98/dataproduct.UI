@@ -1,4 +1,4 @@
-import type { SearchPhieuRequest } from "../models/Phieu";
+import type { SearchPhieuByUserRequest, SearchPhieuRequest } from "../models/Phieu";
 import apiService from "./ApiService";
 
 export const PhieuApi = {
@@ -27,8 +27,13 @@ export const PhieuApi = {
     payload: { status: number; isLock: number; isDelete: number },
   ) => apiService.put(`/api/Phieus/${id}/status-extended`, payload),
 
+  // [API cũ] Tìm kiếm phiếu với nguoiTaoId / nguoiDuyetId riêng biệt
   search: (payload: SearchPhieuRequest) =>
     apiService.post("/api/Phieus/search", payload),
+
+  // [API mới] Tìm kiếm phiếu theo quyền user - backend tự tra BM_QuyenXL để lọc
+  searchByUser: (payload: SearchPhieuByUserRequest) =>
+    apiService.post("/api/Phieus/search-by-user", payload),
   syncNguoiTaoPhieu: (id: string, data: Record<string, unknown>) =>
     apiService.put(`/api/Phieus/${id}/sync-nguoi-tao`, data),
   exportDynamicPDF: (id: string, data: Record<string, unknown>) =>
