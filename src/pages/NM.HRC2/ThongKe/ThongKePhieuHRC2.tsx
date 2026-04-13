@@ -1,10 +1,8 @@
-import { Button, Card, Checkbox, message, Modal, Space, Table, Tag, Tooltip } from "antd";
-import { EyeOutlined } from "@ant-design/icons";
+import { Button, Card, Checkbox, message, Modal, Table, Tag } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
-import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
@@ -12,6 +10,9 @@ import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import type { PhieuFilterValues } from "../../../components/PhieuFilterCard";
 import type { SearchPhieuRequest } from "../../../models/Phieu";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
+import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
+import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 
 // Map maBm -> route chi tiết
 const MABM_DETAIL_ROUTE: Record<string, string> = {
@@ -81,17 +82,29 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
     userObj?.ID_TaiKhoan ??
     null;
 
+  // [API cũ] phân biệt "việc tôi tạo" vs "việc đến tôi" bằng 2 param riêng
+  // const fixedFilters = useMemo(() => {
+  //   const base: Record<string, string | number | null | undefined> = {
+  //     usercode: userObj?.maNV || "",
+  //   };
+  //   if (type === "viecdentoi") {
+  //     base.nguoiDuyetId = currentUserId;
+  //   } else {
+  //     base.nguoiTaoId = currentUserId;
+  //   }
+  //   return base;
+  // }, [currentUserId, type, userObj?.maNV]);
+
+  // Vùng 3 (Thống kê): PKH / admin — toàn bộ phiếu; người khác: vùng 1 + userId
   const fixedFilters = useMemo(() => {
-    const base: Record<string, string | number | null | undefined> = {
-      usercode: userObj?.maNV || "",
-    };
-    if (type === "viecdentoi") {
-      base.nguoiDuyetId = currentUserId;
-    } else {
-      base.nguoiTaoId = currentUserId;
+    const u = getThongTinUser();
+    const canThongKe =
+      u.tenNgan === "P.KH" || u.iD_PhongBan === 70 || isAdminUser(u);
+    if (canThongKe) {
+      return { userId: currentUserId, loaiVung: 3, isThongKeUser: true };
     }
-    return base;
-  }, [currentUserId, type, userObj?.maNV]);
+    return { userId: currentUserId, loaiVung: 1 };
+  }, [currentUserId]);
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [chotLoading, setChotLoading] = useState(false);
@@ -111,7 +124,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
   }, []);
 
   const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange, refetch } =
-    usePhieuSearchList({
+    usePhieuSearchListHRC({
       maBmList: MABM_LIST,
       fixedFilters,
       transformFilters,
@@ -127,7 +140,8 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
   const toggleSelect = useCallback((id: string) => {
     setSelectedKeys((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);

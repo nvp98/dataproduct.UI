@@ -14,7 +14,9 @@ const EditableCell = memo(({ value, disabled, onChange }: { value: any; disabled
   const [focused, setFocused] = useState(false);
   const [local, setLocal] = useState(value ?? "");
 
-  useState(() => { setLocal(value ?? ""); });
+  useEffect(() => {
+    setLocal(value ?? "");
+  }, [value]);
 
   return (
     <Input
@@ -133,6 +135,21 @@ export default function SummaryTableSTD({
         baseRow.Ca = meta.ca ?? meta.Ca ?? undefined;
         baseRow.tyLeBOF = meta.tyLeBOF ?? meta.TyLeBOF ?? null;
         baseRow.tyLeTinhLuyen = meta.tyLeTinhLuyen ?? meta.TyLeTinhLuyen ?? null;
+        // Luồng tương tự tyLeBOF: lấy trực tiếp từ initialData (BE) đưa vào row render
+        baseRow.KLPB_BOF = meta.klpB_BOF ?? meta.klpb_BOF ?? meta.KLPB_BOF ?? null;
+        baseRow.KLPB_TL = meta.klpB_TL ?? meta.klpb_TL ?? meta.KLPB_TL ?? null;
+
+        // Ưu tiên chênh lệch từ BE (sau khi phân bổ/thu hồi BE có thể cập nhật lại)
+        const chenhLechFromServer =
+          meta.totalChenhLech ??
+          meta.TotalChenhLech ??
+          meta.chenhLech ??
+          meta.ChenhLech ??
+          null;
+        if (chenhLechFromServer !== null && chenhLechFromServer !== undefined && chenhLechFromServer !== "") {
+          baseRow.totalChenhLech = chenhLechFromServer;
+          baseRow._chenhLechFromServer = true;
+        }
       }
 
       summaryRows.push(baseRow);
@@ -146,6 +163,11 @@ export default function SummaryTableSTD({
   const dataWithChenhLech = useMemo(() => {
     return summaryData.map((row) => {
       if (row._isTotalRow) return row;
+      // Nếu BE đã trả chênh lệch (đã chuẩn hoá), không tự tính lại để tránh lệch dữ liệu sau phân bổ
+      if (row._chenhLechFromServer === true) {
+        const num = parseFloat(String(row.totalChenhLech ?? 0)) || 0;
+        return { ...row, totalChenhLech: Math.abs(num) };
+      }
       
       const suDung = typeof row.totalSuDung === "number" ? row.totalSuDung : parseFloat(String(row.totalSuDung || 0));
       const sdTrongSoSach = parseFloat(String(row.totalSDTrongSoSach || 0)) || 0;
@@ -328,7 +350,7 @@ export default function SummaryTableSTD({
     const dataIndex = col.dataIndex;
     const isReadonly = col.readOnly === true || col.isLabel === true;
     const value = record[dataIndex] ?? "";
-    const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech"].includes(dataIndex);
+    const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech", "KLPB_BOF", "KLPB_TL"].includes(dataIndex);
     const isTyLeColumn = dataIndex === "tyLeBOF" || dataIndex === "tyLeTinhLuyen";
 
     if (isTyLeColumn && !record._isTotalRow) {
@@ -386,7 +408,7 @@ export default function SummaryTableSTD({
   };
 
   const tableColumns = columns.map((col) => {
-    const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech"].includes(col.dataIndex || "");
+    const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech", "KLPB_BOF", "KLPB_TL"].includes(col.dataIndex || "");
     const isTotalTextColumn = col.dataIndex === "totalText";
     const isTyLeCol = col.dataIndex === "tyLeBOF" || col.dataIndex === "tyLeTinhLuyen";
     const isMaterialCol = col.dataIndex === "totalNguyenNhienLieu";
@@ -403,6 +425,41 @@ export default function SummaryTableSTD({
       render: (value: any, record: any) => renderCell(record, col),
     };
   });
+
+  tableColumns.push(
+    {
+      title: "KL PB Lò thổi",
+      dataIndex: "KLPB_BOF",
+      width: 85,
+      align: "right" as const,
+      render: (_: any, record: any) => {
+        if (record._isTotalRow) return null;
+        const v =
+          record.KLPB_BOF ??
+          (record as any).klpB_BOF ??
+          (record as any).klpb_BOF ??
+          (record as any).KLPB_BOF ??
+          "";
+        return <span style={{ textAlign: "right", display: "block" }}>{v === "" ? "" : formatNumber(v)}</span>;
+      },
+    } as any,
+    {
+      title: "KL PB TL",
+      dataIndex: "KLPB_TL",
+      width: 85,
+      align: "right" as const,
+      render: (_: any, record: any) => {
+        if (record._isTotalRow) return null;
+        const v =
+          record.KLPB_TL ??
+          (record as any).klpB_TL ??
+          (record as any).klpb_TL ??
+          (record as any).KLPB_TL ??
+          "";
+        return <span style={{ textAlign: "right", display: "block" }}>{v === "" ? "" : formatNumber(v)}</span>;
+      },
+    } as any
+  );
 
   // Cột "Tình trạng"
   tableColumns.push({
