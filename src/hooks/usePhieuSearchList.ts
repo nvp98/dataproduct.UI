@@ -97,7 +97,7 @@ export const usePhieuSearchList = ({
   const fetchData = useCallback(async (request: SearchPhieuRequest) => {
     setLoading(true);
     try {
-      const res = await PhieuApi.searchByUser(request);
+      const res = await PhieuApi.search(request);
       const payload = res as PagedResponse<SearchPhieuResponseModel>;
       const responseData = Array.isArray(payload?.data)
         ? payload.data
