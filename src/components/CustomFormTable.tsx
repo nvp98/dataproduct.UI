@@ -105,6 +105,7 @@ export default function CustomFormTable({
   const getCellStyle = (
     dataIndex: string | number,
     value: any,
+    row?: any,
     readonly?: boolean,
   ) => {
     const style: any = {};
@@ -114,6 +115,24 @@ export default function CustomFormTable({
       style.backgroundColor = "#fff1f0";
       style.borderColor = "#ff4d4f";
     }
+
+    const key = String(dataIndex || "");
+    if (key.toLowerCase().startsWith("stdachuyen")) {
+      const suffix = key.substring("stDachuyen".length);
+      const sourceKey = `st${suffix}`;
+      const sourceVal = Number(row?.[sourceKey] ?? 0);
+      const transferredVal = Number(value ?? 0);
+
+      if (
+        !Number.isNaN(sourceVal) &&
+        !Number.isNaN(transferredVal) &&
+        sourceVal !== transferredVal
+      ) {
+        style.backgroundColor = "#fff1f0";
+        style.borderColor = "#ff4d4f";
+      }
+    }
+
     return style;
   };
 
@@ -209,6 +228,7 @@ export default function CustomFormTable({
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
+                      record,
                       true,
                     )}
                   />
@@ -238,6 +258,7 @@ export default function CustomFormTable({
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
+                      record,
                       false,
                     )}
                   />
@@ -283,6 +304,7 @@ export default function CustomFormTable({
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex || ""],
+                  record,
                   true,
                 )}
               />
@@ -312,6 +334,7 @@ export default function CustomFormTable({
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex ?? ""],
+                  record,
                   false,
                 )}
               />
@@ -405,7 +428,8 @@ export default function CustomFormTable({
                       onChange: (keys, selected) => {
                         // Keep selected keys in the original data type (number/string)
                         const typedKeys = (selected as any[]).map(
-                          (record, idx) => record?.key ?? record?.id ?? keys[idx],
+                          (record, idx) =>
+                            record?.key ?? record?.id ?? keys[idx],
                         );
                         onSelectionChange?.(typedKeys as any, selected as any);
                       },
