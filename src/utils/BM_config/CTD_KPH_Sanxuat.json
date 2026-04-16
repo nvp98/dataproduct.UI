@@ -1,7 +1,7 @@
 {
   "code": "CTD_KPH_Sanxuat",
   "prefix": "KPHSX",
-  "title": "PHIẾU XỬ LÝ BẢN THÀNH PHẨM/SẢN PHẨM KHÔNG PHỤ HỢP",
+  "title": "PHIẾU XỬ LÝ BẢN THÀNH PHẨM/SẢN PHẨM KHÔNG PHÙ HỢP",
   "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
     "subCompany": "HÒA PHÁT GANG THÉP"
@@ -12,9 +12,9 @@
     "revision": "01"
   },
   "headerFields": [
-     { "label": "Ngày SX", "type": "date", "key": "NgaySX", "required": true },
+     { "label": "Ngày XL", "type": "date", "key": "NgaySX", "required": true },
     {
-      "label": "Ca SX",
+      "label": "Ca XL",
       "type": "select",
       "key": "ca",
       "required": true,
@@ -24,9 +24,9 @@
       ]
     },
    
-    { "label": "Ngày XL", "type": "date", "key": "NgayXL", "required": true },
+    { "label": "Ngày SX", "type": "date", "key": "NgayXL", "required": true },
         {
-      "label": "Ca XL",
+      "label": "Ca SX",
       "type": "select",
       "key": "caXL",
       "required": true,
