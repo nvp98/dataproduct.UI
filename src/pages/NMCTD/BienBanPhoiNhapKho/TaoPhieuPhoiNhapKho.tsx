@@ -1254,7 +1254,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                         >
                           <Table.Summary.Cell
                             index={0}
-                            colSpan={3}
+                            colSpan={4}
                             align="center"
                           >
                             TỔNG CỘNG

@@ -165,6 +165,11 @@ export const phoiNhapKhoApi = {
       params,
       responseType: "blob",
     }),
+  exportExcelPhoiNhapKhoPKH: (params: { fromDate?: string; toDate?: string }) =>
+    apiService.get<Blob>("/api/BMDucCTD/export-excelPhoiNhapKhoPKH", {
+      params,
+      responseType: "blob",
+    }),
 
   getPhoiNhapKhoList: (params: {
     idPhieu?: string;

@@ -242,6 +242,54 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
     }
   };
 
+  const handleExportExcelPKH = async () => {
+    try {
+      const selectedNgaySX = draftFilter?.ngaySX as
+        | [Dayjs | null, Dayjs | null]
+        | null
+        | undefined;
+
+      const fromDate =
+        currentFilter?.ngaySXFrom ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[0]
+          ? selectedNgaySX[0].format("YYYY-MM-DD")
+          : undefined);
+
+      const toDate =
+        currentFilter?.ngaySXTo ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[1]
+          ? selectedNgaySX[1].format("YYYY-MM-DD")
+          : undefined);
+
+      if (!fromDate || !toDate) {
+        message.warning(
+          "Vui lòng chọn khoảng Ngày sản xuất trước khi xuất Excel",
+        );
+        return;
+      }
+
+      const res = await phoiNhapKhoApi.exportExcelPhoiNhapKhoPKH({
+        fromDate,
+        toDate,
+      });
+
+      const blob = new Blob([res as unknown as BlobPart], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TongHopPhoiNhapKho_${fromDate || ""}_${toDate || ""}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export Excel lỗi:", error);
+    }
+  };
+
   // Config cho các filter fields theo model phiếu
   const filterFieldsConfig: FilterFieldConfig[] = [
     {
@@ -299,6 +347,7 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
       <Card
         extra={
           <Space>
+            <Button onClick={handleExportExcelPKH}>Xuất Excel PKH</Button>
             <Button onClick={handleExportExcel}>Xuất Excel</Button>
             {type !== "viecdentoi" && canCreatePhieu && (
               <Button
