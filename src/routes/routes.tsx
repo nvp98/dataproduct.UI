@@ -66,7 +66,7 @@ import TonSiloLoCao from "../pages/NMLG/TonSiloLoCao/TonSiloLoCao";
 import TaoPhieuTonSiLo from "../pages/NMLG/TonSiloLoCao/TaoPhieuTonSiLo";
 import ChiTietTonSiLo from "../pages/NMLG/TonSiloLoCao/ChiTietTonSiLo";
 import SiLoLG from "../components/SiLoLG";
-import ColumnMappingConfig from "../pages/KhoDuLieu/NM.LG/ColumnMappingConfig";
+import QuanLySiLoNVL from "../pages/NMLG/QuanLySiLoNVL/QuanLySiLoNVL";
 
 export const routes = [
   {
@@ -837,11 +837,11 @@ export const routes = [
         ),
       },
       {
-        path: "column-mapping-lg",
+        path: "quanlysilonvl",
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
-              <ColumnMappingConfig />
+              <QuanLySiLoNVL />
             </RequireRole>
           </RequireAuth>
         ),

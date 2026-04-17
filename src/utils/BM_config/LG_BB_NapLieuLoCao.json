@@ -68,11 +68,6 @@
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 200 }
       ],
 
-      "dynamicColumns": {
-        "url": "/api/column-mapping/columns",
-        "param": "loCao"
-      },
-
       "columns": [
         { "title": "Số mẻ", "dataIndex": "soMe", "width": 80 },
         { "title": "Mẻ/giờ", "dataIndex": "meGio", "width": 80 },

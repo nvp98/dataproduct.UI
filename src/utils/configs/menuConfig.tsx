@@ -149,10 +149,10 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub1-4-1",
+            key: "sub1-4-2",
             label: (
-              <Tooltip title="Cấu hình cột nạp liệu theo lò cao">
-                <NavLink to="/column-mapping-lg">Cấu hình cột nạp liệu</NavLink>
+              <Tooltip title="Quản lý Silo & NVL theo ngày và ca">
+                <NavLink to="/quanlysilonvl">Quản lý Silo & NVL</NavLink>
               </Tooltip>
             ),
           },

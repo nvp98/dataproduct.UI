@@ -3,10 +3,10 @@ import LG_BB_NapLieuLoCao from "../../../utils/BM_config/LG_BB_NapLieuLoCao.json
 import { Button, Card, Form, Input, Typography, message } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomFormItem from "../../../components/CustomFormItem";
-import CustomTableLG, { type CustomTableLGRef } from "../../../components/CustomTableLG";
+import CustomTableLG from "../../../components/CustomTableLG";
 import { napLieuLoCaoApi } from "../../../services/NapLieuLoCaoApi";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
@@ -25,7 +25,6 @@ const TaoPhieuNapLieuLoCao = () => {
 
   const config = LG_BB_NapLieuLoCao;
   const [form] = Form.useForm();
-  const tableRef = useRef<CustomTableLGRef>(null);
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [materialColumnsOverride, setMaterialColumnsOverride] = useState<any[] | null>(null);
@@ -98,15 +97,6 @@ const TaoPhieuNapLieuLoCao = () => {
     });
   }, [tableSection, prefixColumns, suffixColumns]);
 
-  const dynamicColumnsConfig = useMemo(
-    () =>
-      (tableSection?.dynamicColumns as {
-        url: string;
-        param: string;
-        sumFormat?: string;
-      }) ?? { url: "/api/column-mapping/columns", param: "loCao" },
-    [tableSection]
-  );
 
   const loadDataFromAPI = useCallback(async () => {
     if (!ca) {
@@ -129,10 +119,10 @@ const TaoPhieuNapLieuLoCao = () => {
         ? ngaySXValue.format("YYYY-MM-DD")
         : ngaySXValue;
 
-      const response = await napLieuLoCaoApi.getMapped({
-        loCao: Number(scope),
+      const response = await napLieuLoCaoApi.getSiloMapped({
+        idLoCao: Number(scope),
         ngay: ngaySXFormatted,
-        ca: ca,
+        idCa: Number(ca),
       });
 
       setMaterialColumnsOverride(response.columns ?? null);
@@ -325,9 +315,6 @@ const TaoPhieuNapLieuLoCao = () => {
       prefix: (config as any).prefix,
     };
 
-    // Lưu quy khô song song, không block luồng chính
-    tableRef.current?.saveQuyKho().catch(() => {});
-
     return result;
   }, [getUserInfo, form, config, tableData, getCapDuyet]);
 
@@ -435,13 +422,9 @@ const TaoPhieuNapLieuLoCao = () => {
 
         <CustomTableLG
           loCao={scope ?? null}
-          ref={tableRef}
-          ngay={form.getFieldValue("NgaySX")?.format?.("YYYY-MM-DD") ?? null}
-          ca={ca != null ? Number(ca) : null}
           prefixColumns={prefixColumns}
           suffixColumns={suffixColumns}
           fallbackMaterialColumns={fallbackMaterialColumns}
-          dynamicColumnsConfig={dynamicColumnsConfig}
           materialColumnsOverride={materialColumnsOverride}
           initialData={tableData}
           onDataChange={(rows) => setTableData(rows as TableRow[])}
