@@ -930,6 +930,55 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
       section.sectionType === "table" && section.key === "table1",
   );
 
+  const tableColumns = useMemo(() => {
+    const sourceColumns = tableSection?.columns || [];
+    const mergedColumns: any[] = [];
+
+    for (let index = 0; index < sourceColumns.length; index += 1) {
+      const column = sourceColumns[index];
+      const nextColumn = sourceColumns[index + 1];
+
+      if (column?.dataIndex === "ngaySX" && nextColumn?.dataIndex === "ca") {
+        mergedColumns.push({
+          ...column,
+          title: "Ngày/Ca SX",
+          dataIndex: "ngayCaSX",
+          width: 170,
+        });
+        index += 1;
+        continue;
+      }
+
+      if (column?.dataIndex === "ca") {
+        continue;
+      }
+
+      mergedColumns.push(column);
+    }
+
+    return mergedColumns;
+  }, [tableSection?.columns]);
+
+  const displayTableData = useMemo(
+    () =>
+      tableData.map((row) => {
+        const ngaySXValue = row.ngaySX ? String(row.ngaySX) : "";
+        const caValue =
+          row.ca !== null && row.ca !== undefined && row.ca !== ""
+            ? `Ca ${row.ca}`
+            : "";
+
+        return {
+          ...row,
+          ngayCaSX:
+            ngaySXValue && caValue
+              ? `${ngaySXValue} - ${caValue}`
+              : ngaySXValue || caValue,
+        };
+      }),
+    [tableData],
+  );
+
   const handleConfirmChuyenThanh = useCallback(() => {
     const saveChuyenThanh = async () => {
       if (!chuyenThanhItems.length) {
@@ -1132,8 +1181,8 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
             <div key={idx}>
               {layout.sectionType === "table" && (
                 <CustomFormTable
-                  columns={tableSection?.columns || []}
-                  initialData={tableData}
+                  columns={tableColumns}
+                  initialData={displayTableData}
                   onDataChange={(rows) => setTableData(rows as TableRow[])}
                   addRowButtonText="+ Thêm dòng"
                   showAddButton={false}

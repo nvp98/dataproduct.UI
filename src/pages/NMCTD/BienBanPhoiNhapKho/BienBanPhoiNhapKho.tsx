@@ -1,11 +1,12 @@
 import HRC1_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/HRC1_BB_GiaoNhanPhoiNhapKho.json";
-import { Button, Card, Space, Table, Tag } from "antd";
+import { Button, Card, Space, Table, Tag, message } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import PhieuFilterCard, {
   type FilterFieldConfig,
 } from "../../../components/PhieuFilterCard";
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
@@ -19,6 +20,7 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
   const [currentFilter, setCurrentFilter] = useState<any>({});
+  const [draftFilter, setDraftFilter] = useState<Record<string, unknown>>({});
   const [canCreatePhieu, setCanCreatePhieu] = useState(false);
 
   useEffect(() => {
@@ -194,8 +196,29 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
 
   const handleExportExcel = async () => {
     try {
-      const fromDate = currentFilter?.ngaySXFrom;
-      const toDate = currentFilter?.ngaySXTo;
+      const selectedNgaySX = draftFilter?.ngaySX as
+        | [Dayjs | null, Dayjs | null]
+        | null
+        | undefined;
+
+      const fromDate =
+        currentFilter?.ngaySXFrom ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[0]
+          ? selectedNgaySX[0].format("YYYY-MM-DD")
+          : undefined);
+
+      const toDate =
+        currentFilter?.ngaySXTo ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[1]
+          ? selectedNgaySX[1].format("YYYY-MM-DD")
+          : undefined);
+
+      if (!fromDate || !toDate) {
+        message.warning(
+          "Vui lòng chọn khoảng Ngày sản xuất trước khi xuất Excel",
+        );
+        return;
+      }
 
       const res = await phoiNhapKhoApi.exportExcelPhoiNhapKho({
         fromDate,
@@ -262,8 +285,12 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}
+        onFilterFieldChange={(key, value) => {
+          setDraftFilter((prev) => ({ ...prev, [key]: value }));
+        }}
         onClearFilter={() => {
           setCurrentFilter({});
+          setDraftFilter({});
           handleClearFilter();
         }}
         filterFields={filterFieldsConfig}
