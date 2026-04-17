@@ -13,7 +13,6 @@ import {
   Button,
   Tabs,
   Space,
-  Checkbox,
 } from "antd";
 import dayjs from "dayjs";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
@@ -23,7 +22,7 @@ import {
   type ThongKeHeaderColumn,
   type ThongKeLoaiBMKey,
 } from "../../../utils/configs/thongKeHRC2HeaderConfig";
-import { FileExcelOutlined } from "@ant-design/icons";
+import ThongKeBBGNThepLong from "./ThongKeBBGNThepLong";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -85,26 +84,6 @@ const toAntdColumns = (cols: ThongKeHeaderColumn[]): any[] => {
       mapped.render = (value: unknown) => formatNumberVN(value);
     }
 
-    if (c.dataIndex === "meThoi") {
-      mapped.render = (value: unknown, record: any) => {
-        const isTrungMeThoi = record?.isTrungMeThoi === true;
-        if (!isTrungMeThoi) return String(value ?? "");
-        return (
-          <span
-            style={{
-              display: "block",
-              backgroundColor: "#fff1f0",
-              color: "#cf1322",
-              padding: "0 4px",
-              borderRadius: 2,
-            }}
-          >
-            {String(value ?? "")}
-          </span>
-        );
-      };
-    }
-
     if (Array.isArray(c.children) && c.children.length > 0) {
       mapped.children = toAntdColumns(c.children);
     }
@@ -155,6 +134,7 @@ const ThongKeHRC2 = () => {
   const [columns, setColumns] = useState<any[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
   const [loaiBmKey, setLoaiBmKey] = useState<LoaiBMKey>("BOF");
+  const [mainTabKey, setMainTabKey] = useState<"tieuhao" | "bbgn">("tieuhao");
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
 
   const handleSearch = useCallback(
@@ -204,7 +184,6 @@ const ThongKeHRC2 = () => {
         const currentPageSize = pageSize ?? pagination.pageSize;
         const toDate = dateRange?.[1] ?? null;
 
-        const isTrungMeThoi = values.isTrungMeThoi === true || values.IsTrungMeThoi === true ? true : undefined;
         const basePayload = {
           TuNgay: fromDate ? fromDate.format("YYYY-MM-DD") : null,
           DenNgay: toDate ? toDate.format("YYYY-MM-DD") : null,
@@ -212,7 +191,6 @@ const ThongKeHRC2 = () => {
           LoaiBM: currentLoaiBm,
           Scope: scope ?? undefined,
           SearchText: meThoiFilter ?? undefined,
-          IsTrungMeThoi: isTrungMeThoi,
         };
 
         // Nếu có đủ TuNgay + DenNgay → BE tính sum toàn range, fire độc lập
@@ -305,9 +283,6 @@ const ThongKeHRC2 = () => {
               dataObj?.id ??
               dataObj?.ID ??
               idx,
-            isTrungMeThoi:
-              dataObj?.isTrungMeThoi === true ||
-              dataObj?.IsTrungMeThoi === true,
           };
 
           const getFieldValue = (dataIndex: string): unknown => {
@@ -421,7 +396,7 @@ const ThongKeHRC2 = () => {
         setLoading(false);
       }
     },
-    [form, loaiBmKey]
+    [form, loaiBmKey, pagination.pageSize]
   );
 
   useEffect(() => {
@@ -529,7 +504,20 @@ const ThongKeHRC2 = () => {
   );
 
   return (
-    <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
+    <div style={{ margin: 2 }}>
+      <Tabs
+        activeKey={mainTabKey}
+        onChange={(k) => setMainTabKey(k as "tieuhao" | "bbgn")}
+        items={[
+          { key: "tieuhao", label: "Thống kê tiêu hao HRC2" },
+          { key: "bbgn", label: "Thống kê BBGN thép lỏng" },
+        ]}
+      />
+
+      {mainTabKey === "bbgn" ? (
+        <ThongKeBBGNThepLong />
+      ) : (
+    <Card style={{ boxShadow: "0 2px 8px #f0f1f2" }}>
       <Title level={3} style={{ textAlign: "center", marginBottom: 24 }}>
         BẢNG TỔNG HỢP DỮ LIỆU TIÊU HAO HRC2
       </Title>
@@ -575,7 +563,7 @@ const ThongKeHRC2 = () => {
               allowClear
               options={CA_OPTIONS}
               placeholder="-- Ca --"
-              style={{ minWidth: 80 }}
+              style={{ minWidth: 120 }}
             />
           </Form.Item>
 
@@ -584,7 +572,7 @@ const ThongKeHRC2 = () => {
               allowClear
               options={SCOPE_OPTIONS_BY_BM[loaiBmKey]}
               placeholder={loaiBmKey === "LF" ? "Lò 6 (mặc định)" : "-- Lò --"}
-              style={{ minWidth: 100 }}
+              style={{ minWidth: 150 }}
             />
           </Form.Item>
 
@@ -597,15 +585,12 @@ const ThongKeHRC2 = () => {
                 { value: "B", label: "Kíp B" },
                 { value: "C", label: "Kíp C" },
               ]}
-              style={{ minWidth: 100 }}
+              style={{ minWidth: 140 }}
             />
           </Form.Item>
 
-          <Form.Item name="meThoi" label="Mã mẻ/ mác thép">
-            <Input placeholder="Nhập mã mẻ/ mác thép" style={{ minWidth: 100 }} />
-          </Form.Item>
-          <Form.Item name="isTrungMeThoi" valuePropName="checked" label="Mẻ trùng">
-            <Checkbox />
+          <Form.Item name="meThoi" label="Mã mẻ thép">
+            <Input placeholder="Nhập mã mẻ thép" style={{ minWidth: 160 }} />
           </Form.Item>
 
           <Form.Item>
@@ -618,8 +603,7 @@ const ThongKeHRC2 = () => {
                 Tìm
               </Button>
               <Button onClick={handleReset}>Reset</Button>
-              <Button icon={<FileExcelOutlined />}
-                    style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }} onClick={() => void handleExcel()}>
+              <Button onClick={() => void handleExcel()}>
                 Excel
               </Button>
             </Space>
@@ -689,6 +673,8 @@ const ThongKeHRC2 = () => {
         />
       </div>
     </Card>
+      )}
+    </div>
   );
 };
 

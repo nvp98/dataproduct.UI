@@ -3,7 +3,7 @@ export const BM_CONFIG = {
         HRC2_BB_NauLuyen_BOF: 'HRC2_BB_NauLuyen_BOF',
         HRC2_BB_NauLuyen_LF: 'HRC2_BB_NauLuyen_LF',
         HRC2_BB_NauLuyen_RH: 'HRC2_BB_NauLuyen_RH',
-        HRC2_BB_GN_ThepLong: 'HRC2_BB_GN_ThepLong',
+        HRC2_BBGN_ThepLong: 'HRC2_BBGN_ThepLong',
         HRC2_BBGN_PhoiTam: 'HRC2_BBGN_PhoiTam',
         HRC2_STD_NXT: 'HRC2_STD_NXT',
         THONGKE_HRC2: 'THONGKE_HRC2',
@@ -20,8 +20,8 @@ export const BM_CONFIG = {
         CTD_BB_SanLuong_KCS: 'CTD_BienBan_SanLuong',
     },
     HRC1: {
-        HRC1_BB_Theplong: 'HRC1_BB_Theplong',
         HRC1_BB_Lothoi: 'HRC1_BB_Lothoi',
+        HRC1_BBGN_ThepLong: 'HRC1_BBGN_ThepLong',
         HRC1_BB_GiaoNhanPhoiNhapKho: 'HRC1_BB_GiaoNhanPhoiNhapKho',
         HRC1_BB_Sanluongphoi: 'HRC1_BB_Sanluongphoi',
     }

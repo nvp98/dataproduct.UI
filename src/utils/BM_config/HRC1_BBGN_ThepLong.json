@@ -1,8 +1,8 @@
 {
-  "code": "HRC2_BB_GN_ThepLong",
+  "code": "HRC1_BBGN_ThepLong",
   "loaiBm": "GN",
-  "prefix": "BBTL_GN",
-  "title": "BẢNG GIAO NHẬN THÉP LỎNG",
+  "prefix": "BBGN_TL_HRC1",
+  "title": "BIÊN BẢN GIAO NHẬN THÉP LỎNG",
   "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
     "subCompany": "HÒA PHÁT GANG THÉP"
@@ -24,6 +24,19 @@
         { "label": "Ca Ngày", "value": 1 },
         { "label": "Ca Đêm", "value": 2 }
       ]
+    },
+    {
+      "label": "Máy đúc",
+      "type": "select",
+      "key": "scope",
+      "required": true,
+      "options": [
+        { "label": "TSC 1", "value": 1 },
+        { "label": "TSC 2", "value": 2 },
+        { "label": "TSC 3", "value": 3 },
+        { "label": "TSC 4", "value": 4 },
+        { "label": "TSC 5", "value": 5 }
+      ]
     }
   ],
 
@@ -39,6 +52,7 @@
       },
       "lyDo": { "label": "Lý do điều chỉnh" },
       "columns": [
+        { "title": "STT", "dataIndex": "stt", "width": 60, "readonly": true },
         { "title": "Máy đúc", "dataIndex": "mayDuc", "width": 120 ,"editable": false, "readonly": true},
         { "title": "Mẻ", "dataIndex": "me", "width": 120 ,"editable": false, "readonly": true},
         { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false, "readonly": true},
@@ -62,20 +76,20 @@
   ],
   "signatures": [
     {
-      "label": "Bên giao",
+      "label": "Bên nhận",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_Giao", 
-      "maphongBan": "NM.HRC2",
-      "capduyet": 0,
+      "key": "nguoiKy_Nhan",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 1,
       "isChon": true,
       "required": true
     },
     {
-      "label": "Bên nhận",
+      "label": "Bên giao",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_Nhan",
-      "maphongBan": "NM.HRC2",
-      "capduyet": 1,
+      "key": "nguoiKy_Giao", 
+      "maphongBan": "NM.HRC1",
+      "capduyet": 0,
       "isChon": true,
       "required": true
     }
