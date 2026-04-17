@@ -209,7 +209,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "6",
+            key: "sub2-4-2",
             maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
             label: (
               <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
@@ -253,7 +253,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub2-4-5",
+            key: "sub2-4-6",
             maBM: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
             label: (
               <Tooltip title="BM.08/QT.05.13 (Biên bản xác nhận sản lượng)">
@@ -502,7 +502,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "6",
+            key: "sub3-4-6",
             maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
             label: (
               <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
@@ -585,7 +585,7 @@ export const menuConfig = [
         ],
       },
       {
-        key: "sub3-5",
+        key: "sub3-6",
         label: "NM.HRC1",
         children: [
           {
@@ -639,7 +639,7 @@ export const menuConfig = [
         label: "NM.CTD",
         children: [
           {
-            key: "6",
+            key: "sub5-1-0",
             maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
             label: (
               <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
@@ -736,9 +736,7 @@ export const menuConfig = [
             key: "5-2-3",
             label: (
               <Tooltip title="Thống kê Phiếu HRC1">
-                <NavLink to="/thongkephieuhrc1">
-                  Thống kê Phiếu HRC1
-                </NavLink>
+                <NavLink to="/thongkephieuhrc1">Thống kê Phiếu HRC1</NavLink>
               </Tooltip>
             ),
           },
@@ -746,9 +744,7 @@ export const menuConfig = [
             key: "5-2-44",
             label: (
               <Tooltip title="Thống kê Dữ liệu HRC1">
-                <NavLink to="/thongkehrc1">
-                  Thống kê dữ liệu HRC1
-                </NavLink>
+                <NavLink to="/thongkehrc1">Thống kê dữ liệu HRC1</NavLink>
               </Tooltip>
             ),
           },
@@ -762,9 +758,7 @@ export const menuConfig = [
             key: "5-3-1",
             label: (
               <Tooltip title="Thống kê Phiếu HRC2">
-                <NavLink to="/thongkephieuhrc2">
-                  Thống kê Phiếu HRC2
-                </NavLink>
+                <NavLink to="/thongkephieuhrc2">Thống kê Phiếu HRC2</NavLink>
               </Tooltip>
             ),
           },
@@ -772,9 +766,7 @@ export const menuConfig = [
             key: "5-3-2",
             label: (
               <Tooltip title="Thống kê Dữ liệu HRC2">
-                <NavLink to="/thongkehrc2">
-                  Thống kê dữ liệu HRC2
-                </NavLink>
+                <NavLink to="/thongkehrc2">Thống kê dữ liệu HRC2</NavLink>
               </Tooltip>
             ),
           },
