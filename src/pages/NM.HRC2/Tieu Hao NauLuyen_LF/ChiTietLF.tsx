@@ -95,6 +95,14 @@ function mapColumnsWithHighlight(cols: any[], applyHighlightRender: (col: any) =
   });
 }
 
+function isTrungMeRow(record: any): boolean {
+  return record?.isTrungMeThoi === true || record?.IsTrungMeThoi === true;
+}
+
+function isManualCreatedRow(record: any): boolean {
+  return record?.IsNM === false || record?.isNM === false;
+}
+
 function buildBaseColumnsAndEditableFields(layoutConfig: typeof HRC2_BB_NauLuyen_LF): {
   baseColumns: HRCParentColumn[];
   editableFields: string[];
@@ -407,6 +415,8 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       return {
         ...col,
         render: (value: any, record: any) => {
+          const isDuplicateMe = dataIndex === "meThoi" && isTrungMeRow(record);
+          const isManualRow = isManualCreatedRow(record) && dataIndex !== "stt";
           const origValue = record[`${dataIndex}__orig`];
           const isManualFlag = record[`${dataIndex}__IsManual`] === true;
           const isCellChanged =
@@ -420,9 +430,35 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           if (isCellChanged) {
             return (
               <Tooltip title={`Tự động: ${String(origValue ?? "")} | Chỉnh sửa: ${String(value ?? "")}`}>
-                <span style={{ backgroundColor: "#fff7b3", display: "block" }}>{displayed}</span>
+                <span
+                  style={{
+                    backgroundColor: "#fff7b3",
+                    display: "block",
+                    color: isDuplicateMe ? "red" : undefined,
+                    fontWeight: isDuplicateMe ? 600 : undefined,
+                  }}
+                >
+                  {displayed}
+                </span>
               </Tooltip>
             );
+          }
+          if (isManualRow) {
+            return (
+              <span
+                style={{
+                  backgroundColor: "#fff7b3",
+                  display: "block",
+                  color: isDuplicateMe ? "red" : undefined,
+                  fontWeight: isDuplicateMe ? 600 : undefined,
+                }}
+              >
+                {displayed}
+              </span>
+            );
+          }
+          if (isDuplicateMe) {
+            return <span style={{ color: "red", fontWeight: 600 }}>{displayed}</span>;
           }
           return displayed;
         },

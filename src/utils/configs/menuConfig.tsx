@@ -732,6 +732,26 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "5-2-3",
+            label: (
+              <Tooltip title="Thống kê Phiếu HRC1">
+                <NavLink to="/thongkephieuhrc1">
+                  Thống kê Phiếu HRC1
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "5-2-44",
+            label: (
+              <Tooltip title="Thống kê Dữ liệu HRC1">
+                <NavLink to="/thongkehrc1">
+                  Thống kê dữ liệu HRC1
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {

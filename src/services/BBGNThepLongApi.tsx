@@ -2,6 +2,7 @@ import type { FetchMeThoiRequest, LoadBBGNRequest } from "../models/BBGNThepLong
 import apiService from "./ApiService";
 
 export interface SearchThongKeBBGNThepLongRequest {
+  bieuMau?: string;
   tuNgay?: string;
   denNgay?: string;
   mayDuc?: number;

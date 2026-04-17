@@ -85,6 +85,14 @@ function mapColumnsWithHighlight(cols: any[], applyHighlightRender: (col: any) =
   });
 }
 
+function isTrungMeRow(record: any): boolean {
+  return record?.isTrungMeThoi === true || record?.IsTrungMeThoi === true;
+}
+
+function isManualCreatedRow(record: any): boolean {
+  return record?.IsNM === false || record?.isNM === false;
+}
+
 /** Giống TaoPhieuBOF.fetchPhuLieus — base columns + tập field editable để mergeServerRows preserve đúng cột */
 function buildBaseColumnsAndEditableFields(layoutConfig: typeof HRC2_BB_NauLuyen_BOF): {
   baseColumns: HRCParentColumn[];
@@ -391,6 +399,8 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
       return {
         ...col,
         render: (value: any, record: any) => {
+          const isDuplicateMe = dataIndex === "meThoi" && isTrungMeRow(record);
+          const isManualRow = isManualCreatedRow(record) && dataIndex !== "stt";
           const origValue = record[`${dataIndex}__orig`];
           const isManualFlag = record[`${dataIndex}__IsManual`] === true;
           const isCellChanged =
@@ -404,9 +414,37 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
           if (isCellChanged) {
             return (
               <Tooltip title={`Tự động: ${String(origValue ?? "")} | Chỉnh sửa: ${String(value ?? "")}`}>
-                <span style={{ backgroundColor: "#fff7b3", display: "block" }}>{displayed}</span>
+                <span
+                  style={{
+                    backgroundColor: "#fff7b3",
+                    display: "block",
+                    color: isDuplicateMe ? "red" : undefined,
+                    fontWeight: isDuplicateMe ? 600 : undefined,
+                  }}
+                >
+                  {displayed}
+                </span>
               </Tooltip>
             );
+          }
+
+          if (isManualRow) {
+            return (
+              <span
+                style={{
+                  backgroundColor: "#fff7b3",
+                  display: "block",
+                  color: isDuplicateMe ? "red" : undefined,
+                  fontWeight: isDuplicateMe ? 600 : undefined,
+                }}
+              >
+                {displayed}
+              </span>
+            );
+          }
+
+          if (isDuplicateMe) {
+            return <span style={{ color: "red", fontWeight: 600 }}>{displayed}</span>;
           }
           return displayed;
         },
@@ -494,7 +532,16 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
     if (buttons.length === 0) return null;
     // Ở trang chi tiết, không chỉnh form nên không cần getFormData
     return phieuActionService.renderActionButtons(buttons, idphieu || "");
-  }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
+  }, [
+    data,
+    idphieu,
+    config.code,
+    formData?.NgaySX,
+    formData?.ca,
+    getUserInfo,
+    handleActionSuccess,
+    redirectToList,
+  ]);
 
   return (
     <Card

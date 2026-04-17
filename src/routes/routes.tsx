@@ -73,6 +73,8 @@ import GiaoNhanThepLong_HRC1 from "../pages/NM.HRC1/GiaoNhanThepLong/GiaoNhanThe
 import TaoPhieuGN_HRC1 from "../pages/NM.HRC1/GiaoNhanThepLong/TaoPhieuGN";
 import ChiTietGN_HRC1 from "../pages/NM.HRC1/GiaoNhanThepLong/ChiTietGN";
 import ThongKePhieuHRC2 from "../pages/NM.HRC2/ThongKe/ThongKePhieuHRC2";
+import ThongKeHRC1 from "../pages/NM.HRC1/ThongKe/ThongKeHRC1";
+import ThongKePhieuHRC1 from "../pages/NM.HRC1/ThongKe/ThongKePhieuHRC1";
 import QuanLyMayDuc from "../pages/Settings/MayDuc";
 import QuanLyMacThep from "../pages/Settings/MacThep";
 
@@ -892,6 +894,26 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <ThongKePhieuHRC2 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thongkehrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThongKeHRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thongkephieuhrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThongKePhieuHRC1 />
             </RequireRole>
           </RequireAuth>
         ),

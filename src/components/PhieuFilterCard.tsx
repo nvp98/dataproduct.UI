@@ -14,10 +14,10 @@ export interface PhieuFilterValues {
   maBm?: string;
   xuongId?: number | string;
   mayDuc?: number | string;
-  [key: string]: string | number | undefined; // Cho phép thêm các filter tùy chỉnh
+  [key: string]: string | number | (string | number)[] | undefined; // Cho phép thêm các filter tùy chỉnh
 }
 
-export type FilterFieldType = "text" | "number" | "select" | "dateRange";
+export type FilterFieldType = "text" | "number" | "select" | "multiselect" | "dateRange";
 
 export interface FilterFieldConfig {
   key: string; // Key trong PhieuFilterValues
@@ -64,16 +64,18 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   const [filterStates, setFilterStates] = useState<
     Record<
       string,
-      string | number | [Dayjs | null, Dayjs | null] | null | undefined
+      string | number | (string | number)[] | [Dayjs | null, Dayjs | null] | null | undefined
     >
   >(() => {
     const states: Record<
       string,
-      string | number | [Dayjs | null, Dayjs | null] | null | undefined
+      string | number | (string | number)[] | [Dayjs | null, Dayjs | null] | null | undefined
     > = {};
     filterFields.forEach((field) => {
       if (field.type === "dateRange") {
         states[field.key] = null;
+      } else if (field.type === "multiselect") {
+        states[field.key] = (initialValues?.[field.key] as (string | number)[] | undefined) ?? [];
       } else {
         states[field.key] = initialValues?.[field.key] || "";
       }
@@ -120,6 +122,10 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
         ) {
           filterObj[`${field.key}From`] = value[0].format("YYYY-MM-DD");
           filterObj[`${field.key}To`] = value[1].format("YYYY-MM-DD");
+        } else if (field.type === "multiselect") {
+          if (Array.isArray(value) && value.length > 0) {
+            filterObj[field.key] = value as (string | number)[];
+          }
         } else if (field.type !== "dateRange") {
           // Chỉ gán nếu không phải dateRange (dateRange đã được xử lý riêng)
           filterObj[field.key] =
@@ -147,10 +153,11 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
       string | number | [Dayjs | null, Dayjs | null] | null | undefined
     > = {};
     filterFields.forEach((field) => {
-      clearedStates[field.key] = field.type === "dateRange" ? null : "";
+      const emptyVal = field.type === "dateRange" ? null : field.type === "multiselect" ? [] : "";
+      clearedStates[field.key] = emptyVal;
       // Notify parent about cleared fields
       if (onFilterFieldChange) {
-        onFilterFieldChange(field.key, field.type === "dateRange" ? null : "");
+        onFilterFieldChange(field.key, emptyVal);
       }
     });
     setFilterStates(clearedStates);
@@ -165,7 +172,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
 
   const updateFilterState = (
     key: string,
-    value: string | number | [Dayjs | null, Dayjs | null] | null,
+    value: string | number | (string | number)[] | [Dayjs | null, Dayjs | null] | null,
   ) => {
     setFilterStates((prev) => ({ ...prev, [key]: value }));
     // Notify parent component about field change
@@ -231,6 +238,21 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
               }
               onChange={(val) => updateFilterState(field.key, val ?? "")}
               options={field.options}
+            />
+          </Col>
+        );
+      case "multiselect":
+        return (
+          <Col key={field.key} xs={span.xs} sm={span.sm} md={span.md}>
+            <Select
+              mode="multiple"
+              placeholder={field.placeholder || field.label}
+              allowClear
+              style={{ width: "100%" }}
+              value={Array.isArray(rawValue) ? rawValue : []}
+              onChange={(val: (string | number)[]) => updateFilterState(field.key, val ?? [])}
+              options={field.options}
+              maxTagCount="responsive"
             />
           </Col>
         );
