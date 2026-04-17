@@ -47,7 +47,6 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
-          // { key: "6", label: "Option 6" },
         ],
       },
       // {
@@ -362,7 +361,7 @@ export const menuConfig = [
           },
           {
             key: "sub2-6-5",
-            maBM: BM_CONFIG.HRC2.HRC2_BB_GN_ThepLong,
+            maBM: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
             label: (
               <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
                 <NavLink to="/giaonhantheplong">
@@ -395,6 +394,17 @@ export const menuConfig = [
               <Tooltip title="BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)">
                 <NavLink to="/bienbanphoinapkho">
                   BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-7-3",
+            maBM: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
+            label: (
+              <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
+                <NavLink to="/giaonhantheplong_hrc1">
+                  BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
                 </NavLink>
               </Tooltip>
             ),
@@ -494,7 +504,7 @@ export const menuConfig = [
         ],
       },
       {
-        key: "sub4-5",
+        key: "sub3-5",
         label: "NM.HRC2",
         children: [
           {
@@ -543,7 +553,7 @@ export const menuConfig = [
           },
           {
             key: "sub4-5-5",
-            maBM: BM_CONFIG.HRC2.HRC2_BB_GN_ThepLong,
+            maBM: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
             label: (
               <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
                 <NavLink to="/viecdentoi/giaonhantheplong">
@@ -554,6 +564,23 @@ export const menuConfig = [
           },
         ],
       },
+      {
+        key: "sub3-6",
+        label: "NM.HRC1",
+        children: [
+          {
+            key: "sub3-6-1",
+            maBM: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
+            label: (
+              <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
+                <NavLink to="/viecdentoi/giaonhantheplong_hrc1">
+                  BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      }
     ],
   },
   {
@@ -700,6 +727,24 @@ export const menuConfig = [
         label: (
           <Tooltip title="Phân quyền xử lý biểu mẫu theo khu vực">
             <NavLink to="/phanquyenbieumau">Phân quyền biểu mẫu</NavLink>
+          </Tooltip>
+        ),
+      },
+      {
+        key: "admin-2",
+        icon: <SettingOutlined />,
+        label: (
+          <Tooltip title="Quản lý mác thép">
+            <NavLink to="/mac-thep">Mác thép</NavLink>
+          </Tooltip>
+        ),
+      },
+      {
+        key: "admin-3",
+        icon: <SettingOutlined />,
+        label: (
+          <Tooltip title="Quản lý máy đúc">
+            <NavLink to="/may-duc">Máy đúc</NavLink>
           </Tooltip>
         ),
       },

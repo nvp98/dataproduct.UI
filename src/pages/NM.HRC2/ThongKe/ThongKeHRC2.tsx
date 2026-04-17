@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Card,
   Table,
@@ -22,6 +22,7 @@ import {
   type ThongKeHeaderColumn,
   type ThongKeLoaiBMKey,
 } from "../../../utils/configs/thongKeHRC2HeaderConfig";
+import ThongKeBBGNThepLong from "./ThongKeBBGNThepLong";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -36,7 +37,7 @@ type HkCellData = {
 
 const renderHkCell = (cellData: HkCellData | null | unknown) => {
   if (cellData === null || cellData === undefined) return "";
-  const { value, manualValue, klPhanBo, totalKLPhuGia, isManual } = cellData as HkCellData;
+  const { value, manualValue, klPhanBo, totalKLPhuGia } = cellData as HkCellData;
 
   const displayValue = totalKLPhuGia ?? (manualValue != null ? manualValue : value);
   const formatted = formatNumberVN(displayValue);
@@ -133,6 +134,7 @@ const ThongKeHRC2 = () => {
   const [columns, setColumns] = useState<any[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
   const [loaiBmKey, setLoaiBmKey] = useState<LoaiBMKey>("BOF");
+  const [mainTabKey, setMainTabKey] = useState<"tieuhao" | "bbgn">("tieuhao");
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
 
   const handleSearch = useCallback(
@@ -394,7 +396,7 @@ const ThongKeHRC2 = () => {
         setLoading(false);
       }
     },
-    [form, loaiBmKey]
+    [form, loaiBmKey, pagination.pageSize]
   );
 
   useEffect(() => {
@@ -502,7 +504,20 @@ const ThongKeHRC2 = () => {
   );
 
   return (
-    <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
+    <div style={{ margin: 2 }}>
+      <Tabs
+        activeKey={mainTabKey}
+        onChange={(k) => setMainTabKey(k as "tieuhao" | "bbgn")}
+        items={[
+          { key: "tieuhao", label: "Thống kê tiêu hao HRC2" },
+          { key: "bbgn", label: "Thống kê BBGN thép lỏng" },
+        ]}
+      />
+
+      {mainTabKey === "bbgn" ? (
+        <ThongKeBBGNThepLong />
+      ) : (
+    <Card style={{ boxShadow: "0 2px 8px #f0f1f2" }}>
       <Title level={3} style={{ textAlign: "center", marginBottom: 24 }}>
         BẢNG TỔNG HỢP DỮ LIỆU TIÊU HAO HRC2
       </Title>
@@ -658,6 +673,8 @@ const ThongKeHRC2 = () => {
         />
       </div>
     </Card>
+      )}
+    </div>
   );
 };
 

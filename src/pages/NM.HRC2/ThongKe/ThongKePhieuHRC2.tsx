@@ -19,7 +19,7 @@ const MABM_DETAIL_ROUTE: Record<string, string> = {
   HRC2_BB_NauLuyen_LF: "/chitiettieuhaonauluyen_lf",
   HRC2_BB_NauLuyen_RH: "/chitiettieuhaonauluyen_rh",
   HRC2_STD_NXT: "/tao-std",
-  BBGN_ThepLong: "/chitietgiaonhantheplong",
+  HRC2_BBGN_ThepLong: "/chitietgiaonhantheplong",
 };
 
 const MABM_LIST: string[] = [
@@ -27,13 +27,14 @@ const MABM_LIST: string[] = [
   BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
   BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
   // BM_CONFIG.HRC2.HRC2_STD_NXT,
-  BM_CONFIG.HRC2.BBGN_ThepLong,
+  BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
 ];
 
 const LOAI_BM_TO_MABM: Record<string, string> = {
   BOF: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
   LF: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
   RH: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
+  BBGN_ThepLong: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
 };
 
 const SCOPE_OPTIONS: Record<string, { label: string; value: number }[]> = {
@@ -236,9 +237,9 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
               navigate(route, {
                 state: {
                   idphieu: record.idphieu,
-                  pheduyet: record?.pheDuyet?.[0] ?? null,
-                },
-              });
+                    pheduyet: record?.pheDuyet?.[0] ?? null,
+                  },
+                });
             } else {
               navigate(route, { state: { idphieu: record.idphieu } });
             }
@@ -320,6 +321,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
           { label: "Lò thổi BOF", value: "BOF" },
           { label: "Tinh luyện LF", value: "LF" },
           { label: "Tinh luyện RH", value: "RH" },
+          { label: "Giao nhận thép lỏng", value: "BBGN_ThepLong" },
         ],
       },
       
@@ -350,14 +352,16 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
     // Lò thổi luôn hiển thị; LF chỉ có 1 option (Lò 6) để tự động chọn
     const scopeOptions =
       selectedLoaiBM === "LF"
-        ? [{ label: "Lò 6", value: 6 }]
+        ? [{ label: "Tinh luyện 6", value: 6 }]
         : selectedLoaiBM === "BOF" || selectedLoaiBM === "RH"
           ? SCOPE_OPTIONS[selectedLoaiBM]
-          : [
+          : selectedLoaiBM === "BBGN_ThepLong"
+            ? [{ label: "Máy đúc 6", value: 6 }, { label: "Máy đúc 7", value: 7 }]
+            : [
               { label: "Lò 6", value: 6 },
               { label: "Lò 7", value: 7 },
-              { label: "RH1", value: 1 },
-              { label: "RH2", value: 2 },
+              { label: "RH 1", value: 1 },
+              { label: "RH 2", value: 2 },
             ];
     fields.push({
       key: "scope",
