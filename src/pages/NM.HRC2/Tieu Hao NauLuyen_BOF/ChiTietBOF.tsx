@@ -23,6 +23,7 @@ import { formatNumberGroup } from "../../../utils/formatters/numberFormat";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_BB_NauLuyen_BOF from "../../../utils/BM_config/HRC2_BB_NauLuyen_BOF.json";
+import { getBmQuyenUiFlags } from "../../../utils/helpers/checkAdminRole";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { hrc2PhuLieuService } from "../../../services/HRC2PhuLieuService";
 import HRC2ExportBienBanButtons from "../../../components/HRC2ExportBienBanButtons";
@@ -463,6 +464,7 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
   const actionButtons = useMemo(() => {
     if (!data || !idphieu) return null;
     const userInfo = getUserInfo();
+    if (getBmQuyenUiFlags(config.code, userInfo).isView) return null;
     const buttons = phieuActionService.getActionButtons({
       phieuId: idphieu,
       tinhTrang: data.tinhTrang ?? 0,
@@ -473,6 +475,14 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
       nguoiTaoId: data.nguoiTaoId ?? null,
       phieuPhongBanId: data.idphongBan ?? null,
       pheDuyet: data.pheDuyet ?? [],
+      preConfirmCheck: async () => {
+        const isChot = await hrc2TableService.checkChotPhieuTieuHao(formData?.NgaySX, formData?.ca);
+        if (isChot) {
+          return true;
+        }
+        message.error("Sổ theo dõi nhập xuất tồn chưa được chốt.");
+        return false;
+      },
       redirectToList,
       onSuccess: handleActionSuccess,
       onError: (error) => {
@@ -484,7 +494,7 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
     if (buttons.length === 0) return null;
     // Ở trang chi tiết, không chỉnh form nên không cần getFormData
     return phieuActionService.renderActionButtons(buttons, idphieu || "");
-  }, [data, idphieu, getUserInfo, handleActionSuccess, redirectToList]);
+  }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
 
   return (
     <Card

@@ -15,9 +15,9 @@ import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/Phi
 import { useMemo } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
-import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 // Dữ liệu mẫu
 
 const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
@@ -39,17 +39,26 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
     userObj?.IdTaiKhoan ??
     null;
 
+  // [API cũ] phân biệt "việc tôi tạo" vs "việc đến tôi" bằng 2 param riêng
+  // const fixedFilters = useMemo(() => {
+  //   const base: Record<string, string | number | null | undefined> = {
+  //     usercode: userObj?.maNV || "",
+  //   };
+  //   if (type === "viecdentoi") {
+  //     base.nguoiDuyetId = currentUserId;
+  //   } else {
+  //     base.nguoiTaoId = currentUserId;
+  //   }
+  //   return base;
+  // }, [currentUserId, type, userObj?.maNV]);
+
+  // [API mới] dùng userId + loaiVung — backend tách vùng 1 / vùng 2
   const fixedFilters = useMemo(() => {
-    const base: Record<string, string | number | null | undefined> = {
-      usercode: userObj?.maNV || "",
+    return {
+      userId: currentUserId,
+      loaiVung: type === "viecdentoi" ? 2 : 1,
     };
-    if (type === "viecdentoi") {
-      base.nguoiDuyetId = currentUserId;
-    } else {
-      base.nguoiTaoId = currentUserId;
-    }
-    return base;
-  }, [currentUserId, type, userObj?.maNV]);
+  }, [currentUserId, type]);
 
   const {
     data,
@@ -58,7 +67,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
-  } = usePhieuSearchList({
+  } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
   });
@@ -112,7 +121,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       width: 220,
       ellipsis: true,
       render: (value: number) => {
-        return value === 1 ? "Lò thổi 1" : "Lò thổi 2";
+        return value === 1 ? "RH 1" : "RH 2";
       },
     },
     {
@@ -202,8 +211,8 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       type: "select",
       placeholder: "Chọn lò",
       options: [
-        { label: "Lò thổi 1", value: 1 },
-        { label: "Lò thổi 2", value: 2 },
+        { label: "RH 1", value: 1 },
+        { label: "RH 2", value: 2 },
       ],
     },
     // {

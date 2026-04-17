@@ -1,16 +1,9 @@
 import HRC1_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/HRC1_BB_GiaoNhanPhoiNhapKho.json";
-import {
-  Button,
-  Card,
-  Space,
-  Table,
-  Tag,
-} from "antd";
-import {
-  EyeOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
-import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
+import { Button, Card, Space, Table, Tag } from "antd";
+import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import PhieuFilterCard, {
+  type FilterFieldConfig,
+} from "../../../components/PhieuFilterCard";
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
@@ -70,7 +63,7 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
 
   const fixedFilters = useMemo(
     () => ({ usercode: userObj?.maNV || "" }),
-    [userObj?.maNV]
+    [userObj?.maNV],
   );
 
   const {
@@ -111,14 +104,16 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
           onClick={() => {
             // Nếu là việc đến tôi, luôn mở trang chi tiết
             if (type === "viecdentoi") {
-              return navigate(`/chitietbienbanphoinapkho/${record.idphieu}`);
+              return navigate(`/chitietbienbanphoinapkho/${record.idphieu}`, {
+                state: { type: "viecdentoi" },
+              });
             }
-            
+
             // Nếu phiếu đang ở trạng thái Đang lưu (0), mở trang chỉnh sửa
             if (record.tinhTrang === 0) {
               return navigate(`/taophieubienbanphoinapkho/${record.idphieu}`);
             }
-            
+
             // Các trạng thái khác, mở trang chi tiết
             return navigate(`/chitietbienbanphoinapkho/${record.idphieu}`);
           }}
@@ -186,7 +181,10 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
             type="text"
             icon={<EyeOutlined twoToneColor="#1890ff" />}
             onClick={() =>
-              navigate(`/chitietbienbanphoinapkho/${record.idphieu}`)
+              navigate(`/chitietbienbanphoinapkho/${record.idphieu}`, {
+                state:
+                  type === "viecdentoi" ? { type: "viecdentoi" } : undefined,
+              })
             }
           />
         </Space>
@@ -274,9 +272,7 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
       <Card
         extra={
           <Space>
-            <Button onClick={handleExportExcel}>
-              Xuất Excel
-            </Button>
+            <Button onClick={handleExportExcel}>Xuất Excel</Button>
             {type !== "viecdentoi" && canCreatePhieu && (
               <Button
                 type="primary"

@@ -501,6 +501,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "6",
+            maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
+            label: (
+              <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
+                <NavLink to="/viecdentoi/bienbanphoinong">
+                  BM.06/QT.05.10 Biên bản giao nhận phôi nóng (Nhận phôi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -508,8 +519,17 @@ export const menuConfig = [
         label: "NM.HRC2",
         children: [
           {
+            key: "sub4-5-0",
+            maBM: BM_CONFIG.HRC2.HRC2_STD_NXT,
+            label: (
+              <Tooltip title="STD - Nhập xuất tồn">
+                <NavLink to="/std_nhapxuatton">STD - Nhập xuất tồn</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
             key: "sub4-5-1",
-            maBM: "HRC2_BB_NauLuyen_BOF",
+            maBM: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
             label: (
               <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
                 <NavLink to="/viecdentoi/tieuhaonauluyen_bof">
@@ -520,7 +540,7 @@ export const menuConfig = [
           },
           {
             key: "sub4-5-2",
-            maBM: "HRC2_BB_NauLuyen_LF",
+            maBM: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
             label: (
               <Tooltip title="BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
                 <NavLink to="/viecdentoi/tieuhaonauluyen_lf">
@@ -531,7 +551,7 @@ export const menuConfig = [
           },
           {
             key: "sub4-5-3",
-            maBM: "HRC2_BB_NauLuyen_RH",
+            maBM: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
             label: (
               <Tooltip title="BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)">
                 <NavLink to="/viecdentoi/tieuhaonauluyen_rh">
@@ -542,7 +562,7 @@ export const menuConfig = [
           },
           {
             key: "sub4-5-4",
-            maBM: "HRC2_BBGN_PhoiTam",
+            maBM: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
             label: (
               <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/viecdentoi/bbgnphoitam">
@@ -565,11 +585,33 @@ export const menuConfig = [
         ],
       },
       {
-        key: "sub3-6",
+        key: "sub3-5",
         label: "NM.HRC1",
         children: [
           {
-            key: "sub3-6-1",
+            key: "sub3-5-1",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_Sanluongphoi,
+            label: (
+              <Tooltip title="BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)">
+                <NavLink to="/viecdentoi/bienbansanluongphoi">
+                  BM.11/QT.05.11 (Biên bản xác nhận sản lượng phôi thép)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub3-5-2",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_GiaoNhanPhoiNhapKho,
+            label: (
+              <Tooltip title="BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)">
+                <NavLink to="/viecdentoi/bienbanphoinapkho">
+                  BM.12/QT.05.11 (Biên bản giao nhận phôi nhập kho)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub3-6-3",
             maBM: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
             label: (
               <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
@@ -580,7 +622,7 @@ export const menuConfig = [
             ),
           },
         ],
-      }
+      },
     ],
   },
   {
@@ -596,6 +638,17 @@ export const menuConfig = [
         key: "sub5-1",
         label: "NM.CTD",
         children: [
+          {
+            key: "6",
+            maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
+            label: (
+              <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
+                <NavLink to="/viecdentoi/bienbanphoinong">
+                  BM.06/QT.05.10 Biên bản giao nhận phôi nóng (Nhận phôi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
           {
             key: "5-1-1",
             maBM: BM_CONFIG.CTD.CTD_STD_Sanxuat,

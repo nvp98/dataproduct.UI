@@ -70,6 +70,7 @@
       "label": "Thủ kho",
       "type": "selectNguoiKy",
       "key": "nguoiKy_ThuKho",
+      "maphongBan": "BP. LOG",
       "capDuyet": 2,
       "isChon": true,
       "required": true

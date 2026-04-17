@@ -137,6 +137,16 @@ const CHUYEN_TOI_CA = {
 const isPhuLieuDataIndex = (dataIndex: string) =>
   dataIndex.startsWith("phuLieu_") || dataIndex.startsWith("others_") || dataIndex.startsWith("manual_col_");
 
+/** Cột số thứ tự từ JSON (thường là cột đầu) — không dùng làm cột ghi nhãn "Tổng" ở summary */
+const isSttDataIndex = (dataIndex: string) =>
+  dataIndex === "stt" || dataIndex === "STT";
+
+/** STT luôn theo thứ tự dòng đang hiển thị (sortedRows), 1…n — không đọc từ record/response */
+const resolveSttText = (rows: HRCTableRow[], record: HRCTableRow): string => {
+  const i = rows.findIndex((r) => r.key === record.key);
+  return i >= 0 ? String(i + 1) : "";
+};
+
 const isNegativeValue = (value: unknown): boolean => {
   if (value === null || value === undefined || value === "") return false;
   const num = parseFloat(String(value).replace(/[\s,]/g, ""));
@@ -279,9 +289,11 @@ const CustomTableHRC = forwardRef(({
       IsNM: false,      // Đánh dấu cho BE: dòng nhập tay
       _isNewRow: true,  // Đánh dấu cho UI: dòng thêm mới bằng button (highlight cả hàng + xếp cuối)
     };
-    fieldKeys.forEach((key) => {
-      newRow[key] = "";
-    });
+    fieldKeys
+      .filter((key) => !isSttDataIndex(key))
+      .forEach((key) => {
+        newRow[key] = "";
+      });
     const newRows = [...rows, newRow];
     setRows(newRows);
     emitDataChange(newRows);
@@ -418,11 +430,17 @@ const CustomTableHRC = forwardRef(({
     return result;
   }, [columns]);
 
+  /** Cột lá đầu tiên không phải STT — chỗ hiển thị "Tổng" (tránh chồng lên cột stt khi stt là cột đầu) */
+  const summaryTongLabelIndex = useMemo(() => {
+    const i = leafColumns.findIndex((c) => !isSttDataIndex(c.dataIndex));
+    return i < 0 ? 0 : i;
+  }, [leafColumns]);
+
   // Tính tổng các cột có sum=true
   const columnSums = useMemo(() => {
     const sums: Record<string, number> = {};
     leafColumns.forEach(({ dataIndex, sum }) => {
-      if (!sum) return;
+      if (!sum || isSttDataIndex(dataIndex)) return;
       sums[dataIndex] = sortedRows.reduce((acc, row) => {
         const val = parseFloat(String(row[dataIndex] ?? "").replace(/,/g, ""));
         return acc + (isNaN(val) ? 0 : val);
@@ -466,6 +484,21 @@ const CustomTableHRC = forwardRef(({
               align: child.align,
               fixed: childSticky ? ("left" as const) : undefined,
               render: (_: unknown, record: HRCTableRow) => {
+                if (isSttDataIndex(child.dataIndex)) {
+                  const text = resolveSttText(sortedRows, record);
+                  return (
+                    <Input
+                      value={text}
+                      readOnly
+                      tabIndex={-1}
+                      style={{
+                        textAlign: child.align ?? "center",
+                        backgroundColor: "#f5f5f5",
+                        cursor: "default",
+                      }}
+                    />
+                  );
+                }
                 // ⚠️ Cột phân bổ (variant="adjust") luôn read-only, không cho phép chỉnh sửa thủ công
                 const isAdjustColumn = child.variant === "adjust";
                 const isMeThoiColumn = child.dataIndex === "meThoi";
@@ -495,7 +528,9 @@ const CustomTableHRC = forwardRef(({
                   : cellValue !== undefined && cellValue !== null
                     ? String(cellValue)
                     : "";
-                const isTrungMeThoi = record.isTrungMeThoi === true;
+                const isTrungMeThoi =
+                  record.isTrungMeThoi === true ||
+                  (record as Record<string, unknown>).IsTrungMeThoi === true;
                 const isNegative = isPhuLieuDataIndex(child.dataIndex) && isNegativeValue(currentValue);
 
                 const tooltipTitle = isNegative
@@ -537,7 +572,10 @@ const CustomTableHRC = forwardRef(({
                     disabled={isAdjustColumn}
                     style={{
                       textAlign: child.align ?? "right",
-                      backgroundColor: isCellChanged ? "#fff7b3" : "#f5f5f5",
+                      backgroundColor:
+                        isMeThoiColumn && isTrungMeThoi
+                          ? "tomato"
+                          : (isCellChanged ? "#fff7b3" : "#f5f5f5"),
                       cursor: "not-allowed",
                     }}
                   />
@@ -588,6 +626,21 @@ const CustomTableHRC = forwardRef(({
         align: col.align,
         fixed: baseFixed,
         render: (_: unknown, record: HRCTableRow) => {
+          if (col.dataIndex && isSttDataIndex(col.dataIndex)) {
+            const text = resolveSttText(sortedRows, record);
+            return (
+              <Input
+                value={text}
+                readOnly
+                tabIndex={-1}
+                style={{
+                  textAlign: col.align ?? "center",
+                  backgroundColor: "#f5f5f5",
+                  cursor: "default",
+                }}
+              />
+            );
+          }
           // ⚠️ Cột phân bổ (variant="adjust") luôn read-only, không cho phép chỉnh sửa thủ công
           const isAdjustColumn = col.variant === "adjust";
           const isMeThoiColumn = col.dataIndex === "meThoi";
@@ -617,7 +670,9 @@ const CustomTableHRC = forwardRef(({
             : cellValue !== undefined && cellValue !== null
               ? String(cellValue)
               : "";
-          const isTrungMeThoi = record.isTrungMeThoi === true;
+          const isTrungMeThoi =
+            record.isTrungMeThoi === true ||
+            (record as Record<string, unknown>).IsTrungMeThoi === true;
           const isNegative = isPhuLieuDataIndex(dataIndex) && isNegativeValue(currentValue);
 
           const isKeyColumn = isMeThoiColumn || isMacThepColumn;
@@ -649,7 +704,10 @@ const CustomTableHRC = forwardRef(({
               disabled={isAdjustColumn}
               style={{
                 textAlign: col.align ?? "right",
-                backgroundColor: isCellChanged ? "#fff7b3" : "#f5f5f5",
+                backgroundColor:
+                  isMeThoiColumn && isTrungMeThoi
+                    ? "tomato"
+                    : (isCellChanged ? "#fff7b3" : "#f5f5f5"),
                 cursor: "not-allowed",
               }}
             />
@@ -794,7 +852,7 @@ const CustomTableHRC = forwardRef(({
                         index={idx}
                         align={(align as "left" | "center" | "right") ?? "right"}
                       >
-                        {idx === 0 ? (
+                        {idx === summaryTongLabelIndex ? (
                           <strong>Tổng</strong>
                         ) : sum && columnSums[dataIndex] !== undefined ? (
                           <strong>{formatSum(columnSums[dataIndex])}</strong>

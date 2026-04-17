@@ -55,21 +55,21 @@ export const MenuDataDashboard = [
     icon: "nmhrc2",
     color: "#019221ff",
     items: [
-      // {
-      //   code: "tieuhaonauluyen_lf",
-      //   title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
-      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
-      // },
-      // {
-      //   code: "tieuhaonauluyen_bof",
-      //   title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
-      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
-      // },
-      // {
-      //   code: "tieuhaonauluyen_rf",
-      //   title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
-      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
-      // },
+      {
+        code: "tieuhaonauluyen_lf",
+        title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
+      },
+      {
+        code: "tieuhaonauluyen_bof",
+        title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
+      },
+      {
+        code: "tieuhaonauluyen_rf",
+        title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
+      },
     ],
   },
   {

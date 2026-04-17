@@ -631,7 +631,7 @@ const TaoSoTheoDoiSanXuat = () => {
               </Upload>
             </>
           )}
-          {idphieu &&
+          {/* {idphieu &&
             (currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
               currentTinhTrang === TrangThaiPhieuConst.DaChot) && (
               <Button
@@ -642,7 +642,7 @@ const TaoSoTheoDoiSanXuat = () => {
               >
                 Xuất PDF
               </Button>
-            )}
+            )} */}
           {actionButtons}
         </div>
 

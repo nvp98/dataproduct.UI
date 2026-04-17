@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState } from "react";
 import { Button, Popconfirm, message } from "antd";
 import type { ButtonProps } from "antd";
 import {
@@ -26,6 +27,8 @@ export interface PhieuActionButton {
     title: string;
     description?: string;
   };
+  // Nếu có: chạy API check trước khi hiện Popconfirm. Return false → block, throw → block + message lỗi tự hiện
+  preConfirmCheck?: () => Promise<boolean>;
   onClick: (phieuId: string, formData?: Record<string, unknown>) => Promise<void>;
 }
 
@@ -61,6 +64,8 @@ export interface PhieuActionServiceParams {
   pheDuyet?: PheDuyetItem[];
   // Luồng 1 người: bỏ qua phê duyệt, "Gửi" sẽ chuyển thẳng sang HoanThanh (2) để PKH chốt
   noApproval?: boolean;
+  // API check trước khi chốt (nullable - chỉ truyền ở những chỗ cần). Return false → block, throw → block
+  preConfirmCheck?: () => Promise<boolean>;
   // Callbacks
   onSuccess?: (context?: ActionSuccessContext) => void | Promise<void>;
   onError?: (error: unknown) => void;
@@ -206,6 +211,66 @@ const checkPermission = {
 };
 
 /**
+ * Component nội bộ: Popconfirm có bước check API trước khi mở.
+ * Click button → chạy preConfirmCheck() → nếu pass mới hiện Popconfirm.
+ */
+const PreCheckPopconfirmButton: React.FC<{
+  btn: PhieuActionButton;
+  phieuId: string;
+  getFormData?: (actionKey?: string) => Record<string, unknown> | Promise<Record<string, unknown>>;
+}> = ({ btn, phieuId, getFormData }) => {
+  const [open, setOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  const handleButtonClick = async () => {
+    if (!btn.preConfirmCheck) {
+      setOpen(true);
+      return;
+    }
+    setChecking(true);
+    try {
+      const canProceed = await btn.preConfirmCheck();
+      if (canProceed) setOpen(true);
+    } catch {
+      // lỗi đã được xử lý bên trong preConfirmCheck (message.error)
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    setOpen(false);
+    const formData = getFormData ? await getFormData(btn.key) : undefined;
+    await btn.onClick(phieuId, formData);
+  };
+
+  return (
+    <Popconfirm
+      title={btn.confirm!.title}
+      description={btn.confirm!.description}
+      open={open}
+      onConfirm={handleConfirm}
+      onCancel={() => setOpen(false)}
+      okText="Xác nhận"
+      cancelText="Hủy"
+      okButtonProps={btn.danger ? { danger: true } : undefined}
+    >
+      <Button
+        type={btn.type}
+        danger={btn.danger}
+        icon={btn.icon}
+        disabled={btn.disabled}
+        loading={checking}
+        htmlType="button"
+        onClick={handleButtonClick}
+      >
+        {btn.label}
+      </Button>
+    </Popconfirm>
+  );
+};
+
+/**
  * Service quản lý các action buttons cho phiếu dựa trên trạng thái, isClone và quyền của user
  * 
  * Logic kiểm tra quyền theo trạng thái:
@@ -262,6 +327,7 @@ export const phieuActionService = {
       currentUserTenNgan,
       pheDuyet,
       noApproval = false,
+      preConfirmCheck,
       onSuccess,
       onError,
       redirectToList,
@@ -293,6 +359,7 @@ export const phieuActionService = {
             title: "Xác nhận chốt",
             description: "Bạn có chắc chắn muốn chốt phiếu này? Sau khi chốt, phiếu sẽ không thể chỉnh sửa.",
           },
+          preConfirmCheck,
           onClick: async () => {
             try {
               await PhieuApi.changeStatus(
@@ -811,7 +878,7 @@ export const phieuActionService = {
           danger={btn.danger}
           icon={btn.icon}
           disabled={btn.disabled}
-          htmlType="button" // Ngăn form submit khi click button
+          htmlType="button"
           onClick={handleClick}
         >
           {btn.label}
@@ -819,6 +886,18 @@ export const phieuActionService = {
       );
 
       if (btn.confirm) {
+        // Nếu có preConfirmCheck: dùng controlled Popconfirm, check API trước khi mở
+        if (btn.preConfirmCheck) {
+          return (
+            <PreCheckPopconfirmButton
+              key={btn.key}
+              btn={btn}
+              phieuId={phieuId}
+              getFormData={getFormData}
+            />
+          );
+        }
+
         return (
           <Popconfirm
             key={btn.key}
@@ -834,7 +913,7 @@ export const phieuActionService = {
               danger={btn.danger}
               icon={btn.icon}
               disabled={btn.disabled}
-              htmlType="button" // Ngăn form submit khi click button
+              htmlType="button"
             >
               {btn.label}
             </Button>

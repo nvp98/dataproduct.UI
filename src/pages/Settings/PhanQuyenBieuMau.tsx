@@ -34,6 +34,7 @@ const QUYEN_CHUC_NANG_OPTIONS = [
   { value: 2, label: "Phê duyệt (Việc đến tôi)" },
   { value: 3, label: "Chốt" },
   { value: 4, label: "Xử lý + Phê duyệt" },
+  { value: 5, label: "Xem (chỉ xem)" },
 ];
 
 const PhanQuyenBieuMau = () => {
