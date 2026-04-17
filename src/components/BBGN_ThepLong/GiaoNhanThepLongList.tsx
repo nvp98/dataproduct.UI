@@ -42,7 +42,9 @@ const GiaoNhanThepLongList = ({
   const config = CONFIG_MAP[bieuMau];
   const navigate = useNavigate();
   const nhaMay = bieuMau === "HRC2_BBGN_ThepLong" ? 2 : 1;
-  const [mayDucOptions, setMayDucOptions] = useState<Array<{ label: string; value: number }>>([]);
+  const [mayDucOptions, setMayDucOptions] = useState<
+    Array<{ label: string; value: number }>
+  >([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,7 +57,9 @@ const GiaoNhanThepLongList = ({
           pageSize: 200,
         });
         if (cancelled) return;
-        setMayDucOptions((res.data || []).map((x) => ({ label: x.tenMayDuc, value: x.id })));
+        setMayDucOptions(
+          (res.data || []).map((x) => ({ label: x.tenMayDuc, value: x.id })),
+        );
       } catch (e) {
         console.error(e);
       }
@@ -148,7 +152,9 @@ const GiaoNhanThepLongList = ({
       width: 130,
       ellipsis: true,
       render: (value: number) => {
-        const match = mayDucOptions.find((x) => Number(x.value) === Number(value));
+        const match = mayDucOptions.find(
+          (x) => Number(x.value) === Number(value),
+        );
         return match?.label ?? (value != null ? String(value) : "-");
       },
     },
@@ -217,7 +223,7 @@ const GiaoNhanThepLongList = ({
       label: "Máy đúc",
       type: "select",
       options: mayDucOptions,
-    }
+    },
   ];
 
   return (
@@ -227,7 +233,7 @@ const GiaoNhanThepLongList = ({
         onFilter={handleFilter}
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
-        showCreateButton={true}
+        showCreateButton={false}
         onCreateClick={() => {
           navigate(routeCreate);
         }}
