@@ -2,6 +2,8 @@ import { Select, Spin } from "antd";
 import type { SelectProps } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+const CREATE_SENTINEL = "__ca_create_new__";
+
 export interface AutocompleteSearchParams {
   searchKey?: string;
   page?: number;
@@ -47,6 +49,12 @@ export interface CommonAutocompleteProps<T> {
   resetOnBlur?: boolean;
   /** Prop khác cho Select nếu cần custom thêm */
   selectProps?: Omit<SelectProps, "value" | "onChange" | "options" | "onSearch">;
+  /** Cho phép tạo mới khi search không ra kết quả */
+  allowCreate?: boolean;
+  /** Callback tạo item mới, nhận vào text search, trả về item T vừa tạo */
+  onCreate?: (searchText: string) => Promise<T | null>;
+  /** Nhãn cho option tạo mới, default: `+ Tạo mới: "${text}"` */
+  createOptionLabel?: (text: string) => string;
 }
 
 interface InternalOption<T> {
@@ -69,9 +77,14 @@ function CommonAutocompleteInner<T>({
   fallbackLabelBuilder,
   resetOnBlur = false,
   selectProps,
+  allowCreate = false,
+  onCreate,
+  createOptionLabel,
 }: CommonAutocompleteProps<T>) {
   const [options, setOptions] = useState<InternalOption<T>[]>([]);
   const [fetching, setFetching] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [pendingSearch, setPendingSearch] = useState("");
   const [selectedValue, setSelectedValue] = useState<SelectProps["value"]>();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialOptionsRef = useRef<InternalOption<T>[]>([]);
@@ -142,6 +155,7 @@ function CommonAutocompleteInner<T>({
 
   const handleSearch = useCallback(
     (keyword: string) => {
+      setPendingSearch(keyword);
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
@@ -160,23 +174,58 @@ function CommonAutocompleteInner<T>({
     };
   }, []);
 
-  const selectOptions = useMemo(
-    () =>
-      options.map((item) => ({
-        label: item.label,
-        value: item.value,
-      })),
-    [options]
-  );
+  const selectOptions = useMemo(() => {
+    const base = options.map((item) => ({ label: item.label, value: item.value }));
+    const t = pendingSearch.trim();
+    if (!allowCreate || !t) return base;
+    const dup = options.some(
+      (o) => o.label.trim().toLowerCase() === t.toLowerCase()
+    );
+    if (dup) return base;
+    return [
+      ...base,
+      {
+        label: createOptionLabel ? createOptionLabel(t) : `+ Tạo mới: "${t}"`,
+        value: CREATE_SENTINEL,
+      },
+    ];
+  }, [options, pendingSearch, allowCreate, createOptionLabel]);
 
   const handleChange = (val: { value: number | string; label: string } | { value: number | string; label: string }[] | null) => {
     if (!val) {
       setSelectedValue(undefined);
       onChange?.(null, null);
+      setPendingSearch("");
       return;
     }
     const optionValue = Array.isArray(val) ? val[0] : val;
     const rawValue = optionValue?.value ?? optionValue;
+
+    if (allowCreate && rawValue === CREATE_SENTINEL) {
+      const name = pendingSearch.trim();
+      if (!name || !onCreate) return;
+      void (async () => {
+        setCreating(true);
+        try {
+          const newItem = await onCreate(name);
+          if (newItem) {
+            const mapped = mapOption(newItem);
+            const newOpt: InternalOption<T> = { raw: newItem, value: mapped.value, label: mapped.label };
+            setOptions((prev) => {
+              if (prev.some((p) => p.value === mapped.value)) return prev;
+              return [newOpt, ...prev];
+            });
+            setSelectedValue({ value: mapped.value, label: mapped.label });
+            onChange?.(mapped.value, newItem);
+            setPendingSearch("");
+          }
+        } finally {
+          setCreating(false);
+        }
+      })();
+      return;
+    }
+
     const numericOrStringValue =
       typeof rawValue === "number" || typeof rawValue === "string"
         ? rawValue
@@ -193,6 +242,7 @@ function CommonAutocompleteInner<T>({
         : numericOrStringValue,
       matched?.raw ?? null
     );
+    setPendingSearch("");
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLElement>) => {
@@ -216,12 +266,13 @@ function CommonAutocompleteInner<T>({
       value={selectedValue}
       placeholder={placeholder}
       allowClear={allowClear}
-      disabled={disabled}
+      disabled={disabled || creating}
       style={mergedStyle}
       size={size}
       filterOption={false}
       options={selectOptions}
-      notFoundContent={fetching ? <Spin size="small" /> : null}
+      loading={creating}
+      notFoundContent={fetching || creating ? <Spin size="small" /> : null}
       dropdownMatchSelectWidth={selectProps?.dropdownMatchSelectWidth ?? 260}
       onDropdownVisibleChange={(open) => {
         if (open && !options.length) {
@@ -229,6 +280,7 @@ function CommonAutocompleteInner<T>({
         }
         selectProps?.onDropdownVisibleChange?.(open);
       }}
+      searchValue={pendingSearch}
       onSearch={handleSearch}
       onChange={handleChange}
       onBlur={handleBlur}

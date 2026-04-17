@@ -177,6 +177,25 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
     [nhaMay]
   );
 
+  const handleCreateMacThep = useCallback(
+    async (searchText: string): Promise<MacThep | null> => {
+      try {
+        const created = await MacThepServiceApi.create({
+          tenMacThep: searchText,
+          nhaMay: nhaMay as NhaMayEnum,
+          isLock: false,
+        });
+        message.success(`Đã tạo mác thép "${created.tenMacThep}"`);
+        return created;
+      } catch (e) {
+        console.error(e);
+        message.error("Không tạo được mác thép");
+        return null;
+      }
+    },
+    [nhaMay]
+  );
+
   const updateRow = useCallback(
     (key: string, updates: Partial<BBGNRow>) => {
       onChange?.(value.map((r) => (r.key === key ? { ...r, ...updates } : r)));
@@ -298,6 +317,8 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
             placeholder="Chọn mác thép..."
             style={{ width: "100%" }}
             size="small"
+            allowCreate
+            onCreate={handleCreateMacThep}
           />
         );
       },

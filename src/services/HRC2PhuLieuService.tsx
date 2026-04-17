@@ -237,11 +237,16 @@ export const hrc2PhuLieuService = {
     };
 
     const tableData: HRCTableRow[] = data.map((item, index) => {
+      const isTrungMe =
+        item.data?.isTrungMeThoi === true ||
+        ((item.data as unknown as { IsTrungMeThoi?: boolean } | null)?.IsTrungMeThoi === true);
+
       const row: HRCTableRow = {
         key: `row-${item.data?.reportNo || index}`,
         IsNM: item.data?.isNM ?? true,
         id: item.data?.id ?? undefined,
-        isTrungMeThoi: item.data?.isTrungMeThoi ?? false,
+        isTrungMeThoi: isTrungMe,
+        IsTrungMeThoi: isTrungMe,
       };
 
       // Map các cột cơ bản từ config

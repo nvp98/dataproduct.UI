@@ -16,33 +16,19 @@ import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
 import type { NhaMayEnum } from "../../../models/SiloModel";
 
-// Map maBm -> route chi tiết
 const MABM_DETAIL_ROUTE: Record<string, string> = {
-  HRC2_BB_NauLuyen_BOF: "/chitiettieuhaonauluyen_bof",
-  HRC2_BB_NauLuyen_LF: "/chitiettieuhaonauluyen_lf",
-  HRC2_BB_NauLuyen_RH: "/chitiettieuhaonauluyen_rh",
-  HRC2_STD_NXT: "/tao-std",
-  HRC2_BBGN_ThepLong: "/chitietgiaonhantheplong",
+  HRC1_BB_Lothoi: "/taotieuhaolothoi",
+  HRC1_BBGN_ThepLong: "/chitietgiaonhantheplong_hrc1",
 };
 
 const MABM_LIST: string[] = [
-  BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
-  BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
-  BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
-  // BM_CONFIG.HRC2.HRC2_STD_NXT,
-  BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
+  BM_CONFIG.HRC1.HRC1_BB_Lothoi,
+  BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
 ];
 
 const LOAI_BM_TO_MABM: Record<string, string> = {
-  BOF: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
-  LF: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
-  RH: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
-  BBGN_ThepLong: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
-};
-
-const SCOPE_OPTIONS: Record<string, { label: string; value: number }[]> = {
-  BOF: [{ label: "Lò 6", value: 6 }, { label: "Lò 7", value: 7 }],
-  RH: [{ label: "RH1", value: 1 }, { label: "RH2", value: 2 }],
+  LoThoi: BM_CONFIG.HRC1.HRC1_BB_Lothoi,
+  BBGN_ThepLong: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
 };
 
 const TINH_TRANG_OPTIONS = [
@@ -50,7 +36,6 @@ const TINH_TRANG_OPTIONS = [
   { label: "Đã gửi", value: TrangThaiPhieuConst.DaGui },
   { label: "Hoàn thành", value: TrangThaiPhieuConst.HoanThanh },
   { label: "Đã thu hồi", value: TrangThaiPhieuConst.DaThuHoi },
-  // { label: "Không xác nhận", value: TrangThaiPhieuConst.KhongXacNhan },
   { label: "Đã chốt", value: TrangThaiPhieuConst.DaChot },
   { label: "Đang phê duyệt", value: TrangThaiPhieuConst.DangPheDuyet },
   { label: "Hiệu chỉnh", value: TrangThaiPhieuConst.HieuChinh },
@@ -62,8 +47,8 @@ const normalizeNum = (v: unknown): number | null => {
   return isNaN(n) ? null : n;
 };
 
-interface ThongKePhieuHRC2Props {
-  type?: string; // "viecdentoi" | undefined
+interface ThongKePhieuHRC1Props {
+  type?: string;
 }
 
 type TableRecord = SearchPhieuResponseModel & {
@@ -71,7 +56,7 @@ type TableRecord = SearchPhieuResponseModel & {
   [key: string]: unknown;
 };
 
-const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
+const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
@@ -85,20 +70,6 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
     userObj?.ID_TaiKhoan ??
     null;
 
-  // [API cũ] phân biệt "việc tôi tạo" vs "việc đến tôi" bằng 2 param riêng
-  // const fixedFilters = useMemo(() => {
-  //   const base: Record<string, string | number | null | undefined> = {
-  //     usercode: userObj?.maNV || "",
-  //   };
-  //   if (type === "viecdentoi") {
-  //     base.nguoiDuyetId = currentUserId;
-  //   } else {
-  //     base.nguoiTaoId = currentUserId;
-  //   }
-  //   return base;
-  // }, [currentUserId, type, userObj?.maNV]);
-
-  // Vùng 3 (Thống kê): PKH / admin — toàn bộ phiếu; người khác: vùng 1 + userId
   const fixedFilters = useMemo(() => {
     const u = getThongTinUser();
     const canThongKe =
@@ -119,7 +90,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
     (async () => {
       try {
         const res = await MayDucServiceApi.search({
-          nhaMay: 2 as NhaMayEnum,
+          nhaMay: 1 as NhaMayEnum,
           isLock: false,
           page: 1,
           pageSize: 200,
@@ -131,9 +102,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
         if (!cancelled) setMayDucOptions([]);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const transformFilters = useCallback((filters: PhieuFilterValues): Partial<SearchPhieuRequest> => {
@@ -141,13 +110,11 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
     const maBmList = loaiBMList.length > 0
       ? loaiBMList.map((k) => LOAI_BM_TO_MABM[String(k)]).filter(Boolean)
       : null;
-    // LF luôn dùng scope 6
-    const scopeOverride = loaiBMList.length === 1 && loaiBMList[0] === "LF" ? 6 : normalizeNum(filters.scope);
     return {
       tuNgay: (filters.ngaySXFrom || filters.fromDate || null) as string | null,
       denNgay: (filters.ngaySXTo || filters.toDate || null) as string | null,
       ca: normalizeNum(filters.ca),
-      scope: scopeOverride,
+      scope: normalizeNum(filters.scope),
       searchText: (filters.soPhieu || null) as string | null,
       tinhTrang: normalizeNum(filters.tinhTrang),
       ...(maBmList ? { maBmList, maBm: null } : {}),
@@ -163,10 +130,8 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
 
   const statusConfig = PHIEU_STATUS_CONFIG;
 
-  const isAllSelected =
-    data.length > 0 && data.every((r) => selectedKeys.has(r.idphieu));
-  const isIndeterminate =
-    !isAllSelected && data.some((r) => selectedKeys.has(r.idphieu));
+  const isAllSelected = data.length > 0 && data.every((r) => selectedKeys.has(r.idphieu));
+  const isIndeterminate = !isAllSelected && data.some((r) => selectedKeys.has(r.idphieu));
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedKeys((prev) => {
@@ -257,14 +222,12 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
       key: "select",
       width: 50,
       fixed: "left" as const,
-      render: (_: unknown, record: TableRecord) => {
-        return (
-          <Checkbox
-            checked={selectedKeys.has(record.idphieu)}
-            onChange={() => toggleSelect(record.idphieu)}
-          />
-        );
-      },
+      render: (_: unknown, record: TableRecord) => (
+        <Checkbox
+          checked={selectedKeys.has(record.idphieu)}
+          onChange={() => toggleSelect(record.idphieu)}
+        />
+      ),
     },
     {
       title: <b>Số Phiếu</b>,
@@ -281,9 +244,9 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
               navigate(route, {
                 state: {
                   idphieu: record.idphieu,
-                    pheduyet: record?.pheDuyet?.[0] ?? null,
-                  },
-                });
+                  pheduyet: record?.pheDuyet?.[0] ?? null,
+                },
+              });
             } else {
               navigate(route, { state: { idphieu: record.idphieu } });
             }
@@ -305,8 +268,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
       dataIndex: "ngaySX",
       key: "ngaySX",
       width: 200,
-      render: (value: string) =>
-        value ? dayjs(value).format("DD/MM/YYYY") : "-",
+      render: (value: string) => (value ? dayjs(value).format("DD/MM/YYYY") : "-"),
     },
     {
       title: "Ca",
@@ -333,26 +295,6 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
         </Tag>
       ),
     },
-    // {
-    //   title: "Thao tác",
-    //   key: "action",
-    //   width: 80,
-    //   render: (_: unknown, record: TableRecord) => {
-    //     const route = MABM_DETAIL_ROUTE[record.maBm as string];
-    //     return (
-    //       <Space>
-    //         <Button
-    //           type="text"
-    //           icon={<EyeOutlined />}
-    //           disabled={!route}
-    //           onClick={() =>
-    //             route && navigate(route, { state: { idphieu: record.idphieu } })
-    //           }
-    //         />
-    //       </Space>
-    //     );
-    //   },
-    // },
   ];
 
   const filterFieldsConfig = useMemo<FilterFieldConfig[]>(() => {
@@ -362,20 +304,16 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
         label: "Loại biểu mẫu",
         type: "multiselect",
         options: [
-          { label: "Lò thổi BOF", value: "BOF" },
-          { label: "Tinh luyện LF", value: "LF" },
-          { label: "Tinh luyện RH", value: "RH" },
+          { label: "Lò thổi", value: "LoThoi" },
           { label: "Giao nhận thép lỏng", value: "BBGN_ThepLong" },
         ],
       },
-      
       {
         key: "ngaySX",
         label: "Ngày sản xuất",
         type: "dateRange",
         placeholder: "Khoảng ngày",
       },
-      
       {
         key: "ca",
         label: "Ca",
@@ -393,37 +331,33 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
       },
     ];
 
-    // Gom scope options theo các loaiBM đã chọn (hỗ trợ multi-select)
+    // Scope options: LoThoi không có scope, BBGN_ThepLong dùng máy đúc
     const scopeOptionsMap: Record<string, { label: string; value: number }[]> = {
-      BOF: SCOPE_OPTIONS.BOF,
-      LF: [{ label: "Tinh luyện 6", value: 6 }],
-      RH: SCOPE_OPTIONS.RH,
       BBGN_ThepLong: mayDucOptions,
     };
-    const defaultScopeOptions = [
-      { label: "Lò 6", value: 6 },
-      { label: "Lò 7", value: 7 },
-      { label: "RH 1", value: 1 },
-      { label: "RH 2", value: 2 },
-    ];
     const scopeOptions = selectedLoaiBM.length === 0
-      ? defaultScopeOptions
+      ? mayDucOptions
       : selectedLoaiBM.length === 1
-        ? (scopeOptionsMap[selectedLoaiBM[0]] ?? defaultScopeOptions)
+        ? (scopeOptionsMap[selectedLoaiBM[0]] ?? [])
         : (() => {
             const seen = new Set<number>();
-            return selectedLoaiBM.flatMap((k) => scopeOptionsMap[k] ?? []).filter((o) => {
-              if (seen.has(o.value)) return false;
-              seen.add(o.value);
-              return true;
-            });
+            return selectedLoaiBM
+              .flatMap((k) => scopeOptionsMap[k] ?? [])
+              .filter((o) => {
+                if (seen.has(o.value)) return false;
+                seen.add(o.value);
+                return true;
+              });
           })();
-    fields.push({
-      key: "scope",
-      label: "Lò thổi",
-      type: "select",
-      options: scopeOptions,
-    });
+
+    if (scopeOptions.length > 0) {
+      fields.push({
+        key: "scope",
+        label: "Máy đúc",
+        type: "select",
+        options: scopeOptions,
+      });
+    }
 
     fields.push({
       key: "tinhTrang",
@@ -438,7 +372,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
   return (
     <div>
       <PhieuFilterCard
-        title="Tổng hợp phiếu HRC2"
+        title="Tổng hợp phiếu HRC1"
         onFilter={handleFilter}
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
@@ -481,17 +415,14 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
             total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} phiếu`,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: handlePageChange,
           }}
           scroll={{ x: 1100 }}
           summary={() => (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={8} align="right">
-                <span style={{ fontWeight: 500 }}>
-                  Tổng: {pagination.total} Phiếu
-                </span>
+                <span style={{ fontWeight: 500 }}>Tổng: {pagination.total} Phiếu</span>
               </Table.Summary.Cell>
             </Table.Summary.Row>
           )}
@@ -501,4 +432,4 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
   );
 };
 
-export default ThongKePhieuHRC2;
+export default ThongKePhieuHRC1;

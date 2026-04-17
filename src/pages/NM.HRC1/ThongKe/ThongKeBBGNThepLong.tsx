@@ -52,7 +52,7 @@ const ThongKeBBGNThepLong = () => {
     total: 0,
   });
   const [filters, setFilters] = useState<SearchThongKeBBGNThepLongRequest>({
-    bieuMau: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
+    bieuMau: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
     page: 1,
     pageSize: 20,
   });
@@ -63,7 +63,7 @@ const ThongKeBBGNThepLong = () => {
     (async () => {
       try {
         const res = await MayDucServiceApi.search({
-          nhaMay: 2,
+          nhaMay: 1,
           isLock: false,
           page: 1,
           pageSize: 200,
@@ -104,41 +104,38 @@ const ThongKeBBGNThepLong = () => {
   }, []);
 
   useEffect(() => {
-    void fetchData({ bieuMau: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong, page: 1, pageSize: 20 });
+    void fetchData({ bieuMau: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong, page: 1, pageSize: 20 });
   }, [fetchData]);
 
-  const handleFilter = useCallback(
-    () => {
-      const values = form.getFieldsValue(true) as Record<string, unknown>;
-      const dateRange = values.ngaySX as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+  const handleFilter = useCallback(() => {
+    const values = form.getFieldsValue(true) as Record<string, unknown>;
+    const dateRange = values.ngaySX as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
 
-      const nextFilters: SearchThongKeBBGNThepLongRequest = {
-        tuNgay: dateRange?.[0]?.format("YYYY-MM-DD"),
-        denNgay: dateRange?.[1]?.format("YYYY-MM-DD"),
-        scope: values.scope ? Number(values.scope) : undefined,
-        mayDuc: values.scope ? Number(values.scope) : undefined,
-        searchString: values.searchString ? String(values.searchString).trim() : undefined,
-        thungSo: values.thungSo ? String(values.thungSo).trim() : undefined,
-        tinhLuyenLenThang: values.tinhLuyenLenThang
-          ? String(values.tinhLuyenLenThang).trim()
-          : undefined,
-        phanLoai: values.phanLoai ? String(values.phanLoai).trim() : undefined,
-        isTrungMeThoi:
-          values.isTrungMeThoi === "" || values.isTrungMeThoi === undefined
-            ? undefined
-            : String(values.isTrungMeThoi) === "true",
-        bieuMau: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
-        page: 1,
-        pageSize: pagination.pageSize,
-      };
-      void fetchData(nextFilters);
-    },
-    [fetchData, form, pagination.pageSize]
-  );
+    const nextFilters: SearchThongKeBBGNThepLongRequest = {
+      tuNgay: dateRange?.[0]?.format("YYYY-MM-DD"),
+      denNgay: dateRange?.[1]?.format("YYYY-MM-DD"),
+      scope: values.scope ? Number(values.scope) : undefined,
+      mayDuc: values.scope ? Number(values.scope) : undefined,
+      searchString: values.searchString ? String(values.searchString).trim() : undefined,
+      thungSo: values.thungSo ? String(values.thungSo).trim() : undefined,
+      tinhLuyenLenThang: values.tinhLuyenLenThang
+        ? String(values.tinhLuyenLenThang).trim()
+        : undefined,
+      phanLoai: values.phanLoai ? String(values.phanLoai).trim() : undefined,
+      isTrungMeThoi:
+        values.isTrungMeThoi === "" || values.isTrungMeThoi === undefined
+          ? undefined
+          : String(values.isTrungMeThoi) === "true",
+      bieuMau: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
+      page: 1,
+      pageSize: pagination.pageSize,
+    };
+    void fetchData(nextFilters);
+  }, [fetchData, form, pagination.pageSize]);
 
   const handleClearFilter = useCallback(() => {
     form.resetFields();
-    void fetchData({ bieuMau: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong, page: 1, pageSize: pagination.pageSize });
+    void fetchData({ bieuMau: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong, page: 1, pageSize: pagination.pageSize });
   }, [fetchData, form, pagination.pageSize]);
 
   const columns = useMemo(
@@ -282,65 +279,57 @@ const ThongKeBBGNThepLong = () => {
         </Space>
       </Form>
 
-        <Table<ThongKeRow>
-          bordered
-          size="small"
-          columns={columns}
-          dataSource={tableData}
-          loading={loading}
-          rowKey={(row) => String(row.id)}
-          scroll={{ x: 1800, y: 520 }}
-          onRow={(record) =>
-            isDuplicateMe(record)
-              ? { style: { backgroundColor: "#fff1f0" } }
-              : {}
-          }
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            pageSizeOptions: ["10", "20", "50", "100"],
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} dòng`,
-            onChange: (page, pageSize) => {
-              void fetchData({
-                ...filters,
-                page,
-                pageSize,
-              });
-            },
-          }}
-          summary={() => (
-            <Table.Summary fixed>
-              <Table.Summary.Row style={{ background: "#fafafa", fontWeight: 600 }}>
-                <Table.Summary.Cell index={0} colSpan={10} align="right">
-                  Tổng
-                </Table.Summary.Cell>
-                <Table.Summary.Cell
-                  index={10}
-                  align="right"
+      <Table<ThongKeRow>
+        bordered
+        size="small"
+        columns={columns}
+        dataSource={tableData}
+        loading={loading}
+        rowKey={(row) => String(row.id)}
+        scroll={{ x: 1800, y: 520 }}
+        onRow={(record) =>
+          isDuplicateMe(record)
+            ? { style: { backgroundColor: "#fff1f0" } }
+            : {}
+        }
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          pageSizeOptions: ["10", "20", "50", "100"],
+          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} dòng`,
+          onChange: (page, pageSize) => {
+            void fetchData({ ...filters, page, pageSize });
+          },
+        }}
+        summary={() => (
+          <Table.Summary fixed>
+            <Table.Summary.Row style={{ background: "#fafafa", fontWeight: 600 }}>
+              <Table.Summary.Cell index={0} colSpan={10} align="right">
+                Tổng
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={10} align="right">
+                <span
+                  style={
+                    Number(sumData.totalKlThepLong) < 0
+                      ? { color: "red", fontWeight: 600 }
+                      : undefined
+                  }
                 >
-                  <span
-                    style={
-                      Number(sumData.totalKlThepLong) < 0
-                        ? { color: "red", fontWeight: 600 }
-                        : undefined
-                    }
-                  >
-                    {formatNumber(sumData.totalKlThepLong)}
-                  </span>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={11} colSpan={4} align="right">
-                  Tổng dòng: {sumData.totalRows}
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
-          )}
-        />
+                  {formatNumber(sumData.totalKlThepLong)}
+                </span>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={11} colSpan={4} align="right">
+                Tổng dòng: {sumData.totalRows}
+              </Table.Summary.Cell>
+            </Table.Summary.Row>
+          </Table.Summary>
+        )}
+      />
     </Card>
   );
 };
 
 export default ThongKeBBGNThepLong;
-

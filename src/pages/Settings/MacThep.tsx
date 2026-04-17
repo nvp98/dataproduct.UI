@@ -84,6 +84,7 @@ const QuanLyMacThep = () => {
     setEditingRecord(record);
     modalForm.setFieldsValue({
       tenMacThep: record.tenMacThep,
+      nhaMay: record.nhaMay as NhaMayEnum,
       isLock: record.isLock ?? false,
     });
     setModalVisible(true);

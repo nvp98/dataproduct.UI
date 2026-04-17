@@ -11,7 +11,7 @@ export interface MacThep {
 export interface MacThepPayload {
   tenMacThep: string;
   nhaMay: number;
-  isLock?: boolean | null;
+  isLock?: boolean | null ;
 }
 
 export interface MacThepSearchResponse {
