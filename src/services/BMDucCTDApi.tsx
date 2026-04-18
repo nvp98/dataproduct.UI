@@ -1,28 +1,5 @@
 import apiService from "./ApiService";
 
-interface InsertSanLuongPhoiPayload {
-  idPhieu: string;
-  soPhieu: string;
-  ngaySX: string;
-  kip: string;
-  ca: number;
-  mayDuc: number;
-  table1: Array<{
-    kipNgay: string;
-    macThep: string;
-    kichThuoc: string;
-    stLoai1: number;
-    klLoai1: number;
-    stPhoiNgan: number;
-    klPhoiNgan: number;
-    stLoai2: number;
-    klLoai2: number;
-    stLoai3: number;
-    klLoai3: number;
-    tongSoThanh: number;
-    tongKhoiLuong: number;
-  }>;
-}
 
 export interface InsertPhoiNhapKhoTableRow {
   soPhieu?: string;
@@ -115,17 +92,8 @@ export const sanLuongPhoiApi = {
       params,
       responseType: "blob",
     }),
-  insertSanLuongPhoi: (payload: InsertSanLuongPhoiPayload) =>
-    apiService.post("/api/BMDucCTD/InsertSanLuongPhoi", payload),
-
   deleteSanLuongPhoiByIdPhieu: (idPhieu: string) =>
     apiService.delete(`/api/BMDucCTD/DeleteSanLuongPhoi/${idPhieu}`),
-
-  hideSanLuongPhoiByIdPhieu: (idPhieu: string) =>
-    apiService.patch(`/api/BMDucCTD/HideSanLuongPhoi/${idPhieu}`),
-
-  restoreSanLuongPhoiByIdPhieu: (idPhieu: string) =>
-    apiService.patch(`/api/BMDucCTD/RestoreSanLuongPhoi/${idPhieu}`),
 };
 
 // ============================= PHÔI NHẬP KHO =============================
