@@ -3,7 +3,7 @@ import HRC1_BB_Sanluongphoi from "../../../utils/BM_config/HRC1_BB_Sanluongphoi.
 import { Button, Card, Form, Input, Typography, message, Table } from "antd";
 import { FilterOutlined, FilePdfOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { useNavigate, useParams } from "react-router-dom";
@@ -37,10 +37,6 @@ const TaoPhieuSanLuongPhoi = () => {
     isClone?: boolean;
     idPhieuGoc?: string | null;
   }>({});
-
-  // ★ Ref snapshot – đọc trong closure mà không bao giờ bị stale
-  const phieuInfoRef = useRef(phieuInfo);
-  useEffect(() => { phieuInfoRef.current = phieuInfo; }, [phieuInfo]);
 
   const kip    = Form.useWatch("kip",   form);
   const ca     = Form.useWatch("ca",    form);
@@ -235,139 +231,28 @@ const TaoPhieuSanLuongPhoi = () => {
   }, [getUserInfo, form, config, tableData]);
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  handleStatusChange
-  //  Gọi từ PhieuActionService với các trạng thái: HoanThanh, DaThuHoi,
-  //  KhongXacNhan. Dùng phieuInfoRef.current để tránh stale closure.
+  //  handleStatusChange — validate form trước khi action service thực thi
   // ─────────────────────────────────────────────────────────────────────────
-  const handleStatusChange = useCallback(
-    async (idPhieu: string, newStatus: number) => {
-      const { isClone, idPhieuGoc } = phieuInfoRef.current; // ★ luôn fresh
-
-      try {
-        const formValues = await form.validateFields();
-
-        // ── HoanThanh → INSERT ─────────────────────────────────────────────
-        if (newStatus === TrangThaiPhieuConst.HoanThanh) {
-          await sanLuongPhoiApi.insertSanLuongPhoi({
-            idPhieu, soPhieu: soPhieu || "",
-            ngaySX:  formValues.NgaySX ? formValues.NgaySX.format("YYYY-MM-DD") : "",
-            kip:     formValues.kip    || "",
-            ca:      formValues.ca     || 0,
-            mayDuc:  formValues.mayDuc || 0,
-            table1: tableData.map((row) => ({
-              kipNgay:       row.kipNgay        || "",
-              macThep:       row.macThep        || "",
-              kichThuoc:     row.kichThuoc      || "",
-              stLoai1:       Number(row.stLoai1)       || 0,
-              klLoai1:       Number(row.klLoai1)       || 0,
-              stPhoiNgan:    Number(row.stPhoiNgan)    || 0,
-              klPhoiNgan:    Number(row.klPhoiNgan)    || 0,
-              stLoai2:       Number(row.stLoai2)       || 0,
-              klLoai2:       Number(row.klLoai2)       || 0,
-              stLoai3:       Number(row.stLoai3)       || 0,
-              klLoai3:       Number(row.klLoai3)       || 0,
-              tongSoThanh:   Number(row.tongSoThanh)   || 0,
-              tongKhoiLuong: Number(row.tongKhoiLuong) || 0,
-            })),
-          });
-          message.success("Đã insert dữ liệu sản lượng phôi thành công!");
-          return;
-        }
-
-        // ── DaThuHoi → DELETE (+ RESTORE cha nếu là clone) ────────────────
-        if (newStatus === TrangThaiPhieuConst.DaThuHoi) {
-          await sanLuongPhoiApi.deleteSanLuongPhoiByIdPhieu(idPhieu);
-          message.success("Đã xóa dữ liệu sản lượng phôi!");
-          if (isClone && idPhieuGoc) {
-            await sanLuongPhoiApi.restoreSanLuongPhoiByIdPhieu(idPhieuGoc);
-            message.success("Đã khôi phục dữ liệu phiếu cha!");
-          }
-          return;
-        }
-
-        // ── KhongXacNhan → DELETE clone + RESTORE cha ─────────────────────
-        if (newStatus === TrangThaiPhieuConst.KhongXacNhan) {
-          if (isClone && idPhieuGoc) {
-            try {
-              await sanLuongPhoiApi.deleteSanLuongPhoiByIdPhieu(idPhieu);
-            } catch {
-              // clone chưa có data → không sao
-            }
-            await sanLuongPhoiApi.restoreSanLuongPhoiByIdPhieu(idPhieuGoc);
-            message.success("Đã khôi phục dữ liệu sản lượng phôi của phiếu cha!");
-          }
-        }
-      } catch (error: any) {
-        console.error("❌ Error in handleStatusChange:", error);
-        message.error(`Lỗi: ${error?.response?.data?.message || error?.message || "Không xác định"}`);
-      }
-    },
-    [form, soPhieu, tableData]
-    // ★ KHÔNG đưa phieuInfo vào deps – đọc từ phieuInfoRef.current
-  );
+  const handleStatusChange = useCallback(async () => {
+    try {
+      await form.validateFields();
+    } catch (error: any) {
+      message.error(error?.message || "Vui lòng kiểm tra dữ liệu trước khi đổi trạng thái");
+    }
+  }, [form]);
 
   // ─────────────────────────────────────────────────────────────────────────
   //  handleActionSuccess
-  //
-  //  DeNghiHieuChinh  → navigate sang clone (không làm gì với TTHD vì
-  //                     phiếu cha có thể chưa có data lúc này)
-  //  HoanThanh        → INSERT data + HIDE cha (nếu là clone)
-  //                     ★ check prevStatus để tránh gọi lại khi đã HoanThanh
-  //  KhongXacNhan     → handleStatusChange đã xử lý TRƯỚC navigate → skip
   // ─────────────────────────────────────────────────────────────────────────
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
-
-      // ── DeNghiHieuChinh ───────────────────────────────────────────────────
       if (context?.newPhieuId) {
-        navigate(`/taophieubienbansanluongphoi/${context.newPhieuId}`, {
-          replace: true,
-        });
+        navigate(`/taophieubienbansanluongphoi/${context.newPhieuId}`, { replace: true });
         return;
       }
-
-      if (!idphieu) return;
-
-      try {
-        // ★ Đọc prevStatus từ ref (không phải state) để luôn fresh
-        const prevStatus = phieuInfoRef.current.tinhTrang;
-
-        const res: any = await PhieuApi.getDetail(idphieu);
-        const newStatus = res?.tinhTrang;
-
-        // ── HoanThanh ─────────────────────────────────────────────────────
-        // ★ Guard prevStatus: chỉ xử lý khi VỪA chuyển sang HoanThanh,
-        //    tránh gọi lại INSERT + HIDE mỗi lần component re-render
-        if (
-          newStatus  === TrangThaiPhieuConst.HoanThanh &&
-          prevStatus !== TrangThaiPhieuConst.HoanThanh
-        ) {
-          // INSERT data phiếu hiện tại (TTHD = 1)
-          await handleStatusChange(idphieu, TrangThaiPhieuConst.HoanThanh);
-
-          // Nếu là clone → HIDE data cha trực tiếp (TTHD → 0)
-          // Dùng res (fresh từ API) để lấy idPhieuGoc, không dùng closure cũ
-          // ★ Đọc cả 3 biến thể tên field: idPhieuGoc / iD_PhieuGoc / ID_PhieuGoc
-          const parentId = res?.idPhieuGoc ?? res?.iD_PhieuGoc ?? res?.ID_PhieuGoc;
-          if (res?.isClone && parentId) {
-            try {
-              await sanLuongPhoiApi.hideSanLuongPhoiByIdPhieu(parentId);
-            } catch {
-              // cha chưa có data → không block flow
-            }
-          }
-        }
-
-        // ── KhongXacNhan → đã xử lý trong handleStatusChange, skip ────────
-
-      } catch {
-        // bỏ qua lỗi fetch
-      }
-
       await initData();
     },
-    [navigate, initData, idphieu, handleStatusChange]
-    // phieuInfoRef không cần deps – dùng ref
+    [navigate, initData]
   );
 
   const handleExportPdf = async () => {
