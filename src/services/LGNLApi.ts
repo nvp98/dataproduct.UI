@@ -5,7 +5,6 @@ import apiService from "./ApiService";
 export interface LGNLTsMappingDto {
   id: number;
   tagKey: string | null;   // ví dụ: "XUAT.TS1"
-  ts_Index: number | null; // ví dụ: 1
   isActive: boolean | null;
 }
 
