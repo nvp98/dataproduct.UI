@@ -269,6 +269,7 @@ const TaoPhieuGN = ({
 
       const values = form.getFieldsValue(true);
       const phieuScope = typeof values?.scope === "number" ? values.scope : scopeValue ?? null;
+      const tenScope = typeof values?.tenScope === "string" ? values.tenScope : selectedMayDucLabel ?? null;
       const tableError = validateBBGNRows(tableData, {
         mode: isSend ? "send" : "save",
         scopeLabel: selectedMayDucLabel,
@@ -300,6 +301,7 @@ const TaoPhieuGN = ({
         maBm: config.code,
         prefix: config.prefix,
         scope: phieuScope,
+        tenScope: tenScope,
         xuongId: userInfo.iD_PhanXuong ?? null,
         idphongBan: userInfo.iD_PhongBan ?? null,
         table1: tablePayload,

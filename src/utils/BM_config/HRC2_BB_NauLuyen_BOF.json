@@ -22,11 +22,13 @@
       "options": [
         {
           "label": "Lò thổi 6",
-          "value": 6
+          "value": 6,
+          "tenScope": "Lò thổi 6"
         },
         {
           "label": "Lò thổi 7",
-          "value": 7
+          "value": 7,
+          "tenScope": "Lò thổi 7"
         }
       ]
     },

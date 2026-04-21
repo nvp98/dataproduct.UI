@@ -630,6 +630,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       // Khi đã có idphieu: giữ theo `phieuInfo.nguoiTaoId` để user khác không bị ghi đè khi chỉ "Lưu".
       // `nguoiTaoId` sẽ được BE cập nhật đúng lúc khi "Gửi" (status==1) qua ChangeStatusAsync(idUser).
       nguoiTaoId: isCreateNew ? userInfo.iD_TaiKhoan ?? null : phieuInfo.nguoiTaoId ?? null,
+      tenScope: scope ? 'Tinh luyện ' + scope : null,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: processedTable1,
@@ -647,6 +648,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     config.prefix,
     idphieu,
     phieuInfo.nguoiTaoId,
+    scope,
     phuGiaColumns,
     chatHopKimColumns,
     khacColumns,

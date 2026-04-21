@@ -229,7 +229,7 @@ const GiaoNhanThepLongList = ({
         onFilter={handleFilter}
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
-        showCreateButton={true}
+        showCreateButton={false}
         onCreateClick={() => {
           navigate(routeCreate);
         }}
