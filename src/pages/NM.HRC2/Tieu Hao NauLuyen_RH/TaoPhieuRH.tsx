@@ -631,6 +631,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       //   + Nếu server chưa có nguoiTaoId và tinhTrang = 0 (phiếu tạo tự động) => vẫn gửi lên null khi "Lưu"
       //     (chỉ khi "Gửi" thì backend mới set theo idUser qua ChangeStatusAsync).
       nguoiTaoId: isCreateNew ? userInfo.iD_TaiKhoan ?? null : phieuInfo.nguoiTaoId ?? null,
+      tenScope: scope ? 'RH ' +  scope : null,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: processedTable1,
@@ -648,6 +649,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
     config.prefix,
     idphieu,
     phieuInfo.nguoiTaoId,
+    scope,
     phuGiaColumns,
     chatHopKimColumns,
     khacColumns,

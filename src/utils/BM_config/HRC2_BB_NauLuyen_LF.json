@@ -20,7 +20,7 @@
       "key": "scope",
       "required": true,
       "options": [
-        { "label": "Khu vực 6", "value": 6 }
+        { "label": "Tinh luyện 6", "value": 6, "tenScope": "Tinh luyện 6" }
       ]
     },
     {
