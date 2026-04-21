@@ -6,12 +6,16 @@ export interface MacThep {
   tenMacThep: string;
   nhaMay: number;
   isLock?: boolean | null;
+  isXacNhan?: boolean | null;
+  idMayDuc?: number | null;
+  tenMayDuc?: string | null;
 }
 
 export interface MacThepPayload {
   tenMacThep: string;
   nhaMay: number;
-  isLock?: boolean | null ;
+  isLock?: boolean | null;
+  idMayDuc?: number | null;
 }
 
 export interface MacThepSearchResponse {
@@ -26,6 +30,10 @@ export const MacThepServiceApi = {
     searchKey?: string;
     nhaMay?: number;
     isLock?: boolean;
+    idMayDuc?: number | null;
+    ca?: number;
+    kip?: string;
+    maBm?: string;
     page?: number;
     pageSize?: number;
   }): Promise<MacThepSearchResponse> => {
@@ -33,6 +41,10 @@ export const MacThepServiceApi = {
     if (params.searchKey) q.searchKey = params.searchKey;
     if (params.nhaMay != null) q.nhaMay = params.nhaMay;
     if (params.isLock !== undefined) q.isLock = params.isLock;
+    if (params.idMayDuc != null) q.idMayDuc = params.idMayDuc;
+    if (params.ca != null) q.ca = params.ca;
+    if (params.kip) q.kip = params.kip;
+    if (params.maBm) q.maBm = params.maBm;
     if (params.page) q.page = params.page;
     if (params.pageSize) q.pageSize = params.pageSize;
     const res = (await apiService.get("/api/MacThep/search", { params: q })) as MacThepSearchResponse;
@@ -54,5 +66,9 @@ export const MacThepServiceApi = {
 
   delete: async (id: number): Promise<void> => {
     await apiService.delete(`/api/MacThep/${id}`);
+  },
+
+  toggleXacNhan: async (id: number): Promise<{ id: number; isXacNhan: boolean }> => {
+    return (await apiService.patch(`/api/MacThep/${id}/xac-nhan`)) as { id: number; isXacNhan: boolean };
   },
 };

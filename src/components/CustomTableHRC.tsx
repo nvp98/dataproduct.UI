@@ -127,6 +127,7 @@ interface CustomTableHRCProps {
   lyDoLabel?: string;       // Nếu có → render textbox lý do bên dưới bảng
   lyDoValue?: string;
   onLyDoChange?: (value: string) => void;
+  onSave?: () => Promise<void>;
 }
 
 const CHUYEN_TOI_CA = {
@@ -207,6 +208,7 @@ const CustomTableHRC = forwardRef(({
   lyDoLabel,
   lyDoValue = "",
   onLyDoChange,
+  onSave,
 }: CustomTableHRCProps, ref: React.ForwardedRef<CustomTableHRCHandle>) => {
   const [rows, setRows] = useState<HRCTableRow[]>(initialData as HRCTableRow[]);
   const rowsRef = useRef<HRCTableRow[]>(rows);
@@ -342,11 +344,29 @@ const CustomTableHRC = forwardRef(({
   const handleDeleteRow = async (record: HRCTableRow) => {
     if (rows.length <= minRows) return;
 
+    if (record.IsNM === true && lyDoLabel && !lyDoValue?.trim()) {
+      message.error(`Vui lòng nhập "${lyDoLabel}" trước khi xóa dòng từ NM`);
+      setLyDoError(true);
+      return;
+    }
+
     const id = record.id;
     if (typeof id === "number") {
       try {
-        await dlnmHRC2Api.deleteRowByKey(id);
+        if(record.IsNM === false){
+          await dlnmHRC2Api.deleteRowByKey(id);
+        }
+        else{
+          await dlnmHRC2Api.deleteRowNM(id);
+        }
         message.success("Xóa dòng thành công");
+        setRows((prev) => {
+          const newRows = prev.filter((row) => row.key !== record.key);
+          emitDataChange(newRows);
+          return newRows;
+        });
+        await onSave?.();
+        return;
       } catch (error) {
         console.error("Delete row error:", error);
         message.error("Không thể xóa dòng trên server");
@@ -783,7 +803,7 @@ const CustomTableHRC = forwardRef(({
                     </Tooltip>
                   </div>
                 ) : null}
-                {record.IsNM === false && (
+                { (
                   <Popconfirm
                     title="Xác nhận xóa dòng"
                     description={`Bạn có chắc muốn xóa dòng mẻ ${record.meThoi || ""}?`}
@@ -791,7 +811,7 @@ const CustomTableHRC = forwardRef(({
                     cancelText="Hủy"
                     onConfirm={() => handleDeleteRow(record)}
                   >
-                    <Tooltip title="Xóa dòng nhập tay">
+                    <Tooltip title="Xóa dòng">
                       <Button
                         type="text"
                         danger

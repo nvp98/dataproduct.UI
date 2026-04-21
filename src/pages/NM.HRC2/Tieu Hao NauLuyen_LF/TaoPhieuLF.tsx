@@ -656,6 +656,19 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     table2Data,
   ]);
 
+  const handleAutoSave = useCallback(async () => {
+    if (!idphieu) return;
+    try {
+      const formData = await getFormData("save");
+      await PhieuApi.putData(idphieu, formData);
+      message.success("Lưu phiếu thành công!");
+      await initData();
+    } catch (err) {
+      console.error("Auto save error:", err);
+      message.error("Không thể tự động lưu phiếu");
+    }
+  }, [idphieu, getFormData, initData]);
+
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
       if (context?.newPhieuId) {
@@ -837,6 +850,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
                 lyDoLabel={(layout as any).lyDo?.label}
                 lyDoValue={table1LyDo}
                 onLyDoChange={setTable1LyDo}
+                onSave={handleAutoSave}
                 ref={table1Ref}
               />
               <div style={{ fontWeight: 600, marginTop: 12 }}>

@@ -48,6 +48,11 @@ export const MenuDataDashboard = [
         title: "BM.12/QT.05.11 BIÊN BẢN GIAO NHẬN PHÔI NHẬP KHO",
         maBm: BM_CONFIG.HRC1.HRC1_BB_GiaoNhanPhoiNhapKho,
       },
+      {
+        code: "giaonhantheplong_hrc1",
+        title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+        maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
+      }
     ],
   },
   {
@@ -70,6 +75,11 @@ export const MenuDataDashboard = [
         title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
         maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
       },
+      {
+        code: "giaonhantheplong",
+        title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+        maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
+      }
     ],
   },
   {
