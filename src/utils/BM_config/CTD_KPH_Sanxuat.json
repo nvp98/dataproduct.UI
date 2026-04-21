@@ -102,7 +102,7 @@
       "label": "BP.LOG",
       "type": "selectNguoiKy",
       "key": "nguoiKy_BPLOG",
-      "maphongBan": "BP.LOG",
+      "maphongBan": "BP. LOG",
       "capDuyet": 2,
       "isChon": true,
       "required": true
