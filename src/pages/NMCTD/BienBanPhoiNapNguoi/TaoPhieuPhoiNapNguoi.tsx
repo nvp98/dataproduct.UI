@@ -317,61 +317,61 @@ const TaoPhieuPhoiNapNguoi = () => {
         const formValues = await form.validateFields();
 
         // ── HoanThanh → INSERT ─────────────────────────────────────────────
-        if (newStatus === TrangThaiPhieuConst.HoanThanh) {
-          await phoiNapNguoiApi.insertSanLuongPhoi({
-            idPhieu,
-            soPhieu: soPhieu || "",
-            ngaySX: formValues.NgaySX
-              ? formValues.NgaySX.format("YYYY-MM-DD")
-              : "",
-            kip: formValues.kip || "",
-            ca: formValues.ca || 0,
-            mayDuc: formValues.mayDuc || 0,
-            table1: tableData.map((row) => ({
-              kipNgay: row.kipNgay || "",
-              macThep: row.macThep || "",
-              kichThuoc: row.kichThuoc || "",
-              stLoai1: Number(row.stLoai1) || 0,
-              klLoai1: Number(row.klLoai1) || 0,
-              stPhoiNgan: Number(row.stPhoiNgan) || 0,
-              klPhoiNgan: Number(row.klPhoiNgan) || 0,
-              stLoai2: Number(row.stLoai2) || 0,
-              klLoai2: Number(row.klLoai2) || 0,
-              stLoai3: Number(row.stLoai3) || 0,
-              klLoai3: Number(row.klLoai3) || 0,
-              tongSoThanh: Number(row.tongSoThanh) || 0,
-              tongKhoiLuong: Number(row.tongKhoiLuong) || 0,
-            })),
-          });
-          message.success("Đã insert dữ liệu sản lượng phôi thành công!");
-          return;
-        }
+        // if (newStatus === TrangThaiPhieuConst.HoanThanh) {
+        //   await phoiNapNguoiApi.insertSanLuongPhoi({
+        //     idPhieu,
+        //     soPhieu: soPhieu || "",
+        //     ngaySX: formValues.NgaySX
+        //       ? formValues.NgaySX.format("YYYY-MM-DD")
+        //       : "",
+        //     kip: formValues.kip || "",
+        //     ca: formValues.ca || 0,
+        //     mayDuc: formValues.mayDuc || 0,
+        //     table1: tableData.map((row) => ({
+        //       kipNgay: row.kipNgay || "",
+        //       macThep: row.macThep || "",
+        //       kichThuoc: row.kichThuoc || "",
+        //       stLoai1: Number(row.stLoai1) || 0,
+        //       klLoai1: Number(row.klLoai1) || 0,
+        //       stPhoiNgan: Number(row.stPhoiNgan) || 0,
+        //       klPhoiNgan: Number(row.klPhoiNgan) || 0,
+        //       stLoai2: Number(row.stLoai2) || 0,
+        //       klLoai2: Number(row.klLoai2) || 0,
+        //       stLoai3: Number(row.stLoai3) || 0,
+        //       klLoai3: Number(row.klLoai3) || 0,
+        //       tongSoThanh: Number(row.tongSoThanh) || 0,
+        //       tongKhoiLuong: Number(row.tongKhoiLuong) || 0,
+        //     })),
+        //   });
+        //   message.success("Đã insert dữ liệu sản lượng phôi thành công!");
+        //   return;
+        // }
 
         // ── DaThuHoi → DELETE (+ RESTORE cha nếu là clone) ────────────────
-        if (newStatus === TrangThaiPhieuConst.DaThuHoi) {
-          await phoiNapNguoiApi.deleteSanLuongPhoiByIdPhieu(idPhieu);
-          message.success("Đã xóa dữ liệu sản lượng phôi!");
-          if (isClone && idPhieuGoc) {
-            await phoiNapNguoiApi.restoreSanLuongPhoiByIdPhieu(idPhieuGoc);
-            message.success("Đã khôi phục dữ liệu phiếu cha!");
-          }
-          return;
-        }
+        // if (newStatus === TrangThaiPhieuConst.DaThuHoi) {
+        //   await phoiNapNguoiApi.deleteSanLuongPhoiByIdPhieu(idPhieu);
+        //   message.success("Đã xóa dữ liệu sản lượng phôi!");
+        //   if (isClone && idPhieuGoc) {
+        //     await phoiNapNguoiApi.restoreSanLuongPhoiByIdPhieu(idPhieuGoc);
+        //     message.success("Đã khôi phục dữ liệu phiếu cha!");
+        //   }
+        //   return;
+        // }
 
         // ── KhongXacNhan → DELETE clone + RESTORE cha ─────────────────────
-        if (newStatus === TrangThaiPhieuConst.KhongXacNhan) {
-          if (isClone && idPhieuGoc) {
-            try {
-              await phoiNapNguoiApi.deleteSanLuongPhoiByIdPhieu(idPhieu);
-            } catch {
-              // clone chưa có data → không sao
-            }
-            await phoiNapNguoiApi.restoreSanLuongPhoiByIdPhieu(idPhieuGoc);
-            message.success(
-              "Đã khôi phục dữ liệu sản lượng phôi của phiếu cha!",
-            );
-          }
-        }
+        // if (newStatus === TrangThaiPhieuConst.KhongXacNhan) {
+        //   if (isClone && idPhieuGoc) {
+        //     try {
+        //       await phoiNapNguoiApi.deleteSanLuongPhoiByIdPhieu(idPhieu);
+        //     } catch {
+        //       // clone chưa có data → không sao
+        //     }
+        //     await phoiNapNguoiApi.restoreSanLuongPhoiByIdPhieu(idPhieuGoc);
+        //     message.success(
+        //       "Đã khôi phục dữ liệu sản lượng phôi của phiếu cha!",
+        //     );
+        //   }
+        // }
       } catch (error: any) {
         console.error("❌ Error in handleStatusChange:", error);
         message.error(
@@ -414,26 +414,26 @@ const TaoPhieuPhoiNapNguoi = () => {
         // ── HoanThanh ─────────────────────────────────────────────────────
         // ★ Guard prevStatus: chỉ xử lý khi VỪA chuyển sang HoanThanh,
         //    tránh gọi lại INSERT + HIDE mỗi lần component re-render
-        if (
-          newStatus === TrangThaiPhieuConst.HoanThanh &&
-          prevStatus !== TrangThaiPhieuConst.HoanThanh
-        ) {
-          // INSERT data phiếu hiện tại (TTHD = 1)
-          await handleStatusChange(idphieu, TrangThaiPhieuConst.HoanThanh);
+        // if (
+        //   newStatus === TrangThaiPhieuConst.HoanThanh &&
+        //   prevStatus !== TrangThaiPhieuConst.HoanThanh
+        // ) {
+        //   // INSERT data phiếu hiện tại (TTHD = 1)
+        //   await handleStatusChange(idphieu, TrangThaiPhieuConst.HoanThanh);
 
-          // Nếu là clone → HIDE data cha trực tiếp (TTHD → 0)
-          // Dùng res (fresh từ API) để lấy idPhieuGoc, không dùng closure cũ
-          // ★ Đọc cả 3 biến thể tên field: idPhieuGoc / iD_PhieuGoc / ID_PhieuGoc
-          const parentId =
-            res?.idPhieuGoc ?? res?.iD_PhieuGoc ?? res?.ID_PhieuGoc;
-          if (res?.isClone && parentId) {
-            try {
-              await phoiNapNguoiApi.hideSanLuongPhoiByIdPhieu(parentId);
-            } catch {
-              // cha chưa có data → không block flow
-            }
-          }
-        }
+        //   // Nếu là clone → HIDE data cha trực tiếp (TTHD → 0)
+        //   // Dùng res (fresh từ API) để lấy idPhieuGoc, không dùng closure cũ
+        //   // ★ Đọc cả 3 biến thể tên field: idPhieuGoc / iD_PhieuGoc / ID_PhieuGoc
+        //   const parentId =
+        //     res?.idPhieuGoc ?? res?.iD_PhieuGoc ?? res?.ID_PhieuGoc;
+        //   if (res?.isClone && parentId) {
+        //     try {
+        //       await phoiNapNguoiApi.hideSanLuongPhoiByIdPhieu(parentId);
+        //     } catch {
+        //       // cha chưa có data → không block flow
+        //     }
+        //   }
+        // }
 
         // ── KhongXacNhan → đã xử lý trong handleStatusChange, skip ────────
       } catch {
@@ -492,7 +492,7 @@ const TaoPhieuPhoiNapNguoi = () => {
           mac: r[1] ?? "",
           kichThuoc: r[2] ?? "",
           tongThanh: Number(r[3]) || 0,
-          tongKL: Number(r[4]) || 0,
+          tongKL: Math.round((Number(r[4]) || 0) * 1000) / 1000,
           ghiChu: r[5] ?? "",
         }));
         setTableData(imported);

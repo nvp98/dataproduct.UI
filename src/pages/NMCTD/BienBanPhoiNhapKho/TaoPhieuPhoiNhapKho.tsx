@@ -1254,7 +1254,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                         >
                           <Table.Summary.Cell
                             index={0}
-                            colSpan={4}
+                            colSpan={5}
                             align="center"
                           >
                             TỔNG CỘNG
@@ -1451,7 +1451,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                   <Table.Summary.Row
                     style={{ fontWeight: "bold", background: "#fafafa" }}
                   >
-                    <Table.Summary.Cell index={0} colSpan={3} align="center">
+                    <Table.Summary.Cell index={0} colSpan={7} align="center">
                       TỔNG CỘNG
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1} align="right">
@@ -1498,6 +1498,31 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
               { title: "Mẻ", dataIndex: "me", width: 110, fixed: "left" },
               { title: "Mác thép", dataIndex: "mac", width: 80 },
               { title: "Kích thước", dataIndex: "kichThuoc", width: 130 },
+              {
+                title: "Ngày đúc",
+                dataIndex: "ngaySX",
+                width: 130,
+                render: (v: string) => {
+                  if (!v) return "";
+                  const date = dayjs(v);
+                  return date.isValid() ? date.format("DD/MM/YYYY") : v;
+                },
+              },
+              {
+                title: "Ngày giao",
+                dataIndex: "ngayGiao",
+                width: 130,
+                render: (v: string) => {
+                  if (!v) return "";
+                  const date = dayjs(v);
+                  return date.isValid() ? date.format("DD/MM/YYYY") : v;
+                },
+              },
+              {
+                title: "Ca/Kíp giao",
+                width: 130,
+                render: (_, record) => `${record.ca}${record.kip}`,
+              },
               {
                 title: "Loại I",
                 children: [
