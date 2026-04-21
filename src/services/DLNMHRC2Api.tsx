@@ -42,5 +42,6 @@ export const dlnmHRC2Api = {
         Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       },
     }),
+  deleteRowNM: (rowKey: number) => apiService.delete(`/api/DLNMHRC2/delete-row-nm/${rowKey}`),
   };
 

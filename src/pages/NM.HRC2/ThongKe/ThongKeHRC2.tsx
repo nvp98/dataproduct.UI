@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Card,
+  Checkbox,
   Table,
   Tooltip,
   Typography,
@@ -158,6 +159,7 @@ const ThongKeHRC2 = () => {
           scope = 6;
         }
         const meThoiFilter = (values.meThoi as string | undefined)?.trim();
+        const isDelete = (values.isDelete as boolean | undefined) === true;
 
         // Cột cố định: không hardcode phụ liệu theo config nữa
         const configCols =
@@ -191,6 +193,7 @@ const ThongKeHRC2 = () => {
           LoaiBM: currentLoaiBm,
           Scope: scope ?? undefined,
           SearchText: meThoiFilter ?? undefined,
+          IsDelete: isDelete || undefined,
         };
 
         // Nếu có đủ TuNgay + DenNgay → BE tính sum toàn range, fire độc lập
@@ -426,6 +429,7 @@ const ThongKeHRC2 = () => {
       scope = 6;
     }
     const meThoiFilter = (values.meThoi as string | undefined)?.trim();
+    const isDelete = (values.isDelete as boolean | undefined) === true;
 
     const payload: Record<string, unknown> = {
       TuNgay: fromDate.format("YYYY-MM-DD"),
@@ -434,6 +438,7 @@ const ThongKeHRC2 = () => {
       LoaiBM: loaiBmKey,
       Scope: scope ?? undefined,
       SearchText: meThoiFilter ?? undefined,
+      IsDelete: isDelete || undefined,
     };
 
     try {
@@ -593,6 +598,10 @@ const ThongKeHRC2 = () => {
             <Input placeholder="Nhập mã mẻ thép" style={{ minWidth: 160 }} />
           </Form.Item>
 
+          <Form.Item name="isDelete" valuePropName="checked">
+            <Checkbox>Đã xóa</Checkbox>
+          </Form.Item>
+
           <Form.Item>
             <Space>
               <Button
@@ -603,7 +612,7 @@ const ThongKeHRC2 = () => {
                 Tìm
               </Button>
               <Button onClick={handleReset}>Reset</Button>
-              <Button onClick={() => void handleExcel()}>
+              <Button type="primary" style={{ backgroundColor: "green" }} onClick={() => void handleExcel()}>
                 Excel
               </Button>
             </Space>

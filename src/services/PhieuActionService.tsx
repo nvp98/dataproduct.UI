@@ -15,6 +15,7 @@ import {
 import { PhieuApi } from "./PhieuApi";
 import { PheDuyetApi } from "./PheDuyetApi";
 import { TrangThaiPhieuConst, TrangThaiXacNhanPhieuConst } from "../utils/constants/TrangThaiPhieuConstant";
+import { PhieuActionButtonKeys } from "../utils/constants/PhieuActionButtonKeys";
 
 export interface PhieuActionButton {
   key: string;
@@ -351,7 +352,7 @@ export const phieuActionService = {
     if (isPKH) {
       if (tinhTrang === TrangThaiPhieuConst.HoanThanh) {
         buttons.push({
-          key: "lock",
+          key: PhieuActionButtonKeys.Lock,
           label: "Chốt",
           icon: <LockOutlined />,
           type: "primary",
@@ -377,7 +378,7 @@ export const phieuActionService = {
         });
       } else if (tinhTrang === TrangThaiPhieuConst.DaChot) {
         buttons.push({
-          key: "unlock",
+          key: PhieuActionButtonKeys.Unlock,
           label: "Hủy Chốt",
           icon: <UnlockOutlined />,
           type: "default",
@@ -408,7 +409,7 @@ export const phieuActionService = {
     if (!hasPhieuId) {
         // Button Lưu
         buttons.push({
-          key: "save",
+          key: PhieuActionButtonKeys.Save,
           label: "Tạo mới",
           icon: <EditOutlined />,
           type: "default",
@@ -436,7 +437,7 @@ export const phieuActionService = {
 
       // Button Lưu và Gửi
       buttons.push({
-        key: "saveAndSend",
+        key: PhieuActionButtonKeys.SaveAndSend,
         label: sendLabel,
         icon: <SendOutlined />,
         type: "primary",
@@ -477,7 +478,7 @@ export const phieuActionService = {
       if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
         // Button Lưu
         buttons.push({
-          key: "save",
+          key: PhieuActionButtonKeys.Save,
           label: "Lưu",
           icon: <EditOutlined />,
           type: "default",
@@ -502,7 +503,7 @@ export const phieuActionService = {
 
         // Button Lưu và Gửi
         buttons.push({
-          key: "saveAndSend",
+          key: PhieuActionButtonKeys.SaveAndSend,
           label: sendLabel,
           icon: <SendOutlined />,
           type: "primary",
@@ -537,7 +538,7 @@ export const phieuActionService = {
       // Trạng thái 1 - Đã gửi: Thu hồi (sửa trực tiếp trên phiếu đó)
       if (tinhTrang === TrangThaiPhieuConst.DaGui && isCreatorZero) {
         buttons.push({
-          key: "recall",
+          key: PhieuActionButtonKeys.Recall,
           label: "Thu hồi",
           icon: <UndoOutlined />,
           type: "default",
@@ -565,7 +566,7 @@ export const phieuActionService = {
       // noApproval + HoanThanh: chỉ cần Thu hồi đơn giản về DangLuu để sửa lại (không clone)
       if (noApproval && tinhTrang === TrangThaiPhieuConst.HoanThanh && isCreatorZero) {
         buttons.push({
-          key: "recall",
+          key: PhieuActionButtonKeys.Recall,
           label: "Thu hồi",
           icon: <UndoOutlined />,
           type: "default",
@@ -597,7 +598,7 @@ export const phieuActionService = {
         isCreatorZero
       ) {
         buttons.push({
-          key: "requestEdit",
+          key: PhieuActionButtonKeys.RequestEdit,
           label: "Đề nghị hiệu chỉnh",
           icon: <EditOutlined />,
           type: "default",
@@ -636,7 +637,7 @@ export const phieuActionService = {
       // Trạng thái 7 - Hiệu chỉnh (phiếu clone): Lưu không đổi trạng thái, Lưu và Gửi thì đi luồng bình thường
       if (tinhTrang === TrangThaiPhieuConst.HieuChinh && isCreatorZero) {
         buttons.push({
-          key: "save",
+          key: PhieuActionButtonKeys.Save,
           label: "Lưu",
           icon: <EditOutlined />,
           type: "default",
@@ -658,7 +659,7 @@ export const phieuActionService = {
           },
         });
         buttons.push({
-          key: "saveAndSend",
+          key: PhieuActionButtonKeys.SaveAndSend,
           label: sendLabel,
           icon: <SendOutlined />,
           type: "primary",
@@ -695,7 +696,7 @@ export const phieuActionService = {
       if (tinhTrang === TrangThaiPhieuConst.DaThuHoi && isCreatorZero) {
         // Button Lưu (sửa trực tiếp, không clone)
         buttons.push({
-          key: "save",
+          key: PhieuActionButtonKeys.Save,
           label: "Lưu",
           icon: <EditOutlined />,
           type: "default",
@@ -720,7 +721,7 @@ export const phieuActionService = {
 
         // Button Lưu và Gửi (sửa trực tiếp, không clone)
         buttons.push({
-          key: "saveAndSend",
+          key: PhieuActionButtonKeys.SaveAndSend,
           label: sendLabel,
           icon: <SendOutlined />,
           type: "primary",
@@ -760,7 +761,7 @@ export const phieuActionService = {
     // ========== NÚT XUẤT PDF (cho tất cả mọi người khi phiếu ở trạng thái Hoàn thành hoặc Đã chốt) ==========
     if (tinhTrang === TrangThaiPhieuConst.HoanThanh || tinhTrang === TrangThaiPhieuConst.DaChot) {
       buttons.push({
-        key: "exportPdf",
+        key: PhieuActionButtonKeys.ExportPdf,
         label: "Xuất PDF",
         icon: <FilePdfOutlined />,
         type: "default",
@@ -793,7 +794,7 @@ export const phieuActionService = {
 
     if (canApprovePhieu) {
       buttons.push({
-        key: "approve",
+        key: PhieuActionButtonKeys.Approve,
         label: "Xác nhận",
         icon: <CheckOutlined />,
         type: "primary",
@@ -822,7 +823,7 @@ export const phieuActionService = {
       // Chỉ phiếu clone mới hiện nút Không xác nhận (xóa clone và lôi phiếu gốc lên)
       if (isClone) {
         buttons.push({
-          key: "reject",
+          key: PhieuActionButtonKeys.Reject,
           label: "Không xác nhận",
           icon: <CloseOutlined />,
           type: "default",

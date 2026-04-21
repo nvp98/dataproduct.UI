@@ -8,6 +8,7 @@ import { PhieuApi } from "../../services/PhieuApi";
 import HRC1_BBGN_ThepLong from "../../utils/BM_config/HRC1_BBGN_ThepLong.json";
 import HRC2_BBGN_ThepLong from "../../utils/BM_config/HRC2_BBGN_ThepLong.json";
 import { phieuActionService } from "../../services/PhieuActionService";
+import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../utils/constants/PhieuActionButtonKeys";
 import type { BBGNThepLongBieuMau } from "./GiaoNhanThepLongList";
 import BBGNThepLongTable, { type BBGNRow } from "./BBGNThepLongTable";
 import { bbgbThepLongApi } from "../../services/BBGNThepLongApi";
@@ -165,8 +166,9 @@ const ChiTietGN = ({
       onSuccess: handleActionSuccess,
       onError: (error) => console.error("Action error:", error),
     });
-    if (buttons.length === 0) return null;
-    return phieuActionService.renderActionButtons(buttons, idphieu || "");
+    const filteredButtons = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
+    if (filteredButtons.length === 0) return null;
+    return phieuActionService.renderActionButtons(filteredButtons, idphieu || "");
   }, [data, getUserInfo, handleActionSuccess, idphieu, redirectToList]);
 
   return (

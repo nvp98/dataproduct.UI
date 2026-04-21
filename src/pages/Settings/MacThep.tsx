@@ -15,14 +15,19 @@ import {
   message,
 } from "antd";
 import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MacThepServiceApi, NhaMayEnum } from "../../services/MacThepServiceApi";
 import type { MacThep, MacThepPayload } from "../../services/MacThepServiceApi";
+import { MayDucServiceApi } from "../../services/MayDucServiceApi";
+import type { MayDuc } from "../../services/MayDucServiceApi";
+import { CommonAutocomplete } from "../../components/CommonAutocomplete";
+import type { AutocompleteSearchParams } from "../../components/CommonAutocomplete";
 import type { ColumnType } from "antd/es/table";
 
 type FilterState = {
   searchKey?: string;
   isLock?: boolean;
+  idMayDuc?: number | null;
 };
 
 const QuanLyMacThep = () => {
@@ -35,6 +40,38 @@ const QuanLyMacThep = () => {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState<FilterState>({});
   const [editingRecord, setEditingRecord] = useState<MacThep | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [modalNhaMay, setModalNhaMay] = useState<number | undefined>(undefined);
+  const [modalMayDucLabel, setModalMayDucLabel] = useState<string | undefined>(undefined);
+  const [searchNhaMay, setSearchNhaMay] = useState<number | undefined>(undefined);
+
+  const mayDucSearchApi = useCallback(
+    async (params: AutocompleteSearchParams) => {
+      const res = await MayDucServiceApi.search({
+        searchKey: params.searchKey || undefined,
+        nhaMay: modalNhaMay,
+        isLock: false,
+        page: 1,
+        pageSize: params.pageSize ?? 50,
+      });
+      return { data: res.data, totalRecords: res.totalRecords };
+    },
+    [modalNhaMay]
+  );
+
+  const searchMayDucApi = useCallback(
+    async (params: AutocompleteSearchParams) => {
+      const res = await MayDucServiceApi.search({
+        searchKey: params.searchKey || undefined,
+        nhaMay: searchNhaMay,
+        isLock: false,
+        page: 1,
+        pageSize: params.pageSize ?? 50,
+      });
+      return { data: res.data, totalRecords: res.totalRecords };
+    },
+    [searchNhaMay]
+  );
 
   const fetchData = async (
     page = pagination.current,
@@ -65,11 +102,13 @@ const QuanLyMacThep = () => {
     fetchData(1, pagination.pageSize, values.nhaMay as NhaMayEnum, {
       searchKey: values.searchKey?.trim() || undefined,
       isLock: typeof values.isLock === "boolean" ? values.isLock : undefined,
+      idMayDuc: (values.idMayDuc as number | null) ?? undefined,
     });
   };
 
   const handleReset = () => {
     searchForm.resetFields();
+    setSearchNhaMay(undefined);
     fetchData(1, pagination.pageSize, undefined, {});
   };
 
@@ -77,6 +116,8 @@ const QuanLyMacThep = () => {
     setEditingRecord(null);
     modalForm.resetFields();
     modalForm.setFieldsValue({ isLock: false });
+    setModalNhaMay(undefined);
+    setModalMayDucLabel(undefined);
     setModalVisible(true);
   };
 
@@ -86,7 +127,10 @@ const QuanLyMacThep = () => {
       tenMacThep: record.tenMacThep,
       nhaMay: record.nhaMay as NhaMayEnum,
       isLock: record.isLock ?? false,
+      idMayDuc: record.idMayDuc ?? null,
     });
+    setModalNhaMay(record.nhaMay);
+    setModalMayDucLabel(record.tenMayDuc ?? undefined);
     setModalVisible(true);
   };
 
@@ -103,7 +147,8 @@ const QuanLyMacThep = () => {
         tenMacThep: values.tenMacThep.trim(),
         nhaMay: values.nhaMay as NhaMayEnum,
         isLock: values.isLock as boolean,
-      } as MacThepPayload;
+        idMayDuc: (values.idMayDuc as number | null) ?? null,
+      };
       setModalLoading(true);
       if (editingRecord) {
         await MacThepServiceApi.update(editingRecord.id, payload);
@@ -119,6 +164,21 @@ const QuanLyMacThep = () => {
       message.error("Không thể lưu Mác thép");
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleToggleXacNhan = async (record: MacThep) => {
+    setTogglingId(record.id);
+    const prev = record.isXacNhan;
+    setData((d) => d.map((r) => (r.id === record.id ? { ...r, isXacNhan: !prev } : r)));
+    try {
+      const res = await MacThepServiceApi.toggleXacNhan(record.id);
+      setData((d) => d.map((r) => (r.id === record.id ? { ...r, isXacNhan: res.isXacNhan } : r)));
+    } catch {
+      setData((d) => d.map((r) => (r.id === record.id ? { ...r, isXacNhan: prev } : r)));
+      message.error("Không thể cập nhật xác nhận");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -159,12 +219,34 @@ const QuanLyMacThep = () => {
         onFilter: (value: number, record: MacThep) => record.nhaMay === value,
       },
       {
+        title: "Máy đúc",
+        dataIndex: "tenMayDuc",
+        key: "tenMayDuc",
+        width: 150,
+        render: (v: string | null) => v ?? "-",
+      },
+      {
         title: "Trạng thái",
         dataIndex: "isLock",
         key: "isLock",
         width: 130,
         render: (v: boolean | null) =>
           v ? <Tag color="red">Đã khóa</Tag> : <Tag color="green">Đang dùng</Tag>,
+      },
+      {
+        title: "Xác nhận",
+        dataIndex: "isXacNhan",
+        key: "isXacNhan",
+        width: 120,
+        render: (v: boolean | null, record: MacThep) => (
+          <Switch
+            checked={v === true}
+            loading={togglingId === record.id}
+            onChange={() => void handleToggleXacNhan(record)}
+            checkedChildren="Đã XN"
+            unCheckedChildren="Chưa XN"
+          />
+        ),
       },
       {
         title: "Thao tác",
@@ -204,9 +286,18 @@ const QuanLyMacThep = () => {
         }
         style={{ marginBottom: 16 }}
       >
-        <Form form={searchForm} layout="vertical">
+        <Form
+          form={searchForm}
+          layout="vertical"
+          onValuesChange={(changed: Record<string, unknown>) => {
+            if ("nhaMay" in changed) {
+              setSearchNhaMay(changed.nhaMay as number | undefined);
+              searchForm.setFieldValue("idMayDuc", null);
+            }
+          }}
+        >
           <Row gutter={16}>
-            <Col xs={24} md={6}>
+            <Col xs={24} md={5}>
               <Form.Item label="Nhà máy" name="nhaMay">
                 <Select allowClear placeholder="Tất cả">
                   <Select.Option value={NhaMayEnum.HRC1}>HRC1</Select.Option>
@@ -214,7 +305,18 @@ const QuanLyMacThep = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
+            <Col xs={24} md={5}>
+              <Form.Item label="Máy đúc" name="idMayDuc">
+                <CommonAutocomplete<MayDuc>
+                  searchApi={searchMayDucApi}
+                  mapOption={(item) => ({ value: item.id, label: item.tenMayDuc })}
+                  placeholder={searchNhaMay ? "Tìm máy đúc..." : "Chọn nhà máy trước"}
+                  disabled={!searchNhaMay}
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={5}>
               <Form.Item label="Tìm kiếm" name="searchKey">
                 <Input placeholder="Tên mác thép..." allowClear />
               </Form.Item>
@@ -227,7 +329,7 @@ const QuanLyMacThep = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} md={6} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
+            <Col xs={24} md={5} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                   Lọc
@@ -267,12 +369,32 @@ const QuanLyMacThep = () => {
         confirmLoading={modalLoading}
         destroyOnClose
       >
-        <Form layout="vertical" form={modalForm}>
+        <Form
+          layout="vertical"
+          form={modalForm}
+          onValuesChange={(changed: Record<string, unknown>) => {
+            if ("nhaMay" in changed) {
+              setModalNhaMay(changed.nhaMay as number | undefined);
+              setModalMayDucLabel(undefined);
+              modalForm.setFieldValue("idMayDuc", null);
+            }
+          }}
+        >
           <Form.Item name="nhaMay" label="Nhà máy" rules={[{ required: true, message: "Vui lòng chọn nhà máy" }]}>
             <Select allowClear placeholder="Tất cả">
               <Select.Option value={NhaMayEnum.HRC1}>HRC1</Select.Option>
               <Select.Option value={NhaMayEnum.HRC2}>HRC2</Select.Option>
             </Select>
+          </Form.Item>
+          <Form.Item name="idMayDuc" label="Máy đúc" rules={[{ required: true, message: "Vui lòng chọn máy đúc" }]}>
+            <CommonAutocomplete<MayDuc>
+              searchApi={mayDucSearchApi}
+              mapOption={(item) => ({ value: item.id, label: item.tenMayDuc })}
+              fallbackLabelBuilder={() => modalMayDucLabel ?? ""}
+              placeholder={modalNhaMay ? "Tìm máy đúc..." : "Chọn nhà máy trước"}
+              disabled={!modalNhaMay}
+              style={{ width: "100%" }}
+            />
           </Form.Item>
           <Form.Item
             name="tenMacThep"

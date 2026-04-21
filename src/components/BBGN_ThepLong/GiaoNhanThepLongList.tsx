@@ -8,11 +8,11 @@ import PhieuFilterCard, { type FilterFieldConfig } from "../PhieuFilterCard";
 import { useMemo } from "react";
 import { useEffect, useState } from "react";
 import type { SearchPhieuResponseModel } from "../../models/Phieu";
-import { usePhieuSearchList } from "../../hooks/usePhieuSearchList";
 import { PHIEU_STATUS_CONFIG } from "../../utils/constants/TrangThaiPhieuDisplay";
 import { getThongTinUser } from "../../utils/constants/GetThongTinLocalStore";
 import { MayDucServiceApi } from "../../services/MayDucServiceApi";
 import type { NhaMayEnum } from "../../models/SiloModel";
+import { usePhieuSearchListHRC } from "../../hooks/usePhieuSearchListHRC";
 
 const CONFIG_MAP = {
   HRC1_BBGN_ThepLong: HRC1_BBGN_ThepLong,
@@ -71,9 +71,11 @@ const GiaoNhanThepLongList = ({
   }, []);
 
   const fixedFilters = useMemo(() => {
-    return { userId: currentUserId };
-  }, [currentUserId]);
-
+    return {
+      userId: currentUserId,
+      loaiVung: type === "viecdentoi" ? 2 : 1,
+    };
+  }, [currentUserId, type]);
   const {
     data,
     loading,
@@ -81,7 +83,7 @@ const GiaoNhanThepLongList = ({
     handleFilter,
     handleClearFilter,
     onPageChange,
-  } = usePhieuSearchList({
+  } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
   });
