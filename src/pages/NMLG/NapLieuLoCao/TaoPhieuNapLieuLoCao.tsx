@@ -6,7 +6,10 @@ import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomFormItem from "../../../components/CustomFormItem";
-import CustomTableLG from "../../../components/CustomTableLG";
+import CustomTableLG, {
+  type TableColumnDef,
+  type TableSectionConfig,
+} from "../../../components/CustomTableLG";
 import { napLieuLoCaoApi } from "../../../services/NapLieuLoCaoApi";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
@@ -27,7 +30,7 @@ const TaoPhieuNapLieuLoCao = () => {
   const [form] = Form.useForm();
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
-  const [materialColumnsOverride, setMaterialColumnsOverride] = useState<any[] | null>(null);
+  const [materialColumnsOverride, setMaterialColumnsOverride] = useState<TableColumnDef[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
@@ -68,50 +71,20 @@ const TaoPhieuNapLieuLoCao = () => {
     return stored ? JSON.parse(stored) : {};
   }, []);
 
-  // Lấy config section table1 từ JSON
-  const tableSection = useMemo(
+  // Lấy table section config từ JSON — đây là nguồn sự thật cho cấu trúc bảng
+  const tableConfig = useMemo(
     () =>
       config.layout.find(
         (s: any) => s.sectionType === "table" && s.key === "table1"
-      ) as any,
+      ) as unknown as TableSectionConfig,
     [config.layout]
   );
 
-  // Tách prefix / suffix / fallback material columns từ JSON
-  const prefixColumns = useMemo(
-    () => (tableSection?.prefixColumns as any[]) ?? [],
-    [tableSection]
-  );
-  const suffixColumns = useMemo(
-    () => (tableSection?.suffixColumns as any[]) ?? [],
-    [tableSection]
-  );
-  // Fallback: lấy các cột không nằm trong prefix/suffix từ "columns" tĩnh
-  const fallbackMaterialColumns = useMemo(() => {
-    const allCols: any[] = tableSection?.columns ?? [];
-    const prefixSet = new Set(prefixColumns.map((c: any) => c.dataIndex).filter(Boolean));
-    const suffixSet = new Set(suffixColumns.map((c: any) => c.dataIndex).filter(Boolean));
-    return allCols.filter((c: any) => {
-      if (c.children) return true; // group columns luôn là material
-      return !prefixSet.has(c.dataIndex) && !suffixSet.has(c.dataIndex);
-    });
-  }, [tableSection, prefixColumns, suffixColumns]);
-
-
   const loadDataFromAPI = useCallback(async () => {
-    if (!ca) {
-      message.warning("Vui lòng chọn Kíp");
-      return;
-    }
-    if (!scope) {
-      message.warning("Vui lòng chọn Lò cao");
-      return;
-    }
+    if (!ca) { message.warning("Vui lòng chọn Kíp"); return; }
+    if (!scope) { message.warning("Vui lòng chọn Lò cao"); return; }
     const ngaySXValue = form.getFieldValue("NgaySX");
-    if (!ngaySXValue) {
-      message.warning("Vui lòng chọn Ngày sản xuất");
-      return;
-    }
+    if (!ngaySXValue) { message.warning("Vui lòng chọn Ngày sản xuất"); return; }
 
     try {
       setLoading(true);
@@ -125,12 +98,16 @@ const TaoPhieuNapLieuLoCao = () => {
         idCa: Number(ca),
       });
 
-      setMaterialColumnsOverride(response.columns ?? null);
+      setMaterialColumnsOverride((response.columns as TableColumnDef[]) ?? null);
 
       const rows = (response.rows ?? []).map((row: any, index: number) => {
         const { time, ...rest } = row;
         const thoiGianNapLieu = time
-          ? new Date(time).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" ,second: "2-digit"})
+          ? new Date(time).toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
           : "";
         return {
           key: row?.id ?? `row-${index}`,
@@ -154,12 +131,8 @@ const TaoPhieuNapLieuLoCao = () => {
   }, [ca, scope, form]);
 
   const handleFilter = useCallback(() => {
-    const ngaySXValue = form.getFieldValue("NgaySX");
-    if (!ca) { message.warning("Vui lòng chọn Kíp"); return; }
-    if (!scope) { message.warning("Vui lòng chọn Lò cao"); return; }
-    if (!ngaySXValue) { message.warning("Vui lòng chọn Ngày sản xuất"); return; }
     loadDataFromAPI();
-  }, [ca, scope, form, loadDataFromAPI]);
+  }, [loadDataFromAPI]);
 
   const initData = useCallback(async () => {
     try {
@@ -233,6 +206,10 @@ const TaoPhieuNapLieuLoCao = () => {
           }
 
           setTableData(formValues.table1 || []);
+          // Khôi phục cột động đã lưu để render đúng dataIndex khi xem chi tiết
+          if (Array.isArray(data.materialColumns) && data.materialColumns.length > 0) {
+            setMaterialColumnsOverride(data.materialColumns);
+          }
           setPhieuInfo({
             tinhTrang,
             nguoiTaoId: (res as any)?.nguoiTaoId ?? null,
@@ -301,7 +278,7 @@ const TaoPhieuNapLieuLoCao = () => {
       }
     });
 
-    const result = {
+    return {
       ...formData,
       ...formattedDates,
       ca: formData.ca != null ? Number(formData.ca) : null,
@@ -311,11 +288,11 @@ const TaoPhieuNapLieuLoCao = () => {
       idphongBan: userInfo.iD_PhongBan ?? null,
       nguoiTaoId: userInfo.iD_TaiKhoan ?? null,
       table1: processedTable1,
+      // Lưu cột động để khôi phục khi mở lại phiếu (xem chi tiết)
+      materialColumns: materialColumnsOverride ?? [],
       pheDuyet: pheDuyetFlow,
       prefix: (config as any).prefix,
     };
-
-    return result;
   }, [getUserInfo, form, config, tableData, getCapDuyet]);
 
   const handleStatusChange = useCallback(async () => {
@@ -329,9 +306,7 @@ const TaoPhieuNapLieuLoCao = () => {
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
       if (context?.newPhieuId) {
-        navigate(`/taophieubienbannaplieulocao/${context.newPhieuId}`, {
-          replace: true,
-        });
+        navigate(`/taophieubienbannaplieulocao/${context.newPhieuId}`, { replace: true });
         return;
       }
       await initData();
@@ -353,9 +328,7 @@ const TaoPhieuNapLieuLoCao = () => {
       pheDuyet: phieuInfo.pheDuyet ?? [],
       onStatusChange: handleStatusChange,
       onSuccess: handleActionSuccess,
-      onError: (error) => {
-        console.error("Action error:", error);
-      },
+      onError: (error) => { console.error("Action error:", error); },
     });
 
     if (buttons.length === 0) return null;
@@ -381,9 +354,7 @@ const TaoPhieuNapLieuLoCao = () => {
 
         {config.isoInfo && (
           <div style={{ fontSize: 13, textAlign: "right", lineHeight: "20px" }}>
-            <div>
-              <b>{config.isoInfo.code}</b>
-            </div>
+            <div><b>{config.isoInfo.code}</b></div>
             <div>Ngày hiệu lực: {config.isoInfo.effectiveDate}</div>
             <div>Lần sửa đổi: {(config.isoInfo as any).revision || "-"}</div>
           </div>
@@ -420,20 +391,19 @@ const TaoPhieuNapLieuLoCao = () => {
           {actionButtons}
         </div>
 
-        <CustomTableLG
-          loCao={scope ?? null}
-          prefixColumns={prefixColumns}
-          suffixColumns={suffixColumns}
-          fallbackMaterialColumns={fallbackMaterialColumns}
-          materialColumnsOverride={materialColumnsOverride}
-          initialData={tableData}
-          onDataChange={(rows) => setTableData(rows as TableRow[])}
-          loading={loading}
-          editable={!isFormLocked}
-          showAddButton={!isFormLocked}
-          showDeleteButton={!isFormLocked}
-          minRows={0}
-        />
+        {tableConfig && (
+          <CustomTableLG
+            tableConfig={tableConfig}
+            materialColumnsOverride={materialColumnsOverride}
+            initialData={tableData}
+            onDataChange={(rows) => setTableData(rows as TableRow[])}
+            loading={loading}
+            editable={!isFormLocked}
+            showAddButton={!isFormLocked}
+            showDeleteButton={!isFormLocked}
+            minRows={0}
+          />
+        )}
 
         <div
           style={{

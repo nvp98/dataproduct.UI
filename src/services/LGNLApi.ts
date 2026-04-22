@@ -97,42 +97,74 @@ export const lgnlMappingApi = {
     apiService.delete(`/api/LGNL/mapping/${id}`),
 };
 
+// ─── Nhóm NVL (LG_NL_NhomNVL) ────────────────────────────────────────────────
+
+export interface LGNLNhomNvlDto {
+  id: number;
+  idLoCao: number | null;
+  tenNhom: string | null;
+  thuTu: number | null;
+  ghiChu: string | null;
+  ngayTao: string | null;
+}
+
+export interface CreateLGNLNhomNvlDto {
+  idLoCao: number;
+  tenNhom: string;
+  thuTu?: number | null;
+  ghiChu?: string | null;
+}
+
+export interface UpdateLGNLNhomNvlDto extends CreateLGNLNhomNvlDto {}
+
+export const lgnlNhomNvlApi = {
+  getList: (params?: { idLoCao?: number }) =>
+    apiService.get<LGNLNhomNvlDto[]>("/api/LGNL/nhom-nvl", { params }),
+
+  getById: (id: number) =>
+    apiService.get<LGNLNhomNvlDto>(`/api/LGNL/nhom-nvl/${id}`),
+
+  create: (dto: CreateLGNLNhomNvlDto) =>
+    apiService.post<LGNLNhomNvlDto>("/api/LGNL/nhom-nvl", dto),
+
+  update: (id: number, dto: UpdateLGNLNhomNvlDto) =>
+    apiService.put<LGNLNhomNvlDto>(`/api/LGNL/nhom-nvl/${id}`, dto),
+
+  delete: (id: number) =>
+    apiService.delete(`/api/LGNL/nhom-nvl/${id}`),
+};
+
 // ─── NVL (LG_NL_NVL) ─────────────────────────────────────────────────────────
 
 export interface LGNLNvlDto {
   id: number;
-  ngay: string | null;
-  idCa: number | null;
   idLoCao: number | null;
-  maNVL: string | null;
+  idNhomNVL: number | null;
   tenNVL: string | null;
   donVi: string | null;
   soLuong: number | null;
   doAm: number | null;
   ghiChu: string | null;
   ngayTao: string | null;
-  nhomHienThi: string | null;   // tên nhóm cột cha trên BM (null = leaf)
-  thuTuNhom: number | null;     // thứ tự nhóm trên BM
+  nhomHienThi: string | null;
+  thuTuNhom: number | null;
 }
 
 export interface CreateLGNLNvlDto {
-  ngay: string;
-  idCa: number;
   idLoCao: number;
-  maNVL?: string | null;
+  idNhomNVL?: number | null;
   tenNVL?: string | null;
   donVi?: string | null;
   soLuong?: number | null;
   doAm?: number | null;
   ghiChu?: string | null;
-  nhomHienThi?: string | null;
   thuTuNhom?: number | null;
 }
 
 export interface UpdateLGNLNvlDto extends CreateLGNLNvlDto {}
 
 export const lgnlNvlApi = {
-  getList: (params?: { ngay?: string; idCa?: number; idLoCao?: number }) =>
+  getList: (params?: { idLoCao?: number }) =>
     apiService.get<LGNLNvlDto[]>("/api/LGNL/nvl", { params }),
 
   getById: (id: number) =>
@@ -160,6 +192,27 @@ export interface LGNLDuLieuSiLoResult {
   columns: LGNLColumnDto[];
   rows: Record<string, unknown>[];
 }
+
+// ─── Dữ liệu SCADA theo TagKey, NVL, LoCao, Ngày ──────────────────────────
+
+export interface LGNLDuLieuScadaDto {
+  id: number;
+  tagName: string | null;
+  tagKey: string | null;
+  time: string | null;
+  value: number | null;
+  idLoCao: number | null;
+}
+
+export const lgnlDuLieuScadaApi = {
+  /** GET /api/LGNL/data-by-filter — lấy dữ liệu theo LoCao, Ngày */
+  getByFilter: (params: {
+    idLoCao?: number | null;
+    ngayBatDau?: string | null;
+    ngayKetThuc?: string | null;
+  }): Promise<LGNLDuLieuScadaDto[]> =>
+    apiService.get("/api/LGNL/data-by-filter", { params: { ...params } }),
+};
 
 export const lgnlDuLieuSiLoApi = {
   /** GET /api/LGNL/dulieu-silo — pivot dữ liệu nạp liệu theo ngày/ca/lò cao */
