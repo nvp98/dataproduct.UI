@@ -105,12 +105,14 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
     },
     {
       title: "Lò thổi",
-      dataIndex: "scope",
-      key: "scope",
+      dataIndex: "tenScope",
+      key: "tenScope",
       width: 220,
       ellipsis: true,
-      render: (value: number) => {
-        return value === 6 ? "Lò thổi 6" : "Lò thổi 7";
+      render: (value: string | null | undefined, record: { scope?: number | string | null }) => {
+        if (value) return value;
+        if (record.scope !== null && record.scope !== undefined) return "Lò thổi " + String(record.scope);
+        return null;
       },
     },
     {

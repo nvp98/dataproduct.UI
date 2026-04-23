@@ -128,7 +128,6 @@ export const usePhieuSearchListHRC = ({
             return !(isDelete && isLock);
           })
         : responseData;
-
       setData(normalizedData);
       setCurrentFilter(request);
 

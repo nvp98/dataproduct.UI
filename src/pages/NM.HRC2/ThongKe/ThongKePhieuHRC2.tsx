@@ -316,6 +316,18 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
       render: (value: number) => (value === 1 ? "(1) Ca Ngày" : value === 2 ? "(2) Ca Đêm" : "-"),
     },
     {
+      title: "Khu vực",
+      dataIndex: "tenScope",
+      key: "tenScope",
+      width: 200,
+      ellipsis: true,
+      render: (value: string | null | undefined, record: { scope?: number | string | null, maBm?: string | null }) => {
+        if (value) return value;
+        if (record.scope !== null && record.scope !== undefined) return record.maBm === BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF ? "Lò thổi " + String(record.scope) : record.maBm === BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF ? "Tinh luyện " + String(record.scope) : record.maBm === BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH ? "RH " + String(record.scope) : null;
+        return null;
+      },
+    },
+    {
       title: "Người tạo",
       dataIndex: "nguoiTaoId",
       key: "nguoiTaoId",

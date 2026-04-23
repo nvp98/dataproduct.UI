@@ -278,6 +278,18 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       render: (value: number) => (value === 1 ? "(1) Ca Ngày" : value === 2 ? "(2) Ca Đêm" : "-"),
     },
     {
+      title: "Khu vực",
+      dataIndex: "tenScope",
+      key: "tenScope",
+      width: 200,
+      ellipsis: true,
+      render: (value: string | null | undefined, record: { scope?: number | string | null, maBm?: string | null }) => {
+        if (value) return value;
+        if (record.scope !== null && record.scope !== undefined) return record.scope;
+        return null;
+      },
+    },
+    {
       title: "Người tạo",
       dataIndex: "nguoiTaoId",
       key: "nguoiTaoId",

@@ -15,19 +15,16 @@ import {
   message,
 } from "antd";
 import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MacThepServiceApi, NhaMayEnum } from "../../services/MacThepServiceApi";
-import type { MacThep, MacThepPayload } from "../../services/MacThepServiceApi";
+import type { MacThep, MacThepMayDucInfo, MacThepPayload } from "../../services/MacThepServiceApi";
 import { MayDucServiceApi } from "../../services/MayDucServiceApi";
-import type { MayDuc } from "../../services/MayDucServiceApi";
-import { CommonAutocomplete } from "../../components/CommonAutocomplete";
-import type { AutocompleteSearchParams } from "../../components/CommonAutocomplete";
 import type { ColumnType } from "antd/es/table";
 
 type FilterState = {
   searchKey?: string;
   isLock?: boolean;
-  idMayDuc?: number | null;
+  idMayDucs?: number[] | null;
 };
 
 const QuanLyMacThep = () => {
@@ -42,36 +39,24 @@ const QuanLyMacThep = () => {
   const [editingRecord, setEditingRecord] = useState<MacThep | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [modalNhaMay, setModalNhaMay] = useState<number | undefined>(undefined);
-  const [modalMayDucLabel, setModalMayDucLabel] = useState<string | undefined>(undefined);
   const [searchNhaMay, setSearchNhaMay] = useState<number | undefined>(undefined);
+  const [modalMayDucOptions, setModalMayDucOptions] = useState<{ value: number; label: string }[]>([]);
+  const [searchMayDucOptions, setSearchMayDucOptions] = useState<{ value: number; label: string }[]>([]);
 
-  const mayDucSearchApi = useCallback(
-    async (params: AutocompleteSearchParams) => {
-      const res = await MayDucServiceApi.search({
-        searchKey: params.searchKey || undefined,
-        nhaMay: modalNhaMay,
-        isLock: false,
-        page: 1,
-        pageSize: params.pageSize ?? 50,
-      });
-      return { data: res.data, totalRecords: res.totalRecords };
-    },
-    [modalNhaMay]
-  );
+  const loadModalMayDucOptions = async (nhaMay?: number, preselected: { value: number; label: string }[] = []) => {
+    if (!nhaMay) { setModalMayDucOptions([]); return; }
+    const res = await MayDucServiceApi.search({ nhaMay, isLock: false, page: 1, pageSize: 200 });
+    const loaded = res.data.map((m) => ({ value: m.id, label: m.tenMayDuc }));
+    const loadedIds = new Set(loaded.map((o) => o.value));
+    const missing = preselected.filter((p) => !loadedIds.has(p.value));
+    setModalMayDucOptions([...missing, ...loaded]);
+  };
 
-  const searchMayDucApi = useCallback(
-    async (params: AutocompleteSearchParams) => {
-      const res = await MayDucServiceApi.search({
-        searchKey: params.searchKey || undefined,
-        nhaMay: searchNhaMay,
-        isLock: false,
-        page: 1,
-        pageSize: params.pageSize ?? 50,
-      });
-      return { data: res.data, totalRecords: res.totalRecords };
-    },
-    [searchNhaMay]
-  );
+  const loadSearchMayDucOptions = async (nhaMay?: number) => {
+    if (!nhaMay) { setSearchMayDucOptions([]); return; }
+    const res = await MayDucServiceApi.search({ nhaMay, isLock: false, page: 1, pageSize: 200 });
+    setSearchMayDucOptions(res.data.map((m) => ({ value: m.id, label: m.tenMayDuc })));
+  };
 
   const fetchData = async (
     page = pagination.current,
@@ -102,13 +87,14 @@ const QuanLyMacThep = () => {
     fetchData(1, pagination.pageSize, values.nhaMay as NhaMayEnum, {
       searchKey: values.searchKey?.trim() || undefined,
       isLock: typeof values.isLock === "boolean" ? values.isLock : undefined,
-      idMayDuc: (values.idMayDuc as number | null) ?? undefined,
+      idMayDucs: (values.idMayDucs as number[] | null) ?? undefined,
     });
   };
 
   const handleReset = () => {
     searchForm.resetFields();
     setSearchNhaMay(undefined);
+    setSearchMayDucOptions([]);
     fetchData(1, pagination.pageSize, undefined, {});
   };
 
@@ -117,7 +103,7 @@ const QuanLyMacThep = () => {
     modalForm.resetFields();
     modalForm.setFieldsValue({ isLock: false });
     setModalNhaMay(undefined);
-    setModalMayDucLabel(undefined);
+    setModalMayDucOptions([]);
     setModalVisible(true);
   };
 
@@ -127,10 +113,15 @@ const QuanLyMacThep = () => {
       tenMacThep: record.tenMacThep,
       nhaMay: record.nhaMay as NhaMayEnum,
       isLock: record.isLock ?? false,
-      idMayDuc: record.idMayDuc ?? null,
+      idMayDucs: record.mayDucs?.map((m) => m.idMayDuc) ?? [],
     });
     setModalNhaMay(record.nhaMay);
-    setModalMayDucLabel(record.tenMayDuc ?? undefined);
+    const preselected = (record.mayDucs ?? []).map((m) => ({
+      value: m.idMayDuc,
+      label: m.tenMayDuc,
+    }));
+    setModalMayDucOptions(preselected);
+    void loadModalMayDucOptions(record.nhaMay, preselected);
     setModalVisible(true);
   };
 
@@ -138,6 +129,7 @@ const QuanLyMacThep = () => {
     setModalVisible(false);
     modalForm.resetFields();
     setEditingRecord(null);
+    setModalMayDucOptions([]);
   };
 
   const handleSave = async () => {
@@ -147,7 +139,7 @@ const QuanLyMacThep = () => {
         tenMacThep: values.tenMacThep.trim(),
         nhaMay: values.nhaMay as NhaMayEnum,
         isLock: values.isLock as boolean,
-        idMayDuc: (values.idMayDuc as number | null) ?? null,
+        idMayDucs: (values.idMayDucs as number[] | null) ?? null,
       };
       setModalLoading(true);
       if (editingRecord) {
@@ -160,8 +152,7 @@ const QuanLyMacThep = () => {
       handleModalCancel();
       fetchData(editingRecord ? pagination.current : 1, pagination.pageSize);
     } catch (error: unknown) {
-      if (typeof error === "object" && error !== null && "errorFields" in error) return;
-      message.error("Không thể lưu Mác thép");
+      message.error(error ? (error as Error).message : "Không thể lưu Mác thép");
     } finally {
       setModalLoading(false);
     }
@@ -220,10 +211,11 @@ const QuanLyMacThep = () => {
       },
       {
         title: "Máy đúc",
-        dataIndex: "tenMayDuc",
-        key: "tenMayDuc",
-        width: 150,
-        render: (v: string | null) => v ?? "-",
+        dataIndex: "mayDucs",
+        key: "mayDucs",
+        width: 200,
+        render: (v: MacThepMayDucInfo[] | null) =>
+          v?.length ? v.map((m) => <Tag key={m.idMayDuc}>{m.tenMayDuc}</Tag>) : "-",
       },
       {
         title: "Trạng thái",
@@ -291,8 +283,10 @@ const QuanLyMacThep = () => {
           layout="vertical"
           onValuesChange={(changed: Record<string, unknown>) => {
             if ("nhaMay" in changed) {
-              setSearchNhaMay(changed.nhaMay as number | undefined);
-              searchForm.setFieldValue("idMayDuc", null);
+              const nm = changed.nhaMay as number | undefined;
+              setSearchNhaMay(nm);
+              searchForm.setFieldValue("idMayDucs", []);
+              void loadSearchMayDucOptions(nm);
             }
           }}
         >
@@ -306,12 +300,14 @@ const QuanLyMacThep = () => {
               </Form.Item>
             </Col>
             <Col xs={24} md={5}>
-              <Form.Item label="Máy đúc" name="idMayDuc">
-                <CommonAutocomplete<MayDuc>
-                  searchApi={searchMayDucApi}
-                  mapOption={(item) => ({ value: item.id, label: item.tenMayDuc })}
-                  placeholder={searchNhaMay ? "Tìm máy đúc..." : "Chọn nhà máy trước"}
+              <Form.Item label="Máy đúc" name="idMayDucs">
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder={searchNhaMay ? "Chọn máy đúc..." : "Chọn nhà máy trước"}
                   disabled={!searchNhaMay}
+                  options={searchMayDucOptions}
+                  optionFilterProp="label"
                   style={{ width: "100%" }}
                 />
               </Form.Item>
@@ -374,9 +370,10 @@ const QuanLyMacThep = () => {
           form={modalForm}
           onValuesChange={(changed: Record<string, unknown>) => {
             if ("nhaMay" in changed) {
-              setModalNhaMay(changed.nhaMay as number | undefined);
-              setModalMayDucLabel(undefined);
-              modalForm.setFieldValue("idMayDuc", null);
+              const nm = changed.nhaMay as number | undefined;
+              setModalNhaMay(nm);
+              modalForm.setFieldValue("idMayDucs", []);
+              void loadModalMayDucOptions(nm);
             }
           }}
         >
@@ -386,13 +383,14 @@ const QuanLyMacThep = () => {
               <Select.Option value={NhaMayEnum.HRC2}>HRC2</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="idMayDuc" label="Máy đúc" rules={[{ required: true, message: "Vui lòng chọn máy đúc" }]}>
-            <CommonAutocomplete<MayDuc>
-              searchApi={mayDucSearchApi}
-              mapOption={(item) => ({ value: item.id, label: item.tenMayDuc })}
-              fallbackLabelBuilder={() => modalMayDucLabel ?? ""}
-              placeholder={modalNhaMay ? "Tìm máy đúc..." : "Chọn nhà máy trước"}
+          <Form.Item name="idMayDucs" label="Máy đúc" rules={[{ required: true, message: "Vui lòng chọn máy đúc" }]}>
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder={modalNhaMay ? "Chọn máy đúc..." : "Chọn nhà máy trước"}
               disabled={!modalNhaMay}
+              options={modalMayDucOptions}
+              optionFilterProp="label"
               style={{ width: "100%" }}
             />
           </Form.Item>
