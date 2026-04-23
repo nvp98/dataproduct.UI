@@ -12,6 +12,7 @@ import {
   Table,
   DatePicker,
   Select,
+  Tag,
 } from "antd";
 import { FilePdfOutlined, FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -967,6 +968,8 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
           row.ca !== null && row.ca !== undefined && row.ca !== ""
             ? `Ca ${row.ca}`
             : "";
+        const tinhtrang =
+          row.tinhTrang_Chuyen === 1 ? "Đã chuyển" : "Chưa chuyển hết";
 
         return {
           ...row,
@@ -974,6 +977,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
             ngaySXValue && caValue
               ? `${ngaySXValue} - ${caValue}`
               : ngaySXValue || caValue,
+          tinhTrang_Chuyen: tinhtrang,
         };
       }),
     [tableData],
@@ -1170,7 +1174,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
               onClick={handleOpenModalChuyenThanh}
               disabled={isFormLocked || selectedRowKeys.length === 0}
             >
-              Chuyển thanh
+              Nhập kho
             </Button>
           </div>
         )}
@@ -1194,6 +1198,11 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                   minRows={0}
                   editable={false}
                   loading={loading}
+                  onRow={(record) => ({
+                    style: {
+                      backgroundColor: record.isCaTruoc ? "#fffacd" : undefined,
+                    },
+                  })}
                   //  selectionEnabled={false}
                   summary={(pageData) => {
                     // Tính tổng cho từng cột số
@@ -1254,7 +1263,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                         >
                           <Table.Summary.Cell
                             index={0}
-                            colSpan={5}
+                            colSpan={9}
                             align="center"
                           >
                             TỔNG CỘNG
@@ -1451,7 +1460,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                   <Table.Summary.Row
                     style={{ fontWeight: "bold", background: "#fafafa" }}
                   >
-                    <Table.Summary.Cell index={0} colSpan={7} align="center">
+                    <Table.Summary.Cell index={0} colSpan={6} align="center">
                       TỔNG CỘNG
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1} align="right">
@@ -1685,7 +1694,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
         )}
 
         <Modal
-          title="Chuyển thanh"
+          title="Chuyển trong ca"
           open={isChuyenModalOpen}
           onCancel={() => setIsChuyenModalOpen(false)}
           onOk={handleConfirmChuyenThanh}

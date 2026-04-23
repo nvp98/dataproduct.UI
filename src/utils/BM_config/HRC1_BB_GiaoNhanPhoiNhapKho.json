@@ -116,6 +116,26 @@
                     "dataIndex": "ca",
                     "width": 50
                 },
+                 {
+                    "title": "ST Ca trước chuyển",
+                    "dataIndex": "sT_CaTruocChuyen",
+                    "width": 50
+                },
+                {
+                    "title": "ST Nhập trong ca",
+                    "dataIndex": "sT_NhapTrongCa",
+                    "width": 50
+                },
+                {
+                    "title": "ST Ca sau chuyển",
+                    "dataIndex": "sT_CaSauChuyen",
+                    "width": 50
+                },
+                {
+                    "title": "Tình trạng",
+                    "dataIndex": "tinhTrang_Chuyen",
+                    "width": 150
+                },
                 {
                     "title": "Loại I",
                     "children": [
