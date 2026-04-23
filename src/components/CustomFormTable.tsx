@@ -54,6 +54,7 @@ interface CustomFormTableProps {
   ) => void;
   compactWhenEmpty?: boolean; // Nếu true, khi không có dòng sẽ không chiếm nhiều chiều cao
   summary?: (data: readonly any[]) => React.ReactNode;
+  onRow?: (record: any, index?: number) => any;
 }
 
 export default function CustomFormTable({
@@ -80,6 +81,7 @@ export default function CustomFormTable({
   onCellChange,
   compactWhenEmpty = false,
   summary,
+  onRow,
 }: CustomFormTableProps) {
   const formatNumberGroup = (value: unknown): string => {
     if (value === null || value === undefined || value === "") return "";
@@ -421,6 +423,7 @@ export default function CustomFormTable({
               scroll={{ x: "max-content", y: scrollY }}
               sticky={stickyHeader}
               summary={summary}
+              onRow={onRow}
               rowSelection={
                 selectionEnabled
                   ? {
