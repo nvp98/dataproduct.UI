@@ -170,7 +170,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
         searchKey: params.searchKey || undefined,
         nhaMay: nhaMay as NhaMayEnum,
         isLock: false,
-        idMayDuc: scopeValue ?? undefined,
+        idMayDucs: scopeValue != null ? [scopeValue] : undefined,
         page: 1,
         pageSize: params.pageSize ?? 50,
       });
@@ -186,7 +186,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
           tenMacThep: searchText,
           nhaMay: nhaMay as NhaMayEnum,
           isLock: false,
-          idMayDuc: scopeValue ?? null,
+          idMayDucs: scopeValue != null ? [scopeValue] : null,
         });
         message.success(`Đã tạo mác thép "${created.tenMacThep}"`);
         return created;

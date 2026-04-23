@@ -144,11 +144,12 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
       },
       {
         title: "Máy đúc",
-        dataIndex: "scope",
-        key: "scope",
+        dataIndex: "mayDuc",
+        key: "mayDuc",
         width: 130,
-        render: (value: number) =>
-          mayDucOptions.find((x) => Number(x.value) === Number(value))?.label ?? (value ?? "-"),
+        render: (value: string) => {
+          return value;
+        },
       },
       {
         title: "Mẻ",

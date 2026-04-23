@@ -92,7 +92,7 @@ const ChiTietGN = ({
         const loadRows = (res as any)?.data ?? res;
         if (Array.isArray(loadRows)) {
           setTableData(normalizeTableRows(loadRows));
-          if (opts?.notify) message.success("Lấy dữ liệu thành công");
+          if (opts?.notify) message.success("Làm mới dữ liệu thành công");
           return;
         }
       } catch (e) {
@@ -175,7 +175,7 @@ const ChiTietGN = ({
     <>
       <div style={{ margin: "24px 24px 0", display: "flex", justifyContent: "flex-end", gap: 8 }}>
         <Button type="primary" icon={<FilterOutlined />} onClick={() => void handleRefresh()} loading={loading}>
-          Làm mới dữ liệu
+          Làm mới phiếu
         </Button>
         <BBGNExportButtons idPhieu={idphieu} templateCode={config.code} soPhieu={data?.soPhieu} />
       </div>
@@ -194,7 +194,7 @@ const ChiTietGN = ({
           {formData?.NgaySX ? dayjs(formData.NgaySX).format("DD/MM/YYYY") : ""}
         </Descriptions.Item>
         <Descriptions.Item label="Ca">{formData?.ca ?? ""}</Descriptions.Item>
-        <Descriptions.Item label="Máy đúc">{tableData[0]?.mayDuc ?? ""}</Descriptions.Item>
+        <Descriptions.Item label="Máy đúc">{formData?.tenScope ?? ""}</Descriptions.Item>
       </Descriptions>
 
       <BBGNThepLongTable
