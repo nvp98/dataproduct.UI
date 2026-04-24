@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-  Button, Card, Col, DatePicker, Form, Input, InputNumber,
-  Modal, Popconfirm, Row, Select, Space, Table, Tabs, Typography, message,
+  Alert, Button, Card, Col, DatePicker, Form, Input, InputNumber,
+  Modal, Popconfirm, Row, Select, Space, Table, Tag, Tabs, Typography, message,
 } from "antd";
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SwapOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
@@ -12,7 +12,7 @@ import {
   type LGNLSiLoMasterDto, type LGNLMappingDto, type LGNLNvlDto,
   type LGNLTsMappingDto, type LGNLNhomNvlDto,
   type CreateLGNLSiLoMasterDto, type CreateLGNLMappingDto, type CreateLGNLNvlDto,
-  type CreateLGNLNhomNvlDto,
+  type CreateLGNLNhomNvlDto, type LGNLChangeSiLoNVLDto,
 } from "../../../services/LGNLApi";
 import { PhieuApi } from "../../../services/PhieuApi";
 
@@ -169,11 +169,21 @@ interface MappingTabProps {
 const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) => {
   const [data, setData] = useState<LGNLMappingDto[]>([]);
   const [loading, setLoading] = useState(false);
+  // 'active' = cấu hình đang hiệu lực (NgayHetHL=null), 'history' = lịch sử theo ngày/ca
+  const [viewMode, setViewMode] = useState<"active" | "history">("active");
+
+  // Modal thêm / sửa mapping
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [editingRow, setEditingRow] = useState<LGNLMappingDto | null>(null);
   const [form] = Form.useForm();
   const selectedLoCao = Form.useWatch("idLoCao", form);
+
+  // Modal đổi NVL giữa ca
+  const [doiNVLOpen, setDoiNVLOpen] = useState(false);
+  const [doiNVLLoading, setDoiNVLLoading] = useState(false);
+  const [doiNVLRow, setDoiNVLRow] = useState<LGNLMappingDto | null>(null);
+  const [doiNVLForm] = Form.useForm();
 
   const filteredSiloOpts = siloOptions.filter(
     (s) => !selectedLoCao || s.idLoCao === selectedLoCao
@@ -183,14 +193,19 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
     setLoading(true);
     try {
       const params: any = {};
-      if (ngay) params.ngay = ngay;
-      if (idCa) params.idCa = idCa;
       if (idLoCao) params.idLoCao = idLoCao;
+      if (viewMode === "history") {
+        // Lịch sử: lọc đúng ngày/ca được chọn
+        if (ngay) params.ngay = ngay;
+        if (idCa) params.idCa = idCa;
+      }
       const res = await lgnlMappingApi.getList(params);
-      setData(Array.isArray(res) ? res : []);
+      const all: LGNLMappingDto[] = Array.isArray(res) ? res : [];
+      // Chế độ "Cấu hình hiệu lực": chỉ giữ lại rows chưa đóng (NgayHetHL=null)
+      setData(viewMode === "active" ? all.filter((r) => !r.ngayHetHL) : all);
     } catch { message.error("Lỗi khi tải danh sách Mapping"); }
     finally { setLoading(false); }
-  }, [ngay, idCa, idLoCao]);
+  }, [ngay, idCa, idLoCao, viewMode]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -211,6 +226,14 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
     });
     setEditingRow(row);
     setModalOpen(true);
+  };
+
+  const openDoiNVL = (row: LGNLMappingDto) => {
+    doiNVLForm.resetFields();
+    // Gợi ý thời điểm = thời điểm hiện tại trong ca
+    doiNVLForm.setFieldsValue({ thoiDiem: dayjs(), ghiChu: null });
+    setDoiNVLRow(row);
+    setDoiNVLOpen(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -236,18 +259,67 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
     finally { setModalLoading(false); }
   };
 
+  const handleDoiNVL = async () => {
+    if (!doiNVLRow) return;
+    try {
+      const values = await doiNVLForm.validateFields();
+      const dto: LGNLChangeSiLoNVLDto = {
+        idLoCao: doiNVLRow.idLoCao!,
+        ngay: doiNVLRow.ngay!,
+        idCa: doiNVLRow.idCa!,
+        idSiLo: doiNVLRow.idSiLo!,
+        idNVLMoi: values.idNVLMoi,
+        thoiDiem: (values.thoiDiem as dayjs.Dayjs).format("YYYY-MM-DDTHH:mm:ss"),
+        ghiChu: values.ghiChu ?? null,
+      };
+      setDoiNVLLoading(true);
+      await lgnlMappingApi.doiNVL(dto);
+      message.success("Đổi NVL giữa ca thành công");
+      setDoiNVLOpen(false);
+      fetchData();
+    } catch (err: any) { if (err?.errorFields) return; message.error("Lỗi khi đổi NVL"); }
+    finally { setDoiNVLLoading(false); }
+  };
+
   const columns: ColumnsType<LGNLMappingDto> = [
-    { title: "STT", key: "stt", width: 55, align: "center", render: (_v, _r, i) => i + 1 },
-    { title: "Ngày", dataIndex: "ngay", key: "ngay", width: 110 },
-    { title: "Ca", dataIndex: "idCa", key: "idCa", width: 85, render: (v) => v === 1 ? "Ca 1" : v === 2 ? "Ca 2" : "—" },
-    { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
+    { title: "STT", key: "stt", width: 50, align: "center", render: (_v, _r, i) => i + 1 },
+    { title: "Ngày", dataIndex: "ngay", key: "ngay", width: 105 },
+    { title: "Ca", dataIndex: "idCa", key: "idCa", width: 80, render: (v) => v === 1 ? "Ca 1" : v === 2 ? "Ca 2" : "—" },
+    { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 75, align: "center" },
     { title: "Tên Silo", dataIndex: "tenSiLo", key: "tenSiLo", render: (v) => v ?? "—" },
-    { title: "Tên NVL", dataIndex: "tenNVL", key: "tenNVL", render: (v) => v ?? "—" },
+    {
+      title: "Tên NVL", dataIndex: "tenNVL", key: "tenNVL",
+      render: (v, row) => (
+        <Space size={4}>
+          {v ?? "—"}
+          {row.thoiDiemBD && (
+            <Tag color="orange" style={{ fontSize: 11 }}>
+              Đổi {dayjs(row.thoiDiemBD).format("HH:mm")}
+            </Tag>
+          )}
+        </Space>
+      ),
+    },
+    {
+      title: "Hiệu lực", key: "hieuLuc", width: 100, align: "center",
+      render: (_v, row) => row.ngayHetHL
+        ? <Tag color="default">Kết thúc {row.ngayHetHL}</Tag>
+        : <Tag color="green">Đang dùng</Tag>,
+    },
     { title: "Ghi chú", dataIndex: "ghiChu", key: "ghiChu" },
     {
-      title: "Thao tác", key: "action", width: 100, align: "center",
+      title: "Thao tác", key: "action", width: 130, align: "center",
       render: (_v, row) => (
         <Space>
+          {/* Chỉ cho đổi NVL với row đang active và là config đầu ca (thoiDiemBD null) */}
+          {!row.ngayHetHL && !row.thoiDiemBD && (
+            <Button
+              size="small"
+              icon={<SwapOutlined />}
+              title="Đổi NVL giữa ca"
+              onClick={() => openDoiNVL(row)}
+            />
+          )}
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)} />
           <Popconfirm title="Xác nhận xóa?" onConfirm={() => handleDelete(row.id)} okText="Xóa" cancelText="Hủy">
             <Button size="small" danger icon={<DeleteOutlined />} />
@@ -259,14 +331,55 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
 
   return (
     <>
-      <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm Mapping</Button>
+      <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        {/* Toggle chế độ xem */}
+        <Space>
+          <Button
+            type={viewMode === "active" ? "primary" : "default"}
+            onClick={() => setViewMode("active")}
+          >
+            Cấu hình hiệu lực
+          </Button>
+          <Button
+            type={viewMode === "history" ? "primary" : "default"}
+            onClick={() => setViewMode("history")}
+          >
+            Lịch sử theo ngày/ca
+          </Button>
+        </Space>
+        <Space>
+          <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm Mapping</Button>
+        </Space>
       </div>
+
+      {viewMode === "active" && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 10 }}
+          message={
+            idLoCao
+              ? `Đang hiển thị tất cả cấu hình còn hiệu lực của Lò cao ${idLoCao}. Đây là config sẽ được dùng cho các ngày/ca chưa có cấu hình riêng.`
+              : "Chọn Lò cao để xem cấu hình đang hiệu lực. Các ngày/ca không có cấu hình riêng sẽ tự động dùng config gần nhất còn hiệu lực."
+          }
+        />
+      )}
+      {viewMode === "history" && data.length === 0 && ngay && idCa && idLoCao && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 10 }}
+          message={`Không có cấu hình riêng cho Ca ${idCa} ngày ${ngay}. Hệ thống sẽ tự dùng cấu hình gần nhất còn hiệu lực — chuyển sang tab "Cấu hình hiệu lực" để xem.`}
+        />
+      )}
+
       <Table columns={columns} dataSource={data} rowKey="id" loading={loading}
-        size="small" bordered scroll={{ x: 800 }}
+        size="small" bordered scroll={{ x: 900 }}
+        rowClassName={(row) => row.thoiDiemBD ? "row-doi-nvl" : ""}
         pagination={{ pageSize: 20, showTotal: (t) => `Tổng: ${t}` }} />
 
+      {/* ── Modal thêm / sửa mapping ── */}
       <Modal title={editingRow ? "Cập nhật Mapping" : "Thêm Mapping mới"} open={modalOpen}
         onOk={handleSubmit} onCancel={() => setModalOpen(false)}
         confirmLoading={modalLoading} okText={editingRow ? "Cập nhật" : "Thêm"} cancelText="Hủy" destroyOnClose width={560}>
@@ -291,12 +404,8 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
             </Select>
           </Form.Item>
           <Form.Item name="idSiLo" label="Tên Silo" rules={[{ required: true, message: "Chọn Silo" }]}>
-            <Select
-              placeholder={selectedLoCao ? "Chọn Silo" : "Chọn lò cao trước"}
-              disabled={!selectedLoCao}
-              showSearch
-              optionFilterProp="children"
-            >
+            <Select placeholder={selectedLoCao ? "Chọn Silo" : "Chọn lò cao trước"}
+              disabled={!selectedLoCao} showSearch optionFilterProp="children">
               {filteredSiloOpts.map((s) => (
                 <Option key={s.id} value={s.id}>{s.tenSiLo}</Option>
               ))}
@@ -305,14 +414,72 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
           <Form.Item name="idNVL" label="Nguyên nhiên vật liệu">
             <Select placeholder="Chọn NVL" allowClear showSearch optionFilterProp="children">
               {nvlOptions.map((n) => (
-                <Option key={n.id} value={n.id}>
-                  {n.id ? `[${n.id}] ` : ""}{n.tenNVL}
-                </Option>
+                <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL}</Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="ghiChu" label="Ghi chú">
             <Input.TextArea rows={2} maxLength={500} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ── Modal đổi NVL giữa ca ── */}
+      <Modal
+        title={
+          <Space>
+            <SwapOutlined />
+            Đổi NVL giữa ca — Silo: <strong>{doiNVLRow?.tenSiLo}</strong>
+          </Space>
+        }
+        open={doiNVLOpen}
+        onOk={handleDoiNVL}
+        onCancel={() => setDoiNVLOpen(false)}
+        confirmLoading={doiNVLLoading}
+        okText="Xác nhận đổi"
+        cancelText="Hủy"
+        destroyOnClose
+        width={480}
+      >
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={
+            <>
+              NVL hiện tại: <strong>{doiNVLRow?.tenNVL ?? "—"}</strong>.
+              Data trước thời điểm đổi vẫn được tính vào NVL cũ.
+            </>
+          }
+        />
+        <Form form={doiNVLForm} layout="vertical">
+          <Form.Item
+            name="idNVLMoi"
+            label="NVL mới"
+            rules={[{ required: true, message: "Chọn NVL mới" }]}
+          >
+            <Select placeholder="Chọn NVL mới" showSearch optionFilterProp="children">
+              {nvlOptions
+                .filter((n) => n.id !== doiNVLRow?.idNVL)
+                .map((n) => (
+                  <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL}</Option>
+                ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="thoiDiem"
+            label="Thời điểm bắt đầu dùng NVL mới"
+            rules={[{ required: true, message: "Chọn thời điểm" }]}
+          >
+            <DatePicker
+              showTime={{ format: "HH:mm" }}
+              format="DD/MM/YYYY HH:mm"
+              style={{ width: "100%" }}
+              placeholder="Chọn ngày giờ"
+            />
+          </Form.Item>
+          <Form.Item name="ghiChu" label="Ghi chú">
+            <Input.TextArea rows={2} maxLength={500} placeholder="Vd: Hết cát, chuyển sang đá vôi" />
           </Form.Item>
         </Form>
       </Modal>
@@ -488,8 +655,9 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
   const openEdit = (row: LGNLNvlDto) => {
     form.setFieldsValue({
       idLoCao: row.idLoCao,
-      tenNVL: row.tenNVL, donVi: row.donVi,
-      soLuong: row.soLuong, doAm: row.doAm, ghiChu: row.ghiChu,
+      tenNVL: row.tenNVL,
+      thuTu: row.thuTu,
+      ghiChu: row.ghiChu,
       idNhomNVL: row.idNhomNVL, thuTuNhom: row.thuTuNhom,
     });
     setEditingRow(row); setModalOpen(true);
@@ -507,8 +675,8 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
         idLoCao: values.idLoCao,
         idNhomNVL: values.idNhomNVL ?? null,
         tenNVL: values.tenNVL ?? null,
-        donVi: values.donVi ?? null, soLuong: values.soLuong ?? null,
-        doAm: values.doAm ?? null, ghiChu: values.ghiChu ?? null,
+        thuTu: values.thuTu ?? null,
+        ghiChu: values.ghiChu ?? null,
         thuTuNhom: values.thuTuNhom ?? null,
       };
       setModalLoading(true);
@@ -524,10 +692,8 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
     { title: "Tên NVL", dataIndex: "tenNVL", key: "tenNVL" },
     { title: "Nhóm hiển thị", dataIndex: "nhomHienThi", key: "nhomHienThi", render: (v) => v ?? "—" },
+    { title: "Thứ tự", dataIndex: "thuTu", key: "thuTu", width: 90, align: "center", render: (v) => v ?? "—" },
     { title: "Thứ tự nhóm", dataIndex: "thuTuNhom", key: "thuTuNhom", width: 100, align: "center", render: (v) => v ?? "—" },
-    { title: "Đơn vị", dataIndex: "donVi", key: "donVi", width: 85, align: "center" },
-    { title: "Số lượng", dataIndex: "soLuong", key: "soLuong", width: 105, align: "right", render: (v) => v != null ? Number(v).toLocaleString("vi-VN") : "—" },
-    { title: "Độ ẩm (%)", dataIndex: "doAm", key: "doAm", width: 95, align: "right", render: (v) => v ?? "—" },
     { title: "Ghi chú", dataIndex: "ghiChu", key: "ghiChu" },
     {
       title: "Thao tác", key: "action", width: 100, align: "center",
@@ -558,14 +724,14 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           
           <Row gutter={12}>
-            <Col span={16}>
+            <Col span={18}>
               <Form.Item name="tenNVL" label="Tên NVL">
                 <Input maxLength={200} />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item name="donVi" label="Đơn vị">
-                <Input maxLength={50} />
+            <Col span={6}>
+              <Form.Item name="thuTu" label="Thứ tự">
+                <InputNumber style={{ width: "100%" }} min={1} placeholder="1, 2, 3..." />
               </Form.Item>
             </Col>
           </Row>
@@ -592,18 +758,6 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
             <Col span={10}>
               <Form.Item name="thuTuNhom" label="Thứ tự nhóm trên BM">
                 <InputNumber style={{ width: "100%" }} min={1} placeholder="1, 2, 3..." />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item name="soLuong" label="Số lượng">
-                <InputNumber style={{ width: "100%" }} min={0} step={0.001} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="doAm" label="Độ ẩm (%)">
-                <InputNumber style={{ width: "100%" }} min={0} max={100} step={0.01} />
               </Form.Item>
             </Col>
           </Row>

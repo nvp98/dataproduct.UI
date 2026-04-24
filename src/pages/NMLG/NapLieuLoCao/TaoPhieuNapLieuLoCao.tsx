@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_NapLieuLoCao from "../../../utils/BM_config/LG_BB_NapLieuLoCao.json";
-import { Button, Card, Form, Input, Typography, message } from "antd";
+import { Alert, Button, Card, Form, Input, Typography, message } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -32,6 +32,11 @@ const TaoPhieuNapLieuLoCao = () => {
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [materialColumnsOverride, setMaterialColumnsOverride] = useState<TableColumnDef[] | null>(null);
   const [loading, setLoading] = useState(false);
+  // Config hiệu lực: khác null khi đang dùng cấu hình từ ngày/ca khác (fallback)
+  const [configHieuLuc, setConfigHieuLuc] = useState<{
+    ngayHieuLuc: string;
+    idCaHieuLuc: number;
+  } | null>(null);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -99,6 +104,14 @@ const TaoPhieuNapLieuLoCao = () => {
       });
 
       setMaterialColumnsOverride((response.columns as TableColumnDef[]) ?? null);
+
+      const ngayHL = response.ngayHieuLuc ?? null;
+      const idCaHL = response.idCaHieuLuc ?? null;
+      if (ngayHL && idCaHL && (ngayHL !== ngaySXFormatted || idCaHL !== Number(ca))) {
+        setConfigHieuLuc({ ngayHieuLuc: ngayHL, idCaHieuLuc: idCaHL });
+      } else {
+        setConfigHieuLuc(null);
+      }
 
       const rows = (response.rows ?? []).map((row: any, index: number) => {
         const { time, ...rest } = row;
@@ -390,6 +403,15 @@ const TaoPhieuNapLieuLoCao = () => {
           </Button>
           {actionButtons}
         </div>
+
+        {configHieuLuc && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message={`Đang áp dụng cấu hình từ Ca ${configHieuLuc.idCaHieuLuc} ngày ${dayjs(configHieuLuc.ngayHieuLuc).format("DD/MM/YYYY")} (chưa có cấu hình riêng cho ngày/ca đang xem)`}
+          />
+        )}
 
         {tableConfig && (
           <CustomTableLG

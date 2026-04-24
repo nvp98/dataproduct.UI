@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { forwardRef, useImperativeHandle, useMemo } from "react";
-import { Table } from "antd";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { InputNumber, Table } from "antd";
 import CustomFormTable from "./CustomFormTable";
 
 // ─── Config types (khớp với cấu trúc JSON) ───────────────────────────────────
@@ -140,6 +140,12 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
       [mergedColumns]
     );
 
+    const [doAmMap, setDoAmMap] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+      setDoAmMap({});
+    }, [summaryIndexes]);
+
     const summaryRenderer = (pageData: readonly any[]) => {
       if (summaryIndexes.length === 0) return null;
 
@@ -171,6 +177,61 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
                 );
               }
               return <Table.Summary.Cell key={`sum-empty-${colIndex}`} index={colIndex} />;
+            })}
+          </Table.Summary.Row>
+
+          <Table.Summary.Row style={{ backgroundColor: "#f0f5ff" }}>
+            {flatCols.map((col, colIndex) => {
+              if (colIndex === 0) {
+                return (
+                  <Table.Summary.Cell key="doam-label" index={0} align="center">
+                    <b>Độ ẩm</b>
+                  </Table.Summary.Cell>
+                );
+              }
+              const di = col?.dataIndex;
+              if (di && summaryIndexes.includes(di)) {
+                return (
+                  <Table.Summary.Cell key={`doam-${di}`} index={colIndex} align="center">
+                    <InputNumber
+                      min={0}
+                      max={100}
+                      precision={2}
+                      value={doAmMap[di] ?? undefined}
+                      onChange={(val) =>
+                        setDoAmMap((prev) => ({ ...prev, [di]: val ?? 0 }))
+                      }
+                      style={{ width: "100%" }}
+                      size="small"
+                      addonAfter="%"
+                    />
+                  </Table.Summary.Cell>
+                );
+              }
+              return <Table.Summary.Cell key={`doam-empty-${colIndex}`} index={colIndex} />;
+            })}
+          </Table.Summary.Row>
+
+          <Table.Summary.Row style={{ backgroundColor: "#f6ffed", fontWeight: "bold" }}>
+            {flatCols.map((col, colIndex) => {
+              if (colIndex === 0) {
+                return (
+                  <Table.Summary.Cell key="quykho-label" index={0} align="center">
+                    Quy khô
+                  </Table.Summary.Cell>
+                );
+              }
+              const di = col?.dataIndex;
+              if (di && summaryIndexes.includes(di)) {
+                const pct = doAmMap[di] ?? 0;
+                const quyKho = totals[di] * (100 - pct) / 100;
+                return (
+                  <Table.Summary.Cell key={`quykho-${di}`} index={colIndex} align="right">
+                    {quyKho.toLocaleString("en-US", { maximumFractionDigits: 3 })}
+                  </Table.Summary.Cell>
+                );
+              }
+              return <Table.Summary.Cell key={`quykho-empty-${colIndex}`} index={colIndex} />;
             })}
           </Table.Summary.Row>
         </Table.Summary>

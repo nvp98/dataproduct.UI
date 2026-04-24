@@ -123,6 +123,16 @@
   "footerNotes": [],
 
   "signatures": [
+    
+    {
+      "label": "Trưởng ca",
+      "type": "selectNguoiKy",
+      "key": "truongcalocao_NM.LG",
+      "maphongBan": "NM.LG",
+      "capDuyet": 1,
+      "isChon": true,
+      "required": true
+    },
     {
       "label": "Người theo dõi",
       "type": "selectNguoiKy",
