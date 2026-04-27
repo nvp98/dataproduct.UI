@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_NapLieuLoCao from "../../../utils/BM_config/LG_BB_NapLieuLoCao.json";
-import { Alert, Button, Card, Form, Input, Typography, message } from "antd";
-import { FilterOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, DatePicker, Form, Input, Modal, Select, Space, Table, Tag, Typography, message } from "antd";
+import { FilterOutlined, SearchOutlined, SwapOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,6 +15,7 @@ import { PhieuApi } from "../../../services/PhieuApi";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
+import { lgnlMappingApi, lgnlNvlApi, type LGNLNvlDto, type LGNLSiloSnapshotDto } from "../../../services/LGNLApi";
 
 interface TableRow {
   key?: string;
@@ -50,6 +51,16 @@ const TaoPhieuNapLieuLoCao = () => {
   const ca = Form.useWatch("ca", form);
   const scope = Form.useWatch("scope", form);
   Form.useWatch("NgaySX", form);
+
+  const [siloSnapshotOpen, setSiloSnapshotOpen] = useState(false);
+  const [siloSnapshotData, setSiloSnapshotData] = useState<LGNLSiloSnapshotDto[]>([]);
+  const [siloSnapshotLoading, setSiloSnapshotLoading] = useState(false);
+
+  const [doiNVLOpen, setDoiNVLOpen] = useState(false);
+  const [doiNVLRow, setDoiNVLRow] = useState<LGNLSiloSnapshotDto | null>(null);
+  const [doiNVLLoading, setDoiNVLLoading] = useState(false);
+  const [nvlOptions, setNvlOptions] = useState<LGNLNvlDto[]>([]);
+  const [doiNVLForm] = Form.useForm();
 
   const currentUserInfo = useMemo(() => {
     const stored = localStorage.getItem("userinfo");
@@ -146,6 +157,69 @@ const TaoPhieuNapLieuLoCao = () => {
   const handleFilter = useCallback(() => {
     loadDataFromAPI();
   }, [loadDataFromAPI]);
+
+  const refreshSnapshotData = useCallback(async (ngay: string, idCa: number, idLoCao: number) => {
+    setSiloSnapshotLoading(true);
+    try {
+      const res = await lgnlMappingApi.getSnapshotSilo({ ngay, idCa, idLoCao });
+      setSiloSnapshotData(Array.isArray(res) ? res : []);
+    } catch {
+      message.error("Không thể tải trạng thái Silo");
+      setSiloSnapshotData([]);
+    } finally {
+      setSiloSnapshotLoading(false);
+    }
+  }, []);
+
+  const handleKiemTraSilo = useCallback(async () => {
+    const ngaySXValue = form.getFieldValue("NgaySX");
+    if (!scope || !ca || !ngaySXValue) {
+      message.warning("Vui lòng chọn Lò cao, Ca và Ngày sản xuất trước khi kiểm tra Silo");
+      return;
+    }
+    const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
+    setSiloSnapshotOpen(true);
+    await refreshSnapshotData(ngay, Number(ca), Number(scope));
+    // Load NVL options song song để sẵn sàng cho đổi NVL
+    lgnlNvlApi.getList({ idLoCao: Number(scope) })
+      .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
+      .catch(() => {});
+  }, [form, scope, ca, refreshSnapshotData]);
+
+  const handleOpenDoiNVL = useCallback((row: LGNLSiloSnapshotDto) => {
+    setDoiNVLRow(row);
+    doiNVLForm.resetFields();
+    doiNVLForm.setFieldsValue({ thoiDiem: dayjs(), ghiChu: null });
+    setDoiNVLOpen(true);
+  }, [doiNVLForm]);
+
+  const handleDoiNVL = useCallback(async () => {
+    if (!doiNVLRow) return;
+    const ngaySXValue = form.getFieldValue("NgaySX");
+    const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
+    try {
+      const values = await doiNVLForm.validateFields();
+      setDoiNVLLoading(true);
+      await lgnlMappingApi.doiNVL({
+        idLoCao: Number(scope),
+        ngay,
+        idCa: Number(ca),
+        idSiLo: doiNVLRow.idSiLo,
+        idNVLMoi: values.idNVLMoi,
+        thoiDiem: (values.thoiDiem as dayjs.Dayjs).format("YYYY-MM-DDTHH:mm:ss"),
+        ghiChu: values.ghiChu ?? null,
+      });
+      message.success("Đổi NVL thành công");
+      setDoiNVLOpen(false);
+      // Làm mới snapshot sau khi đổi
+      await refreshSnapshotData(ngay, Number(ca), Number(scope));
+    } catch (err: any) {
+      if (err?.errorFields) return;
+      message.error("Lỗi khi đổi NVL");
+    } finally {
+      setDoiNVLLoading(false);
+    }
+  }, [doiNVLRow, doiNVLForm, form, scope, ca, refreshSnapshotData]);
 
   const initData = useCallback(async () => {
     try {
@@ -391,7 +465,7 @@ const TaoPhieuNapLieuLoCao = () => {
           ))}
         </div>
 
-        <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8 }}>
+        <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Button
             type="primary"
             icon={<FilterOutlined />}
@@ -401,8 +475,105 @@ const TaoPhieuNapLieuLoCao = () => {
           >
             Tải dữ liệu
           </Button>
+          <Button
+            icon={<SearchOutlined />}
+            onClick={handleKiemTraSilo}
+          >
+            Kiểm tra Silo
+          </Button>
           {actionButtons}
         </div>
+
+        <Modal
+          title="Trạng thái Silo hiện tại"
+          open={siloSnapshotOpen}
+          onCancel={() => setSiloSnapshotOpen(false)}
+          footer={<Button onClick={() => setSiloSnapshotOpen(false)}>Đóng</Button>}
+          width={700}
+        >
+          <Table
+            size="small"
+            bordered
+            loading={siloSnapshotLoading}
+            dataSource={siloSnapshotData}
+            rowKey="idSiLo"
+            pagination={false}
+            columns={[
+              { title: "STT", key: "stt", width: 50, align: "center", render: (_v: unknown, _r: unknown, i: number) => i + 1 },
+              { title: "Tên Silo", dataIndex: "tenSiLo", key: "tenSiLo", render: (v: string | null) => v ?? "—" },
+              {
+                title: "NVL đang chứa", dataIndex: "tenNVL", key: "tenNVL",
+                render: (v: string | null, row: LGNLSiloSnapshotDto) => (
+                  <Space size={4}>
+                    <span>{v ?? <span style={{ color: "#bbb" }}>Chưa cấu hình</span>}</span>
+                    {row.daDoiGiuaCa && <Tag color="orange">Đổi giữa ca</Tag>}
+                  </Space>
+                ),
+              },
+              {
+                title: "Thời điểm đổi NVL", dataIndex: "thoiDiemBD", key: "thoiDiemBD", width: 145, align: "center",
+                render: (v: string | null) => v
+                  ? <Tag color="orange">{dayjs(v).format("DD/MM/YYYY HH:mm")}</Tag>
+                  : <span style={{ color: "#bbb" }}>Từ đầu ca</span>,
+              },
+              {
+                title: "", key: "action", width: 90, align: "center",
+                render: (_v: unknown, row: LGNLSiloSnapshotDto) => (
+                  <Button
+                    size="small"
+                    icon={<SwapOutlined />}
+                    onClick={() => handleOpenDoiNVL(row)}
+                  >
+                    Đổi NVL
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </Modal>
+
+        <Modal
+          title={
+            <Space>
+              <SwapOutlined />
+              Đổi NVL giữa ca — Silo: <strong>{doiNVLRow?.tenSiLo}</strong>
+            </Space>
+          }
+          open={doiNVLOpen}
+          onOk={handleDoiNVL}
+          onCancel={() => setDoiNVLOpen(false)}
+          confirmLoading={doiNVLLoading}
+          okText="Xác nhận đổi"
+          cancelText="Hủy"
+          destroyOnClose
+          width={480}
+        >
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={
+              <>NVL hiện tại: <strong>{doiNVLRow?.tenNVL ?? "—"}</strong>. Data trước thời điểm đổi vẫn tính vào NVL cũ.</>
+            }
+          />
+          <Form form={doiNVLForm} layout="vertical">
+            <Form.Item name="idNVLMoi" label="NVL mới" rules={[{ required: true, message: "Chọn NVL mới" }]}>
+              <Select placeholder="Chọn NVL mới" showSearch optionFilterProp="children">
+                {nvlOptions
+                  .filter((n) => n.id !== doiNVLRow?.idNVL)
+                  .map((n) => (
+                    <Select.Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL_NM}</Select.Option>
+                  ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="thoiDiem" label="Thời điểm bắt đầu dùng NVL mới" rules={[{ required: true, message: "Chọn thời điểm" }]}>
+              <DatePicker showTime={{ format: "HH:mm" }} format="DD/MM/YYYY HH:mm" style={{ width: "100%" }} placeholder="Chọn ngày giờ" />
+            </Form.Item>
+            <Form.Item name="ghiChu" label="Ghi chú">
+              <Input.TextArea rows={2} maxLength={500} placeholder="Vd: Hết cát, chuyển sang đá vôi" />
+            </Form.Item>
+          </Form>
+        </Modal>
 
         {configHieuLuc && (
           <Alert

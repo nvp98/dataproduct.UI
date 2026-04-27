@@ -93,6 +93,18 @@ export interface CreateLGNLMappingDto {
 
 export interface UpdateLGNLMappingDto extends CreateLGNLMappingDto {}
 
+// ─── Snapshot trạng thái Silo hiện tại ───────────────────────────────────────
+
+export interface LGNLSiloSnapshotDto {
+  idSiLo: number;
+  tenSiLo: string | null;
+  idNVL: number | null;
+  tenNVL: string | null;
+  thoiDiemBD: string | null;   // null = từ đầu ca; có giá trị = đổi giữa ca tại thời điểm này
+  daDoiGiuaCa: boolean;
+  thuTu: number | null;
+}
+
 export const lgnlMappingApi = {
   getList: (params?: { ngay?: string; idCa?: number; idLoCao?: number }) =>
     apiService.get<LGNLMappingDto[]>("/api/LGNL/mapping", { params }),
@@ -111,6 +123,9 @@ export const lgnlMappingApi = {
 
   doiNVL: (dto: LGNLChangeSiLoNVLDto) =>
     apiService.post<{ message: string; id: number }>("/api/LGNL/mapping/doi-nvl", dto),
+
+  getSnapshotSilo: (params: { ngay: string; idCa: number; idLoCao: number }) =>
+    apiService.get<LGNLSiloSnapshotDto[]>("/api/LGNL/snapshot-silo", { params }),
 };
 
 // ─── Nhóm NVL (LG_NL_NhomNVL) ────────────────────────────────────────────────
@@ -156,21 +171,26 @@ export interface LGNLNvlDto {
   id: number;
   idLoCao: number | null;
   idNhomNVL: number | null;
-  tenNVL: string | null;
+  tenNVL_NM: string | null;
   thuTu: number | null;
   ghiChu: string | null;
   ngayTao: string | null;
   nhomHienThi: string | null;
   thuTuNhom: number | null;
+  tenNVL_TK: string | null;
+  xacNhan: boolean | null;
 }
 
 export interface CreateLGNLNvlDto {
   idLoCao: number;
   idNhomNVL?: number | null;
-  tenNVL?: string | null;
+  tenNVL_NM?: string | null;
   thuTu?: number | null;
   ghiChu?: string | null;
   thuTuNhom?: number | null;
+  tenNVL_TK?: string | null;  
+  xacNhan?: boolean | null; // true = đã xác nhận, false/null = chưa xác nhận
+
 }
 
 export interface UpdateLGNLNvlDto extends CreateLGNLNvlDto {}
@@ -190,14 +210,17 @@ export const lgnlNvlApi = {
 
   delete: (id: number) =>
     apiService.delete(`/api/LGNL/nvl/${id}`),
+
+  updateXacNhan: (data: { id: number; xacNhan: boolean }) =>
+  apiService.put("/api/LGNL/nvl/xac-nhan", data)
 };
 
 // ─── Dữ liệu Silo pivot (LG1_DuLieuNL JOIN LG_NL_Mapping) ───────────────────
 
 export interface LGNLColumnDto {
   title: string;
-  dataIndex?: string;             // undefined nếu là cột cha (có children)
-  children?: LGNLColumnDto[];     // undefined nếu là cột lá
+  dataIndex?: string;           
+  children?: LGNLColumnDto[];   
 }
 
 export interface LGNLDuLieuSiLoResult {

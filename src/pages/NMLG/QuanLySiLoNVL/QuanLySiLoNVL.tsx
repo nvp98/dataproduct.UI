@@ -2,6 +2,7 @@
 import {
   Alert, Button, Card, Col, DatePicker, Form, Input, InputNumber,
   Modal, Popconfirm, Row, Select, Space, Table, Tag, Tabs, Typography, message,
+  Switch,
 } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SwapOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -43,6 +44,7 @@ const SiLoMasterTab = ({ loCaoOptions, filterLoCao, tsOptions, onDataChange }: S
   const [modalLoading, setModalLoading] = useState(false);
   const [editingRow, setEditingRow] = useState<LGNLSiLoMasterDto | null>(null);
   const [form] = Form.useForm();
+
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -288,17 +290,21 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 75, align: "center" },
     { title: "Tên Silo", dataIndex: "tenSiLo", key: "tenSiLo", render: (v) => v ?? "—" },
     {
-      title: "Tên NVL", dataIndex: "tenNVL", key: "tenNVL",
+      title: "Tên NVL", dataIndex: "tenNVL", key: "tenNVL_NM",
       render: (v, row) => (
         <Space size={4}>
           {v ?? "—"}
           {row.thoiDiemBD && (
-            <Tag color="orange" style={{ fontSize: 11 }}>
-              Đổi {dayjs(row.thoiDiemBD).format("HH:mm")}
-            </Tag>
+            <Tag color="orange" style={{ fontSize: 11 }}>Đổi giữa ca</Tag>
           )}
         </Space>
       ),
+    },
+    {
+      title: "Thời điểm đổi NVL", dataIndex: "thoiDiemBD", key: "thoiDiemBD", width: 150, align: "center",
+      render: (v) => v
+        ? <Tag color="orange">{dayjs(v).format("DD/MM/YYYY HH:mm")}</Tag>
+        : <span style={{ color: "#bbb" }}>—</span>,
     },
     {
       title: "Hiệu lực", key: "hieuLuc", width: 100, align: "center",
@@ -414,7 +420,7 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
           <Form.Item name="idNVL" label="Nguyên nhiên vật liệu">
             <Select placeholder="Chọn NVL" allowClear showSearch optionFilterProp="children">
               {nvlOptions.map((n) => (
-                <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL}</Option>
+                <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL_NM}</Option>
               ))}
             </Select>
           </Form.Item>
@@ -462,7 +468,7 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
               {nvlOptions
                 .filter((n) => n.id !== doiNVLRow?.idNVL)
                 .map((n) => (
-                  <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL}</Option>
+                  <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL_NM}</Option>
                 ))}
             </Select>
           </Form.Item>
@@ -630,6 +636,7 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
   const [modalLoading, setModalLoading] = useState(false);
   const [editingRow, setEditingRow] = useState<LGNLNvlDto | null>(null);
   const [form] = Form.useForm();
+  const [loadingId, setLoadingId] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -655,14 +662,37 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
   const openEdit = (row: LGNLNvlDto) => {
     form.setFieldsValue({
       idLoCao: row.idLoCao,
-      tenNVL: row.tenNVL,
+      tenNVL_NM: row.tenNVL_NM,
       thuTu: row.thuTu,
       ghiChu: row.ghiChu,
       idNhomNVL: row.idNhomNVL, thuTuNhom: row.thuTuNhom,
+      tenNVL_TK: row.tenNVL_TK,
+      xacNhan: row.xacNhan,
     });
     setEditingRow(row); setModalOpen(true);
   };
+  const handleToggleXacNhan = async (id: number, checked: boolean) => {
+    try {
+      setLoadingId(id);
+      await lgnlNvlApi.updateXacNhan({
+        id,
+        xacNhan: checked
+      });
 
+      // cập nhật UI ngay (optimistic update)
+      setData(prev =>
+        prev.map(x =>
+          x.id === id ? { ...x, xacNhan: checked } : x
+        )
+      );
+
+      message.success("Cập nhật xác nhận thành công");
+    } catch (err) {
+      message.error("Cập nhật thất bại");
+    } finally {
+      setLoadingId(null);
+    }
+  };
   const handleDelete = async (id: number) => {
     try { await lgnlNvlApi.delete(id); message.success("Đã xóa"); fetchData(); onDataChange(); }
     catch { message.error("Lỗi khi xóa"); }
@@ -674,10 +704,12 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
       const dto: CreateLGNLNvlDto = {
         idLoCao: values.idLoCao,
         idNhomNVL: values.idNhomNVL ?? null,
-        tenNVL: values.tenNVL ?? null,
+        tenNVL_NM: values.tenNVL_NM ?? null,
         thuTu: values.thuTu ?? null,
         ghiChu: values.ghiChu ?? null,
         thuTuNhom: values.thuTuNhom ?? null,
+        tenNVL_TK: values.tenNVL_TK ?? null,
+        xacNhan: values.xacNhan ?? null,
       };
       setModalLoading(true);
       if (editingRow) { await lgnlNvlApi.update(editingRow.id, dto); message.success("Cập nhật thành công"); }
@@ -690,7 +722,22 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
   const columns: ColumnsType<LGNLNvlDto> = [
     { title: "STT", key: "stt", width: 55, align: "center", render: (_v, _r, i) => i + 1 },
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
-    { title: "Tên NVL", dataIndex: "tenNVL", key: "tenNVL" },
+    { title: "Tên NVL NM", dataIndex: "tenNVL_NM", key: "tenNVL_NM" },
+    { title: "Tên NVL (P.KH)", dataIndex: "tenNVL_TK", key: "tenNVL_TK", ellipsis: true },
+    {
+      title: "Xác nhận",
+      dataIndex: "xacNhan",
+      key: "xacNhan",
+      width: 100,
+      align: "center",
+      render: (value, row) => (
+        <Switch
+        checked={!!value}
+        loading={loadingId === row.id}
+        onChange={(checked) => handleToggleXacNhan(row.id, checked)}
+      />
+      ),
+    },
     { title: "Nhóm hiển thị", dataIndex: "nhomHienThi", key: "nhomHienThi", render: (v) => v ?? "—" },
     { title: "Thứ tự", dataIndex: "thuTu", key: "thuTu", width: 90, align: "center", render: (v) => v ?? "—" },
     { title: "Thứ tự nhóm", dataIndex: "thuTuNhom", key: "thuTuNhom", width: 100, align: "center", render: (v) => v ?? "—" },
@@ -722,28 +769,20 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
         onOk={handleSubmit} onCancel={() => setModalOpen(false)}
         confirmLoading={modalLoading} okText={editingRow ? "Cập nhật" : "Thêm"} cancelText="Hủy" destroyOnClose width={600}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          
+
           <Row gutter={12}>
-            <Col span={18}>
-              <Form.Item name="tenNVL" label="Tên NVL">
+            <Col span={12}>
+              <Form.Item name="tenNVL_NM" label="Tên NVL">
                 <Input maxLength={200} />
               </Form.Item>
             </Col>
-            <Col span={6}>
-              <Form.Item name="thuTu" label="Thứ tự">
-                <InputNumber style={{ width: "100%" }} min={1} placeholder="1, 2, 3..." />
+             <Col span={12}>
+              <Form.Item name="tenNVL_TK" label="Tên NVL P.KH">
+                <Input maxLength={200} />
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item name="idLoCao" label="Lò cao" rules={[{ required: true, message: "Chọn lò cao" }]}>
-                <Select placeholder="Chọn lò cao">
-                  {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+          
           <Row gutter={12}>
             <Col span={14}>
               <Form.Item name="idNhomNVL" label="Nhóm cột cha trên BM"
@@ -758,6 +797,20 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
             <Col span={10}>
               <Form.Item name="thuTuNhom" label="Thứ tự nhóm trên BM">
                 <InputNumber style={{ width: "100%" }} min={1} placeholder="1, 2, 3..." />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={14}>
+              <Form.Item name="idLoCao" label="Lò cao" rules={[{ required: true, message: "Chọn lò cao" }]}>
+                <Select placeholder="Chọn lò cao">
+                  {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item name="xacNhan" label="Xác nhận">
+                <Switch />
               </Form.Item>
             </Col>
           </Row>
