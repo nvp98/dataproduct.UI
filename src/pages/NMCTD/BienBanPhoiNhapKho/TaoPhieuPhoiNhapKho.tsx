@@ -27,8 +27,10 @@ import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuCons
 import {
   phoiNhapKhoApi,
   type InsertPhoiNhapKhoRequest,
+  type ChotPhoiNhapKhoRequest,
   type PhoiNhapKhoListItem,
 } from "../../../services/BMDucCTDApi";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 
 interface TableRow {
   key?: string;
@@ -99,6 +101,60 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
   const ngayNhanPhoiWatch = Form.useWatch("ngayNhanPhoi", form);
   const caNhanPhoiWatch = Form.useWatch("caNhanPhoi", form);
 
+  // ★ Tính toán các ngày/ca cho phép dựa trên ca sản xuất
+  const allowedDatesAndShifts = useMemo(() => {
+    if (!ngaySX || !ca) return { dates: [], shifts: [] };
+
+    const ngaySXDayjs = dayjs(ngaySX);
+    const allowedDates: string[] = [];
+    const allowedShifts: number[] = [];
+
+    // Ca 1 (Ngày): được chọn ca 1 ngày hôm nay + ca 2 đêm hôm nay
+    // Ca 2 (Đêm): được chọn ca 2 đêm hôm nay + ca 1 ngày hôm sau
+    if (ca === 1 || ca === "1") {
+      // Ca ngày: cho phép chọn ngày hôm nay
+      allowedDates.push(ngaySXDayjs.format("YYYY-MM-DD"));
+      allowedShifts.push(1, 2); // Ca Ngày và Ca Đêm
+    } else if (ca === 2 || ca === "2") {
+      // Ca đêm: cho phép chọn ngày hôm nay + ngày hôm sau
+      allowedDates.push(ngaySXDayjs.format("YYYY-MM-DD"));
+      allowedDates.push(ngaySXDayjs.add(1, "day").format("YYYY-MM-DD"));
+      allowedShifts.push(2, 1); // Ca Đêm và Ca Ngày
+    }
+
+    return {
+      dates: allowedDates,
+      shifts: allowedShifts,
+    };
+  }, [ngaySX, ca]);
+
+  // ★ Lấy các ca cho phép dựa trên ngày đã chọn
+  const allowedShiftsForSelectedDate = useMemo(() => {
+    if (!ngayNhanPhoiWatch || !ngaySX || !ca) return [];
+
+    const ngaySXDayjs = dayjs(ngaySX);
+    const selectedDateStr = dayjs(ngayNhanPhoiWatch).format("YYYY-MM-DD");
+    const ngaySXStr = ngaySXDayjs.format("YYYY-MM-DD");
+    const ngayHomnauStr = ngaySXDayjs.add(1, "day").format("YYYY-MM-DD");
+
+    // Ca 1 (Ngày): được chọn ca 1 ngày hôm nay + ca 2 đêm hôm nay
+    if (ca === 1 || ca === "1") {
+      if (selectedDateStr === ngaySXStr) {
+        return [1, 2]; // Ca Ngày + Ca Đêm
+      }
+    }
+    // Ca 2 (Đêm): được chọn ca 2 đêm hôm nay + ca 1 ngày hôm sau
+    else if (ca === 2 || ca === "2") {
+      if (selectedDateStr === ngaySXStr) {
+        return [2]; // Ca Đêm
+      } else if (selectedDateStr === ngayHomnauStr) {
+        return [1]; // Ca Ngày
+      }
+    }
+
+    return [];
+  }, [ngayNhanPhoiWatch, ngaySX, ca]);
+
   useEffect(() => {
     const ngaySXValue = ngaySX;
     const caValue = ca;
@@ -112,8 +168,8 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
   }, [form, ngaySX, ca]);
 
   const currentUserInfo = useMemo(() => {
-    const stored = localStorage.getItem("userinfo");
-    return stored ? JSON.parse(stored) : {};
+    const stored = getThongTinUser();
+    return stored;
   }, []);
 
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
@@ -1083,6 +1139,112 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
     loadNhanPhoiData,
   ]);
 
+  const handleXacNhanPhoi = useCallback(
+    (xacNhan: boolean, capXacNhan: number) => {
+      return async () => {
+        if (!selectedNhanPhoiRowKeys.length) {
+          message.warning("Vui lòng chọn ít nhất 1 dòng để xác nhận");
+          return;
+        }
+
+        const selectedIds = nhanPhoiData
+          .filter((row) => selectedNhanPhoiRowKeys.includes(row.id))
+          .map((row) => Number(row.id))
+          .filter((id) => Number.isInteger(id));
+
+        if (!selectedIds.length) {
+          message.warning("Không tìm thấy dòng hợp lệ để xác nhận");
+          return;
+        }
+
+        const userInfo = getUserInfo();
+        const capName = capXacNhan === 1 ? "QLCL" : "Đúc";
+        const title = xacNhan ? `Xác nhận ${capName}` : `Bỏ nhận ${capName}`;
+        const content = xacNhan
+          ? `Bạn có chắc muốn xác nhận ${capName} cho ${selectedIds.length} dòng?`
+          : `Bạn có chắc muốn bỏ nhận ${capName} cho ${selectedIds.length} dòng?`;
+
+        Modal.confirm({
+          title,
+          content,
+          okText: "Xác nhận",
+          cancelText: "Hủy",
+          onOk: async () => {
+            try {
+              setNhanPhoiLoading(true);
+              const payload = {
+                ids: selectedIds,
+                nguoiXacNhanId: userInfo?.iD_TaiKhoan ?? 0,
+                capXacNhan,
+                tinhTrangCap: xacNhan ? 1 : 0,
+                phieuId: idphieu || "",
+              };
+              await phoiNhapKhoApi.xacNhanPhoiNhapKho(payload);
+              message.success(`${title} thành công`);
+              setSelectedNhanPhoiRowKeys([]);
+              await loadNhanPhoiData();
+            } catch (error: any) {
+              message.error(
+                error?.response?.data?.message ||
+                  error?.message ||
+                  `${title} thất bại`,
+              );
+            } finally {
+              setNhanPhoiLoading(false);
+            }
+          },
+        });
+      };
+    },
+    [selectedNhanPhoiRowKeys, nhanPhoiData, getUserInfo, loadNhanPhoiData],
+  );
+
+  const handleChot = useCallback(
+    (idPhieu: string | undefined, tinhTrangChot: number) => {
+      return async () => {
+        if (!idPhieu) {
+          message.warning("Vui lòng lưu phiếu trước khi chốt");
+          return;
+        }
+
+        const actionName = tinhTrangChot === 1 ? "Chốt" : "Hủy chốt";
+        const content =
+          tinhTrangChot === 1
+            ? "Bạn có chắc muốn chốt phôi nhập kho này?"
+            : "Bạn có chắc muốn hủy chốt phôi nhập kho này?";
+
+        Modal.confirm({
+          title: actionName,
+          content,
+          okText: actionName,
+          okType: tinhTrangChot === 1 ? "primary" : "danger",
+          cancelText: "Hủy",
+          onOk: async () => {
+            try {
+              setNhanPhoiLoading(true);
+              const payload = {
+                idPhieu,
+                tinhTrangChot,
+              };
+              await phoiNhapKhoApi.chotPhoiNhapKho(payload);
+              message.success(`${actionName} phôi nhập kho thành công`);
+              await loadNhanPhoiData();
+            } catch (error: any) {
+              message.error(
+                error?.response?.data?.message ||
+                  error?.message ||
+                  `${actionName} phôi nhập kho thất bại`,
+              );
+            } finally {
+              setNhanPhoiLoading(false);
+            }
+          },
+        });
+      };
+    },
+    [loadNhanPhoiData],
+  );
+
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
       {/* Tiêu đề biên bản */}
@@ -1097,7 +1259,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
         {/* Tiêu đề trung tâm */}
         <div style={{ flex: 1, textAlign: "center" }}>
           <Typography.Title level={3} style={{ marginBottom: 0 }}>
-            {/* {config.title} */}
+            {config.title}
           </Typography.Title>
           {idphieu && <b>Số phiếu: {soPhieu}</b>}
         </div>
@@ -1163,21 +1325,20 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                     Xuất PDF
                   </Button>
                 )}
-              {actionButtons}
+              {!isViecDenToi && (
+                <div style={{ marginBottom: 12 }}>
+                  <Button
+                    onClick={handleOpenModalChuyenThanh}
+                    disabled={isFormLocked || selectedRowKeys.length === 0}
+                  >
+                    Nhập kho
+                  </Button>
+                </div>
+              )}
+              {/* {actionButtons} */}
             </>
           }
         </div>
-
-        {!isViecDenToi && (
-          <div style={{ marginBottom: 12 }}>
-            <Button
-              onClick={handleOpenModalChuyenThanh}
-              disabled={isFormLocked || selectedRowKeys.length === 0}
-            >
-              Nhập kho
-            </Button>
-          </div>
-        )}
 
         {!isViecDenToi &&
           /* TABLE - danh sách phôi */
@@ -1364,7 +1525,14 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
               <DatePicker
                 format="DD/MM/YYYY"
                 style={{ width: "100%" }}
-                disabled
+                disabledDate={(current) => {
+                  if (!current) return false;
+                  const currentStr = current.format("YYYY-MM-DD");
+                  const isAllowed = allowedDatesAndShifts.dates.some(
+                    (date) => date === currentStr,
+                  );
+                  return !isAllowed;
+                }}
               />
             </Form.Item>
             <Form.Item
@@ -1375,11 +1543,12 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
               <Select
                 allowClear
                 placeholder="Chọn ca"
-                disabled
                 options={[
                   { label: "Ca Ngày", value: 1 },
                   { label: "Ca Đêm", value: 2 },
-                ]}
+                ].filter((opt) =>
+                  allowedShiftsForSelectedDate.includes(opt.value),
+                )}
               />
             </Form.Item>
             <div style={{ display: "flex", alignItems: "end" }}>
@@ -1392,17 +1561,103 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                 >
                   Tìm kiếm
                 </Button>
-                <Button
-                  danger
-                  disabled={
-                    isFormLocked ||
-                    nhanPhoiLoading ||
-                    selectedNhanPhoiRowKeys.length === 0
-                  }
-                  onClick={handleThuHoiNhanPhoi}
-                >
-                  Thu hồi
-                </Button>
+                {!isViecDenToi && (
+                  <Button
+                    danger
+                    disabled={
+                      isFormLocked ||
+                      nhanPhoiLoading ||
+                      selectedNhanPhoiRowKeys.length === 0
+                    }
+                    onClick={handleThuHoiNhanPhoi}
+                  >
+                    Thu hồi
+                  </Button>
+                )}
+                {isViecDenToi &&
+                  currentUserInfo?.tenNgan ==
+                    config.signatures.filter((x) => x.capDuyet === 1)[0]
+                      ?.maphongBan && (
+                    <>
+                      <Button
+                        type="primary"
+                        disabled={
+                          isFormLocked ||
+                          nhanPhoiLoading ||
+                          selectedNhanPhoiRowKeys.length === 0
+                        }
+                        onClick={handleXacNhanPhoi(true, 1)}
+                      >
+                        Xác nhận QLCL
+                      </Button>
+                      <Button
+                        danger
+                        disabled={
+                          isFormLocked ||
+                          nhanPhoiLoading ||
+                          selectedNhanPhoiRowKeys.length === 0
+                        }
+                        onClick={handleXacNhanPhoi(false, 1)}
+                      >
+                        Bỏ nhận QLCL
+                      </Button>
+                    </>
+                  )}
+                {isViecDenToi &&
+                  currentUserInfo?.tenNgan ==
+                    config.signatures.filter((x) => x.capDuyet === 2)[0]
+                      ?.maphongBan && (
+                    <>
+                      <Button
+                        type="primary"
+                        disabled={
+                          isFormLocked ||
+                          nhanPhoiLoading ||
+                          selectedNhanPhoiRowKeys.length === 0
+                        }
+                        onClick={handleXacNhanPhoi(true, 2)}
+                      >
+                        Xác nhận Đúc
+                      </Button>
+                      <Button
+                        danger
+                        disabled={
+                          isFormLocked ||
+                          nhanPhoiLoading ||
+                          selectedNhanPhoiRowKeys.length === 0
+                        }
+                        onClick={handleXacNhanPhoi(false, 2)}
+                      >
+                        Bỏ nhận Đúc
+                      </Button>
+                    </>
+                  )}
+                {isViecDenToi && currentUserInfo?.tenNgan == "P.KH" && (
+                  <>
+                    <Button
+                      type="primary"
+                      disabled={
+                        isFormLocked ||
+                        nhanPhoiLoading ||
+                        selectedNhanPhoiRowKeys.length === 0
+                      }
+                      onClick={handleChot(idphieu, 1)}
+                    >
+                      Chốt
+                    </Button>
+                    <Button
+                      danger
+                      disabled={
+                        isFormLocked ||
+                        nhanPhoiLoading ||
+                        selectedNhanPhoiRowKeys.length === 0
+                      }
+                      onClick={handleChot(idphieu, 0)}
+                    >
+                      Hủy chốt
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1504,8 +1759,42 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
               );
             }}
             columns={[
+              {
+                title: "Tình trạng QLCL",
+                dataIndex: "tinhTrangCap1",
+                width: 80,
+                render: (v: any) => {
+                  if (!v) return <Tag color="red">Chưa xác nhận</Tag>;
+                  // tinhtrang =1 đã xác nhận còn lại chưa xác nhận
+                  if (v === 1) return <Tag color="green">Đã xác nhận</Tag>;
+                  else return <Tag color="red">Chưa xác nhận</Tag>;
+                },
+              },
+              {
+                title: "Tình trạng Đúc",
+                dataIndex: "tinhTrangCap2",
+                width: 80,
+                render: (v: any) => {
+                  if (!v) return <Tag color="red">Chưa xác nhận</Tag>;
+                  // tinhtrang =1 đã xác nhận còn lại chưa xác nhận
+                  if (v === 1) return <Tag color="green">Đã xác nhận</Tag>;
+                  else return <Tag color="red">Chưa xác nhận</Tag>;
+                },
+              },
+              {
+                title: "Tình trạng Chốt",
+                dataIndex: "tinhTrang",
+                width: 80,
+                render: (v: any) => {
+                  if (!v) return <Tag color="red">Chưa xác nhận</Tag>;
+                  // tinhtrang =1 đã xác nhận còn lại chưa xác nhận
+                  if (v === 1) return <Tag color="green">Đã xác nhận</Tag>;
+                  else return <Tag color="red">Chưa xác nhận</Tag>;
+                },
+              },
               { title: "Mẻ", dataIndex: "me", width: 110, fixed: "left" },
               { title: "Mác thép", dataIndex: "mac", width: 80 },
+
               { title: "Kích thước", dataIndex: "kichThuoc", width: 130 },
               {
                 title: "Ngày đúc",
@@ -1694,7 +1983,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
         )}
 
         <Modal
-          title="Chuyển trong ca"
+          title="Nhập kho phôi"
           open={isChuyenModalOpen}
           onCancel={() => setIsChuyenModalOpen(false)}
           onOk={handleConfirmChuyenThanh}
@@ -1702,6 +1991,48 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
           cancelText="Đóng"
           width={1300}
         >
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "12px 16px",
+              backgroundColor: "#f5f5f5",
+              borderRadius: 6,
+              border: "1px solid #d9d9d9",
+            }}
+          >
+            <div style={{ display: "flex", gap: 32 }}>
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Chuyển đến ngày:
+                </Typography.Text>
+                <div style={{ fontSize: 16, fontWeight: "bold", marginTop: 4 }}>
+                  {form.getFieldValue("ngayNhanPhoi")
+                    ? form.getFieldValue("ngayNhanPhoi").format("DD/MM/YYYY")
+                    : "---"}
+                </div>
+              </div>
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Chuyển đến ca:
+                </Typography.Text>
+                <div style={{ fontSize: 16, fontWeight: "bold", marginTop: 4 }}>
+                  {form.getFieldValue("caNhanPhoi") === 1
+                    ? "Ca Ngày"
+                    : form.getFieldValue("caNhanPhoi") === 2
+                      ? "Ca Đêm"
+                      : "---"}
+                </div>
+              </div>
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Kíp:
+                </Typography.Text>
+                <div style={{ fontSize: 16, fontWeight: "bold", marginTop: 4 }}>
+                  {form.getFieldValue("kip") || "---"}
+                </div>
+              </div>
+            </div>
+          </div>
           <Table<ChuyenThanhItem>
             dataSource={chuyenThanhItems}
             rowKey="rowKey"
