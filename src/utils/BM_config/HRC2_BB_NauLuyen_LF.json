@@ -114,7 +114,7 @@
 
   "signatures": [
     {
-      "label": "Trưởng/Phó kíp",
+      "label": "Tổ trưởng",
       "type": "selectNguoiKy",
       "key": "nguoiKy_Duyet",
       "maphongBan": "NM.HRC2",

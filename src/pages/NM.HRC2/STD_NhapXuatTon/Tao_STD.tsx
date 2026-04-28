@@ -260,10 +260,12 @@ const Tao_STD = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, idphieu, safeGetDetail, currentUserInfo?.iD_TaiKhoan]);
 
-  const getFormData = useCallback(async () => {
+  const getFormData = useCallback(async (skipValidation = false) => {
     const userInfo = getUserInfo();
-    const headerFieldKeys = config.headerFields.map((f: any) => f.key);
-    await form.validateFields(headerFieldKeys);
+    if (!skipValidation) {
+      const headerFieldKeys = config.headerFields.map((f: any) => f.key);
+      await form.validateFields(headerFieldKeys);
+    }
     // Lấy toàn bộ giá trị form (kể cả idphieu, chữ ký) để build payload đầy đủ
     const values = form.getFieldsValue(true);
 
@@ -278,8 +280,8 @@ const Tao_STD = () => {
       luongSuDungKiemKe: row.luongSuDungKiemKe != null && row.luongSuDungKiemKe !== "" ? Number(row.luongSuDungKiemKe) : null,
     }));
 
-    // Validation: Tất cả dòng phải chọn Silo
-    {
+    if (!skipValidation) {
+      // Validation: Tất cả dòng phải chọn Silo
       const missingSiloRows = table1Normalized.filter((row) => !row.siloId && row.viTri !== 2);
       if (missingSiloRows.length > 0) {
         const byTab = missingSiloRows.reduce<Record<string, string[]>>((acc, r: any) => {
@@ -299,9 +301,7 @@ const Tao_STD = () => {
         throw new Error("Validation failed: thiếu Silo");
       }
 
-      // Validation (chỉ khi Gửi): luongSuDungKiemKe phải nhất quán với tongThucTe
-      // - tongThucTe = 0 → luongSuDungKiemKe phải = 0
-      // - tongThucTe != 0 → luongSuDungKiemKe phải != 0
+      // Validation: luongSuDungKiemKe phải nhất quán với tongThucTe
       const inconsistentKiemKeRows = table1Normalized.filter((row) => {
         const thucTe = Number(row.tongThucTe);
         const kiemKe = row.luongSuDungKiemKe;
@@ -310,51 +310,59 @@ const Tao_STD = () => {
         return (thucTe === 0 && kiemKeNum !== 0) || (thucTe !== 0 && kiemKeNum === 0);
       });
       if (inconsistentKiemKeRows.length > 0) {
-        const tenNguyenLieu = inconsistentKiemKeRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+        const byTabKiemKe = inconsistentKiemKeRows.reduce<Record<string, string[]>>((acc, r: any) => {
+          const tab = String(r?.khuVuc ?? "Không xác định");
+          const name = String(r?.nguyenNhienLieu ?? "").trim() || "(không tên)";
+          (acc[tab] ||= []).push(name);
+          return acc;
+        }, {});
+        const detailLinesKiemKe = Object.entries(byTabKiemKe)
+          .map(([tab, names]) => `- Tab ${tab}: ${names.join(", ")}`)
+          .join("\n");
         message.error(
-          `Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng. Vui lòng kiểm tra lại: ${tenNguyenLieu}`
+          `Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng.\nVui lòng kiểm tra lại theo tab:\n${detailLinesKiemKe}`
         );
         throw new Error("Validation failed: luongSuDungKiemKe không nhất quán với tongThucTe");
       }
-    }
 
-    // Validation: các cột số không được âm
-    const isNeg = (v: unknown) => {
-      if (v === null || v === undefined || v === "") return false;
-      const num = typeof v === "number" ? v : Number(v);
-      return !Number.isNaN(num) && num < 0;
-    };
-    const numericFields: { field: keyof typeof table1Normalized[0]; label: string }[] = [
-      { field: "tonDauCa", label: "Tồn đầu ca" },
-      { field: "nhapTrongCa", label: "Nhập trong ca" },
-      { field: "tonCuoiCa", label: "Tồn cuối ca" },
-      { field: "tongThucTe", label: "Tổng thực tế" },
-      { field: "luongSuDungKiemKe", label: "Lượng sử dụng kiểm kê" },
-    ];
-    for (const { field, label } of numericFields) {
-      const negRows = table1Normalized.filter((row) => isNeg(row[field]));
-      if (negRows.length > 0) {
-        const tenNguyenLieu = negRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
-        message.error(`${label} không được âm. Vui lòng kiểm tra lại: ${tenNguyenLieu}`);
-        throw new Error(`Validation failed: ${field} âm`);
+      // Validation: các cột số không được âm
+      const isNeg = (v: unknown) => {
+        if (v === null || v === undefined || v === "") return false;
+        const num = typeof v === "number" ? v : Number(v);
+        return !Number.isNaN(num) && num < 0;
+      };
+      const numericFields: { field: keyof typeof table1Normalized[0]; label: string }[] = [
+        { field: "tonDauCa", label: "Tồn đầu ca" },
+        { field: "nhapTrongCa", label: "Nhập trong ca" },
+        { field: "tonCuoiCa", label: "Tồn cuối ca" },
+        { field: "tongThucTe", label: "Tổng thực tế" },
+        { field: "luongSuDungKiemKe", label: "Lượng sử dụng kiểm kê" },
+      ];
+      for (const { field, label } of numericFields) {
+        const negRows = table1Normalized.filter((row) => isNeg(row[field]));
+        if (negRows.length > 0) {
+          const tenNguyenLieu = negRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+          message.error(`${label} không được âm. Vui lòng kiểm tra lại: ${tenNguyenLieu}`);
+          throw new Error(`Validation failed: ${field} âm`);
+        }
       }
-    }
 
-    // Validation: Khi SoSuDung = 0 và SoNhapVe = 0 thì SoTonCuoi phải bằng SoTonDau
-    const invalidRows = table1Normalized.filter((row) => {
-      const soSuDung = row.tongThucTe;
-      const soNhapVe = row.nhapTrongCa;
-      const soTonDau = row.tonDauCa;
-      const soTonCuoi = row.tonCuoiCa;
-      return soSuDung === 0 && soNhapVe === 0 && soTonCuoi !== soTonDau;
-    });
+      // Validation: Khi SoSuDung = 0 và SoNhapVe = 0 thì SoTonCuoi phải bằng SoTonDau
+      const invalidRows = table1Normalized.filter((row) => {
+        const soSuDung = row.tongThucTe;
+        const soNhapVe = row.nhapTrongCa;
+        const soTonDau = row.tonDauCa;
+        const soTonCuoi = row.tonCuoiCa;
+        return soSuDung === 0 && soNhapVe === 0 && soTonCuoi !== soTonDau;
+      });
 
-    if (invalidRows.length > 0) {
-      const tenNguyenLieu = invalidRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
-      message.error(
-        `Dữ liệu tồn kho không hợp lệ.\nKhi số sử dụng = 0 và số nhập về = 0 thì số tồn cuối phải bằng số tồn đầu.\nVui lòng kiểm tra lại: ${tenNguyenLieu}`
-      );
-      throw new Error("Validation failed: tồn cuối không bằng tồn đầu");
+      if (invalidRows.length > 0) {
+        const tenNguyenLieu = invalidRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+        message.error(
+          `Dữ liệu tồn kho không hợp lệ.\nKhi số sử dụng = 0 và số nhập về = 0 thì số tồn cuối phải bằng số tồn đầu.\nVui lòng kiểm tra lại: ${tenNguyenLieu}`
+        );
+        throw new Error("Validation failed: tồn cuối không bằng tồn đầu");
+      }
     }
 
     const table2Normalized = (table2Data || []).map((row) => ({
@@ -387,7 +395,7 @@ const Tao_STD = () => {
   const handleSave = useCallback(async () => {
     try {
       setLoading(true);
-      const formData = await getFormData();
+      const formData = await getFormData(true);
       const nxtPayload = (formData as any)?.nxtPayload as STD_NXT_HRC2_UpsertDto | undefined;
       if (idphieu) {
         await PhieuApi.putData(idphieu, formData as Record<string, unknown>);

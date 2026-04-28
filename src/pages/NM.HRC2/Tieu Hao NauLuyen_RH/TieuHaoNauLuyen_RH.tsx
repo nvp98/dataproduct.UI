@@ -56,7 +56,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   const fixedFilters = useMemo(() => {
     return {
       userId: currentUserId,
-      loaiVung: type === "viecdentoi" ? 2 : 1,
+      loaiVung: type === "xemphieu" ? 3 : type === "viecdentoi" ? 2 : 1,
     };
   }, [currentUserId, type]);
 
@@ -67,6 +67,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
+    getAllowedScopeOptions,
   } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
@@ -88,7 +89,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
-            if (type === "viecdentoi") {
+            if (type === "viecdentoi" || type === "xemphieu") {
               return navigate("/chitiettieuhaonauluyen_rh", {
                 state: {
                   idphieu: record.idphieu,
@@ -184,7 +185,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   ];
 
   // Config cho các filter fields theo model phiếu
-  const filterFieldsConfig: FilterFieldConfig[] = [
+  const filterFieldsConfig = useMemo((): FilterFieldConfig[] => [
     {
       key: "soPhieu",
       label: "Số phiếu",
@@ -212,27 +213,16 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       label: "Lò",
       type: "select",
       placeholder: "Chọn lò",
-      options: [
-        { label: "RH 1", value: 1 },
-        { label: "RH 2", value: 2 },
-      ],
+      options: getAllowedScopeOptions(config.code as string),
     },
     // {
     //   key: "tinhTrang",
     //   label: "Trạng thái",
     //   type: "select",
     //   placeholder: "Chọn trạng thái",
-    //   options: [
-    //     { label: "Đang lưu", value: 0 },
-    //     { label: "Đã gửi", value: 1 },
-    //     { label: "Hoàn thành", value: 2 },
-    //     { label: "Đã thu hồi", value: 3 },
-    //     { label: "Không xác nhận", value: 4 },
-    //     { label: "Chốt", value: 5 },
-    //     { label: "Đang phê duyệt", value: 6 },
-    //   ],
+    //   options: [...],
     // },
-  ];
+  ], [getAllowedScopeOptions]);
 
   return (
     <div>

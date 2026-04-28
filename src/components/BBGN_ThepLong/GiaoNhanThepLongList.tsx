@@ -77,7 +77,7 @@ const GiaoNhanThepLongList = ({
   const fixedFilters = useMemo(() => {
     return {
       userId: currentUserId,
-      loaiVung: type === "viecdentoi" ? 2 : 1,
+      loaiVung: type === "xemphieu" ? 3 : type === "viecdentoi" ? 2 : 1,
     };
   }, [currentUserId, type]);
   const {
@@ -87,6 +87,7 @@ const GiaoNhanThepLongList = ({
     handleFilter,
     handleClearFilter,
     onPageChange,
+    getAllowedScopeOptions,
   } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
@@ -103,7 +104,7 @@ const GiaoNhanThepLongList = ({
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
-            if (type === "viecdentoi") {
+            if (type === "viecdentoi" || type === "xemphieu") {
               return navigate(routeDetail, {
                 state: {
                   idphieu: record.idphieu,
@@ -198,7 +199,7 @@ const GiaoNhanThepLongList = ({
     },
   ];
 
-  const filterFieldsConfig: FilterFieldConfig[] = [
+  const filterFieldsConfig = useMemo((): FilterFieldConfig[] => [
     {
       key: "soPhieu",
       label: "Số phiếu",
@@ -224,9 +225,10 @@ const GiaoNhanThepLongList = ({
       key: "scope",
       label: "Máy đúc",
       type: "select",
-      options: mayDucOptions,
+      // Lọc theo khu vực được phân quyền; mayDucOptions (API) vẫn dùng để hiển thị tên cột bảng
+      options: getAllowedScopeOptions(config.code as string),
     },
-  ];
+  ], [getAllowedScopeOptions]);
 
   return (
     <div>

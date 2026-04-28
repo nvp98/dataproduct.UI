@@ -8,6 +8,7 @@ import {
   ProfileOutlined,
   SettingOutlined,
   SafetyCertificateOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import { Tooltip } from "antd";
 import { NavLink } from "react-router-dom";
@@ -18,6 +19,7 @@ export type MenuItemWithMaBM = {
   key: string;
   maBM?: string;
   label: React.ReactNode;
+  vung?: number;
   children?: MenuItemWithMaBM[];
   [key: string]: unknown;
 };
@@ -146,6 +148,7 @@ export const menuConfig = [
   {
     key: "sub2",
     label: "Việc tôi bắt đầu",
+    vung: 1,
     icon: <AppstoreAddOutlined />,
     children: [
       // { key: "3", label: <NavLink to="/dashboard">Tạo yêu cầu</NavLink> },
@@ -416,6 +419,7 @@ export const menuConfig = [
   {
     key: "sub3",
     label: "Việc đến tôi",
+    vung: 2,
     icon: <DeliveredProcedureOutlined />,
     children: [
       // { key: "3", label: <NavLink to="/dashboard">Tạo yêu cầu</NavLink> },
@@ -626,8 +630,104 @@ export const menuConfig = [
     ],
   },
   {
+    key: "sub4",
+    label: "Xem phiếu",
+    vung: 3,
+    icon: <EyeOutlined />,
+    children: [
+      {
+        key: "sub4-1",
+        label: "NM.HRC1",
+        children: [
+          {
+            key: "sub4-1-1",
+            maBM: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
+            label: (
+              <Tooltip title="BM.16/QT.05.10 (Biên bản giao nhận thép lỏng)">
+                <NavLink to="/xemphieu/giaonhantheplong_hrc1">
+                  BM.16/QT.05.10 (Biên bản giao nhận thép lỏng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
+      {
+        key: "sub4-2",
+        label: "NM.HRC2",
+        children: [
+          {
+            key: "sub4-2-0",
+            maBM: BM_CONFIG.HRC2.HRC2_STD_NXT,
+            label: (
+              <Tooltip title="STD - Nhập xuất tồn">
+                <NavLink to="/std_nhapxuatton">STD - Nhập xuất tồn</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-22-1",
+            maBM: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
+            label: (
+              <Tooltip title="BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)">
+                <NavLink to="/xemphieu/tieuhaonauluyen_bof">
+                  BM.08/QT.05.15 (Biên bản tiêu hao nấu luyện lò thổi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-22-2",
+            maBM: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
+            label: (
+              <Tooltip title="BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)">
+                <NavLink to="/xemphieu/tieuhaonauluyen_lf">
+                  BM.14/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-22-3",
+            maBM: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
+            label: (
+              <Tooltip title="BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)">
+                <NavLink to="/xemphieu/tieuhaonauluyen_rh">
+                  BM.16/QT.05.15 (Bảng tiêu hao nấu luyện lò tinh luyện RH)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-22-4",
+            maBM: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+            label: (
+              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+                <NavLink to="/xemphieu/bbgnphoitam">
+                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-2-5",
+            maBM: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
+            label: (
+              <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
+                <NavLink to="/xemphieu/giaonhantheplong">
+                  BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
+    ],
+  },
+  {
     key: "sub5",
     label: "Xử lý phiếu",
+    vung: 4,
     icon: <ProfileOutlined />,
     roles: ["PKH", "admin"], // chỉ P.KH mới xử lý phiếu
     children: [

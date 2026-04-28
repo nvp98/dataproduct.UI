@@ -324,6 +324,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/tieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_BOF type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieutieuhaonauluyen_bof",
         element: (
           <RequireAuth>
@@ -364,6 +374,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/tieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_LF type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieutieuhaonauluyen_lf",
         element: (
           <RequireAuth>
@@ -399,6 +419,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TieuHaoNauLuyen_RH type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/tieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_RH type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -459,6 +489,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <BienBanGiaoNhanPhoiTam type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/bbgnphoitam",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanGiaoNhanPhoiTam type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -939,6 +979,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/giaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanThepLong type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieugiaonhantheplong",
         element: (
           <RequireAuth>
@@ -975,6 +1025,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <GiaoNhanThepLong_HRC1 type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/giaonhantheplong_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanThepLong_HRC1 type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
