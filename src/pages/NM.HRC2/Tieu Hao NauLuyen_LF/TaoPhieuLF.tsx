@@ -630,6 +630,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       // Khi đã có idphieu: giữ theo `phieuInfo.nguoiTaoId` để user khác không bị ghi đè khi chỉ "Lưu".
       // `nguoiTaoId` sẽ được BE cập nhật đúng lúc khi "Gửi" (status==1) qua ChangeStatusAsync(idUser).
       nguoiTaoId: isCreateNew ? userInfo.iD_TaiKhoan ?? null : phieuInfo.nguoiTaoId ?? null,
+      tenScope: scope ? 'Tinh luyện ' + scope : null,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: processedTable1,
@@ -647,6 +648,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     config.prefix,
     idphieu,
     phieuInfo.nguoiTaoId,
+    scope,
     phuGiaColumns,
     chatHopKimColumns,
     khacColumns,
@@ -655,6 +657,19 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     table1LyDo,
     table2Data,
   ]);
+
+  const handleAutoSave = useCallback(async () => {
+    if (!idphieu) return;
+    try {
+      const formData = await getFormData("save");
+      await PhieuApi.putData(idphieu, formData);
+      message.success("Lưu phiếu thành công!");
+      await initData();
+    } catch (err) {
+      console.error("Auto save error:", err);
+      message.error("Không thể tự động lưu phiếu");
+    }
+  }, [idphieu, getFormData, initData]);
 
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
@@ -837,6 +852,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
                 lyDoLabel={(layout as any).lyDo?.label}
                 lyDoValue={table1LyDo}
                 onLyDoChange={setTable1LyDo}
+                onSave={handleAutoSave}
                 ref={table1Ref}
               />
               <div style={{ fontWeight: 600, marginTop: 12 }}>

@@ -1,0 +1,78 @@
+{
+  "code": "NL_BB_TheoDoiBenPhe",
+  "prefix": "TheoDoiBenPhe",
+  "title": "BẢNG THEO DÕI BEN PHẾ",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.18/HD.25.08",
+    "effectiveDate": "15/10/2025",
+    "revision": "00"
+  },
+
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca ngày", "value": 1 },
+        { "label": "Ca đêm", "value": 2 }
+      ]
+    },
+    {
+      "label": "Kíp",
+      "type": "select",
+      "key": "kip",
+      "required": true,
+      "options": [
+        { "label": "A", "value": "A" },
+        { "label": "B", "value": "B" },
+        { "label": "C", "value": "C" }
+      ]
+    },
+    { "label": "Ngày sản xuất", "type": "date", "key": "NgaySX", "required": true }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key": "table1",
+      "columns": [
+        { "title": "Mã BSX", "dataIndex": "maBSX", "type": "text" },
+        { "title": "Số hiệu ben", "dataIndex": "soHieuBen", "type": "text" },
+        { "title": "Khối lượng tấn/ben", "dataIndex": "khoiLuongBen", "type": "float", "format": "number-group" },
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "type": "text" }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+    ""
+  ],
+
+  "signatures": [
+    {
+      "label": "NNM.NL",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_NguoiLap",
+      "maphongBan": "All",
+      "capduyet": 0,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "NM.HRC",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Nhan",
+      "maphongBan": "All",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

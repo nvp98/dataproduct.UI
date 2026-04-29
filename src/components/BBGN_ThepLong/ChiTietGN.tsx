@@ -8,6 +8,7 @@ import { PhieuApi } from "../../services/PhieuApi";
 import HRC1_BBGN_ThepLong from "../../utils/BM_config/HRC1_BBGN_ThepLong.json";
 import HRC2_BBGN_ThepLong from "../../utils/BM_config/HRC2_BBGN_ThepLong.json";
 import { phieuActionService } from "../../services/PhieuActionService";
+import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../utils/constants/PhieuActionButtonKeys";
 import type { BBGNThepLongBieuMau } from "./GiaoNhanThepLongList";
 import BBGNThepLongTable, { type BBGNRow } from "./BBGNThepLongTable";
 import { bbgbThepLongApi } from "../../services/BBGNThepLongApi";
@@ -91,7 +92,7 @@ const ChiTietGN = ({
         const loadRows = (res as any)?.data ?? res;
         if (Array.isArray(loadRows)) {
           setTableData(normalizeTableRows(loadRows));
-          if (opts?.notify) message.success("Lấy dữ liệu thành công");
+          if (opts?.notify) message.success("Làm mới dữ liệu thành công");
           return;
         }
       } catch (e) {
@@ -165,15 +166,16 @@ const ChiTietGN = ({
       onSuccess: handleActionSuccess,
       onError: (error) => console.error("Action error:", error),
     });
-    if (buttons.length === 0) return null;
-    return phieuActionService.renderActionButtons(buttons, idphieu || "");
+    const filteredButtons = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
+    if (filteredButtons.length === 0) return null;
+    return phieuActionService.renderActionButtons(filteredButtons, idphieu || "");
   }, [data, getUserInfo, handleActionSuccess, idphieu, redirectToList]);
 
   return (
     <>
       <div style={{ margin: "24px 24px 0", display: "flex", justifyContent: "flex-end", gap: 8 }}>
         <Button type="primary" icon={<FilterOutlined />} onClick={() => void handleRefresh()} loading={loading}>
-          Làm mới dữ liệu
+          Làm mới phiếu
         </Button>
         <BBGNExportButtons idPhieu={idphieu} templateCode={config.code} soPhieu={data?.soPhieu} />
       </div>
@@ -192,7 +194,7 @@ const ChiTietGN = ({
           {formData?.NgaySX ? dayjs(formData.NgaySX).format("DD/MM/YYYY") : ""}
         </Descriptions.Item>
         <Descriptions.Item label="Ca">{formData?.ca ?? ""}</Descriptions.Item>
-        <Descriptions.Item label="Máy đúc">{tableData[0]?.mayDuc ?? ""}</Descriptions.Item>
+        <Descriptions.Item label="Máy đúc">{formData?.tenScope ?? ""}</Descriptions.Item>
       </Descriptions>
 
       <BBGNThepLongTable

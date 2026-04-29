@@ -16,6 +16,7 @@ export interface BBGNRow {
   isTrungMeThoi?: boolean | null;
   mayDuc?: string | null;
   me?: string | null;
+  idMacThep?: number | null;
   macThep?: string | null;
   thungSo?: string | null;
   thoiGian?: string | null;   // "HH:mm"
@@ -169,12 +170,13 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
         searchKey: params.searchKey || undefined,
         nhaMay: nhaMay as NhaMayEnum,
         isLock: false,
+        idMayDucs: scopeValue != null ? [scopeValue] : undefined,
         page: 1,
         pageSize: params.pageSize ?? 50,
       });
       return { data: res.data, totalRecords: res.totalRecords };
     },
-    [nhaMay]
+    [nhaMay, scopeValue]
   );
 
   const handleCreateMacThep = useCallback(
@@ -184,6 +186,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
           tenMacThep: searchText,
           nhaMay: nhaMay as NhaMayEnum,
           isLock: false,
+          idMayDucs: scopeValue != null ? [scopeValue] : null,
         });
         message.success(`Đã tạo mác thép "${created.tenMacThep}"`);
         return created;
@@ -193,7 +196,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
         return null;
       }
     },
-    [nhaMay]
+    [nhaMay, scopeValue]
   );
 
   const updateRow = useCallback(
@@ -309,11 +312,16 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
         if (disabled) return <span>{val ?? "-"}</span>;
         return (
           <CommonAutocomplete<MacThep>
-            value={val}
+            value={record.idMacThep}
             searchApi={macThepSearchApi}
-            mapOption={(item) => ({ value: item.tenMacThep, label: item.tenMacThep })}
-            fallbackLabelBuilder={(v) => String(v)}
-            onChange={(newVal) => updateRow(record.key, { macThep: (newVal as string | null) })}
+            mapOption={(item) => ({ value: item.id, label: item.tenMacThep })}
+            fallbackLabelBuilder={() => record.macThep ?? ""}
+            onChange={(newVal, option) =>
+              updateRow(record.key, {
+                idMacThep: newVal as number | null,
+                macThep: option ? (option as MacThep).tenMacThep : null,
+              })
+            }
             placeholder="Chọn mác thép..."
             style={{ width: "100%" }}
             size="small"
@@ -503,6 +511,13 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       key: "phanLoai",
       width: 100,
       // Readonly – tự điền khi chọn mẻ hoặc từ dữ liệu đã có
+      render: (val: string | null) => <span>{val ?? "-"}</span>,
+    },
+    {
+      title: "Mác thép BKMIS",
+      dataIndex: "macThepBKMIS",
+      key: "macThepBKMIS",
+      width: 100,
       render: (val: string | null) => <span>{val ?? "-"}</span>,
     },
     // Cột xóa – chỉ hiện khi đang chỉnh sửa

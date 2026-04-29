@@ -24,6 +24,9 @@ export const BM_CONFIG = {
         HRC1_BBGN_ThepLong: 'HRC1_BBGN_ThepLong',
         HRC1_BB_GiaoNhanPhoiNhapKho: 'HRC1_BB_GiaoNhanPhoiNhapKho',
         HRC1_BB_Sanluongphoi: 'HRC1_BB_Sanluongphoi',
-    }
+    },
+    NL: {
+        NL_BB_TheoDoiBenPhe: 'NL_BB_TheoDoiBenPhe',
+    },
 }
 

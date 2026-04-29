@@ -104,13 +104,15 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       ellipsis: true,
     },
     {
-      title: "Lò",
-      dataIndex: "scope",
-      key: "scope",
+      title: "Khu vực",
+      dataIndex: "tenScope",
+      key: "tenScope",
       width: 220,
       ellipsis: true,
-      render: (value: number) => {
-        return value === 6 ? "Tinh luyện 6" : "Tinh luyện 7";
+      render: (value: string | null | undefined, record: { scope?: number | string | null }) => {
+        if (value) return value;
+        if (record.scope !== null && record.scope !== undefined) return "Tinh luyện " + String(record.scope);
+        return null;
       },
     },
     {

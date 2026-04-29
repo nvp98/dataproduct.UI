@@ -49,4 +49,5 @@ export interface SearchPhieuResponseModel {
   mayDuc: number;
   tinhTrang: number;
   nguoiTao: number;
+  tenScope?: string | null;
 }

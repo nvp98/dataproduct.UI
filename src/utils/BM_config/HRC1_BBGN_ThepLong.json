@@ -31,11 +31,11 @@
       "key": "scope",
       "required": true,
       "options": [
-        { "label": "TSC 1", "value": 1 },
-        { "label": "TSC 2", "value": 2 },
-        { "label": "TSC 3", "value": 3 },
-        { "label": "TSC 4", "value": 4 },
-        { "label": "TSC 5", "value": 5 }
+        { "label": "TSC 1", "value": 1 , "tenScope": "TSC 1"},
+        { "label": "TSC 2", "value": 2 , "tenScope": "TSC 2"},
+        { "label": "Đúc vuông 1", "value": 3 , "tenScope": "Đúc vuông 1"},
+        { "label": "Đúc vuông 2", "value": 4 , "tenScope": "Đúc vuông 2"},
+        { "label": "Đúc vuông 3", "value": 5 , "tenScope": "Đúc vuông 3"}
       ]
     }
   ],
@@ -70,7 +70,8 @@
         { "title": "KL thép lỏng (tấn)", "dataIndex": "klThepLong", "width": 100, "readonly": true },
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 120 },
         { "title": "Tinh Luyện, Lên Thẳng", "dataIndex": "tinhLuyenLenThang", "width": 120, "readonly": true },
-        { "title": "Phân loại", "dataIndex": "phanLoai", "width": 120, "readonly": true }
+        { "title": "Phân loại", "dataIndex": "phanLoai", "width": 120, "readonly": true },
+        {"title": "Mác thép BKMIS", "dataIndex": "macThepBKMIS", "width": 120, "editable": false, "readonly": true }
       ]
     }
   ],

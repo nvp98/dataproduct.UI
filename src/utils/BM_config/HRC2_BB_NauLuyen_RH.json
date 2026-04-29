@@ -20,8 +20,8 @@
       "key": "scope",
       "required": true,
       "options": [
-        { "label": "Khu vực 1", "value": 1 },
-        { "label": "Khu vực 2", "value": 2 }
+        { "label": "RH 1", "value": 1, "tenScope": "RH 1" },
+        { "label": "RH 2", "value": 2, "tenScope": "RH 2" }
       ]
     },
     {

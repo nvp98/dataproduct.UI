@@ -27,6 +27,7 @@ import { getBmQuyenUiFlags } from "../../../utils/helpers/checkAdminRole";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { hrc2PhuLieuService } from "../../../services/HRC2PhuLieuService";
 import HRC2ExportBienBanButtons from "../../../components/HRC2ExportBienBanButtons";
+import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
 
 const { Title, Text } = Typography;
 
@@ -102,6 +103,18 @@ function isTrungMeRow(record: any): boolean {
 function isManualCreatedRow(record: any): boolean {
   return record?.IsNM === false || record?.isNM === false;
 }
+
+const isSttDataIndex = (dataIndex: string) => dataIndex === "stt" || dataIndex === "STT";
+
+const formatSum = (value: number): string => {
+  const rounded = Math.round(value * 100) / 100;
+  const sign = rounded < 0 ? "-" : "";
+  const abs = Math.abs(rounded);
+  const isInteger = Number.isInteger(abs);
+  const [intRaw, fracRaw] = (isInteger ? abs.toFixed(0) : abs.toFixed(2)).split(".");
+  const intFormatted = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return isInteger ? `${sign}${intFormatted}` : `${sign}${intFormatted}.${fracRaw}`;
+};
 
 function buildBaseColumnsAndEditableFields(layoutConfig: typeof HRC2_BB_NauLuyen_LF): {
   baseColumns: HRCParentColumn[];
@@ -474,6 +487,32 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
     config.layout,
   ]);
 
+  const leafColumns = useMemo(() => {
+    const result: Array<{ dataIndex: string; sum?: boolean; align?: string }> = [];
+    (tableColumns as any[]).forEach((col: any) => {
+      if (col.children) {
+        col.children.forEach((child: any) => {
+          if (child.dataIndex) result.push({ dataIndex: child.dataIndex, sum: child.sum, align: child.align });
+        });
+      } else if (col.dataIndex) {
+        result.push({ dataIndex: col.dataIndex, sum: col.sum, align: col.align });
+      }
+    });
+    return result;
+  }, [tableColumns]);
+
+  const columnSums = useMemo(() => {
+    const sums: Record<string, number> = {};
+    leafColumns.forEach(({ dataIndex, sum }) => {
+      if (!sum || isSttDataIndex(dataIndex)) return;
+      sums[dataIndex] = table1DisplayRows.reduce((acc: number, row: any) => {
+        const val = parseFloat(String(row[dataIndex] ?? "").replace(/,/g, ""));
+        return acc + (isNaN(val) ? 0 : val);
+      }, 0);
+    });
+    return sums;
+  }, [leafColumns, table1DisplayRows]);
+
   const tableSection2 = config.layout2.find(
     (section: any) =>
       section.sectionType === "table" && section.key === "table2"
@@ -543,9 +582,17 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
         message.error((error as any)?.message ?? "Không thể thực hiện thao tác");
       },
     });
-    if (buttons.length === 0) return null;
-    return phieuActionService.renderActionButtons(buttons, idphieu || "");
-  }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
+    const filteredButtons = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
+    if (filteredButtons.length === 0) return null;
+    return phieuActionService.renderActionButtons(filteredButtons, idphieu || "");
+  }, [data,
+    idphieu,
+    config.code,
+    formData?.NgaySX,
+    formData?.ca,
+    getUserInfo,
+    handleActionSuccess,
+    redirectToList,]);
 
   return (
     <Card bordered style={{ padding: 24, background: "#fff" }} loading={loading}>
@@ -622,8 +669,8 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
         <Descriptions.Item label="Ngày SX">
           {formData?.NgaySX ? dayjs(formData.NgaySX).format("DD/MM/YYYY") : ""}
         </Descriptions.Item>
-        <Descriptions.Item label="Ca sản xuất">{formData?.ca || ""}</Descriptions.Item>
-        <Descriptions.Item label="Máy đúc">{formData?.mayduc || ""}</Descriptions.Item>
+        <Descriptions.Item label="Ca sản xuất">{formData?.ca == 1 ? "Ca ngày" : "Ca đêm" }   </Descriptions.Item>
+        <Descriptions.Item label="Khu vực">{"Tinh luyện "+formData?.scope || ""}</Descriptions.Item>
       </Descriptions>
 
       <Table
@@ -638,6 +685,33 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
         size="small"
         scroll={{ x: "max-content" }}
         sticky={{ offsetHeader: 0 }}
+        summary={() => {
+          const hasSumColumn = leafColumns.some((c) => c.sum);
+          if (!hasSumColumn) return null;
+          const tongLabelIndex = (() => {
+            const i = leafColumns.findIndex((c) => !isSttDataIndex(c.dataIndex));
+            return i < 0 ? 0 : i;
+          })();
+          return (
+            <Table.Summary fixed>
+              <Table.Summary.Row>
+                {leafColumns.map(({ dataIndex, sum, align }, idx) => (
+                  <Table.Summary.Cell
+                    key={dataIndex}
+                    index={idx}
+                    align={(align as "left" | "center" | "right") ?? "right"}
+                  >
+                    {idx === tongLabelIndex ? (
+                      <strong>Tổng</strong>
+                    ) : sum && columnSums[dataIndex] !== undefined ? (
+                      <strong>{formatSum(columnSums[dataIndex])}</strong>
+                    ) : null}
+                  </Table.Summary.Cell>
+                ))}
+              </Table.Summary.Row>
+            </Table.Summary>
+          );
+        }}
       />
       {formData?.table1_lyDo && (
         <div style={{ marginTop: 12, display: "flex", alignItems: "flex-start", gap: 8 }}>

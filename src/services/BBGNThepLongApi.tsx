@@ -5,6 +5,8 @@ export interface SearchThongKeBBGNThepLongRequest {
   bieuMau?: string;
   tuNgay?: string;
   denNgay?: string;
+  ca?: number;
+  kip?: string;
   mayDuc?: number;
   scope?: number;
   searchString?: string;
