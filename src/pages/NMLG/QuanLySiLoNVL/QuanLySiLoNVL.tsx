@@ -181,6 +181,9 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
   const [form] = Form.useForm();
   const selectedLoCao = Form.useWatch("idLoCao", form);
 
+  const [modalNvlOptions, setModalNvlOptions] = useState<LGNLNvlDto[]>([]);
+  const [modalNvlLoading, setModalNvlLoading] = useState(false);
+
   // Modal đổi NVL giữa ca
   const [doiNVLOpen, setDoiNVLOpen] = useState(false);
   const [doiNVLLoading, setDoiNVLLoading] = useState(false);
@@ -190,6 +193,15 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
   const filteredSiloOpts = siloOptions.filter(
     (s) => !selectedLoCao || s.idLoCao === selectedLoCao
   );
+
+  useEffect(() => {
+    if (!selectedLoCao || !modalOpen) return;
+    setModalNvlLoading(true);
+    lgnlNvlApi.getList({ idLoCao: selectedLoCao })
+      .then((res) => setModalNvlOptions(Array.isArray(res) ? res : []))
+      .catch(() => setModalNvlOptions([]))
+      .finally(() => setModalNvlLoading(false));
+  }, [selectedLoCao, modalOpen]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -285,7 +297,7 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
 
   const columns: ColumnsType<LGNLMappingDto> = [
     { title: "STT", key: "stt", width: 50, align: "center", render: (_v, _r, i) => i + 1 },
-    { title: "Ngày", dataIndex: "ngay", key: "ngay", width: 105 },
+    { title: "Ngày", dataIndex: "ngay", key: "ngay", width: 105 , render: (value) => dayjs(value).format("YYYY-MM-DD")},
     { title: "Ca", dataIndex: "idCa", key: "idCa", width: 80, render: (v) => v === 1 ? "Ca 1" : v === 2 ? "Ca 2" : "—" },
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 75, align: "center" },
     { title: "Tên Silo", dataIndex: "tenSiLo", key: "tenSiLo", render: (v) => v ?? "—" },
@@ -405,7 +417,10 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
             </Col>
           </Row>
           <Form.Item name="idLoCao" label="Lò cao" rules={[{ required: true, message: "Chọn lò cao" }]}>
-            <Select placeholder="Chọn lò cao" onChange={() => form.setFieldValue("idSiLo", null)}>
+            <Select placeholder="Chọn lò cao" onChange={() => {
+              form.setFieldValue("idSiLo", null);
+              form.setFieldValue("idNVL", null);
+            }}>
               {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
             </Select>
           </Form.Item>
@@ -418,8 +433,15 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
             </Select>
           </Form.Item>
           <Form.Item name="idNVL" label="Nguyên nhiên vật liệu">
-            <Select placeholder="Chọn NVL" allowClear showSearch optionFilterProp="children">
-              {nvlOptions.map((n) => (
+            <Select
+              placeholder={selectedLoCao ? "Chọn NVL" : "Chọn lò cao trước"}
+              disabled={!selectedLoCao}
+              allowClear
+              showSearch
+              optionFilterProp="children"
+              loading={modalNvlLoading}
+            >
+              {modalNvlOptions.map((n) => (
                 <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL_NM}</Option>
               ))}
             </Select>

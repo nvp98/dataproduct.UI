@@ -94,10 +94,25 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
       columnDefaults = {},
     } = tableConfig;
 
-    const rawMaterialCols =
-      materialColumnsOverride != null && materialColumnsOverride.length > 0
-        ? materialColumnsOverride
-        : fallbackColumns;
+    // Kết hợp API columns với JSON fallback để hiển thị đẹp hơn:
+    // - Nếu chưa có dữ liệu API → dùng fallback hoàn toàn (6 nhóm mẫu)
+    // - Nếu có API columns → dùng API (nhomNVL + NVL thực từ DB) nhưng áp dụng
+    //   title từ fallback cho header nhóm tầng 1 khi khớp (VD: thêm đơn vị "(Kg)")
+    const rawMaterialCols = useMemo(() => {
+      if (materialColumnsOverride == null || materialColumnsOverride.length === 0)
+        return fallbackColumns;
+
+      return materialColumnsOverride.map((apiCol) => {
+        if (!Array.isArray(apiCol.children)) return apiCol;
+        const fb = fallbackColumns.find(
+          (fc) =>
+            Array.isArray(fc.children) &&
+            (fc.title.toLowerCase().includes(apiCol.title.toLowerCase()) ||
+              apiCol.title.toLowerCase().includes(fc.title.toLowerCase()))
+        );
+        return fb ? { ...apiCol, title: fb.title } : apiCol;
+      });
+    }, [materialColumnsOverride, fallbackColumns]);
 
     const materialCols = useMemo(
       () => applyDefaults(rawMaterialCols, columnDefaults),
