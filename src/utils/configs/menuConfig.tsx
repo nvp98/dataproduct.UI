@@ -265,6 +265,23 @@ export const menuConfig = [
           },
         ],
       },
+      {
+        key: "sub2-nl",
+        label: "NM.NL",
+        children: [
+          {
+            key: "sub2-nl-1",
+            maBM: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
+            label: (
+              <Tooltip title="BM.18/HD.25.08 (Bảng theo dõi ben phế)">
+                <NavLink to="/bangtheodoibenphe">
+                  BM.18/HD.25.08 Bảng theo dõi ben phế
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
       // {
       //   key: "sub2-5",
       //   label: "NM.LG",
@@ -508,6 +525,23 @@ export const menuConfig = [
               <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
                 <NavLink to="/viecdentoi/bienbanphoinong">
                   BM.06/QT.05.10 Biên bản giao nhận phôi nóng (Nhận phôi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
+      {
+        key: "sub3-nl",
+        label: "NM.NL",
+        children: [
+          {
+            key: "sub3-nl-1",
+            maBM: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
+            label: (
+              <Tooltip title="BM.18/HD.25.08 (Bảng theo dõi ben phế)">
+                <NavLink to="/viecdentoi/bangtheodoibenphe">
+                  BM.18/HD.25.08 Bảng theo dõi ben phế
                 </NavLink>
               </Tooltip>
             ),
