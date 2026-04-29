@@ -1582,7 +1582,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                       <Button
                         type="primary"
                         disabled={
-                          isFormLocked ||
+                          !isFormLocked ||
                           nhanPhoiLoading ||
                           selectedNhanPhoiRowKeys.length === 0
                         }
@@ -1593,7 +1593,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                       <Button
                         danger
                         disabled={
-                          isFormLocked ||
+                          !isFormLocked ||
                           nhanPhoiLoading ||
                           selectedNhanPhoiRowKeys.length === 0
                         }
@@ -1611,7 +1611,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                       <Button
                         type="primary"
                         disabled={
-                          isFormLocked ||
+                          !isFormLocked ||
                           nhanPhoiLoading ||
                           selectedNhanPhoiRowKeys.length === 0
                         }
@@ -1622,7 +1622,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                       <Button
                         danger
                         disabled={
-                          isFormLocked ||
+                          !isFormLocked ||
                           nhanPhoiLoading ||
                           selectedNhanPhoiRowKeys.length === 0
                         }
@@ -1637,7 +1637,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                     <Button
                       type="primary"
                       disabled={
-                        isFormLocked ||
+                        !isFormLocked ||
                         nhanPhoiLoading ||
                         selectedNhanPhoiRowKeys.length === 0
                       }
@@ -1648,7 +1648,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                     <Button
                       danger
                       disabled={
-                        isFormLocked ||
+                        !isFormLocked ||
                         nhanPhoiLoading ||
                         selectedNhanPhoiRowKeys.length === 0
                       }
@@ -1668,7 +1668,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
             dataSource={nhanPhoiData}
             rowKey="id"
             rowSelection={
-              isFormLocked
+              !isFormLocked
                 ? undefined
                 : {
                     selectedRowKeys: selectedNhanPhoiRowKeys,
