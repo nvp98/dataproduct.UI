@@ -24,6 +24,7 @@ type ThongKeRow = {
   ghiChu?: string | null;
   tinhLuyenLenThang?: string | null;
   phanLoai?: string | null;
+  phanLoaiNhom?: string | null;
   ngaySX?: string | null;
   ca?: number | null;
   scope?: number | null;
@@ -113,6 +114,7 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
       thungSo: values.thungSo ? String(values.thungSo).trim() : undefined,
       tinhLuyenLenThang: values.tinhLuyenLenThang ? String(values.tinhLuyenLenThang) : undefined,
       phanLoai: values.phanLoai ? String(values.phanLoai).trim() : undefined,
+      phanLoaiNhom: values.phanLoaiNhom ? String(values.phanLoaiNhom).trim() : undefined,
       isTrungMeThoi: values.isTrungMeThoi === true ? true : undefined,
       bieuMau,
       page: 1,
@@ -203,6 +205,7 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
       },
       { title: "Tinh luyện lên thang", dataIndex: "tinhLuyenLenThang", key: "tinhLuyenLenThang", width: 160 },
       { title: "Phân loại", dataIndex: "phanLoai", key: "phanLoai", width: 120 },
+      { title: "Phân loại nhóm", dataIndex: "phanLoaiNhom", key: "phanLoaiNhom", width: 130 },
       {
         title: "Trùng mẻ",
         dataIndex: "isTrungMeThoi",
@@ -262,6 +265,10 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
 
           <Form.Item name="phanLoai" label="Phân loại">
             <Input placeholder="Phân loại" style={{ minWidth: 100 }} />
+          </Form.Item>
+
+          <Form.Item name="phanLoaiNhom" label="Phân loại nhóm">
+            <Input placeholder="Phân loại nhóm" style={{ minWidth: 120 }} />
           </Form.Item>
 
           <Form.Item name="isTrungMeThoi" valuePropName="checked">
