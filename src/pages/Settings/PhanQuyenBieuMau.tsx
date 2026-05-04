@@ -29,6 +29,7 @@ interface BmRow {
   key: string;
   maBm?: string;
   subRows: SubRow[];
+  khuVucPhus: string[];
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -41,6 +42,16 @@ const getScopeOptions = (maBm?: string) => {
   ];
 };
 
+const getKhuVucPhuOptions = (maBm?: string) => {
+  const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
+  return (bm?.khuVucPhus ?? []).map((k) => ({ value: k.khuVucPhu, label: k.tenKhuVuc }));
+};
+
+const hasKhuVucPhu = (maBm?: string) => {
+  const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
+  return (bm?.khuVucPhus?.length ?? 0) > 0;
+};
+
 const getBmName = (maBm: string) =>
   bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm)?.tenBm ?? maBm;
 
@@ -49,7 +60,7 @@ const getBmNhom = (maBm: string) =>
 
 const makeKey = () => Date.now().toString() + Math.random().toString(36).slice(2);
 const makeSubRow = (): SubRow => ({ key: makeKey(), maKhuVucs: [], quyenChucNangs: [] });
-const makeBmRow = (): BmRow => ({ key: makeKey(), subRows: [makeSubRow()] });
+const makeBmRow = (): BmRow => ({ key: makeKey(), subRows: [makeSubRow()], khuVucPhus: [] });
 
 /**
  * Reconstruct BmRows từ danh sách flat records của một user.
@@ -91,7 +102,11 @@ function buildBmRowsFromRecords(records: any[]): BmRow[] {
       quyenChucNangs: quyens,
     }));
 
-    return { key: makeKey(), maBm, subRows };
+    const khuVucPhus = [...new Set(
+      recs.map((r: any) => r.khuVucPhu).filter((k: any): k is string => !!k)
+    )];
+
+    return { key: makeKey(), maBm, subRows, khuVucPhus };
   });
 }
 
@@ -292,6 +307,7 @@ const PhanQuyenBieuMau = () => {
             maBm: bmRow.maBm!,
             maKhuVucs: subRow.maKhuVucs,
             quyenChucNangs: subRow.quyenChucNangs,
+            khuVucPhus: bmRow.khuVucPhus,
           }))
         ),
       });
@@ -336,6 +352,12 @@ const PhanQuyenBieuMau = () => {
   const visibleBmRows = useMemo(
     () => (filterBmInModal ? bmRows.filter((r) => r.maBm === filterBmInModal) : bmRows),
     [bmRows, filterBmInModal]
+  );
+
+  // Hiện cột Khu vực phụ khi có ít nhất 1 biểu mẫu trong danh sách có cấu hình khuVucPhus
+  const showKhuVucPhuCol = useMemo(
+    () => bmRows.some((r) => hasKhuVucPhu(r.maBm)),
+    [bmRows]
   );
 
   // ── Main table columns ─────────────────────────────────────────────────────
@@ -488,9 +510,10 @@ const PhanQuyenBieuMau = () => {
           <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, width: "30%" }}>Biểu mẫu</th>
-                <th style={{ ...thStyle, width: "34%" }}>Khu vực</th>
-                <th style={{ ...thStyle, width: "24%" }}>Quyền chức năng</th>
+                <th style={{ ...thStyle, width: showKhuVucPhuCol ? "25%" : "30%" }}>Biểu mẫu</th>
+                {showKhuVucPhuCol && <th style={{ ...thStyle, width: "18%" }}>Khu vực phụ</th>}
+                <th style={{ ...thStyle, width: showKhuVucPhuCol ? "25%" : "34%" }}>Khu vực</th>
+                <th style={{ ...thStyle, width: showKhuVucPhuCol ? "20%" : "24%" }}>Quyền chức năng</th>
                 <th style={{ ...thStyle, width: "12%" }} />
               </tr>
             </thead>
@@ -517,7 +540,7 @@ const PhanQuyenBieuMau = () => {
                             showSearch
                             optionFilterProp="label"
                             value={bmRow.maBm}
-                            onChange={(v) => updateBmRow(bmRow.key, { maBm: v })}
+                            onChange={(v) => updateBmRow(bmRow.key, { maBm: v, khuVucPhus: [] })}
                             options={bmQuyenConfig.danhSachBieuMau.map((bm) => ({
                               value: bm.maBm,
                               label: `[${bm.nhom}] ${bm.tenBm}`,
@@ -532,6 +555,24 @@ const PhanQuyenBieuMau = () => {
                             title="Xóa biểu mẫu này"
                           />
                         </div>
+                      </td>
+                    )}
+
+                    {subIdx === 0 && showKhuVucPhuCol && (
+                      <td
+                        rowSpan={bmRow.subRows.length}
+                        style={{ ...tdStyle, borderRight: "1px solid #f0f0f0" }}
+                      >
+                        {hasKhuVucPhu(bmRow.maBm) && (
+                          <Select
+                            mode="multiple"
+                            style={{ width: "100%" }}
+                            placeholder="Chọn khu vực phụ"
+                            value={bmRow.khuVucPhus}
+                            options={getKhuVucPhuOptions(bmRow.maBm)}
+                            onChange={(vals) => updateBmRow(bmRow.key, { khuVucPhus: vals })}
+                          />
+                        )}
                       </td>
                     )}
 

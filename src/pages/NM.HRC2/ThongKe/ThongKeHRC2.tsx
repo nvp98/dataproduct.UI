@@ -238,7 +238,7 @@ const ThongKeHRC2 = () => {
             tenPhuLieu: String(h?.tenPhuLieu ?? h?.TenPhuLieu ?? "").trim(),
             loaiThongKe: h?.loaiThongKe ?? h?.LoaiThongKe,
           }))
-          .filter((h: any) => h.idHeaderKey > 0 && !!h.tenPhuLieu);
+          .filter((h: any) => h.idHeaderKey !== 0 && !!h.tenPhuLieu);
 
         const totalRecords: number =
           payload?.totalRecords ??

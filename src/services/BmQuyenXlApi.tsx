@@ -6,6 +6,7 @@ export interface BmQuyenXlModel {
   maBm: string;
   maKhuVuc: string;
   quyenChucNang?: number;
+  khuVucPhu?: string | null;
   ngayTao?: string;
   nguoiTao?: string;
 }
@@ -60,7 +61,7 @@ export const BmQuyenXlApi = {
   bulkSave: (data: {
     idTaiKhoan: number;
     idsToDelete: number[];
-    items: { maBm: string; maKhuVucs: string[]; quyenChucNangs: number[] }[];
+    items: { maBm: string; maKhuVucs: string[]; quyenChucNangs: number[]; khuVucPhus?: string[] }[];
   }) => apiService.post("/api/BmQuyenXl/save", data),
 
   // Xóa toàn bộ quyền của tài khoản

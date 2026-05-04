@@ -1,15 +1,21 @@
 import { BM_CONFIG } from "./BieuMauConst";
 
+export interface KhuVucQuyenItem {
+  maKhuVuc: string;
+  tenKhuVuc: string;
+}
+
+export interface KhuVucPhuItem {
+  khuVucPhu: string;
+  tenKhuVuc: string;
+}
+
 export interface BieuMauQuyenItem {
   maBm: string;
   tenBm: string;
   nhom: string;
-  scope: KhuVucQuyenItem[];
-}
-
-export interface KhuVucQuyenItem {
-  maKhuVuc: string;
-  tenKhuVuc: string
+  scope?: KhuVucQuyenItem[];
+  khuVucPhus?: KhuVucPhuItem[];
 }
 
 export const bmQuyenConfig = {
@@ -104,6 +110,10 @@ export const bmQuyenConfig = {
       scope: [
         {maKhuVuc: "6", tenKhuVuc: "CCM1",},
         {maKhuVuc: "7", tenKhuVuc: "CCM2"},
+      ],
+      khuVucPhus: [
+        {khuVucPhu: "6", tenKhuVuc: "Lò thổi 6"},
+        {khuVucPhu: "7", tenKhuVuc: "Lò thổi 7"},
       ]
     },
     {
@@ -116,6 +126,13 @@ export const bmQuyenConfig = {
         {maKhuVuc: "3", tenKhuVuc: "Đúc vuông 1"},
         {maKhuVuc: "4", tenKhuVuc: "Đúc vuông 2"},
         {maKhuVuc: "5", tenKhuVuc: "Đúc vuông 3"},
+      ],
+      khuVucPhus: [
+        {khuVucPhu: "1", tenKhuVuc: "Lò thổi 1"},
+        {khuVucPhu: "2", tenKhuVuc: "Lò thổi 2"},
+        {khuVucPhu: "3", tenKhuVuc: "Lò thổi 3"},
+        {khuVucPhu: "4", tenKhuVuc: "Lò thổi 4"},
+        {khuVucPhu: "5", tenKhuVuc: "Lò thổi 5"}
       ]
     },
   ] as BieuMauQuyenItem[],
