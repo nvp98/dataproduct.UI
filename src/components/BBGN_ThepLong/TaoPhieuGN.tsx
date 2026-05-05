@@ -57,6 +57,7 @@ const normalizeTableRows = (rows: unknown[]): BBGNRow[] => {
       ...(row as BBGNRow),
       key,
       thoiGian: normalizeHHmm(row.thoiGian),
+      klLFSauThep: (row.klLFSauThep ?? (row as Record<string, unknown>).kllfSauThep ?? null) as number | null,
     };
   });
 };

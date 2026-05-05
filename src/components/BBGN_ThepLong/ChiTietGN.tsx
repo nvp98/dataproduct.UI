@@ -41,6 +41,7 @@ const normalizeTableRows = (rows: unknown[]): BBGNRow[] =>
       ...(row as BBGNRow),
       key,
       isTrungMeThoi: isTrungMeThoiRaw === true,
+      klLFSauThep: (row.klLFSauThep ?? row.kllfSauThep ?? null) as number | null,
     };
   });
 
