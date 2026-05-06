@@ -391,6 +391,10 @@ const TaoBangTheoDoiBenPhe = () => {
           ))}
         </div>
 
+        <div style={{ textAlign: "center", marginTop: 32 }}>
+          {actionButtons}
+        </div>
+
         {/* Bảng dữ liệu */}
         {config.layout.map((layout, idx) => (
           <div key={idx} style={{ marginBottom: 16 }}>
@@ -477,10 +481,6 @@ const TaoBangTheoDoiBenPhe = () => {
                 />
               </div>
             ))}
-        </div>
-
-        <div style={{ textAlign: "center", marginTop: 32 }}>
-          {actionButtons}
         </div>
       </Form>
     </Card>
