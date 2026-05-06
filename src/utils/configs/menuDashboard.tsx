@@ -13,7 +13,7 @@ export const MenuDataDashboard = [
       // },
       {
         code: "bangtheodoibenphe",
-        title: "BM.18/HD.25.08 BẢNG THEO DÕI BIẾN PHẾ",
+        title: "BM.18/HD.25.08 BẢNG THEO DÕI BEN PHẾ",
         maBm: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
       },
     ],

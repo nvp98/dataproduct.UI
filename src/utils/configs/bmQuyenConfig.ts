@@ -86,7 +86,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
-      tenBm: "Biên bản theo dõi bên phế",
+      tenBm: "Biên bản theo dõi ben phế",
       nhom: "NM.NL",
     },
   ] as BieuMauQuyenItem[],
