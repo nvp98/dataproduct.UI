@@ -1,5 +1,5 @@
 import NL_BB_TheoDoiBenPhe from "../../../utils/BM_config/NL_BB_TheoDoiBenPhe.json";
-import { Button, Card, Form, Input, Typography, message } from "antd";
+import { Button, Card, Form, Input, Table, Typography, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import CustomFormTable from "../../../components/CustomFormTable";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -41,11 +41,10 @@ const TaoBangTheoDoiBenPhe = () => {
     TrangThaiPhieuConst.DangPheDuyet,
     TrangThaiPhieuConst.DaChot,
   ].includes(currentTinhTrang);
-  const isFormLocked = !(
+  const isFormLocked =
     currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
     currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
-    currentTinhTrang === TrangThaiPhieuConst.HieuChinh
-  );
+    currentTinhTrang === TrangThaiPhieuConst.HieuChinh;
 
   const userInfo = getThongTinUser();
 
@@ -86,31 +85,13 @@ const TaoBangTheoDoiBenPhe = () => {
     const stored = getThongTinUser();
     const currentUserId = stored ? stored.iD_TaiKhoan : null;
 
-    if (!idphieu) {
-      // Tạo mới: set default người tạo vào các signature capduyet === 0
-      const defaultSigs: Record<string, any> = {};
-      config.signatures
-        .filter((s) => s.capduyet === 0)
-        .forEach((s) => {
-          defaultSigs[s.key] = currentUserId;
-        });
-      form.setFieldsValue(defaultSigs);
-      setPhieuInfo({
-        idphieu: "",
-        tinhTrang: 0,
-        pheDuyet: [],
-        nguoiTaoId: currentUserId,
-        idphongBan: stored?.iD_PhongBan || null,
-        sophieu: "",
-      });
-      return;
-    }
-
     try {
       setLoading(true);
       const res = await PhieuApi.getDetail(idphieu);
       if (res) {
-        const data = (res as any)?.jsonData || {};
+        const data = (res as any).jsonData || {};
+        console.log("Loaded phiếu data:", data);
+        const dataPhieu = (res as any) || {};
         setPhieuInfo({
           idphieu: (res as any)?.idphieu || "",
           tinhTrang: (res as any)?.tinhTrang || 0,
@@ -122,9 +103,32 @@ const TaoBangTheoDoiBenPhe = () => {
         form.setFieldsValue({
           ...data,
           idphieu: (res as any)?.idphieu || "",
-          NgaySX: data.NgaySX ? dayjs(data.NgaySX, "YYYY-MM-DD") : null,
+          NgaySX: dataPhieu.ngaySX
+            ? dayjs(dataPhieu.ngaySX, "YYYY-MM-DD")
+            : null,
+          ca: dataPhieu.ca ? Number(dataPhieu.ca) : null,
+          kip: dataPhieu.kip ? dataPhieu.kip : null,
         });
         if (data.table1?.length) setTableData(data.table1);
+        if (!dataPhieu.pheDuyet?.length) {
+          // Tạo mới: set default người tạo vào các signature capduyet === 0
+          const defaultSigs: Record<string, any> = {};
+          config.signatures
+            .filter((s) => s.capduyet === 0)
+            .forEach((s) => {
+              defaultSigs[s.key] = currentUserId;
+            });
+          form.setFieldsValue(defaultSigs);
+          // setPhieuInfo({
+          //   idphieu: "",
+          //   tinhTrang: 0,
+          //   pheDuyet: [],
+          //   nguoiTaoId: currentUserId,
+          //   idphongBan: stored?.iD_PhongBan || null,
+          //   sophieu: "",
+          // });
+          return;
+        }
       }
     } catch {
       message.error("Không thể tải dữ liệu phiếu!");
@@ -299,6 +303,39 @@ const TaoBangTheoDoiBenPhe = () => {
     );
   }, [getFormData, handleActionSuccess, phieuInfo, redirectToList]);
 
+  // Tạo hàm summary để tính tổng khối lượng
+  const tableSummary = useMemo(() => {
+    return (pageData: readonly any[]) => {
+      const total = pageData.reduce((sum, record) => {
+        const khoi = Number(record.khoiLuongBen) || 0;
+        return sum + khoi;
+      }, 0);
+
+      return (
+        <Table.Summary.Row>
+          <Table.Summary.Cell index={0}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Tổng</span>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={1}></Table.Summary.Cell>
+          <Table.Summary.Cell index={2}>
+            <span
+              style={{
+                fontWeight: 600,
+                fontSize: 14,
+                textAlign: "right",
+                display: "block",
+              }}
+            >
+              {total.toFixed(2)}
+            </span>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={3}></Table.Summary.Cell>
+          <Table.Summary.Cell index={4}></Table.Summary.Cell>
+        </Table.Summary.Row>
+      );
+    };
+  }, []);
+
   return (
     <Card
       style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}
@@ -349,7 +386,7 @@ const TaoBangTheoDoiBenPhe = () => {
               key={f.key || idx}
               field={f}
               idx={idx}
-              disabled={isFormLocked}
+              disabled={true}
             />
           ))}
         </div>
@@ -365,7 +402,7 @@ const TaoBangTheoDoiBenPhe = () => {
                 >
                   {layout.title}
                 </Typography.Text>
-                {!isFormLocked && (
+                {isFormLocked && (
                   <>
                     {/* Import Excel Button */}
                     <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
@@ -401,11 +438,12 @@ const TaoBangTheoDoiBenPhe = () => {
                   initialData={tableData}
                   onDataChange={setTableData}
                   addRowButtonText="+ Thêm dòng"
-                  showAddButton={true}
-                  showDeleteButton={true}
+                  showAddButton={isFormLocked}
+                  showDeleteButton={isFormLocked}
                   minRows={1}
                   editable={(layout as any).editable !== false}
                   loading={loading}
+                  summary={tableSummary}
                 />
               </>
             )}
@@ -422,7 +460,7 @@ const TaoBangTheoDoiBenPhe = () => {
           }}
         >
           {config.signatures
-            // .filter((x) => x.isChon)
+            .filter((x) => x.isChon)
             .map((sig, i) => (
               <div key={sig.key || i}>
                 <Typography.Text
@@ -435,7 +473,7 @@ const TaoBangTheoDoiBenPhe = () => {
                   key={sig.key || i}
                   field={sig}
                   idx={i}
-                  disabled={isFormLocked}
+                  disabled={!isFormLocked}
                 />
               </div>
             ))}

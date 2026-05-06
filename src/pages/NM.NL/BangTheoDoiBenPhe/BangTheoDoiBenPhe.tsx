@@ -13,6 +13,7 @@ import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
 import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { PhieuApi } from "../../../services/PhieuApi";
 
 const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
   const config = NL_BB_TheoDoiBenPhe;
@@ -243,6 +244,38 @@ const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
     },
   ];
 
+  const handleExportExcel = async () => {
+    try {
+      const fromDate = currentFilter?.ngaySXFrom;
+      const toDate = currentFilter?.ngaySXTo;
+      const maBm = config?.code;
+
+      const res = await PhieuApi.exportDynamicExcelTH({
+        maBm,
+        fromDate,
+        toDate,
+      });
+
+      const blob = new Blob([res as unknown as BlobPart], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `BangTheoDoiBenPhe_${fromDate || ""}_${toDate || ""}.xlsx`;
+
+      document.body.appendChild(a);
+      a.click();
+
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export Excel lỗi:", error);
+    }
+  };
+
   return (
     <div>
       <PhieuFilterCard
@@ -256,12 +289,19 @@ const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
         onFilterFieldChange={(key, value) => {
           setDraftFilter((prev) => ({ ...prev, [key]: value }));
         }}
-        showCreateButton={canCreatePhieu && type !== "viecdentoi"}
+        showCreateButton={false}
         onCreateClick={() => navigate("/taophieubangtheodoibenphe")}
         mergeFilters={
           type === "viecdentoi" ? {} : { usercode: userObj?.maNV || "" }
         }
+        extraFilters={
+          <Space>
+            {/* <Button onClick={handleExportExcelPKH}>Xuất Excel PKH</Button> */}
+            <Button onClick={handleExportExcel}>Xuất Excel</Button>
+          </Space>
+        }
       />
+
       <Card style={{ width: "100%", overflow: "auto" }}>
         <Table<TableRecord>
           rowKey="idphieu"

@@ -180,10 +180,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
   ].includes(currentTinhTrang);
 
   // Khóa form: chỉ mở khi Đang lưu hoặc Đã thu hồi
-  const isFormLocked = !(
-    currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
-    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi
-  );
+  const isFormLocked = true; // luon mo khoa
 
   const getUserInfo = useCallback(() => {
     const stored = localStorage.getItem("userinfo");
@@ -1308,7 +1305,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                 type="primary"
                 icon={<FilterOutlined />}
                 onClick={handleFilter}
-                disabled={isFormLocked}
+                disabled={!isFormLocked}
                 loading={loading}
               >
                 Tải dữ liệu
@@ -1329,7 +1326,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                 <div style={{ marginBottom: 12 }}>
                   <Button
                     onClick={handleOpenModalChuyenThanh}
-                    disabled={isFormLocked || selectedRowKeys.length === 0}
+                    disabled={!isFormLocked || selectedRowKeys.length === 0}
                   >
                     Nhập kho
                   </Button>
@@ -1944,7 +1941,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
               textAlign: "center",
             }}
           >
-            {config.signatures?.map((sig, i) => {
+            {/* {config.signatures?.map((sig, i) => {
               const isLevelZero = sig.capDuyet === 0;
               const autoValue = isLevelZero
                 ? (currentUserInfo?.iD_TaiKhoan ?? null)
@@ -1978,7 +1975,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                   )}
                 </div>
               );
-            })}
+            })} */}
           </div>
         )}
 

@@ -57,7 +57,7 @@
 
   "signatures": [
     {
-      "label": "NNM.NL",
+      "label": "NM.NL",
       "type": "selectNguoiKy",
       "key": "nguoiKy_NguoiLap",
       "maphongBan": "All",

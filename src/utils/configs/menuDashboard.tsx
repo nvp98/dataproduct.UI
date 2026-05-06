@@ -11,6 +11,11 @@ export const MenuDataDashboard = [
       //   title: "BM.06/QT.05.01 NHẬT KÝ THAO TÁC PHỐI TRỘN QUẶNG TRUNG HÒA",
       //   maBm: "NL_BB_Quangtrunghoa",
       // },
+      {
+        code: "bangtheodoibenphe",
+        title: "BM.18/HD.25.08 BẢNG THEO DÕI BIẾN PHẾ",
+        maBm: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
+      },
     ],
   },
   {
@@ -52,7 +57,7 @@ export const MenuDataDashboard = [
         code: "giaonhantheplong_hrc1",
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
         maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
-      }
+      },
     ],
   },
   {
@@ -79,7 +84,7 @@ export const MenuDataDashboard = [
         code: "giaonhantheplong",
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
         maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
-      }
+      },
     ],
   },
   {

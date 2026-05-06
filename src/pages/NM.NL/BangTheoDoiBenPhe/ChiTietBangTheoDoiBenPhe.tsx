@@ -8,6 +8,7 @@ import {
   Modal,
   Row,
   Space,
+  Table,
   Typography,
   message,
 } from "antd";
@@ -27,7 +28,7 @@ const ChiTietBangTheoDoiBenPhe = () => {
   const { pheduyet } = location.state || {};
   const { idphieu, safeGetDetail } = usePhieuNavigation(
     "benphe_idphieu",
-    "/bangtheodoibenphe"
+    "/bangtheodoibenphe",
   );
 
   const config = NL_BB_TheoDoiBenPhe;
@@ -77,7 +78,9 @@ const ChiTietBangTheoDoiBenPhe = () => {
         ghiChu,
       });
       message.success(
-        action === "approve" ? "Xác nhận phiếu thành công!" : "Đã từ chối phiếu!"
+        action === "approve"
+          ? "Xác nhận phiếu thành công!"
+          : "Đã từ chối phiếu!",
       );
       setOpen(false);
       setGhiChu("");
@@ -115,9 +118,15 @@ const ChiTietBangTheoDoiBenPhe = () => {
       </div>
 
       <Modal
-        title={action === "approve" ? "Nhập nội dung phê duyệt" : "Nhập lý do từ chối"}
+        title={
+          action === "approve"
+            ? "Nhập nội dung phê duyệt"
+            : "Nhập lý do từ chối"
+        }
         open={open}
-        okText={action === "approve" ? "Xác nhận phê duyệt" : "Xác nhận từ chối"}
+        okText={
+          action === "approve" ? "Xác nhận phê duyệt" : "Xác nhận từ chối"
+        }
         cancelText="Hủy"
         confirmLoading={loading}
         onOk={handlePheDuyet}
@@ -159,8 +168,12 @@ const ChiTietBangTheoDoiBenPhe = () => {
             )}
           </div>
           {config.isoInfo && (
-            <div style={{ fontSize: 13, textAlign: "right", lineHeight: "20px" }}>
-              <div><b>{config.isoInfo.code}</b></div>
+            <div
+              style={{ fontSize: 13, textAlign: "right", lineHeight: "20px" }}
+            >
+              <div>
+                <b>{config.isoInfo.code}</b>
+              </div>
               <div>Ngày hiệu lực: {config.isoInfo.effectiveDate}</div>
               <div>Lần sửa đổi: {config.isoInfo.revision}</div>
             </div>
@@ -176,15 +189,26 @@ const ChiTietBangTheoDoiBenPhe = () => {
         </div>
 
         {/* Thông tin chung */}
-        <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+        <Descriptions
+          bordered
+          size="small"
+          column={2}
+          style={{ marginBottom: 16 }}
+        >
           <Descriptions.Item label="Số phiếu">
             {data?.soPhieu || "—"}
           </Descriptions.Item>
           <Descriptions.Item label="Ca">
-            {formData?.ca === 1 ? "Ca ngày" : formData?.ca === 2 ? "Ca đêm" : "—"}
+            {formData?.ca === 1
+              ? "Ca ngày"
+              : formData?.ca === 2
+                ? "Ca đêm"
+                : "—"}
           </Descriptions.Item>
           <Descriptions.Item label="Ngày sản xuất">
-            {formData?.NgaySX ? dayjs(formData.NgaySX).format("DD/MM/YYYY") : "—"}
+            {formData?.NgaySX
+              ? dayjs(formData.NgaySX).format("DD/MM/YYYY")
+              : "—"}
           </Descriptions.Item>
           <Descriptions.Item label="Người tạo">
             {data?.nguoiTao || "—"}
@@ -205,15 +229,40 @@ const ChiTietBangTheoDoiBenPhe = () => {
               showDeleteButton={false}
               editable={false}
               loading={loading}
+              summary={(data) => {
+                const total = data.reduce(
+                  (sum, record) => sum + (parseFloat(record.khoiLuongBen) || 0),
+                  0,
+                );
+                return (
+                  <Table.Summary.Row>
+                    <Table.Summary.Cell colSpan={2} index={0}>
+                      <strong>Tổng</strong>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={1}>
+                      <strong style={{ textAlign: "right", display: "block" }}>
+                        {total.toLocaleString("vi-VN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </strong>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={2}></Table.Summary.Cell>
+                  </Table.Summary.Row>
+                );
+              }}
             />
           </div>
         )}
 
         {/* Khu vực chữ ký */}
-        <Row justify="space-around" style={{ textAlign: "center", marginTop: 32 }}>
+        <Row
+          justify="space-around"
+          style={{ textAlign: "center", marginTop: 32 }}
+        >
           {config.signatures.map((sig) => {
             const duyet = data?.pheDuyet?.find(
-              (p: any) => p.capDuyet === sig.capduyet
+              (p: any) => p.capDuyet === sig.capduyet,
             );
             return (
               <Col key={sig.key}>
