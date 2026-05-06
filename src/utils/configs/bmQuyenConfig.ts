@@ -84,6 +84,11 @@ export const bmQuyenConfig = {
       tenBm: "HRC1 - Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC1",
     },
+    {
+      maBm: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
+      tenBm: "Biên bản theo dõi bên phế",
+      nhom: "NM.NL",
+    },
   ] as BieuMauQuyenItem[],
   danhSachKhuVuc: [
     { maKhuVuc: "1", tenKhuVuc: "Xưởng cán 1", nhom: "NM.CTD" },

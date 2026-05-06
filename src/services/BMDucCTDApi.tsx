@@ -1,6 +1,5 @@
 import apiService from "./ApiService";
 
-
 export interface InsertPhoiNhapKhoTableRow {
   soPhieu?: string;
   ngaySX?: string;
@@ -66,6 +65,17 @@ export interface PhoiNhapKhoListItem {
 
 export interface ThuHoiPhoiNhapKhoRequest {
   ids: number[];
+}
+
+export interface ChotPhoiNhapKhoRequest {
+  idPhieu: string;
+  tinhTrangChot?: number; // 1 = chốt, 0 = hủy chốt
+}
+
+export interface XacNhanPhoiNhapKhoRequest {
+  ids: number[];
+  nguoiXacNhanId: number;
+  capXacNhan: number;
 }
 //============================= SẢN LƯỢNG PHÔI  =============================
 export const sanLuongPhoiApi = {
@@ -157,4 +167,10 @@ export const phoiNhapKhoApi = {
 
   thuHoiPhoiNhapKho: (payload: ThuHoiPhoiNhapKhoRequest) =>
     apiService.post("/api/BMDucCTD/ThuHoiPhoiNhapKho", payload),
+
+  xacNhanPhoiNhapKho: (payload: XacNhanPhoiNhapKhoRequest) =>
+    apiService.post("/api/BMDucCTD/XacNhanPhoiNhapKho", payload),
+
+  chotPhoiNhapKho: (payload: ChotPhoiNhapKhoRequest) =>
+    apiService.post("/api/BMDucCTD/ChotPhoiNhapKho", payload),
 };

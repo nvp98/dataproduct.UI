@@ -19,6 +19,9 @@ import TaoPhieuPhoiNong from "../pages/NMCTD/BienBanPhoiNong/TaoPhieuPhoiNong";
 import TaoPhieuPhoiNguoi from "../pages/NMCTD/BienBanPhoiNguoi/TaoPhieuPhoiNguoi";
 import NhatKyQuangTH from "../pages/NM.NL/NhatKyQuangTH/NhatKyQuangTH";
 import TaoPhieuNhatKyQuang from "../pages/NM.NL/NhatKyQuangTH/TaoNhatKyQuangTH";
+import BangTheoDoiBenPhe from "../pages/NM.NL/BangTheoDoiBenPhe/BangTheoDoiBenPhe";
+import TaoBangTheoDoiBenPhe from "../pages/NM.NL/BangTheoDoiBenPhe/TaoBangTheoDoiBenPhe";
+import ChiTietBangTheoDoiBenPhe from "../pages/NM.NL/BangTheoDoiBenPhe/ChiTietBangTheoDoiBenPhe";
 import TieuHaoLoThoi from "../pages/NM.HRC1/TieuHaoLoThoi/TieuHaoLoThoi";
 import TaoTieuHaoLoThoi from "../pages/NM.HRC1/TieuHaoLoThoi/TaoTieuHaoLoThoi";
 import ChiTietPhieuPhoiNong from "../pages/NMCTD/BienBanPhoiNong/ChiTietPhieuPhoiNong";
@@ -260,6 +263,44 @@ export const routes = [
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoPhieuNhatKyQuang />
             </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "bangtheodoibenphe",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BangTheoDoiBenPhe />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieubangtheodoibenphe",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoBangTheoDoiBenPhe />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietbangtheodoibenphe",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietBangTheoDoiBenPhe />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/bangtheodoibenphe",
+        element: (
+          <RequireAuth>
+            <BangTheoDoiBenPhe type="viecdentoi" />
           </RequireAuth>
         ),
       },

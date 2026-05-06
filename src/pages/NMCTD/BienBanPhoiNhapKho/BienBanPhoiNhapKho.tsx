@@ -155,12 +155,120 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
       ellipsis: true,
       render: (value: number) => `Đúc ${value}`,
     },
+    // {
+    //   title: "Người tạo",
+    //   dataIndex: "nguoiTaoId",
+    //   key: "nguoiTaoId",
+    //   width: 270,
+    //   ellipsis: true,
+    // },
+    // {
+    //   title: "Cấp 0 (Xuống/Factory)",
+    //   dataIndex: "pheDuyet",
+    //   key: "pheduyetCap0",
+    //   width: 200,
+    //   render: (_: unknown, record: TableRecord) => {
+    //     const approversCap0 = (record.pheDuyet || []).filter(
+    //       (item: any) => item.capDuyet === 0
+    //     );
+    //     if (approversCap0.length === 0) return "-";
+    //     return (
+    //       <Space direction="vertical" size="small" style={{ width: "100%" }}>
+    //         {approversCap0.map((approver: any, idx: number) => (
+    //           <Space key={idx} size="small">
+    //             <span>{approver.hoVaTen}</span>
+    //             <Tag
+    //               color={
+    //                 approver.tinhTrang === 1
+    //                   ? "green"
+    //                   : approver.tinhTrang === 0
+    //                     ? "gold"
+    //                     : "red"
+    //               }
+    //             >
+    //               {approver.tinhTrang === 1
+    //                 ? "✓ Đã duyệt"
+    //                 : approver.tinhTrang === 0
+    //                   ? "Chờ duyệt"
+    //                   : "Từ chối"}
+    //             </Tag>
+    //           </Space>
+    //         ))}
+    //       </Space>
+    //     );
+    //   },
+    // },
     {
-      title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
-      width: 270,
-      ellipsis: true,
+      title: "Cấp 1 (QLCL/QC)",
+      dataIndex: "pheDuyet",
+      key: "pheduyetCap1",
+      width: 200,
+      render: (_: unknown, record: TableRecord) => {
+        const approversCap1 = (record.pheDuyet || []).filter(
+          (item: any) => item.capDuyet === 1,
+        );
+        if (approversCap1.length === 0) return "-";
+        return (
+          <Space direction="vertical" size="small" style={{ width: "100%" }}>
+            {approversCap1.map((approver: any, idx: number) => (
+              <Space key={idx} size="small">
+                {/* <span>{approver.hoVaTen}</span> */}
+                <Tag
+                  color={
+                    approver.tinhTrang === 1
+                      ? "green"
+                      : approver.tinhTrang === 0
+                        ? "gold"
+                        : "red"
+                  }
+                >
+                  {approver.tinhTrang === 1
+                    ? `${approver.hoVaTen} -  Đã duyệt`
+                    : approver.tinhTrang === 0
+                      ? `${approver.hoVaTen} - Chờ duyệt`
+                      : `${approver.hoVaTen} - Từ chối`}
+                </Tag>
+              </Space>
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Cấp 2 (Đúc/Casting)",
+      dataIndex: "pheDuyet",
+      key: "pheduyetCap2",
+      width: 200,
+      render: (_: unknown, record: TableRecord) => {
+        const approversCap2 = (record.pheDuyet || []).filter(
+          (item: any) => item.capDuyet === 2,
+        );
+        if (approversCap2.length === 0) return "-";
+        return (
+          <Space direction="vertical" size="small" style={{ width: "100%" }}>
+            {approversCap2.map((approver: any, idx: number) => (
+              <Space key={idx} size="small">
+                {/* <span>{approver.hoVaTen}</span> */}
+                <Tag
+                  color={
+                    approver.tinhTrang === 1
+                      ? "green"
+                      : approver.tinhTrang === 0
+                        ? "gold"
+                        : "red"
+                  }
+                >
+                  {approver.tinhTrang === 1
+                    ? `${approver.hoVaTen} -  Đã duyệt`
+                    : approver.tinhTrang === 0
+                      ? `${approver.hoVaTen} - Chờ duyệt`
+                      : `${approver.hoVaTen} - Từ chối`}
+                </Tag>
+              </Space>
+            ))}
+          </Space>
+        );
+      },
     },
     {
       title: "Trạng thái",
@@ -375,7 +483,6 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
               `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: onPageChange,
           }}
-          scroll={{ x: 1100 }}
           summary={() => (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={8} align="right">
