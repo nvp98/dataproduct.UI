@@ -6,7 +6,13 @@ export const napLieuLoCaoApi = {
 
 export const tonSiLoLoCaoApi = {
   getByFilter: (params: { idLoCao: number; idCa: number; ngay: string }) =>
-    apiService.get("/api/NMLG/getkltonsilolocao", { params }),
+    apiService.get("/api/LGTSL/tonsilo-silo-mapping", {
+      params: {
+        idLoCao: params.idLoCao,
+        ca: params.idCa,
+        ngay: params.ngay,
+      },
+    }),
 };
 
 export const siLoLGApi = {

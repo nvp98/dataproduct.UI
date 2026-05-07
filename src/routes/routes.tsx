@@ -65,8 +65,8 @@ import ChiTietNapLieuLoCao from "../pages/NMLG/NapLieuLoCao/ChiTietNapLieuLoCao"
 import TonSiloLoCao from "../pages/NMLG/TonSiloLoCao/TonSiloLoCao";
 import TaoPhieuTonSiLo from "../pages/NMLG/TonSiloLoCao/TaoPhieuTonSiLo";
 import ChiTietTonSiLo from "../pages/NMLG/TonSiloLoCao/ChiTietTonSiLo";
-import SiLoLG from "../components/SiLoLG";
 import QuanLySiLoNVL from "../pages/NMLG/QuanLySiLoNVL/QuanLySiLoNVL";
+import QuanLyTonSiLoNVL from "../pages/NMLG/QuanLyTonSiLoNVL/QuanLyTonSiLoNVL";
 
 export const routes = [
   {
@@ -831,7 +831,7 @@ export const routes = [
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
-              <SiLoLG />
+              <QuanLyTonSiLoNVL />
             </RequireRole>
           </RequireAuth>
         ),
@@ -842,6 +842,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <QuanLySiLoNVL />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "quanlytonsilonvl",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyTonSiLoNVL />
             </RequireRole>
           </RequireAuth>
         ),
