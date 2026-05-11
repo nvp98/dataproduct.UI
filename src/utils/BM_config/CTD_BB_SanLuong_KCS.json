@@ -53,7 +53,7 @@
       "type": "selectNguoiKy",
       "key": "nguoiKy_TruongKip",
       "maphongBan": "NM.CTD",
-      "capDuyet": 0,
+      "capDuyet": 1,
       "isChon": true,
       "required": true
     },
@@ -62,7 +62,7 @@
       "type": "selectNguoiKy",
       "key": "nguoiKy_ToTruongKCS",
       "maphongBan": "P.QLCL",
-      "capDuyet": 1,
+      "capDuyet": 0,
       "isChon": true,
       "required": true
     },

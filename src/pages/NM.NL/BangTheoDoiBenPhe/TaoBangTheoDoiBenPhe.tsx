@@ -1,5 +1,14 @@
 import NL_BB_TheoDoiBenPhe from "../../../utils/BM_config/NL_BB_TheoDoiBenPhe.json";
-import { Button, Card, Form, Input, Table, Typography, message } from "antd";
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Table,
+  Typography,
+  message,
+  Select,
+} from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import CustomFormTable from "../../../components/CustomFormTable";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -33,6 +42,17 @@ const TaoBangTheoDoiBenPhe = () => {
     nguoiTaoId: null,
     idphongBan: null,
     sophieu: "",
+  });
+
+  // Filter states cho export PDF
+  const [pdfFilters, setPdfFilters] = useState<{
+    selectedGhiChu: string[];
+    minKhoiLuong: number | null;
+    maxKhoiLuong: number | null;
+  }>({
+    selectedGhiChu: [],
+    minKhoiLuong: null,
+    maxKhoiLuong: null,
   });
 
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
@@ -195,6 +215,16 @@ const TaoBangTheoDoiBenPhe = () => {
     }
   };
 
+  // Helper function để fix lỗi floating point precision
+  const sanitizeNumber = (value: any): number | string => {
+    if (value === "" || value === null || value === undefined) return "";
+    const parsed = parseFloat(value);
+    if (isNaN(parsed)) return value;
+    // Round to 3 decimal places để tránh lỗi floating point (26.299999999999997 → 26.3)
+    const rounded = Math.round(parsed * 1000) / 1000;
+    return rounded.toFixed(3);
+  };
+
   const handleImportExcel = useCallback(
     (event: any) => {
       const file = event.target.files?.[0];
@@ -215,9 +245,11 @@ const TaoBangTheoDoiBenPhe = () => {
             return;
           }
 
-          // Get column headers từ config
-          const columnHeaders = (config.layout?.[0]?.columns || []).map(
-            (col: any) => col.dataIndex,
+          // Get column headers và config từ config
+          const columns = config.layout?.[0]?.columns || [];
+          const columnHeaders = columns.map((col: any) => col.dataIndex);
+          const columnConfigMap = Object.fromEntries(
+            columns.map((col: any) => [col.dataIndex, col]),
           );
 
           // Parse data từ Excel
@@ -226,7 +258,17 @@ const TaoBangTheoDoiBenPhe = () => {
             .map((row: any[], idx: number) => {
               const newRow: any = { key: uuidv4() };
               columnHeaders.forEach((header: string, colIndex: number) => {
-                newRow[header] = row[colIndex] ?? "";
+                let value = row[colIndex] ?? "";
+
+                // Fix lỗi làm tròn số cho các column float/number
+                if (value !== "" && value !== null) {
+                  const columnConfig = columnConfigMap[header];
+                  if (columnConfig?.dataIndex === "khoiLuongBen") {
+                    value = sanitizeNumber(value);
+                  }
+                }
+
+                newRow[header] = value;
               });
               return newRow;
             });
@@ -246,6 +288,55 @@ const TaoBangTheoDoiBenPhe = () => {
     },
     [tableData, config],
   );
+
+  // Export PDF với filters
+  const handleExportPdfWithFilters = useCallback(async () => {
+    if (!phieuInfo.idphieu) {
+      message.warning("Chưa có phiếu để xuất PDF");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const filters: string[] = [];
+
+      // Thêm filter theo ghi chú đã chọn
+      if (pdfFilters.selectedGhiChu && pdfFilters.selectedGhiChu.length > 0) {
+        filters.push(`ghiChu:${pdfFilters.selectedGhiChu.join("|")}`);
+      }
+
+      // Thêm filter theo khối lượng
+      if (pdfFilters.minKhoiLuong !== null && pdfFilters.minKhoiLuong > 0) {
+        filters.push(`minKL:${pdfFilters.minKhoiLuong}`);
+      }
+      if (pdfFilters.maxKhoiLuong !== null && pdfFilters.maxKhoiLuong > 0) {
+        filters.push(`maxKL:${pdfFilters.maxKhoiLuong}`);
+      }
+
+      // Gọi API với filters
+      const res = await PhieuApi.exportPdf(
+        phieuInfo.idphieu,
+        filters.length > 0 ? filters : undefined,
+      );
+
+      if (res instanceof Blob) {
+        const url = window.URL.createObjectURL(res);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `BM.18-HD.25.08_BangTheoDoiBenPhe_${phieuInfo.sophieu}_${new Date().getTime()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        message.success("Xuất PDF thành công!");
+      }
+    } catch (error) {
+      console.error("Lỗi xuất PDF:", error);
+      message.error("Lỗi xuất PDF!");
+    } finally {
+      setLoading(false);
+    }
+  }, [phieuInfo.idphieu, phieuInfo.sophieu, pdfFilters]);
 
   const downloadTemplate = useCallback(() => {
     try {
@@ -303,6 +394,48 @@ const TaoBangTheoDoiBenPhe = () => {
     );
   }, [getFormData, handleActionSuccess, phieuInfo, redirectToList]);
 
+  // Lấy danh sách ghi chú duy nhất từ dữ liệu bảng
+  const ghiChuOptions = useMemo(() => {
+    const uniqueGhiChu = new Set<string>();
+    tableData.forEach((row) => {
+      if (row.ghiChu && row.ghiChu.trim()) {
+        uniqueGhiChu.add(row.ghiChu.trim());
+      }
+    });
+    return Array.from(uniqueGhiChu)
+      .sort()
+      .map((value) => ({
+        label: value,
+        value: value,
+      }));
+  }, [tableData]);
+
+  // Format columns để hiển thị số với 3 chữ số thập phân
+  const formattedColumns = useMemo(() => {
+    const columns = config.layout?.[0]?.columns || [];
+
+    const columnsWithStt = [
+      {
+        title: "STT",
+        dataIndex: "stt",
+        width: 50,
+        type: "index",
+        render: (_: any, __: any, index: number) => index + 1,
+      },
+      ...columns.map((col: any) => {
+        // Add grouped options for ghi chú select
+        if (col.dataIndex === "ghiChu" && col.type === "select") {
+          return {
+            ...col,
+            options: ghiChuOptions,
+          };
+        }
+        return col;
+      }),
+    ];
+    return columnsWithStt;
+  }, [config, ghiChuOptions]);
+
   // Tạo hàm summary để tính tổng khối lượng
   const tableSummary = useMemo(() => {
     return (pageData: readonly any[]) => {
@@ -313,11 +446,12 @@ const TaoBangTheoDoiBenPhe = () => {
 
       return (
         <Table.Summary.Row>
-          <Table.Summary.Cell index={0}>
+          <Table.Summary.Cell index={0}></Table.Summary.Cell>
+          <Table.Summary.Cell index={1}>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Tổng</span>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={1}></Table.Summary.Cell>
-          <Table.Summary.Cell index={2}>
+          <Table.Summary.Cell index={2}></Table.Summary.Cell>
+          <Table.Summary.Cell index={3}>
             <span
               style={{
                 fontWeight: 600,
@@ -326,10 +460,9 @@ const TaoBangTheoDoiBenPhe = () => {
                 display: "block",
               }}
             >
-              {total.toFixed(2)}
+              {total.toFixed(3)}
             </span>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={3}></Table.Summary.Cell>
           <Table.Summary.Cell index={4}></Table.Summary.Cell>
         </Table.Summary.Row>
       );
@@ -395,6 +528,106 @@ const TaoBangTheoDoiBenPhe = () => {
           {actionButtons}
         </div>
 
+        {/* Filter & Export PDF */}
+        {phieuInfo.idphieu &&
+          (phieuInfo.tinhTrang == TrangThaiPhieuConst.HoanThanh ||
+            phieuInfo.tinhTrang == TrangThaiPhieuConst.DaChot) && (
+            <Card
+              style={{ marginBottom: 20, backgroundColor: "#f6f8fb" }}
+              title="Xuất PDF theo lọc"
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: 4,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Lọc theo ghi chú
+                  </label>
+                  <Select
+                    mode="multiple"
+                    placeholder="Chọn loại ghi chú"
+                    value={pdfFilters.selectedGhiChu}
+                    onChange={(value) =>
+                      setPdfFilters({ ...pdfFilters, selectedGhiChu: value })
+                    }
+                    options={ghiChuOptions}
+                    style={{ width: "100%" }}
+                    allowClear
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: 4,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Khối lượng tối thiểu (tấn)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Nhập giá trị tối thiểu"
+                    value={pdfFilters.minKhoiLuong ?? ""}
+                    onChange={(e) =>
+                      setPdfFilters({
+                        ...pdfFilters,
+                        minKhoiLuong: e.target.value
+                          ? parseFloat(e.target.value)
+                          : null,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: 4,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Khối lượng tối đa (tấn)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Nhập giá trị tối đa"
+                    value={pdfFilters.maxKhoiLuong ?? ""}
+                    onChange={(e) =>
+                      setPdfFilters({
+                        ...pdfFilters,
+                        maxKhoiLuong: e.target.value
+                          ? parseFloat(e.target.value)
+                          : null,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <Button
+                type="primary"
+                onClick={handleExportPdfWithFilters}
+                loading={loading}
+                style={{ width: "100%" }}
+              >
+                Xuất PDF theo lọc
+              </Button>
+            </Card>
+          )}
+
         {/* Bảng dữ liệu */}
         {config.layout.map((layout, idx) => (
           <div key={idx} style={{ marginBottom: 16 }}>
@@ -438,7 +671,7 @@ const TaoBangTheoDoiBenPhe = () => {
                   </>
                 )}
                 <CustomFormTable
-                  columns={layout.columns || []}
+                  columns={formattedColumns}
                   initialData={tableData}
                   onDataChange={setTableData}
                   addRowButtonText="+ Thêm dòng"

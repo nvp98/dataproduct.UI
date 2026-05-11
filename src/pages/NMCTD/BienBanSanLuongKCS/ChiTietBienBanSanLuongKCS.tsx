@@ -1,7 +1,7 @@
-import TaoPhieuXuLyKPH from "./TaoPhieuBienBanSanLuongKCS";
+import TaoPhieuBienBanSanLuongKCS from "./TaoPhieuBienBanSanLuongKCS";
 
 const ChiTietPhieuXuLyKPH = () => {
-  return <TaoPhieuXuLyKPH />;
+  return <TaoPhieuBienBanSanLuongKCS />;
 };
 
 export default ChiTietPhieuXuLyKPH;

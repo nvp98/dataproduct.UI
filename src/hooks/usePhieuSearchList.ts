@@ -3,6 +3,7 @@ import { PhieuApi } from "../services/PhieuApi";
 import type { SearchPhieuRequest, SearchPhieuResponseModel } from "../models/Phieu";
 import type { PhieuFilterValues } from "../components/PhieuFilterCard";
 import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
+import { isAdminUser } from "../utils/helpers/checkAdminRole";
 
 interface PagedResponse<T> {
   data?: T[];
@@ -23,6 +24,7 @@ export interface UsePhieuSearchListOptions {
   initialPageSize?: number;
   fixedFilters?: Partial<SearchPhieuRequest>;
   autoLoad?: boolean;
+  isViecdentoi?: boolean;
   transformFilters?: (filters: PhieuFilterValues) => Partial<SearchPhieuRequest>;
 }
 
@@ -47,6 +49,7 @@ export const usePhieuSearchList = ({
   initialPageSize = 10,
   fixedFilters = {},
   autoLoad = true,
+  isViecdentoi = false,
   transformFilters = defaultTransform,
 }: UsePhieuSearchListOptions) => {
   // Kiểm tra user có phải PKH không (tenNgan = "P.KH" hoặc iD_PhongBan = 70)
@@ -64,8 +67,16 @@ export const usePhieuSearchList = ({
       delete rest.nguoiDuyetId;
       return rest;
     }
+     const user = getThongTinUser();
+    if (isViecdentoi && !isPKH && !isAdminUser(user) && false) {
+      const rest = { ...(fixedFilters as Record<string, unknown>) };
+      rest.nguoiDuyetId =  user.iD_TaiKhoan;
+      // rest.nguoiTaoId =  user.iD_TaiKhoan;
+      return rest;
+    }
+    console.log("Applying fixed filters for non-PKH user:", fixedFilters);
     return fixedFilters;
-  }, [isPKH, fixedFilters]);
+  }, [isPKH, fixedFilters, isViecdentoi]);
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SearchPhieuResponseModel[]>([]);

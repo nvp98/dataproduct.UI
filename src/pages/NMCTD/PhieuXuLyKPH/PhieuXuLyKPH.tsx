@@ -27,7 +27,7 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
 
   const fixedFilters = useMemo(
     () => ({
-      usercode: userObj?.maNV || "",
+      // usercode: userObj?.maNV || "",
     }),
     [userObj?.maNV, thongtinuser.iD_TaiKhoan],
   );
@@ -42,6 +42,7 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
+    isViecdentoi: type === "viecdentoi",
   });
 
   const statusConfig: Record<number, { color: string; text: string }> = {

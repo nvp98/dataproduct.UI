@@ -1,4 +1,7 @@
-import type { SearchPhieuByUserRequest, SearchPhieuRequest } from "../models/Phieu";
+import type {
+  SearchPhieuByUserRequest,
+  SearchPhieuRequest,
+} from "../models/Phieu";
 import apiService from "./ApiService";
 
 export const PhieuApi = {
@@ -14,11 +17,8 @@ export const PhieuApi = {
 
   deleteData: (id: string) => apiService.delete(`/api/Phieus/${id}`),
 
-  changeStatus: (
-    id: string,
-    status: number,
-    idUser?: number | null
-  ) => apiService.put(`/api/Phieus/${id}/status`, { status, idUser }),
+  changeStatus: (id: string, status: number, idUser?: number | null) =>
+    apiService.put(`/api/Phieus/${id}/status`, { status, idUser }),
   clone: (id: string, data: Record<string, unknown>) =>
     apiService.post(`/api/Phieus/${id}/clone`, data),
 
@@ -38,8 +38,19 @@ export const PhieuApi = {
     apiService.put(`/api/Phieus/${id}/sync-nguoi-tao`, data),
   exportDynamicPDF: (id: string, data: Record<string, unknown>) =>
     apiService.get(`/api/Phieus/${id}/export-pdf`, { responseType: "blob" }),
+  exportPdf: (id: string, filters?: string[]) => {
+    const params = new URLSearchParams();
+    if (filters && filters.length > 0) {
+      filters.forEach((f) => params.append("filters", f));
+    }
+    const queryString = params.toString();
+    const url = `/api/Phieus/${id}/export-pdf${queryString ? `?${queryString}` : ""}`;
+    return apiService.get(url, { responseType: "blob" });
+  },
   exportDetailExcel: (id: string) =>
-    apiService.get(`/api/Phieus/${id}/export-excel-detail`, { responseType: "blob" }),
+    apiService.get(`/api/Phieus/${id}/export-excel-detail`, {
+      responseType: "blob",
+    }),
   exportDynamicExcelTH: (params?: Record<string, unknown>) =>
     apiService.get(`/api/Phieus/export-excel-tonghop`, {
       params,
@@ -48,5 +59,6 @@ export const PhieuApi = {
 
   chotNhieuPhieu: (idPhieus: string[], status: number) =>
     apiService.post("/api/Phieus/chot-nhieu-phieu", { idPhieus, status }),
-  checkChotPhieuTieuHao: (ngaySX: string, ca: number) => apiService.get(`/api/Phieus/hrc2-std-nxt/status?ngaySX=${ngaySX}&ca=${ca}`),
+  checkChotPhieuTieuHao: (ngaySX: string, ca: number) =>
+    apiService.get(`/api/Phieus/hrc2-std-nxt/status?ngaySX=${ngaySX}&ca=${ca}`),
 };

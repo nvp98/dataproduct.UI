@@ -326,6 +326,17 @@ export default function CustomFormTable({
           };
         }
 
+        // Check if column has custom render function
+        if ((col as any).type === "index") {
+          return {
+            title: col.title,
+            dataIndex: col.dataIndex,
+            width: col.width,
+            fixed: col.fixed,
+            render: (col as any).render,
+          };
+        }
+
         // Cột bình thường
         return {
           title: col.title,

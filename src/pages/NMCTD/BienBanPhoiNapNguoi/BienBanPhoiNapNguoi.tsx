@@ -42,6 +42,7 @@ const BienBanPhoiNapNguoi = ({ type }: { type?: string }) => {
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
+    isViecdentoi: type === "viecdentoi",
   });
 
   const statusConfig: Record<string, { color: string; text: string }> = {

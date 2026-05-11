@@ -43,6 +43,7 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
+    isViecdentoi: type === "viecdentoi",
   });
 
   const statusConfig: Record<number, { color: string; text: string }> = {

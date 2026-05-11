@@ -14,12 +14,13 @@ import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
 import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { PhieuApi } from "../../../services/PhieuApi";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 
 const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
   const config = NL_BB_TheoDoiBenPhe;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
-  const userObj = userStr ? JSON.parse(userStr) : {};
+  const userObj = getThongTinUser();
   const [currentFilter, setCurrentFilter] = useState<any>({});
   const [draftFilter, setDraftFilter] = useState<Record<string, unknown>>({});
   const [canCreatePhieu, setCanCreatePhieu] = useState(false);
@@ -28,19 +29,14 @@ const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
     const loadPermission = async () => {
       try {
         const userInfoStr = localStorage.getItem("userinfo");
-        const userInfo = userInfoStr ? JSON.parse(userInfoStr) : userObj;
+        const userInfo = getThongTinUser();
 
         if (isAdminUser(userInfo)) {
           setCanCreatePhieu(true);
           return;
         }
 
-        const raw =
-          userInfo?.iD_TaiKhoan ??
-          userInfo?.ID_TaiKhoan ??
-          userInfo?.idTaiKhoan ??
-          userInfo?.IdTaiKhoan ??
-          userObj?.id;
+        const raw = userInfo?.iD_TaiKhoan ?? userObj?.iD_TaiKhoan;
 
         const idTaiKhoan = typeof raw === "number" ? raw : Number(raw);
         if (!Number.isFinite(idTaiKhoan) || idTaiKhoan <= 0) {
@@ -65,8 +61,17 @@ const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
   };
 
   const fixedFilters = useMemo(
-    () => (type === "viecdentoi" ? {} : { usercode: userObj?.maNV || "" }),
-    [userObj?.maNV, type],
+    () =>
+      type === "viecdentoi"
+        ? {
+            // nguoiDuyetId: userObj?.iD_TaiKhoan,
+            // nguoiTaoId: userObj?.iD_TaiKhoan,
+          }
+        : {
+            // nguoiDuyetId: userObj?.iD_TaiKhoan,
+            // nguoiTaoId: userObj?.iD_TaiKhoan,
+          },
+    [userObj?.iD_TaiKhoan, type],
   );
 
   const {
@@ -79,6 +84,7 @@ const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
+    isViecdentoi: type === "viecdentoi",
   });
 
   type TableRecord = SearchPhieuResponseModel & {
@@ -292,7 +298,9 @@ const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
         showCreateButton={false}
         onCreateClick={() => navigate("/taophieubangtheodoibenphe")}
         mergeFilters={
-          type === "viecdentoi" ? {} : { usercode: userObj?.maNV || "" }
+          type === "viecdentoi"
+            ? {}
+            : { nguoiDuyetId: userObj?.iD_TaiKhoan || "" }
         }
         extraFilters={
           <Space>
