@@ -354,12 +354,6 @@ const PhanQuyenBieuMau = () => {
     [bmRows, filterBmInModal]
   );
 
-  // Hiện cột Khu vực phụ khi có ít nhất 1 biểu mẫu trong danh sách có cấu hình khuVucPhus
-  const showKhuVucPhuCol = useMemo(
-    () => bmRows.some((r) => hasKhuVucPhu(r.maBm)),
-    [bmRows]
-  );
-
   // ── Main table columns ─────────────────────────────────────────────────────
 
   const columns = [
@@ -510,10 +504,9 @@ const PhanQuyenBieuMau = () => {
           <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, width: showKhuVucPhuCol ? "25%" : "30%" }}>Biểu mẫu</th>
-                {showKhuVucPhuCol && <th style={{ ...thStyle, width: "18%" }}>Khu vực phụ</th>}
-                <th style={{ ...thStyle, width: showKhuVucPhuCol ? "25%" : "34%" }}>Khu vực</th>
-                <th style={{ ...thStyle, width: showKhuVucPhuCol ? "20%" : "24%" }}>Quyền chức năng</th>
+                <th style={{ ...thStyle, width: "30%" }}>Biểu mẫu</th>
+                <th style={{ ...thStyle, width: "34%" }}>Khu vực</th>
+                <th style={{ ...thStyle, width: "24%" }}>Quyền chức năng</th>
                 <th style={{ ...thStyle, width: "12%" }} />
               </tr>
             </thead>
@@ -555,18 +548,10 @@ const PhanQuyenBieuMau = () => {
                             title="Xóa biểu mẫu này"
                           />
                         </div>
-                      </td>
-                    )}
-
-                    {subIdx === 0 && showKhuVucPhuCol && (
-                      <td
-                        rowSpan={bmRow.subRows.length}
-                        style={{ ...tdStyle, borderRight: "1px solid #f0f0f0" }}
-                      >
                         {hasKhuVucPhu(bmRow.maBm) && (
                           <Select
                             mode="multiple"
-                            style={{ width: "100%" }}
+                            style={{ width: "100%", marginTop: 4 }}
                             placeholder="Chọn khu vực phụ"
                             value={bmRow.khuVucPhus}
                             options={getKhuVucPhuOptions(bmRow.maBm)}

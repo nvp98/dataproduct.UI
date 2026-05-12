@@ -49,6 +49,8 @@ export interface CommonAutocompleteProps<T> {
   resetOnBlur?: boolean;
   /** Prop khác cho Select nếu cần custom thêm */
   selectProps?: Omit<SelectProps, "value" | "onChange" | "options" | "onSearch">;
+  /** Tự fetch options ngay khi mount (dùng khi cần hiển thị label cho giá trị đã có sẵn) */
+  fetchOnMount?: boolean;
   /** Cho phép tạo mới khi search không ra kết quả */
   allowCreate?: boolean;
   /** Callback tạo item mới, nhận vào text search, trả về item T vừa tạo */
@@ -77,6 +79,7 @@ function CommonAutocompleteInner<T>({
   fallbackLabelBuilder,
   resetOnBlur = false,
   selectProps,
+  fetchOnMount = false,
   allowCreate = false,
   onCreate,
   createOptionLabel,
@@ -85,9 +88,10 @@ function CommonAutocompleteInner<T>({
   const [fetching, setFetching] = useState(false);
   const [creating, setCreating] = useState(false);
   const [pendingSearch, setPendingSearch] = useState("");
-  const [selectedValue, setSelectedValue] = useState<SelectProps["value"]>();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialOptionsRef = useRef<InternalOption<T>[]>([]);
+  const fallbackLabelBuilderRef = useRef(fallbackLabelBuilder);
+  fallbackLabelBuilderRef.current = fallbackLabelBuilder;
 
   const mappedValue = useMemo(() => {
     if (value === null || value === undefined) {
@@ -97,15 +101,12 @@ function CommonAutocompleteInner<T>({
     if (matched) {
       return { value: matched.value, label: matched.label };
     }
-    if (fallbackLabelBuilder) {
-      return { value, label: fallbackLabelBuilder(value) };
+    if (fallbackLabelBuilderRef.current) {
+      return { value, label: fallbackLabelBuilderRef.current(value) };
     }
     return { value, label: String(value) };
-  }, [value, options, fallbackLabelBuilder]);
-
-  useEffect(() => {
-    setSelectedValue(mappedValue);
-  }, [mappedValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, options]);
 
   const fetchOptions = useCallback(
     async (searchKey?: string) => {
@@ -174,6 +175,13 @@ function CommonAutocompleteInner<T>({
     };
   }, []);
 
+  useEffect(() => {
+    if (fetchOnMount) {
+      void fetchOptions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount only
+
   const selectOptions = useMemo(() => {
     const base = options.map((item) => ({ label: item.label, value: item.value }));
     const t = pendingSearch.trim();
@@ -193,7 +201,6 @@ function CommonAutocompleteInner<T>({
 
   const handleChange = (val: { value: number | string; label: string } | { value: number | string; label: string }[] | null) => {
     if (!val) {
-      setSelectedValue(undefined);
       onChange?.(null, null);
       setPendingSearch("");
       return;
@@ -215,7 +222,6 @@ function CommonAutocompleteInner<T>({
               if (prev.some((p) => p.value === mapped.value)) return prev;
               return [newOpt, ...prev];
             });
-            setSelectedValue({ value: mapped.value, label: mapped.label });
             onChange?.(mapped.value, newItem);
             setPendingSearch("");
           }
@@ -232,10 +238,6 @@ function CommonAutocompleteInner<T>({
         : Number(rawValue);
 
     const matched = options.find((opt) => opt.value === numericOrStringValue);
-    const label =
-      optionValue.label ?? matched?.label ?? fallbackLabelBuilder?.(numericOrStringValue) ?? undefined;
-
-    setSelectedValue({ value: numericOrStringValue, label });
     onChange?.(
       typeof numericOrStringValue === "number" && Number.isNaN(numericOrStringValue)
         ? null
@@ -263,7 +265,7 @@ function CommonAutocompleteInner<T>({
     <Select
       showSearch
       labelInValue
-      value={selectedValue}
+      value={mappedValue}
       placeholder={placeholder}
       allowClear={allowClear}
       disabled={disabled || creating}

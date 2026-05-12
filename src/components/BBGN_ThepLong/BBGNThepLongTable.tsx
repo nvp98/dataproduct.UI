@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AutoComplete, Button, Grid, Input, InputNumber, Popconfirm, Select, Table, message } from "antd";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AutoComplete, Button, Checkbox, Grid, Input, InputNumber, Popconfirm, Select, Table, message } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { bbgbThepLongApi } from "../../services/BBGNThepLongApi";
@@ -29,6 +29,7 @@ export interface BBGNRow {
   tinhLuyenLenThang?: string | null;
   phanLoai?: string | null;
   phanLoaiNhom?: string | null;
+  isThuNghiem?: boolean | null;
   [key: string]: unknown;
 }
 
@@ -91,7 +92,7 @@ const computeKlThepLong = (
   klLan2?: number | null,
   klLFSauThep?: number | null
 ): number | null => {
-  const base = klLFSauThep != null ? klLFSauThep : klLan1;
+  const base = klLan1 != null ? klLan1  : klLFSauThep;
   if (base != null && klLan2 != null) {
     return Math.round((base - klLan2) * 1000) / 1000;
   }
@@ -131,28 +132,51 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
   const [meLoading, setMeLoading] = useState(false);
   const meDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
-  const [phanLoaiNhomOptions, setPhanLoaiNhomOptions] = useState<{ value: string }[]>([]);
-  const [phanLoaiNhomLoading, setPhanLoaiNhomLoading] = useState(false);
-  const phanLoaiNhomDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // const [phanLoaiNhomOptions, setPhanLoaiNhomOptions] = useState<{ value: string }[]>([]);
+  // const [phanLoaiNhomLoading, setPhanLoaiNhomLoading] = useState(false);
+  // const phanLoaiNhomDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const searchPhanLoaiNhom = useCallback(
-    (searchText?: string) => {
-      if (phanLoaiNhomDebounceRef.current) clearTimeout(phanLoaiNhomDebounceRef.current);
-      phanLoaiNhomDebounceRef.current = setTimeout(async () => {
-        const bieuMau = nhaMay === 1 ? "HRC1_BBGN_ThepLong" : "HRC2_BBGN_ThepLong";
-        setPhanLoaiNhomLoading(true);
-        try {
+  // Phân quyền nhập theo khuVucPhu:
+  //   "TL"          → được nhập klLan1, klLan2
+  //   ID số lò thổi → được nhập các cột còn lại
+  //   Không có entry → không hạn chế
+  // Phân quyền khuVucPhu chỉ áp dụng cho HRC1 (nhaMay === 1)
+  const { canEditKlLan, canEditOthers, canEditThuNghiem } = useMemo(() => {
+    const maBm = nhaMay === 1 ? "HRC1_BBGN_ThepLong" : "HRC2_BBGN_ThepLong";
+    const info = (() => { try { return JSON.parse(localStorage.getItem("userinfo") ?? "{}"); } catch { return {}; } })();
+    const quyenTheoLo = Array.isArray(info.quyenTheoLo)
+      ? (info.quyenTheoLo as { maBm?: unknown; khuVucPhus?: unknown[] }[])
+      : [];
+    const entry = quyenTheoLo.find((x) => x.maBm === maBm);
+    const khuVucPhus = (entry?.khuVucPhus ?? []).map(String);
+    const hasTL = khuVucPhus.includes("TL");
+    const hasLoThoi = khuVucPhus.some((v) => Number.isFinite(parseInt(v, 10)));
+
+    if (nhaMay !== 1) {
+      return { canEditKlLan: true, canEditOthers: true, canEditThuNghiem: hasLoThoi };
+    }
+
+    return { canEditKlLan: hasTL, canEditOthers: hasLoThoi, canEditThuNghiem: hasLoThoi };
+  }, [nhaMay]);
+
+  // const searchPhanLoaiNhom = useCallback(
+  //   (searchText?: string) => {
+  //     if (phanLoaiNhomDebounceRef.current) clearTimeout(phanLoaiNhomDebounceRef.current);
+  //     phanLoaiNhomDebounceRef.current = setTimeout(async () => {
+  //       const bieuMau = nhaMay === 1 ? "HRC1_BBGN_ThepLong" : "HRC2_BBGN_ThepLong";
+  //       setPhanLoaiNhomLoading(true);
+  //       try {
           
-          const res = await bbgbThepLongApi.getPhanLoaiNhomOptions(bieuMau, searchText || undefined);
-          const raw = (res as { data?: unknown }).data ?? res;
-          setPhanLoaiNhomOptions(Array.isArray(raw) ? (raw as string[]).map((v) => ({ value: v })) : []);
-        } finally {
-          setPhanLoaiNhomLoading(false);
-        }
-      }, 300);
-    },
-    [nhaMay]
-  );
+  //         const res = await bbgbThepLongApi.getPhanLoaiNhomOptions(bieuMau, searchText || undefined);
+  //         const raw = (res as { data?: unknown }).data ?? res;
+  //         setPhanLoaiNhomOptions(Array.isArray(raw) ? (raw as string[]).map((v) => ({ value: v })) : []);
+  //       } finally {
+  //         setPhanLoaiNhomLoading(false);
+  //       }
+  //     }, 300);
+  //   },
+  //   [nhaMay]
+  // );
 
   const searchMeThoi = useCallback(
     (searchText?: string) => {
@@ -160,14 +184,17 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       meDebounceRef.current = setTimeout(async () => {
         setMeLoading(true);
         try {
-          let idLoThois: number[] | undefined;
-          if (nhaMay === 1) {
-            const info = (() => { try { return JSON.parse(localStorage.getItem("userinfo") ?? "{}"); } catch { return {}; } })();
-            const quyenTheoLo = Array.isArray(info.quyenTheoLo) ? info.quyenTheoLo as { maLo?: unknown; iD_BoPhan?: unknown }[] : [];
-            const maLos = quyenTheoLo.filter((x) => x.iD_BoPhan === 60).map((x) => x.maLo).filter((x): x is number => typeof x === "number" && Number.isFinite(x));
-            if (maLos.length > 0) idLoThois = maLos;
-          }
-          const res = await bbgbThepLongApi.searchMeThoi(nhaMay, searchText || undefined, idLoThois);
+          const maBm = nhaMay === 1 ? "HRC1_BBGN_ThepLong" : "HRC2_BBGN_ThepLong";
+          const info = (() => { try { return JSON.parse(localStorage.getItem("userinfo") ?? "{}"); } catch { return {}; } })();
+          const quyenTheoLo = Array.isArray(info.quyenTheoLo)
+            ? (info.quyenTheoLo as { maBm?: unknown; khuVucPhus?: unknown[] }[])
+            : [];
+          const entry = quyenTheoLo.find((x) => x.maBm === maBm);
+          const idLoThois = (entry?.khuVucPhus ?? [])
+            .map((v) => parseInt(String(v), 10))
+            .filter((n): n is number => Number.isFinite(n));
+
+          const res = await bbgbThepLongApi.searchMeThoi(nhaMay, searchText || undefined, idLoThois.length > 0 ? idLoThois : undefined);
           const data = (res as { data?: unknown }).data ?? res;
           setMeOptions(normalizeMeOptions(Array.isArray(data) ? data : []));
         } finally {
@@ -276,7 +303,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       title: "Máy đúc",
       dataIndex: "mayDuc",
       key: "mayDuc",
-      width: 100,
+      width: 150,
       align: "center" as const,
       render: () =>
         scopeLabel ?? (scopeValue != null ? `Máy đúc ${scopeValue}` : "-"),
@@ -285,10 +312,10 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       title: "Mẻ",
       dataIndex: "me",
       key: "me",
-      width: 120,
+      width: 100,
       render: (val: string | null, record: BBGNRow) => {
         const meStyle = record.isTrungMeThoi === true ? { color: "red", fontWeight: 600 } : undefined;
-        if (disabled) return <span style={meStyle}>{val ?? "-"}</span>;
+        if (disabled || !canEditOthers) return <span style={meStyle}>{val ?? "-"}</span>;
         return (
           <div style={meStyle}>
             <Select
@@ -326,7 +353,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       key: "macThep",
       width: 150,
       render: (val: string | null, record: BBGNRow) => {
-        if (disabled) return <span>{val ?? "-"}</span>;
+        if (disabled || !canEditOthers) return <span>{val ?? "-"}</span>;
         return (
           <CommonAutocomplete<MacThep>
             value={record.idMacThep}
@@ -337,6 +364,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
               updateRow(record.key, {
                 idMacThep: newVal as number | null,
                 macThep: option ? (option as MacThep).tenMacThep : null,
+                phanLoaiNhom: option ? ((option as MacThep).tenNhom ?? null) : null,
               })
             }
             placeholder="Chọn mác thép..."
@@ -354,7 +382,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       key: "thungSo",
       width: 60,
       render: (val: string | null, record: BBGNRow) => {
-        if (disabled) return <span>{val ?? "-"}</span>;
+        if (disabled || !canEditOthers) return <span>{val ?? "-"}</span>;
         return (
           <Input
             value={val ?? ""}
@@ -373,7 +401,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       width: 100,
       render: (val: string | null, record: BBGNRow) => {
         const timeHHmm = toHHmm(val);
-        if (disabled) return <span>{timeHHmm ?? "-"}</span>;
+        if (disabled || !canEditOthers) return <span>{timeHHmm ?? "-"}</span>;
         return (
           <Input
             type="time"
@@ -397,12 +425,11 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
             key: "klLFSauThep",
             width: 130,
             render: (val: number | null, record: BBGNRow) => {
-              if (disabled) return <span>{val ?? "-"}</span>;
-              const isLenThang = record.tinhLuyenLenThang === "Lên thẳng";
+              if (disabled || !canEditOthers) return <span>{val ?? "-"}</span>;
               return (
                 <InputNumber
                   value={val}
-                  disabled={isLenThang}
+                  // disabled={isLenThang}
                   onChange={(v) =>
                     updateRow(record.key, {
                       klLFSauThep: v,
@@ -424,7 +451,9 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       width: 100,
       render: (val: number | null, record: BBGNRow) => {
         const isNeg = val != null && val < 0;
-        if (disabled)
+        const isLenThang = record.tinhLuyenLenThang === "Lên thẳng";
+
+        if (disabled || isLenThang || !canEditKlLan || (!canEditOthers && !record.me))
           return (
             <span style={isNeg ? { color: "red", fontWeight: 600 } : undefined}>
               {val ?? "-"}
@@ -433,6 +462,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
         return (
           <InputNumber
             value={val}
+            disabled={isLenThang}
             onChange={(v) =>
               updateRow(record.key, {
                 klLan1: v,
@@ -453,7 +483,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       width: 100,
       render: (val: number | null, record: BBGNRow) => {
         const isNeg = val != null && val < 0;
-        if (disabled)
+        if (disabled || !canEditKlLan || (!canEditOthers && !record.me))
           return (
             <span style={isNeg ? { color: "red", fontWeight: 600 } : undefined}>
               {val ?? "-"}
@@ -482,7 +512,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       width: 100,
       render: (val: number | null, record: BBGNRow) => {
         const isNeg = val != null && val < 0;
-        if (disabled)
+        if (disabled || !canEditOthers)
           return (
             <span style={isNeg ? { color: "red", fontWeight: 600 } : undefined}>
               {val ?? "-"}
@@ -517,9 +547,9 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       title: "Ghi chú",
       dataIndex: "ghiChu",
       key: "ghiChu",
-      width: 130,
+      width: 110,
       render: (val: string | null, record: BBGNRow) => {
-        if (disabled) return <span>{val ?? "-"}</span>;
+        if (disabled || !canEditOthers) return <span>{val ?? "-"}</span>;
         return (
           <Input
             value={val ?? ""}
@@ -537,8 +567,8 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       key: "tinhLuyenLenThang",
       width: 120,
       render: (val: string | null, record: BBGNRow) => {
-        if (disabled) return <span>{val ?? "-"}</span>;
-        const hasKlLF = record.klLFSauThep != null;
+        if (disabled || !canEditOthers) return <span>{val ?? "-"}</span>;
+        const hasKlLF = record.klLan1 != null ;
         const options = TINH_LUYEN_OPTIONS.map((opt) =>
           opt.value === "Lên thẳng" && hasKlLF ? { ...opt, disabled: true } : opt
         );
@@ -551,8 +581,8 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
               updateRow(record.key, {
                 tinhLuyenLenThang: v ?? null,
                 ...(isLenThang && {
-                  klLFSauThep: null,
-                  klThepLong: computeKlThepLong(record.klLan1, record.klLan2, null),
+                  klLan1: null,
+                  klThepLong: computeKlThepLong(null, record.klLan2, record.klLFSauThep),
                 }),
               });
             }}
@@ -576,23 +606,26 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       key: "phanLoaiNhom",
       width: 140,
       render: (val: string | null, record: BBGNRow) => {
-        if (disabled) return <span>{val ?? "-"}</span>;
+        // if (disabled || !canEditOthers) return <span>{val ?? "-"}</span>;
         return (
-          <AutoComplete
-            value={val ?? undefined}
-            options={phanLoaiNhomOptions}
-            filterOption={false}
-            onDropdownVisibleChange={(open) => { if (open) searchPhanLoaiNhom(""); }}
-            onSearch={searchPhanLoaiNhom}
-            onChange={(newVal: string | undefined) =>
-              updateRow(record.key, { phanLoaiNhom: newVal || null })
-            }
-            notFoundContent={phanLoaiNhomLoading ? "Đang tải..." : "Không có kết quả"}
-            placeholder="Nhập hoặc chọn..."
-            style={{ width: "100%" }}
-            size="small"
-            allowClear
-          />
+          // <AutoComplete
+          //   value={val ?? undefined}
+          //   options={phanLoaiNhomOptions}
+          //   filterOption={false}
+          //   onDropdownVisibleChange={(open) => { if (open) searchPhanLoaiNhom(""); }}
+          //   onSearch={searchPhanLoaiNhom}
+          //   onChange={(newVal: string | undefined) =>
+          //     updateRow(record.key, { phanLoaiNhom: newVal || null })
+          //   }
+          //   notFoundContent={phanLoaiNhomLoading ? "Đang tải..." : "Không có kết quả"}
+          //   placeholder="Nhập hoặc chọn..."
+          //   style={{ width: "100%" }}
+          //   size="small"
+          //   allowClear
+          // />
+          <span >
+            {val != null ? val : ""}
+          </span>
         );
       },
     },
@@ -602,6 +635,20 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       key: "macThepBKMIS",
       width: 100,
       render: (val: string | null) => <span>{val ?? "-"}</span>,
+    },
+    {
+      title: "Thử nghiệm",
+      dataIndex: "isThuNghiem",
+      key: "isThuNghiem",
+      width: 80,
+      align: "center" as const,
+      render: (val: boolean | null, record: BBGNRow) => (
+        <Checkbox
+          checked={!!val}
+          disabled={disabled || !canEditThuNghiem}
+          onChange={(e) => updateRow(record.key, { isThuNghiem: e.target.checked })}
+        />
+      ),
     },
     // Cột xóa – chỉ hiện khi đang chỉnh sửa
     ...(!disabled
@@ -686,7 +733,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
           </Table.Summary.Row>
         )}
       />
-      {!disabled && (
+      {!disabled && canEditOthers && (
         <Button
           type="dashed"
           icon={<PlusOutlined />}

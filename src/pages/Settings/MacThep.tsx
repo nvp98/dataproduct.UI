@@ -15,11 +15,12 @@ import {
   message,
 } from "antd";
 import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MacThepServiceApi, NhaMayEnum } from "../../services/MacThepServiceApi";
-import type { MacThep, MacThepMayDucInfo, MacThepPayload } from "../../services/MacThepServiceApi";
+import type { MacThep, MacThepMayDucInfo, MacThepPayload, NhomPhanLoaiMacThep } from "../../services/MacThepServiceApi";
 import { MayDucServiceApi } from "../../services/MayDucServiceApi";
 import type { ColumnType } from "antd/es/table";
+import { CommonAutocomplete, type AutocompleteSearchParams } from "../../components/CommonAutocomplete";
 
 type FilterState = {
   searchKey?: string;
@@ -42,6 +43,9 @@ const QuanLyMacThep = () => {
   const [searchNhaMay, setSearchNhaMay] = useState<number | undefined>(undefined);
   const [modalMayDucOptions, setModalMayDucOptions] = useState<{ value: number; label: string }[]>([]);
   const [searchMayDucOptions, setSearchMayDucOptions] = useState<{ value: number; label: string }[]>([]);
+  // const [phanLoaiNhomOptions, setPhanLoaiNhomOptions] = useState<{ value: string }[]>([]);
+  // const [phanLoaiNhomLoading, setPhanLoaiNhomLoading] = useState(false);
+  // const phanLoaiNhomDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadModalMayDucOptions = async (nhaMay?: number, preselected: { value: number; label: string }[] = []) => {
     if (!nhaMay) { setModalMayDucOptions([]); return; }
@@ -114,6 +118,7 @@ const QuanLyMacThep = () => {
       nhaMay: record.nhaMay as NhaMayEnum,
       isLock: record.isLock ?? false,
       idMayDucs: record.mayDucs?.map((m) => m.idMayDuc) ?? [],
+      idPhanLoaiMacThep: record.id_PhanLoaiNhomMacThep ?? null
     });
     setModalNhaMay(record.nhaMay);
     const preselected = (record.mayDucs ?? []).map((m) => ({
@@ -132,6 +137,34 @@ const QuanLyMacThep = () => {
     setModalMayDucOptions([]);
   };
 
+  const searchPhanLoaiNhom = useCallback(
+    async (params: AutocompleteSearchParams) => {
+      const res = await MacThepServiceApi.getPhanLoaiNhomOptions({
+        searchKey: params.searchKey,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 20,});
+      return { data: res.data, totalRecords: res.totalRecords };
+    },
+    []
+  );
+
+  const handleCreateNhomPhanLoaiMacThep = useCallback(
+    async (searchText: string): Promise<NhomPhanLoaiMacThep | null> => {
+      try {
+        const created = await MacThepServiceApi.createNhomPhanLoaiMacThep({
+          tenNhom: searchText
+        });
+        message.success(`Đã tạo nhóm phân loại mác thép "${created.tenNhom}"`);
+        return created;
+      } catch (e) {
+        console.error(e);
+        message.error("Không tạo được mác thép");
+        return null;
+      }
+    },
+    []
+  );
+
   const handleSave = async () => {
     try {
       const values = await modalForm.validateFields();
@@ -140,6 +173,7 @@ const QuanLyMacThep = () => {
         nhaMay: values.nhaMay as NhaMayEnum,
         isLock: values.isLock as boolean,
         idMayDucs: (values.idMayDucs as number[] | null) ?? null,
+        id_PhanLoaiNhomMacThep: values.idPhanLoaiMacThep as number ?? null
       };
       setModalLoading(true);
       if (editingRecord) {
@@ -191,7 +225,7 @@ const QuanLyMacThep = () => {
         title: "Tên Mác thép",
         dataIndex: "tenMacThep",
         key: "tenMacThep",
-        sorter: (a: MacThep, b: MacThep) => a.tenMacThep.localeCompare(b.tenMacThep),
+        render: (a: string) => a,
       },
       {
         title: "Nhà máy",
@@ -216,6 +250,14 @@ const QuanLyMacThep = () => {
         width: 200,
         render: (v: MacThepMayDucInfo[] | null) =>
           v?.length ? v.map((m) => <Tag key={m.idMayDuc}>{m.tenMayDuc}</Tag>) : "-",
+      },
+      {
+        title: "Phân loại nhóm",
+        dataIndex: "tenNhom",
+        key: "tenNhom",
+        width: 200,
+        render: (v: string) =>
+          v,
       },
       {
         title: "Trạng thái",
@@ -404,6 +446,25 @@ const QuanLyMacThep = () => {
             ]}
           >
             <Input placeholder="Nhập tên mác thép" />
+          </Form.Item>
+          <Form.Item
+            name="idPhanLoaiMacThep"
+            label="Nhóm Phân Loại Mác Thép"
+            rules={[
+              { required: true, message: "Vui lòng nhập tên mác thép" }
+            ]}
+          >
+            <CommonAutocomplete<NhomPhanLoaiMacThep>
+              searchApi={searchPhanLoaiNhom}
+              mapOption={(item) => ({ value: item.id, label: item.tenNhom })}
+              fallbackLabelBuilder={(id) => editingRecord?.tenNhom ?? `Nhóm #${id}`}
+              placeholder="Chọn Nhóm mác thép..."
+              style={{ width: "100%" }}
+              size="small"
+              fetchOnMount
+              allowCreate
+              onCreate={handleCreateNhomPhanLoaiMacThep}
+            />
           </Form.Item>
           <Form.Item name="isLock" label="Trạng thái khóa" valuePropName="checked" initialValue={false}>
             <Switch checkedChildren="Đã khóa" unCheckedChildren="Đang dùng" />

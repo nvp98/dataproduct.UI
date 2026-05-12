@@ -69,7 +69,8 @@
         { "title": "Tinh Luyện, Lên Thẳng", "dataIndex": "tinhLuyenLenThang", "width": 120, "readonly": true },
         { "title": "Phân loại", "dataIndex": "phanLoai", "width": 120, "readonly": true },
         { "title": "Phân loại nhóm", "dataIndex": "phanLoaiNhom", "width": 130, "readonly": true },
-        {"title": "Mác thép BKMIS", "dataIndex": "macThepBKMIS", "width": 120, "editable": false, "readonly": true }
+        { "title": "Mác thép BKMIS", "dataIndex": "macThepBKMIS", "width": 120, "editable": false, "readonly": true },
+        { "title": "Thử nghiệm", "dataIndex": "isThuNghiem", "width": 50}
       ]
     }
   ],

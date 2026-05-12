@@ -114,6 +114,7 @@ export const bmQuyenConfig = {
       khuVucPhus: [
         {khuVucPhu: "6", tenKhuVuc: "Lò thổi 6"},
         {khuVucPhu: "7", tenKhuVuc: "Lò thổi 7"},
+        {khuVucPhu: "TL", tenKhuVuc: "Tinh luyện"}
       ]
     },
     {
@@ -132,7 +133,8 @@ export const bmQuyenConfig = {
         {khuVucPhu: "2", tenKhuVuc: "Lò thổi 2"},
         {khuVucPhu: "3", tenKhuVuc: "Lò thổi 3"},
         {khuVucPhu: "4", tenKhuVuc: "Lò thổi 4"},
-        {khuVucPhu: "5", tenKhuVuc: "Lò thổi 5"}
+        {khuVucPhu: "5", tenKhuVuc: "Lò thổi 5"},
+        {khuVucPhu: "TL", tenKhuVuc: "Tinh luyện"}
       ]
     },
   ] as BieuMauQuyenItem[],

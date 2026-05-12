@@ -913,6 +913,15 @@ export const menuConfig = [
           </Tooltip>
         ),
       },
+      // {
+      //   key: "admin-4",
+      //   icon: <UserOutlined />,
+      //   label: (
+      //     <Tooltip title="Quản lý tài khoản">
+      //       <NavLink to="/quan-ly-tai-khoan">Quản lý tài khoản</NavLink>
+      //     </Tooltip>
+      //   ),
+      // },
     ],
   },
   // {

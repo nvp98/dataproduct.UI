@@ -38,7 +38,7 @@ export const bbgbThepLongApi = {
     apiService.post("/api/BBGNThepLong/search-me-thoi", {
       nhaMay,
       textStr: textStr ?? null,
-      iD_LoThois: nhaMay === 1 && idLoThois && idLoThois.length > 0 ? idLoThois : null,
+      iD_LoThois: idLoThois && idLoThois.length > 0 ? idLoThois : null,
     }),
   load: (payload: LoadBBGNRequest) => apiService.post("/api/BBGNThepLong/load", payload),
   deleteRow: (id: number) => apiService.delete(`/api/BBGNThepLong/${id}`),

@@ -58,6 +58,7 @@ const normalizeTableRows = (rows: unknown[]): BBGNRow[] => {
       key,
       thoiGian: normalizeHHmm(row.thoiGian),
       klLFSauThep: (row.klLFSauThep ?? (row as Record<string, unknown>).kllfSauThep ?? null) as number | null,
+      phanLoaiNhom: (row.phanLoaiNhom ?? (row as Record<string, unknown>).tenNhomPhanLoaiMacThep ?? null) as string | null,
     };
   });
 };
@@ -281,7 +282,113 @@ const TaoPhieuGN = ({
         throw new Error(tableError);
       }
 
-      const tablePayload: BBGNRow[] = tableData.map((row) => ({
+      // Với HRC1: nếu user có quyền một phần (TL hoặc lò thổi), fetch server mới nhất
+      // rồi merge để tránh ghi đè fields mà user không có quyền sửa.
+      let mergedTableData = tableData;
+      if (nhaMay === 1) {
+        const userInfo = getUserInfo();
+        const quyenTheoLo = Array.isArray(userInfo.quyenTheoLo)
+          ? (userInfo.quyenTheoLo as { maBm?: unknown; khuVucPhus?: unknown[] }[])
+          : [];
+        const entry = quyenTheoLo.find((x) => x.maBm === "HRC1_BBGN_ThepLong");
+        const khuVucPhus = (entry?.khuVucPhus ?? []).map(String);
+        const canEditKlLan = khuVucPhus.includes("TL");
+        const canEditOthers = khuVucPhus.some((v) => Number.isFinite(parseInt(v, 10)));
+
+        if (!(canEditKlLan && canEditOthers)) {
+          try {
+            const ngaySX = form.getFieldValue("NgaySX")?.format("YYYY-MM-DD");
+            const ca = form.getFieldValue("ca");
+            if (ngaySX && ca != null) {
+              const res = await bbgbThepLongApi.load({ IdPhieu: idphieu || null, NgaySX: ngaySX, Ca: ca, BieuMau: bieuMau });
+              const serverData = (res as any)?.data ?? res;
+              // if (Array.isArray(serverData)) {
+              //   const serverRows = normalizeTableRows(serverData);
+              //   mergedTableData = serverRows.map((serverRow) => {
+              //     const local = tableData.find((r) =>
+              //       (r.id != null && r.id === serverRow.id) || r.key === serverRow.key
+              //     );
+              //     if (!local) return serverRow;
+              //     if (canEditKlLan) {
+              //       // TL: base server, chỉ ghi đè klLan1/klLan2 từ local
+              //       return { ...serverRow, klLan1: local.klLan1, klLan2: local.klLan2, klThepLong: local.klThepLong };
+              //     } else {
+              //       // Lò thổi: base local (giữ mọi thứ user sửa), chỉ lấy klLan1/klLan2 từ server
+              //       return { ...local, klLan1: serverRow.klLan1, klLan2: serverRow.klLan2, klThepLong: serverRow.klThepLong };
+              //     }
+              //   });
+              // }
+              if (Array.isArray(serverData)) {
+                const serverRows = normalizeTableRows(serverData);
+  
+                // =========================
+                // Build local map
+                // =========================
+                const localMap = new Map();
+  
+                tableData.forEach((row) => {
+                  const key = row.id ?? row.key;
+                  localMap.set(key, row);
+                });
+  
+                // =========================
+                // Merge rows từ server
+                // =========================
+                const mergedRows = serverRows.map((serverRow) => {
+                  const key = serverRow.id ?? serverRow.key;
+  
+                  const local = localMap.get(key);
+  
+                  if (!local) {
+                    return serverRow;
+                  }
+  
+                  // User TL
+                  if (canEditKlLan) {
+                    return {
+                      ...serverRow,
+                      klLan1: local.klLan1,
+                      klLan2: local.klLan2,
+                      klThepLong: local.klThepLong,
+                    };
+                  }
+  
+                  // User lò thổi
+                  return {
+                    ...local,
+                    klLan1: serverRow.klLan1,
+                    klLan2: serverRow.klLan2,
+                    klThepLong: local.klThepLong,
+                  };
+                });
+  
+                // =========================
+                // Thêm các dòng mới local
+                // chưa tồn tại trên server
+                // =========================
+                const serverKeySet = new Set(
+                  serverRows.map((x) => x.id ?? x.key)
+                );
+  
+                const newLocalRows = tableData.filter((localRow) => {
+                  const key = localRow.id ?? localRow.key;
+  
+                  return !serverKeySet.has(key);
+                });
+  
+                mergedTableData = [
+                  ...mergedRows,
+                  ...newLocalRows,
+                ];
+              }
+            }
+          } catch (e) {
+            console.error("Warning: could not fetch fresh table for merge, saving local state", e);
+          }
+        }
+      }
+
+      const tablePayload: BBGNRow[] = mergedTableData.map((row) => ({
         ...row,
         scope: phieuScope,
       }));
@@ -309,7 +416,7 @@ const TaoPhieuGN = ({
         pheDuyet: pheDuyetFlow,
       };
     },
-    [config.code, config.headerFields, config.prefix, config.signatures, form, getUserInfo, scopeValue, selectedMayDucLabel, tableData]
+    [bieuMau, config.code, config.headerFields, config.prefix, config.signatures, form, getUserInfo, idphieu, nhaMay, scopeValue, selectedMayDucLabel, tableData]
   );
 
   const handleActionSuccess = useCallback(
