@@ -42,6 +42,7 @@ const TaoBangTheoDoiBenPhe = () => {
     nguoiTaoId: null,
     idphongBan: null,
     sophieu: "",
+    tenScope: "",
   });
 
   // Filter states cho export PDF
@@ -62,15 +63,21 @@ const TaoBangTheoDoiBenPhe = () => {
     TrangThaiPhieuConst.DaChot,
   ].includes(currentTinhTrang);
   const isFormLocked =
-    currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
-    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+    currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
     currentTinhTrang === TrangThaiPhieuConst.HieuChinh;
 
   const userInfo = getThongTinUser();
 
   const getFormData = useCallback(async () => {
+    // call api sô phiếu theo maBm + scope để lấy số tiếp theo
+
     // Validate trước khi lấy dữ liệu - trigger required validation
     const values = await form.validateFields();
+    const NgaySX = values?.NgaySX
+      ? dayjs(values.NgaySX).format("YYYY-MM-DD")
+      : "";
+    const CaSX = values?.ca ? Number(values.ca) : 0;
+    const STTPhieu = await PhieuApi.getSoPhieu(config.code, NgaySX, CaSX);
     const pheDuyetFlow = (config.signatures || [])
       .filter((s: any) => s.isChon)
       .map((s: any) => ({
@@ -86,7 +93,8 @@ const TaoBangTheoDoiBenPhe = () => {
       NgaySX: values?.NgaySX ? dayjs(values.NgaySX).format("YYYY-MM-DD") : null,
       maBm: config.code,
       prefix: config.prefix,
-      scope: 0,
+      scope: (STTPhieu as any)?.count ?? 0 + 1, // gọi API số phiếu theo maBm + scope để lấy số tiếp theo
+      tenScope: values?.tenScope || "",
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: tableData,
@@ -106,48 +114,51 @@ const TaoBangTheoDoiBenPhe = () => {
     const currentUserId = stored ? stored.iD_TaiKhoan : null;
 
     try {
-      setLoading(true);
-      const res = await PhieuApi.getDetail(idphieu);
-      if (res) {
-        const data = (res as any).jsonData || {};
-        console.log("Loaded phiếu data:", data);
-        const dataPhieu = (res as any) || {};
-        setPhieuInfo({
-          idphieu: (res as any)?.idphieu || "",
-          tinhTrang: (res as any)?.tinhTrang || 0,
-          pheDuyet: (res as any)?.pheDuyet || [],
-          nguoiTaoId: (res as any)?.nguoiTaoId || null,
-          idphongBan: (res as any)?.idphongBan || null,
-          sophieu: (res as any)?.soPhieu || "",
-        });
-        form.setFieldsValue({
-          ...data,
-          idphieu: (res as any)?.idphieu || "",
-          NgaySX: dataPhieu.ngaySX
-            ? dayjs(dataPhieu.ngaySX, "YYYY-MM-DD")
-            : null,
-          ca: dataPhieu.ca ? Number(dataPhieu.ca) : null,
-          kip: dataPhieu.kip ? dataPhieu.kip : null,
-        });
-        if (data.table1?.length) setTableData(data.table1);
-        if (!dataPhieu.pheDuyet?.length) {
-          // Tạo mới: set default người tạo vào các signature capduyet === 0
-          const defaultSigs: Record<string, any> = {};
-          config.signatures
-            .filter((s) => s.capduyet === 0)
-            .forEach((s) => {
-              defaultSigs[s.key] = currentUserId;
-            });
-          form.setFieldsValue(defaultSigs);
-          // setPhieuInfo({
-          //   idphieu: "",
-          //   tinhTrang: 0,
-          //   pheDuyet: [],
-          //   nguoiTaoId: currentUserId,
-          //   idphongBan: stored?.iD_PhongBan || null,
-          //   sophieu: "",
-          // });
-          return;
+      if (idphieu) {
+        setLoading(true);
+        const res = await PhieuApi.getDetail(idphieu);
+        if (res) {
+          const data = (res as any).jsonData || {};
+          console.log("Loaded phiếu data:", data);
+          const dataPhieu = (res as any) || {};
+          setPhieuInfo({
+            idphieu: (res as any)?.idphieu || "",
+            tinhTrang: (res as any)?.tinhTrang || 0,
+            pheDuyet: (res as any)?.pheDuyet || [],
+            nguoiTaoId: (res as any)?.nguoiTaoId || null,
+            idphongBan: (res as any)?.idphongBan || null,
+            sophieu: (res as any)?.soPhieu || "",
+          });
+          form.setFieldsValue({
+            ...data,
+            idphieu: (res as any)?.idphieu || "",
+            NgaySX: dataPhieu.ngaySX
+              ? dayjs(dataPhieu.ngaySX, "YYYY-MM-DD")
+              : null,
+            ca: dataPhieu.ca ? Number(dataPhieu.ca) : null,
+            kip: dataPhieu.kip ? dataPhieu.kip : null,
+            tenScope: data.tenScope || "",
+          });
+          if (data.table1?.length) setTableData(data.table1);
+          if (!dataPhieu.pheDuyet?.length) {
+            // Tạo mới: set default người tạo vào các signature capduyet === 0
+            const defaultSigs: Record<string, any> = {};
+            config.signatures
+              .filter((s) => s.capduyet === 0)
+              .forEach((s) => {
+                defaultSigs[s.key] = currentUserId;
+              });
+            form.setFieldsValue(defaultSigs);
+            // setPhieuInfo({
+            //   idphieu: "",
+            //   tinhTrang: 0,
+            //   pheDuyet: [],
+            //   nguoiTaoId: currentUserId,
+            //   idphongBan: stored?.iD_PhongBan || null,
+            //   sophieu: "",
+            // });
+            return;
+          }
         }
       }
     } catch {
@@ -395,20 +406,20 @@ const TaoBangTheoDoiBenPhe = () => {
   }, [getFormData, handleActionSuccess, phieuInfo, redirectToList]);
 
   // Lấy danh sách ghi chú duy nhất từ dữ liệu bảng
-  const ghiChuOptions = useMemo(() => {
-    const uniqueGhiChu = new Set<string>();
-    tableData.forEach((row) => {
-      if (row.ghiChu && row.ghiChu.trim()) {
-        uniqueGhiChu.add(row.ghiChu.trim());
-      }
-    });
-    return Array.from(uniqueGhiChu)
-      .sort()
-      .map((value) => ({
-        label: value,
-        value: value,
-      }));
-  }, [tableData]);
+  // const ghiChuOptions = useMemo(() => {
+  //   const uniqueGhiChu = new Set<string>();
+  //   tableData.forEach((row) => {
+  //     if (row.ghiChu && row.ghiChu.trim()) {
+  //       uniqueGhiChu.add(row.ghiChu.trim());
+  //     }
+  //   });
+  //   return Array.from(uniqueGhiChu)
+  //     .sort()
+  //     .map((value) => ({
+  //       label: value,
+  //       value: value,
+  //     }));
+  // }, [tableData]);
 
   // Format columns để hiển thị số với 3 chữ số thập phân
   const formattedColumns = useMemo(() => {
@@ -424,17 +435,17 @@ const TaoBangTheoDoiBenPhe = () => {
       },
       ...columns.map((col: any) => {
         // Add grouped options for ghi chú select
-        if (col.dataIndex === "ghiChu" && col.type === "select") {
-          return {
-            ...col,
-            options: ghiChuOptions,
-          };
-        }
+        // if (col.dataIndex === "ghiChu" && col.type === "select") {
+        //   return {
+        //     ...col,
+        //     options: ghiChuOptions,
+        //   };
+        // }
         return col;
       }),
     ];
     return columnsWithStt;
-  }, [config, ghiChuOptions]);
+  }, [config /*ghiChuOptions*/]);
 
   // Tạo hàm summary để tính tổng khối lượng
   const tableSummary = useMemo(() => {
@@ -519,7 +530,7 @@ const TaoBangTheoDoiBenPhe = () => {
               key={f.key || idx}
               field={f}
               idx={idx}
-              disabled={true}
+              disabled={isFormLocked}
             />
           ))}
         </div>
@@ -529,7 +540,8 @@ const TaoBangTheoDoiBenPhe = () => {
         </div>
 
         {/* Filter & Export PDF */}
-        {phieuInfo.idphieu &&
+        {false &&
+          phieuInfo.idphieu &&
           (phieuInfo.tinhTrang == TrangThaiPhieuConst.HoanThanh ||
             phieuInfo.tinhTrang == TrangThaiPhieuConst.DaChot) && (
             <Card
@@ -554,7 +566,7 @@ const TaoBangTheoDoiBenPhe = () => {
                   >
                     Lọc theo ghi chú
                   </label>
-                  <Select
+                  {/* <Select
                     mode="multiple"
                     placeholder="Chọn loại ghi chú"
                     value={pdfFilters.selectedGhiChu}
@@ -564,7 +576,7 @@ const TaoBangTheoDoiBenPhe = () => {
                     options={ghiChuOptions}
                     style={{ width: "100%" }}
                     allowClear
-                  />
+                  /> */}
                 </div>
 
                 <div>
@@ -639,7 +651,7 @@ const TaoBangTheoDoiBenPhe = () => {
                 >
                   {layout.title}
                 </Typography.Text>
-                {isFormLocked && (
+                {!isFormLocked && (
                   <>
                     {/* Import Excel Button */}
                     <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
@@ -675,8 +687,8 @@ const TaoBangTheoDoiBenPhe = () => {
                   initialData={tableData}
                   onDataChange={setTableData}
                   addRowButtonText="+ Thêm dòng"
-                  showAddButton={isFormLocked}
-                  showDeleteButton={isFormLocked}
+                  showAddButton={!isFormLocked}
+                  showDeleteButton={!isFormLocked}
                   minRows={1}
                   editable={(layout as any).editable !== false}
                   loading={loading}
@@ -710,7 +722,7 @@ const TaoBangTheoDoiBenPhe = () => {
                   key={sig.key || i}
                   field={sig}
                   idx={i}
-                  disabled={!isFormLocked}
+                  disabled={isFormLocked}
                 />
               </div>
             ))}

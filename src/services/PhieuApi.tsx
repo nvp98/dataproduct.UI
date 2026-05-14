@@ -61,4 +61,11 @@ export const PhieuApi = {
     apiService.post("/api/Phieus/chot-nhieu-phieu", { idPhieus, status }),
   checkChotPhieuTieuHao: (ngaySX: string, ca: number) =>
     apiService.get(`/api/Phieus/hrc2-std-nxt/status?ngaySX=${ngaySX}&ca=${ca}`),
+
+  getSoPhieu: (maBm: string, ngaySX?: string, ca?: number) => {
+    const params: Record<string, unknown> = { maBm };
+    if (ngaySX) params.ngaySX = ngaySX;
+    if (ca) params.ca = ca;
+    return apiService.get("/api/Phieus/so-phieu", { params });
+  },
 };
