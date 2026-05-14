@@ -34,7 +34,8 @@
         { "label": "C", "value": "C" }
       ]
     },
-    { "label": "Ngày sản xuất", "type": "date", "key": "NgaySX", "required": true }
+    { "label": "Ngày sản xuất", "type": "date", "key": "NgaySX", "required": true },
+    { "label": "Mã tuyến đường", "type": "text", "key": "tenScope", "required": true }
   ],
 
   "layout": [

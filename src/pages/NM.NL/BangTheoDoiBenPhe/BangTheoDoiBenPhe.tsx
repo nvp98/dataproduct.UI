@@ -295,7 +295,7 @@ const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
         onFilterFieldChange={(key, value) => {
           setDraftFilter((prev) => ({ ...prev, [key]: value }));
         }}
-        showCreateButton={false}
+        showCreateButton={true}
         onCreateClick={() => navigate("/taophieubangtheodoibenphe")}
         mergeFilters={
           type === "viecdentoi"
