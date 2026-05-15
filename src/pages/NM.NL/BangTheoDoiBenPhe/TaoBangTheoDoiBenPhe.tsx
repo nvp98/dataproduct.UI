@@ -64,7 +64,8 @@ const TaoBangTheoDoiBenPhe = () => {
   ].includes(currentTinhTrang);
   const isFormLocked =
     currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
-    currentTinhTrang === TrangThaiPhieuConst.HieuChinh;
+    currentTinhTrang === TrangThaiPhieuConst.DaChot ||
+    currentTinhTrang === TrangThaiPhieuConst.DangPheDuyet;
 
   const userInfo = getThongTinUser();
 
