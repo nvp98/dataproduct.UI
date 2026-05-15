@@ -12,4 +12,6 @@ export const TaiKhoanApi = {
     apiService.get("/api/TaiKhoan/me", { withCredentials: true }),
   getDetail: (tenTaiKhoan: string) =>
     apiService.get(`/api/TaiKhoan/info/${tenTaiKhoan}`),
+  getQuyen: (tenTaiKhoan: string) =>
+    apiService.get(`/api/TaiKhoan/quyen/${tenTaiKhoan}`),
 };
