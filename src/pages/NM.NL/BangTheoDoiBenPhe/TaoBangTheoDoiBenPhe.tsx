@@ -93,7 +93,7 @@ const TaoBangTheoDoiBenPhe = () => {
       NgaySX: values?.NgaySX ? dayjs(values.NgaySX).format("YYYY-MM-DD") : null,
       maBm: config.code,
       prefix: config.prefix,
-      scope: (STTPhieu as any)?.count ?? 0 + 1, // gọi API số phiếu theo maBm + scope để lấy số tiếp theo
+      scope: ((STTPhieu as any)?.count ?? 0) + 1, // gọi API số phiếu theo maBm + scope để lấy số tiếp theo
       tenScope: values?.tenScope || "",
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
