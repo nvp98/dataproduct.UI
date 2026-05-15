@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AutoComplete, Button, Checkbox, Grid, Input, InputNumber, Popconfirm, Select, Table, message } from "antd";
+import { Button, Checkbox, Grid, Input, InputNumber, Popconfirm, Select, Table, message } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { bbgbThepLongApi } from "../../services/BBGNThepLongApi";
@@ -30,6 +30,10 @@ export interface BBGNRow {
   phanLoai?: string | null;
   phanLoaiNhom?: string | null;
   isThuNghiem?: boolean | null;
+  klcau1?: number | null;
+  klcau2?: number | null;
+  lastIdUserEdit?: number | null;
+  lastNameUserEdit?: string | null;
   [key: string]: unknown;
 }
 
@@ -649,6 +653,47 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
           onChange={(e) => updateRow(record.key, { isThuNghiem: e.target.checked })}
         />
       ),
+    },
+    {
+      title: "KL 1 cẩu",
+      dataIndex: "klcau1",
+      key: "klcau1",
+      width: 80,
+      render: (val: number | null, record: BBGNRow) => {
+        if (disabled || !(canEditOthers || canEditKlLan)) return <span>{val ?? "-"}</span>;
+        return (
+          <InputNumber
+            value={val}
+            onChange={(v) => updateRow(record.key, { klcau1: v })}
+            style={{ width: "100%" }}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: "KL 2 cẩu",
+      dataIndex: "klcau2",
+      key: "klcau2",
+      width: 80,
+      render: (val: number | null, record: BBGNRow) => {
+        if (disabled || !(canEditOthers || canEditKlLan)) return <span>{val ?? "-"}</span>;
+        return (
+          <InputNumber
+            value={val}
+            onChange={(v) => updateRow(record.key, { klcau2: v })}
+            style={{ width: "100%" }}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: "Người chỉnh sửa cuối",
+      dataIndex: "lastNameUserEdit",
+      key: "lastNameUserEdit",
+      width: 130,
+      render: (val: string | null) => <span>{val ?? "-"}</span>,
     },
     // Cột xóa – chỉ hiện khi đang chỉnh sửa
     ...(!disabled

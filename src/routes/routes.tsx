@@ -77,6 +77,7 @@ import ThongKeHRC1 from "../pages/NM.HRC1/ThongKe/ThongKeHRC1";
 import ThongKePhieuHRC1 from "../pages/NM.HRC1/ThongKe/ThongKePhieuHRC1";
 import QuanLyMayDuc from "../pages/Settings/MayDuc";
 import QuanLyMacThep from "../pages/Settings/MacThep";
+import QuanLyTaiKhoan from "../pages/Settings/QuanLyTaiKhoan";
 
 export const routes = [
   {
@@ -529,6 +530,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <STD_NhapXuatTon />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "/xemphieu/std_nhapxuatton",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <STD_NhapXuatTon type="xemphieu"/>
             </RequireRole>
           </RequireAuth>
         ),
@@ -1075,6 +1086,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <QuanLyMayDuc />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "quan-ly-tai-khoan",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyTaiKhoan />
             </RequireRole>
           </RequireAuth>
         ),

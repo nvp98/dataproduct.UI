@@ -661,7 +661,7 @@ export const menuConfig = [
             maBM: BM_CONFIG.HRC2.HRC2_STD_NXT,
             label: (
               <Tooltip title="STD - Nhập xuất tồn">
-                <NavLink to="/std_nhapxuatton">STD - Nhập xuất tồn</NavLink>
+                <NavLink to="/xemphieu/std_nhapxuatton">STD - Nhập xuất tồn</NavLink>
               </Tooltip>
             ),
           },

@@ -237,16 +237,20 @@ const ChiTietTieuHaoNauLuyen_RH = () => {
           return;
         }
 
-        const baseMerged = hrc2TableService.mergeServerRows(
+        const rowsWithOverrides = hrc2TableService.applyManualOverrides(
           result.tableData || [],
+          savedWithAdjust,
+          {
+            rowIdField: "id",
+            fallbackKeyField: "meThoi",
+          }
+        );
+        const finalRows = hrc2TableService.mergeServerRows(
+          rowsWithOverrides,
           savedWithAdjust,
           "meThoi",
           editableFields
         );
-        const finalRows = hrc2TableService.applyManualOverrides(baseMerged, savedWithAdjust, {
-          rowIdField: "id",
-          fallbackKeyField: "meThoi",
-        });
 
         const phanBoMetas: AdjustColumnMeta[] = (result.phanBoColumns ?? []).map((col: any) => ({
           key: col.dataIndex || `phanBo_${col.headerKeyId}`,
@@ -434,23 +438,19 @@ const ChiTietTieuHaoNauLuyen_RH = () => {
           const isCellChanged =
             isManualFlag ||
             (origValue !== undefined && String(value ?? "") !== String(origValue ?? ""));
+            
           const displayed = baseRender
             ? baseRender(value)
             : value !== undefined && value !== null
             ? String(value)
             : "";
+            const displayedFinal = displayed === "" && isManualFlag ? "0" : displayed;
           if (isCellChanged) {
+      
             return (
-              <Tooltip title={`Tự động: ${String(origValue ?? "")} | Chỉnh sửa: ${String(value ?? "")}`}>
-                <span
-                  style={{
-                    backgroundColor: "#fff7b3",
-                    display: "block",
-                    color: isDuplicateMe ? "red" : undefined,
-                    fontWeight: isDuplicateMe ? 600 : undefined,
-                  }}
-                >
-                  {displayed}
+              <Tooltip title={`Tự động: ${String(origValue ?? "")} | Chỉnh sửa: ${displayedFinal === "0" && value === "" ? "(đã xóa)" : displayedFinal}`}>
+                <span style={{ backgroundColor: "#fff7b3", display: "block", color: isDuplicateMe ? "red" : undefined, fontWeight: isDuplicateMe ? 600 : undefined }}>
+                  {displayedFinal}
                 </span>
               </Tooltip>
             );

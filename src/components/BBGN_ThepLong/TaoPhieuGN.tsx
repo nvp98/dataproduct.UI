@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Form, Input, Typography, message } from "antd";
 import CustomFormItem from "../CustomFormItem";
 import HRC1_BBGN_ThepLong from "../../utils/BM_config/HRC1_BBGN_ThepLong.json";
@@ -17,6 +17,16 @@ import BBGNExportButtons from "./BBGNExportButtons";
 import { MayDucServiceApi } from "../../services/MayDucServiceApi";
 import type { NhaMayEnum } from "../../models/SiloModel";
 import { validateBBGNRows } from "./bbgnThepLongValidation";
+import { PhieuActionButtonKeys } from "../../utils/constants/PhieuActionButtonKeys";
+
+const EDITABLE_FIELDS: (keyof BBGNRow)[] = [
+  'me', 'idMacThep', 'thungSo', 'thoiGian',
+  'klLFSauThep', 'klLan1', 'klLan2', 'klLan3', 'ghiChu',
+  'tinhLuyenLenThang', 'isThuNghiem', 'klcau1', 'klcau2',
+];
+const isSameVal = (a: unknown, b: unknown) => (a == null ? null : a) === (b == null ? null : b);
+const hasRowChanged = (cur: BBGNRow, init: BBGNRow) =>
+  EDITABLE_FIELDS.some((f) => !isSameVal(cur[f], init[f]));
 
 const CONFIG_MAP = {
   HRC1_BBGN_ThepLong: HRC1_BBGN_ThepLong,
@@ -88,6 +98,7 @@ const TaoPhieuGN = ({
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   const [tableData, setTableData] = useState<BBGNRow[]>([]);
+  const initialTableDataRef = useRef<BBGNRow[]>([]);
   const [mayDucOptions, setMayDucOptions] = useState<Array<{ label: string; value: number }>>([]);
 
   const scopeValue = Form.useWatch("scope", form);
@@ -98,6 +109,25 @@ const TaoPhieuGN = ({
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
   }, []);
+
+  const DETAIL_HIDDEN_BUTTON_KEYS = new Set<string>([
+    PhieuActionButtonKeys.SaveAndSend,
+    PhieuActionButtonKeys.Recall,
+    PhieuActionButtonKeys.RequestEdit,
+  ]);
+
+  const UserLoThoi = useMemo(() => {
+    const maBm = nhaMay === 1 ? "HRC1_BBGN_ThepLong" : "HRC2_BBGN_ThepLong";
+    const info = (() => { try { return JSON.parse(localStorage.getItem("userinfo") ?? "{}"); } catch { return {}; } })();
+    const quyenTheoLo = Array.isArray(info.quyenTheoLo)
+      ? (info.quyenTheoLo as { maBm?: unknown; khuVucPhus?: unknown[] }[])
+      : [];
+    const entry = quyenTheoLo.find((x) => x.maBm === maBm);
+    const khuVucPhus = (entry?.khuVucPhus ?? []).map(String);
+    // const hasTL = khuVucPhus.includes("TL");
+    const hasLoThoi = khuVucPhus.some((v) => Number.isFinite(parseInt(v, 10)));
+    return hasLoThoi && !khuVucPhus.includes("TL");
+  }, [nhaMay])
 
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -173,7 +203,9 @@ const TaoPhieuGN = ({
         });
         const data = (res as any)?.data ?? res;
         if (Array.isArray(data)) {
-          setTableData(normalizeTableRows(data));
+          const rows = normalizeTableRows(data);
+          setTableData(rows);
+          initialTableDataRef.current = rows;
           if (opts?.notify) message.success("Lấy dữ liệu thành công");
           return;
         }
@@ -336,13 +368,13 @@ const TaoPhieuGN = ({
                 // =========================
                 const mergedRows = serverRows.map((serverRow) => {
                   const key = serverRow.id ?? serverRow.key;
-  
+
                   const local = localMap.get(key);
-  
+
                   if (!local) {
                     return serverRow;
                   }
-  
+
                   // User TL
                   if (canEditKlLan) {
                     return {
@@ -350,9 +382,11 @@ const TaoPhieuGN = ({
                       klLan1: local.klLan1,
                       klLan2: local.klLan2,
                       klThepLong: local.klThepLong,
+                      klcau1: local.klcau1,
+                      klcau2: local.klcau2,
                     };
                   }
-  
+
                   // User lò thổi
                   return {
                     ...local,
@@ -388,10 +422,20 @@ const TaoPhieuGN = ({
         }
       }
 
-      const tablePayload: BBGNRow[] = mergedTableData.map((row) => ({
-        ...row,
-        scope: phieuScope,
-      }));
+      const tablePayload: BBGNRow[] = mergedTableData.map((row) => {
+        const initialRow = initialTableDataRef.current.find(
+          (r) => (row.id != null && r.id === row.id) || r.key === row.key
+        );
+        const changed = !initialRow || hasRowChanged(row, initialRow);
+        return {
+          ...row,
+          scope: phieuScope,
+          ...(changed && {
+            lastIdUserEdit: userInfo?.iD_TaiKhoan ?? null,
+            lastNameUserEdit: userInfo?.hoVaTen ?? null,
+          }),
+        };
+      });
 
       const pheDuyetFlow = (config.signatures || [])
         .filter((s: any) => s.isChon)
@@ -464,8 +508,10 @@ const TaoPhieuGN = ({
       onSuccess: handleActionSuccess,
       onError: (error) => console.error("Action error:", error),
     });
-    if (buttons.length === 0) return null;
-    return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
+    const filteredButtons = buttons.filter((btn) => UserLoThoi ? !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key) : true);
+    if (filteredButtons.length === 0) return null;
+    // if (buttons.length === 0) return null;
+    return phieuActionService.renderActionButtons(filteredButtons, idphieu || "", getFormData);
   }, [getFormData, getUserInfo, handleActionSuccess, idphieu, phieuInfo, redirectToList]);
 
   return (

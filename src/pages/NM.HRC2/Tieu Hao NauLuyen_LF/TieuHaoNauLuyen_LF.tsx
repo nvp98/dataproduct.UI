@@ -135,6 +135,16 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       },
     },
     {
+      title: "Kíp",
+      dataIndex: "kip",
+      key: "kip",
+      width: 100,
+      ellipsis: true,
+      render: (value: string) => {
+        return value;
+      },
+    },
+    {
       title: "Người tạo",
       dataIndex: "nguoiTaoId",
       key: "nguoiTaoId",

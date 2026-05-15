@@ -39,7 +39,6 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
     }),
     [currentUserId, type]
   );
-
   const {
     data,
     loading,
@@ -108,6 +107,16 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
       ellipsis: true,
       render: (value: number) => {
         return value === 1 ? "Ca Ngày" : "Ca Đêm";
+      },
+    },
+    {
+      title: "Kíp",
+      dataIndex: "kip",
+      key: "kip",
+      width: 100,
+      ellipsis: true,
+      render: (value: string) => {
+        return value;
       },
     },
     {
@@ -193,7 +202,7 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={true}
+        showCreateButton={false}
         onCreateClick={() => {
           navigate("/tao_std");
         }}
