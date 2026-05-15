@@ -34,9 +34,11 @@ type HeaderKeySearchParams = {
   LoaiPhieu?: string;
   TrangThai?: string; // DangDung | ChuaMocNoi | Ngung
   IsUsedNXT?: boolean;
+  IsUsedThongKe?: boolean;
   FromDate?: string; // ISO string
   ToDate?: string; // ISO string
   SortThuTu?: string; // asc | desc
+  IdNhom?: number;
   page?: number;
   pageSize?: number;
 };

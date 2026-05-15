@@ -328,7 +328,12 @@ export const hrc2PhuLieuService = {
           (p: HeaderKeyResponse) => p.idHeaderKey === phuLieu.idHeaderKey
         );
         if (matchedPhuLieu) {
-          row[dataIndex] = matchedPhuLieu.klPhuGiaTotal ?? matchedPhuLieu.klPhuGia ?? "";
+          const nmValue = matchedPhuLieu.klPhuGiaTotal ?? matchedPhuLieu.klPhuGia ?? "";
+          row[dataIndex] = nmValue;
+          if (matchedPhuLieu.isManual === true) {
+            row[`${dataIndex}__IsManual`] = true;
+            row[`${dataIndex}__orig`] = nmValue;
+          }
         }
       });
 
@@ -482,8 +487,17 @@ export const hrc2PhuLieuService = {
         const baseKey = key.slice(0, -6);
         const origVal = processedRow[key];
         const curVal = processedRow[baseKey];
-        const curNum = curVal === null || curVal === undefined || curVal === "" ? null : Number(curVal);
+         const curNum = curVal === null || curVal === undefined || curVal === "" ? null : Number(curVal);
         const origNum = origVal === null || origVal === undefined || origVal === "" ? null : Number(origVal);
+
+        // Khi user xóa giá trị của một cột có dữ liệu NM (origNum !== null), gửi 0 thay vì ""
+        // để BE lưu KLPhuGia_Manual = 0 (override = 0) thay vì revert về giá trị NM gốc.
+        // if ((curVal === "" || curVal === null || curVal === undefined) && origNum !== null) {
+        //   processedRow[baseKey] = 0;
+        // }
+
+        // const curNum = processedRow[baseKey] === null || processedRow[baseKey] === undefined || processedRow[baseKey] === ""
+        //   ? null : Number(processedRow[baseKey]);
         const isSame =
           (curNum === null && origNum === null) ||
           (curNum !== null &&

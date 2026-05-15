@@ -35,7 +35,7 @@ export interface SearchPhieuByUserRequest {
   tinhTrang?: number | null;
   // [API mới search-by-user] userId thay cho nguoiTaoId + nguoiDuyetId, backend tự phân quyền
   userId?: number | null;
-  /** 1 = Việc tôi bắt đầu, 2 = Việc đến tôi, 3 = Thống kê (kèm isThongKeUser) */
+  /** 1 = Việc tôi bắt đầu, 2 = Việc đến tôi, 3 = Chỉ xem, 4 = Thống kê (kèm isThongKeUser) */
   loaiVung?: number | null;
   isThongKeUser?: boolean | null;
 }

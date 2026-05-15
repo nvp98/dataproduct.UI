@@ -13,6 +13,7 @@ export interface SearchThongKeBBGNThepLongRequest {
   thungSo?: string;
   tinhLuyenLenThang?: string;
   phanLoai?: string;
+  phanLoaiNhom?: string;
   isTrungMeThoi?: boolean;
   page?: number;
   pageSize?: number;
@@ -33,12 +34,22 @@ export interface SearchThongKeBBGNThepLongResponse<T> {
 
 export const bbgbThepLongApi = {
   fetch: (payload: FetchMeThoiRequest) => apiService.post("/api/BBGNThepLong/fetch", payload),
+  searchMeThoi: (nhaMay: number, textStr?: string, idLoThois?: number[]) =>
+    apiService.post("/api/BBGNThepLong/search-me-thoi", {
+      nhaMay,
+      textStr: textStr ?? null,
+      iD_LoThois: idLoThois && idLoThois.length > 0 ? idLoThois : null,
+    }),
   load: (payload: LoadBBGNRequest) => apiService.post("/api/BBGNThepLong/load", payload),
   deleteRow: (id: number) => apiService.delete(`/api/BBGNThepLong/${id}`),
   searchThongKe: <T = unknown>(payload: SearchThongKeBBGNThepLongRequest) =>
     apiService.post("/api/BBGNThepLong/search-thongke", payload) as Promise<SearchThongKeBBGNThepLongResponse<T>>,
   sumThongKe: (payload: SearchThongKeBBGNThepLongRequest) =>
     apiService.post("/api/BBGNThepLong/sum-thongke", payload) as Promise<SumThongKeBBGNThepLongResponse>,
+  getPhanLoaiNhomOptions: (bieuMau: string, search?: string) => {
+    const url = `/api/BBGNThepLong/phan-loai-nhom-options?bieuMau=${encodeURIComponent(bieuMau)}`;
+    return apiService.get(search ? `${url}&search=${encodeURIComponent(search)}` : url) as Promise<string[]>;
+  },
   exportDetailExcel: (idPhieu: string) =>
     apiService.get(`/api/BBGNThepLong/export-excel?idPhieu=${idPhieu}`, { responseType: "blob" }),
   exportDetailPDF: (idPhieu: string) =>

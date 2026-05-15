@@ -230,16 +230,26 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
           return;
         }
 
-        const baseMerged = hrc2TableService.mergeServerRows(
+        // applyManualOverrides phải chạy TRƯỚC mergeServerRows, dùng NM gốc làm base.
+        // Lý do: mergeServerRows sẽ overwrite phuLieu_xxx bằng giá trị saved (""),
+        // khiến applyManualOverrides thấy serverAuto="" = manualValue="" → isStillManual=false → không highlight.
+        // Khi chạy trước, serverAuto = NM gốc (vd 171), manualValue="" → isStillManual=true,
+        // __orig=171 và __IsManual=true được set đúng.
+        // mergeServerRows sau đó chỉ overwrite editableFields (không phải __orig/__IsManual).
+        const rowsWithOverrides = hrc2TableService.applyManualOverrides(
           result.tableData || [],
+          savedWithAdjust,
+          {
+            rowIdField: "id",
+            fallbackKeyField: "meThoi",
+          }
+        );
+        const finalRows = hrc2TableService.mergeServerRows(
+          rowsWithOverrides,
           savedWithAdjust,
           "meThoi",
           editableFields
         );
-        const finalRows = hrc2TableService.applyManualOverrides(baseMerged, savedWithAdjust, {
-          rowIdField: "id",
-          fallbackKeyField: "meThoi",
-        });
 
         const phanBoMetas: AdjustColumnMeta[] = (result.phanBoColumns ?? []).map((col: any) => ({
           key: col.dataIndex || `phanBo_${col.headerKeyId}`,
@@ -425,8 +435,12 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
             ? String(value)
             : "";
           if (isCellChanged) {
+            const editedLabel =
+              value !== undefined && value !== null && value !== ""
+                ? String(value)
+                : "(đã xóa)";
             return (
-              <Tooltip title={`Tự động: ${String(origValue ?? "")} | Chỉnh sửa: ${String(value ?? "")}`}>
+              <Tooltip title={`Tự động: ${String(origValue ?? "")} | Chỉnh sửa: ${editedLabel}`}>
                 <span
                   style={{
                     backgroundColor: "#fff7b3",

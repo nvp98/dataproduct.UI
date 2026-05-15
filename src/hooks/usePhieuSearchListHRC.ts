@@ -3,6 +3,8 @@ import { PhieuApi } from "../services/PhieuApi";
 import type { SearchPhieuByUserRequest, SearchPhieuResponseModel } from "../models/Phieu";
 import type { PhieuFilterValues } from "../components/PhieuFilterCard";
 import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
+import { BmQuyenXlApi, type BmQuyenXlModel } from "../services/BmQuyenXlApi";
+import { bmQuyenConfig } from "../utils/configs/bmQuyenConfig";
 
 interface PagedResponse<T> {
   data?: T[];
@@ -55,21 +57,79 @@ export const usePhieuSearchListHRC = ({
     return user.tenNgan === "P.KH" || user.iD_PhongBan === 70;
   }, []);
 
-  // PKH: bỏ userId để backend trả hết (không lọc quyền), xem tất cả phiếu
-  // [API cũ] delete rest.nguoiTaoId / rest.nguoiDuyetId
-  // [API mới] delete rest.userId - backend không lọc khi không có userId
+  // PKH: bỏ userId để backend không lọc theo quyền cá nhân.
+  // ThongKe pages tự set loaiVung=4+isThongKeUser=true nên backend trả hết phiếu.
+  // Non-ThongKe pages (loaiVung 1/2/3) không có userId → backend trả rỗng (đúng hành vi).
   const effectiveFixedFilters = useMemo(() => {
     if (isPKH) {
       const rest = { ...(fixedFilters as Record<string, unknown>) };
-      // [API cũ - đã thay bằng userId]
-      // delete rest.usercode;
-      // delete rest.nguoiTaoId;
-      // delete rest.nguoiDuyetId;
-      delete rest.userId; // [API mới] PKH không truyền userId → backend trả hết
+      delete rest.userId;
       return rest;
     }
     return fixedFilters;
   }, [isPKH, fixedFilters]);
+
+  // ── Permission records: fetched once per userId, used to filter scope options ──
+  const [userQuyenRecords, setUserQuyenRecords] = useState<BmQuyenXlModel[] | null>(null);
+
+  const effectiveUserId = useMemo(
+    () => (effectiveFixedFilters as Record<string, unknown>).userId as number | undefined,
+    [effectiveFixedFilters]
+  );
+
+  useEffect(() => {
+    if (!effectiveUserId || effectiveUserId <= 0) {
+      setUserQuyenRecords(null);
+      return;
+    }
+    BmQuyenXlApi.getByTaiKhoan(effectiveUserId)
+      .then((res) => {
+        const arr: BmQuyenXlModel[] = Array.isArray(res) ? res : ((res as any)?.data ?? []);
+        setUserQuyenRecords(arr);
+      })
+      .catch(() => setUserQuyenRecords(null));
+  }, [effectiveUserId]);
+
+  /**
+   * Trả về options cho filter scope của một BM, đã lọc theo MaKhuVuc của user.
+   * - isThongKeUser / chưa load records → trả tất cả options trong bmQuyenConfig.
+   * - MaKhuVuc="ALL" → trả tất cả.
+   * - Không có record nào cho BM đó → fallback trả tất cả (graceful).
+   */
+  const getAllowedScopeOptions = useCallback(
+    (maBm: string): Array<{ label: string; value: number }> => {
+      const bmDef = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
+      const allOptions = (bmDef?.scope ?? []).map((s) => ({
+        value: Number(s.maKhuVuc),
+        label: s.tenKhuVuc,
+      }));
+
+      if (allOptions.length === 0) return [];
+
+      const ctx = effectiveFixedFilters as Record<string, unknown>;
+      if (ctx.isThongKeUser === true || !userQuyenRecords) return allOptions;
+
+      const loaiVung = Number(ctx.loaiVung ?? 1);
+      const relevantQuyens =
+        loaiVung === 2 ? new Set([2, 4]) :
+        loaiVung === 3 ? new Set([5]) :
+        new Set([1, 4]); // default loaiVung=1
+
+      const bmRecords = userQuyenRecords.filter(
+        (r) =>
+          r.maBm === maBm &&
+          r.quyenChucNang != null &&
+          relevantQuyens.has(Number(r.quyenChucNang))
+      );
+
+      if (bmRecords.length === 0) return allOptions;
+      if (bmRecords.some((r) => !r.maKhuVuc || r.maKhuVuc === "ALL")) return allOptions;
+
+      const allowed = new Set(bmRecords.map((r) => r.maKhuVuc));
+      return allOptions.filter((opt) => allowed.has(String(opt.value)));
+    },
+    [userQuyenRecords, effectiveFixedFilters]
+  );
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SearchPhieuResponseModel[]>([]);
@@ -183,6 +243,7 @@ export const usePhieuSearchListHRC = ({
     handleFilter,
     handleClearFilter,
     onPageChange,
+    getAllowedScopeOptions,
     refetch: () => {
       if (currentFilter) {
         fetchData(currentFilter);

@@ -45,7 +45,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   const fixedFilters = useMemo(() => {
     return {
       userId: currentUserId,
-      loaiVung: type === "viecdentoi" ? 2 : 1,
+      loaiVung: type === "xemphieu" ? 3 : type === "viecdentoi" ? 2 : 1,
     };
   }, [currentUserId, type]);
 
@@ -56,6 +56,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
+    getAllowedScopeOptions,
   } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
@@ -77,7 +78,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
-            if (type === "viecdentoi") {
+            if (type === "viecdentoi" || type === "xemphieu") {
               return navigate("/chitiettieuhaonauluyen_lf", {
                 state: {
                   idphieu: record.idphieu,
@@ -134,6 +135,16 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       },
     },
     {
+      title: "Kíp",
+      dataIndex: "kip",
+      key: "kip",
+      width: 100,
+      ellipsis: true,
+      render: (value: string) => {
+        return value;
+      },
+    },
+    {
       title: "Người tạo",
       dataIndex: "nguoiTaoId",
       key: "nguoiTaoId",
@@ -179,7 +190,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
     },
   ];
 
-  const filterFieldsConfig: FilterFieldConfig[] = [
+  const filterFieldsConfig = useMemo((): FilterFieldConfig[] => [
     {
       key: "soPhieu",
       label: "Số phiếu",
@@ -205,25 +216,15 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       key: "scope",
       label: "Lò",
       type: "select",
-      options: [
-        { label: "Tinh luyện 6", value: 6 },
-      ],
+      options: getAllowedScopeOptions(config.code as string),
     },
     // {
     //   key: "tinhTrang",
     //   label: "Trạng thái",
     //   type: "select",
-    //   options: [
-    //     { label: "Đang lưu", value: 0 },
-    //     { label: "Đã gửi", value: 1 },
-    //     { label: "Hoàn thành", value: 2 },
-    //     { label: "Đã thu hồi", value: 3 },
-    //     { label: "Không xác nhận", value: 4 },
-    //     { label: "Chốt", value: 5 },
-    //     { label: "Đang phê duyệt", value: 6 },
-    //   ],
+    //   options: [...],
     // },
-  ];
+  ], [getAllowedScopeOptions]);
 
   return (
     <div>
@@ -233,7 +234,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={false}
+        showCreateButton={true}
         onCreateClick={() => {
           navigate("/taophieutieuhaonauluyen_lf");
         }}

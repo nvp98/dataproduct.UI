@@ -6,6 +6,23 @@ export interface MacThepMayDucInfo {
   tenMayDuc: string;
 }
 
+export interface NhomPhanLoaiMacThep{
+  id: number;
+  tenNhom: string;
+}
+
+export interface NhomPhanLoaiMacThepUpsert{
+  id?: number;
+  tenNhom: string;
+}
+
+export interface NhomPhanLoaiMacThepSearchResponse {
+  data: NhomPhanLoaiMacThep[];
+  totalRecords: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
 export interface MacThep {
   id: number;
   tenMacThep: string;
@@ -13,6 +30,8 @@ export interface MacThep {
   isLock?: boolean | null;
   isXacNhan?: boolean | null;
   mayDucs?: MacThepMayDucInfo[] | null;
+  id_PhanLoaiNhomMacThep?: number | null;
+  tenNhom?: string | null;
 }
 
 export interface MacThepPayload {
@@ -21,6 +40,7 @@ export interface MacThepPayload {
   isLock?: boolean | null;
   isXacNhan?: boolean | null;
   idMayDucs?: number[] | null;
+  id_PhanLoaiNhomMacThep?: number | null;
 }
 
 export interface MacThepSearchRequest {
@@ -96,5 +116,25 @@ export const MacThepServiceApi = {
 
   setMayDucs: async (id: number, idMayDucs: number[]): Promise<void> => {
     await apiService.put(`/api/MacThep/${id}/may-duc`, idMayDucs);
+  },
+
+  getPhanLoaiNhomOptions: async(
+    params: {
+    searchKey?: string;
+    page?: number;
+    pageSize?: number;
+  }) : Promise<NhomPhanLoaiMacThepSearchResponse> => {
+    const res = await apiService.get(`/api/MacThep/search-nhom-phan-loai-mac-thep`, {params}) as NhomPhanLoaiMacThepSearchResponse;
+    return {
+      data: res.data ?? [],
+      totalRecords: res.totalRecords ?? 0,
+      page: res.page ?? 1,
+      pageSize: res.pageSize ?? 20,
+      totalPages: res.totalPages ?? 0,
+    };
+  },
+
+  createNhomPhanLoaiMacThep: async (payload: NhomPhanLoaiMacThepUpsert): Promise<NhomPhanLoaiMacThep> => {
+    return (await apiService.post("/api/MacThep/tao-nhom-mac-thep", payload)) as NhomPhanLoaiMacThep;
   },
 };

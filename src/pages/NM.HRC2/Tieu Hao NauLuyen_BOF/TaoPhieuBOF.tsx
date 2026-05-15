@@ -992,6 +992,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
               return (
                 <div key={sig.key || i}>
                   <CustomFormItem
+                    maBm={config.code}
                     field={sig}
                     idx={i}
                     disabled={isLevelZero || isSignatureReadonly || isFormLocked}

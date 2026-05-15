@@ -38,18 +38,23 @@ type HkCellData = {
 
 const renderHkCell = (cellData: HkCellData | null | unknown) => {
   if (cellData === null || cellData === undefined) return "";
-  const { value, manualValue, klPhanBo, totalKLPhuGia } = cellData as HkCellData;
+  const { value, manualValue, klPhanBo, totalKLPhuGia, isManual } = cellData as HkCellData;
 
-  const displayValue = totalKLPhuGia ?? (manualValue != null ? manualValue : value);
+  // isManual=true → dùng manualValue (null nếu user đã xóa → show "0")
+  // isManual=false/undefined → dùng value (giá trị NM gốc)
+  const effectiveValue = isManual ? (manualValue ?? 0) : value;
+  const displayValue = totalKLPhuGia ?? effectiveValue;
   const formatted = formatNumberVN(displayValue);
 
   const hasPhanBo = klPhanBo != null;
-  const hasManual = manualValue != null;
+  // hasManual = true khi có giá trị chỉnh tay, hoặc isManual=true (kể cả khi user đã xóa → manualValue=null)
+  const hasManual = isManual === true || manualValue != null;
 
   if (hasPhanBo || hasManual) {
     const tooltipParts: string[] = [];
     tooltipParts.push(`Tự động: ${formatNumberVN(value)}`);
-    if (hasManual) tooltipParts.push(`Chỉnh tay: ${formatNumberVN(manualValue)}`);
+    if (manualValue != null) tooltipParts.push(`Chỉnh tay: ${formatNumberVN(manualValue)}`);
+    else if (isManual) tooltipParts.push(`Chỉnh tay: (đã xóa)`);
     if (hasPhanBo) tooltipParts.push(`Phân bổ: ${formatNumberVN(klPhanBo)}`);
 
     const bg = hasPhanBo && hasManual ? "#d4edda" : hasPhanBo ? "#d6f0ff" : "#fff7b3";
@@ -238,7 +243,7 @@ const ThongKeHRC2 = () => {
             tenPhuLieu: String(h?.tenPhuLieu ?? h?.TenPhuLieu ?? "").trim(),
             loaiThongKe: h?.loaiThongKe ?? h?.LoaiThongKe,
           }))
-          .filter((h: any) => h.idHeaderKey > 0 && !!h.tenPhuLieu);
+          .filter((h: any) => h.idHeaderKey !== 0 && !!h.tenPhuLieu);
 
         const totalRecords: number =
           payload?.totalRecords ??
@@ -377,7 +382,8 @@ const ThongKeHRC2 = () => {
               if (!key.startsWith("hk_")) return;
               const cell = row[key] as HkCellData | null;
               if (!cell) return;
-              const val = cell.totalKLPhuGia ?? (cell.manualValue != null ? cell.manualValue : cell.value);
+              const effectiveVal = cell.isManual ? cell.manualValue : cell.value;
+              const val = cell.totalKLPhuGia ?? effectiveVal;
               if (val != null) localSum[key] = (localSum[key] ?? 0) + val;
             });
           });

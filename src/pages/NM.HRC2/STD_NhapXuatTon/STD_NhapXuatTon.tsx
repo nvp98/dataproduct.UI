@@ -35,11 +35,10 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
   const fixedFilters = useMemo(
     () => ({
       userId: currentUserId,
-      loaiVung: type === "viecdentoi" ? 2 : 1,
+      loaiVung: type === "xemphieu" ? 3 : type === "viecdentoi" ? 2 : 1,
     }),
     [currentUserId, type]
   );
-
   const {
     data,
     loading,
@@ -66,7 +65,7 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
-            if (type === "viecdentoi") {
+            if (type === "viecdentoi" || type === "xemphieu") {
               return navigate("/chi_tiet_std", {
                 state: {
                   idphieu: record.idphieu,
@@ -108,6 +107,16 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
       ellipsis: true,
       render: (value: number) => {
         return value === 1 ? "Ca Ngày" : "Ca Đêm";
+      },
+    },
+    {
+      title: "Kíp",
+      dataIndex: "kip",
+      key: "kip",
+      width: 100,
+      ellipsis: true,
+      render: (value: string) => {
+        return value;
       },
     },
     {

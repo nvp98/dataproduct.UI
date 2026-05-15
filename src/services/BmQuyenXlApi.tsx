@@ -6,6 +6,7 @@ export interface BmQuyenXlModel {
   maBm: string;
   maKhuVuc: string;
   quyenChucNang?: number;
+  khuVucPhu?: string | null;
   ngayTao?: string;
   nguoiTao?: string;
 }
@@ -55,7 +56,15 @@ export const BmQuyenXlApi = {
   createBulk: (data: BmQuyenXlModel[]) =>
     apiService.post("/api/BmQuyenXl/bulk", data),
 
-  // Xóa tất cả quyền của tài khoản
+  // Lưu hàng loạt: tích Descartes (maBm × maKhuVuc × quyenChucNang) → mỗi tổ hợp = 1 dòng.
+  // idsToDelete: danh sách ID cũ cần xóa trước khi tạo mới (khi cập nhật toàn bộ quyền user).
+  bulkSave: (data: {
+    idTaiKhoan: number;
+    idsToDelete: number[];
+    items: { maBm: string; maKhuVucs: string[]; quyenChucNangs: number[]; khuVucPhus?: string[] }[];
+  }) => apiService.post("/api/BmQuyenXl/save", data),
+
+  // Xóa toàn bộ quyền của tài khoản
   deleteByTaiKhoan: (idTaiKhoan: number) =>
-    apiService.delete(`/api/BmQuyenXl/taikhoan/${idTaiKhoan}`),
+    apiService.delete(`/api/BmQuyenXl/tai-khoan/${idTaiKhoan}`),
 };

@@ -489,7 +489,11 @@ export const phieuActionService = {
                 return;
               }
               // Đã có idphieu, cập nhật (luôn gọi PhieuApi, thêm customPutApi nếu truyền)
-              await PhieuApi.putData(phieuIdParam, formDataParam);
+              const response = await PhieuApi.putData(phieuIdParam, formDataParam);
+              if (response && (response as any).warnings && (response as any).warnings.length > 0) {
+                message.warning((response as any).warnings.join(", ")); // Hiển thị cảnh báo nếu có
+              }
+
               if (customPutApi) {
                 await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
               }

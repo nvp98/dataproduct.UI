@@ -342,8 +342,6 @@ const CustomTableHRC = forwardRef(({
   };
 
   const handleDeleteRow = async (record: HRCTableRow) => {
-    if (rows.length <= minRows) return;
-
     if (record.IsNM === true && lyDoLabel && !lyDoValue?.trim()) {
       message.error(`Vui lòng nhập "${lyDoLabel}" trước khi xóa dòng từ NM`);
       setLyDoError(true);
@@ -816,7 +814,6 @@ const CustomTableHRC = forwardRef(({
                         type="text"
                         danger
                         size="small"
-                        disabled={rows.length <= minRows}
                       >
                         Xóa
                       </Button>

@@ -75,7 +75,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
     const canThongKe =
       u.tenNgan === "P.KH" || u.iD_PhongBan === 70 || isAdminUser(u);
     if (canThongKe) {
-      return { userId: currentUserId, loaiVung: 3, isThongKeUser: true };
+      return { userId: currentUserId, loaiVung: 4, isThongKeUser: true };
     }
     return { userId: currentUserId, loaiVung: 1 };
   }, [currentUserId]);

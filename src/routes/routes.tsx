@@ -80,6 +80,7 @@ import ThongKeHRC1 from "../pages/NM.HRC1/ThongKe/ThongKeHRC1";
 import ThongKePhieuHRC1 from "../pages/NM.HRC1/ThongKe/ThongKePhieuHRC1";
 import QuanLyMayDuc from "../pages/Settings/MayDuc";
 import QuanLyMacThep from "../pages/Settings/MacThep";
+import QuanLyTaiKhoan from "../pages/Settings/QuanLyTaiKhoan";
 
 export const routes = [
   {
@@ -365,6 +366,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/tieuhaonauluyen_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_BOF type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieutieuhaonauluyen_bof",
         element: (
           <RequireAuth>
@@ -405,6 +416,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/tieuhaonauluyen_lf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_LF type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieutieuhaonauluyen_lf",
         element: (
           <RequireAuth>
@@ -440,6 +461,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TieuHaoNauLuyen_RH type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/tieuhaonauluyen_rh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoNauLuyen_RH type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -505,6 +536,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/bbgnphoitam",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanGiaoNhanPhoiTam type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "form-bbgnphoitam",
         element: (
           <RequireAuth>
@@ -530,6 +571,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <STD_NhapXuatTon />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "/xemphieu/std_nhapxuatton",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <STD_NhapXuatTon type="xemphieu"/>
             </RequireRole>
           </RequireAuth>
         ),
@@ -980,6 +1031,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/giaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanThepLong type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieugiaonhantheplong",
         element: (
           <RequireAuth>
@@ -1021,6 +1082,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/giaonhantheplong_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanThepLong_HRC1 type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieugiaonhantheplong_hrc1",
         element: (
           <RequireAuth>
@@ -1056,6 +1127,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <QuanLyMayDuc />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "quan-ly-tai-khoan",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyTaiKhoan />
             </RequireRole>
           </RequireAuth>
         ),

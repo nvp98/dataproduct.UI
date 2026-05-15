@@ -28,7 +28,7 @@ import {
   EyeOutlined,
   EyeInvisibleOutlined,
 } from "@ant-design/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TablePaginationConfig } from "antd";
 import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
@@ -39,6 +39,10 @@ import type {
 } from "../../../models/HeaderKeyModel";
 import HeaderMappingModal from "../../../components/HeaderMapping";
 import type { HeaderMappingRecord } from "../../../components/HeaderMapping";
+import { CommonAutocomplete } from "../../../components/CommonAutocomplete";
+import type { AutocompleteSearchParams } from "../../../components/CommonAutocomplete";
+import { headerNhomApi } from "../../../services/HeaderNhomApi";
+import type { HeaderNhom } from "../../../services/HeaderNhomApi";
 
 type FilterState = {
   searchKey?: string;
@@ -49,6 +53,7 @@ type FilterState = {
   FromDate?: string;
   ToDate?: string;
   SortThuTu?: string;
+  IdNhom?: number;
 };
 
 type ErrorLike = {
@@ -91,6 +96,45 @@ const HeaderMapping = () => {
     null
   );
   const [showExtraColumns, setShowExtraColumns] = useState(false);
+
+  const nhomSearchApi = useCallback(
+    async (params: AutocompleteSearchParams) => {
+      const res = await headerNhomApi.search({
+        searchKey: params.searchKey,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 20,
+      });
+      return { data: res.data, totalRecords: res.totalRecords };
+    },
+    []
+  );
+
+  // Dùng cho form search (không allowCreate)
+  const nhomFilterSearchApi = useCallback(
+    async (params: AutocompleteSearchParams) => {
+      const res = await headerNhomApi.search({
+        searchKey: params.searchKey,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 50,
+      });
+      return { data: res.data, totalRecords: res.totalRecords };
+    },
+    []
+  );
+
+  const handleCreateNhom = useCallback(
+    async (searchText: string): Promise<HeaderNhom | null> => {
+      try {
+        const created = await headerNhomApi.create({ tenHienThi: searchText });
+        message.success(`Đã tạo nhóm "${created.tenHienThi}"`);
+        return created;
+      } catch {
+        message.error("Không thể tạo nhóm mới");
+        return null;
+      }
+    },
+    []
+  );
 
   const fetchData = async (
     page = pagination.current,
@@ -142,11 +186,12 @@ const HeaderMapping = () => {
       TrangThai: values.TrangThai || undefined,
       IsUsedNXT:
         typeof values.IsUsedNXT === "boolean" ? values.IsUsedNXT : undefined,
-      IsUsedThongKe: 
+      IsUsedThongKe:
         typeof values.IsUsedThongKe === "boolean" ? values.IsUsedThongKe : undefined,
       FromDate: fromDate,
       ToDate: toDate,
       SortThuTu: values.SortThuTu || undefined,
+      IdNhom: typeof values.IdNhom === "number" ? values.IdNhom : undefined,
     };
     fetchData(1, pagination.pageSize, appliedFilters);
   };
@@ -181,6 +226,7 @@ const HeaderMapping = () => {
       loaiExcel: record.loaiExcel,
       thuTu_Excel_BOF: record.thuTu_Excel_BOF,
       thuTu_Excel_LFRH: record.thuTu_Excel_LFRH,
+      iD_NhomKey: record.iD_NhomKey ?? undefined,
     });
     setModalVisible(true);
   };
@@ -209,6 +255,7 @@ const HeaderMapping = () => {
         loaiExcel: values.isUsed_Excel ? (values.loaiExcel ?? null) : null,
         thuTu_Excel_BOF: values.isUsed_Excel ? (values.thuTu_Excel_BOF ?? null) : null,
         thuTu_Excel_LFRH: values.isUsed_Excel ? (values.thuTu_Excel_LFRH ?? null) : null,
+        iD_NhomKey: values.iD_NhomKey ?? null,
       };
       if (editingRecord?.keyGuid) {
         payload.keyGuid = editingRecord.keyGuid;
@@ -303,6 +350,15 @@ const HeaderMapping = () => {
         width: 160,
         ellipsis: true,
         render: (value: string) => value || "-",
+      },
+      {
+        title: "Nhóm",
+        dataIndex: "tenNhom",
+        key: "tenNhom",
+        width: 120,
+        ellipsis: true,
+        render: (value: string | null | undefined) =>
+          value ? <Tag color="purple">{value}</Tag> : "-",
       },
       // {
       //   title: "Phụ liệu NM",
@@ -562,6 +618,16 @@ const HeaderMapping = () => {
               </Form.Item>
             </Col>
             <Col xs={24} md={4}>
+              <Form.Item label="Nhóm" name="IdNhom">
+                <CommonAutocomplete<HeaderNhom>
+                  searchApi={nhomFilterSearchApi}
+                  mapOption={(item) => ({ value: item.id, label: item.tenHienThi })}
+                  placeholder="Tất cả nhóm"
+                  allowClear
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={4}>
               <Form.Item label="Loại phiếu" name="LoaiPhieu">
                 <Select allowClear placeholder="Tất cả">
                   <Select.Option value="KL">KL</Select.Option>
@@ -696,6 +762,24 @@ const HeaderMapping = () => {
             tooltip="Đánh dấu Header Key này sẽ được tự động chọn làm mặc định khi lọc dữ liệu STD NXT"
           >
             <Switch checkedChildren="Có" unCheckedChildren="Không" />
+          </Form.Item>
+
+          <Form.Item
+            name="iD_NhomKey"
+            label="Nhóm thống kê"
+            tooltip="Gom Header Key này vào một nhóm — giá trị sẽ được cộng dồn vào cột nhóm trong ThongKe"
+          >
+            <CommonAutocomplete<HeaderNhom>
+              searchApi={nhomSearchApi}
+              mapOption={(item) => ({ value: item.id, label: item.tenHienThi })}
+              fallbackLabelBuilder={(id) =>
+                editingRecord?.tenNhom ?? `Nhóm #${id}`
+              }
+              placeholder="Chọn nhóm hoặc tạo mới..."
+              allowClear
+              allowCreate
+              onCreate={handleCreateNhom}
+            />
           </Form.Item>
 
           <Form.Item label="Sử dụng cho">

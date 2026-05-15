@@ -72,24 +72,20 @@ const SidebarMenu = () => {
   const filteredMenu = useMemo(() => {
     if (!user) return [];
     const isAdmin = isAdminUser(user);
-    const showAllByMaBM = isAdmin || menuPermissions === null;
-    const processingSet = showAllByMaBM
-      ? new Set<string>(["*"])
-      : new Set(menuPermissions?.processingForms ?? []);
-    const approvingSet = showAllByMaBM
-      ? new Set<string>(["*"])
-      : new Set(menuPermissions?.approvingForms ?? []);
-    const viewingSet = showAllByMaBM
-      ? new Set<string>(["*"])
-      : new Set(menuPermissions?.viewingForms ?? []);
-    // Quyền "Xem" chỉ áp dụng cho nhóm "Việc đến tôi" (sub3)
-    const approvingAndViewingSet = new Set<string>([
-      ...Array.from(approvingSet),
-      ...Array.from(viewingSet),
-    ]);
-    const filterMenuItems = (
-      items: { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[]
-    ): typeof items => {
+    const showAll = isAdmin || menuPermissions === null;
+    const mkSet = (forms: string[]) =>
+      showAll ? new Set<string>(["*"]) : new Set<string>(forms);
+
+    // vung 1 = xử lý, vung 2 = phê duyệt, vung 3 = chỉ xem
+    const vungSets: Record<number, Set<string>> = {
+      1: mkSet(menuPermissions?.processingForms ?? []),
+      2: mkSet(menuPermissions?.approvingForms ?? []),
+      3: mkSet(menuPermissions?.viewingForms ?? []),
+    };
+
+    type Item = { key?: string; vung?: number; maBM?: string; children?: unknown[]; [k: string]: unknown };
+
+    const filterMenuItems = (items: Item[]): Item[] => {
       return items
         .filter((item) => {
           const roles = item.roles as string[] | undefined;
@@ -99,18 +95,12 @@ const SidebarMenu = () => {
         })
         .map((item) => {
           if (item.children && Array.isArray(item.children)) {
-            const isSub2 = item.key === "sub2";
-            const isSub3 = item.key === "sub3";
+            const vung = item.vung as number | undefined;
+            const set = vung != null ? vungSets[vung] : undefined;
             const filteredChildren =
-              isSub2 || isSub3
-                ? filterByMaBM(
-                    item.children as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[],
-                    isSub2 ? processingSet : approvingAndViewingSet,
-                    isSub2 ? processingSet.has("*") : approvingAndViewingSet.has("*")
-                  )
-                : filterMenuItems(
-                    item.children as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[]
-                  );
+              set != null
+                ? filterByMaBM(item.children as Item[], set, set.has("*"))
+                : filterMenuItems(item.children as Item[]);
             return { ...item, children: filteredChildren };
           }
           return item;
@@ -122,7 +112,7 @@ const SidebarMenu = () => {
         });
     };
 
-    const filtered = filterMenuItems(menuConfig as { key?: string; maBM?: string; children?: unknown[]; [k: string]: unknown }[]);
+    const filtered = filterMenuItems(menuConfig as { key?: string; vung?: number; maBM?: string; children?: unknown[]; [k: string]: unknown }[]);
 
     // Xóa custom props (maBM, roles) để tránh React warning khi antd spread xuống DOM
     const stripCustomProps = (items: typeof filtered): typeof filtered =>

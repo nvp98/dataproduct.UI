@@ -3,35 +3,41 @@ import { Select } from "antd";
 import { TaiKhoanApi } from "../services/TaiKhoanService";
 
 interface CustomChonNguoiKyProps {
-  maphongBan?: string; // "NM.CTD" | "P.QLCL" | "NM.HRC1"
+  maBm?: string;
+  loaiQuyen?: number; // 1 = người xử lý (quyền 1|4), 2 = người phê duyệt (quyền 2|4)
+  maphongBan?: string; // fallback cũ khi chưa có maBm
   value?: any;
   onChange?: (value: any) => void;
   disabled?: boolean;
-  isReadOnly?: boolean;
 }
 
 export default function CustomChonNguoiKy({
+  maBm,
+  loaiQuyen,
   maphongBan,
   value,
   onChange,
   disabled = false,
 }: CustomChonNguoiKyProps) {
-  // const isDisabled = disabled || isReadOnly;
   const [options, setOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchNguoiKy = async () => {
-      if (!maphongBan) return;
-
+    const fetchOptions = async () => {
       setLoading(true);
       try {
-        // If maphongBan is "All", fetch all users (without maphongBan filter)
-        const params = maphongBan === "All" ? {} : { maphongBan };
-        const res = await TaiKhoanApi.getData(params);
+        let res: any;
+        if (maBm && loaiQuyen != null) {
+          res = await TaiKhoanApi.getListKyDuyet(maBm, loaiQuyen);
+        } else if (maphongBan) {
+          const params = maphongBan === "All" ? {} : { maphongBan };
+          res = await TaiKhoanApi.getData(params);
+        } else {
+          return;
+        }
         setOptions(
           ((res as any) || []).map((x: any) => ({
-            label: x.tenTaiKhoan + "-" + x.hoVaTen,
+            label: x.tenTaiKhoan + " - " + x.hoVaTen,
             value: x.iD_TaiKhoan,
           })),
         );
@@ -42,8 +48,8 @@ export default function CustomChonNguoiKy({
       }
     };
 
-    fetchNguoiKy();
-  }, [maphongBan]);
+    fetchOptions();
+  }, [maBm, loaiQuyen, maphongBan]);
 
   return (
     <Select

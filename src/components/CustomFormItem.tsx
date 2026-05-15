@@ -10,6 +10,7 @@ interface CustomFormItemProps {
   disabled?: boolean;
   readOnly?: boolean;
   initialValue?: any;
+  maBm?: string; // mã biểu mẫu để lọc danh sách người ký theo BmQuyenXl
 }
 
 const CustomFormItem: React.FC<CustomFormItemProps> = ({
@@ -17,6 +18,7 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
   idx,
   disabled,
   readOnly = false,
+  maBm,
   // initialValue,
 }) => {
   const isDisabled = disabled ?? field.disabled ?? false;
@@ -66,13 +68,18 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
           </Select>
         );
 
-      case "selectNguoiKy":
+      case "selectNguoiKy": {
+        // loaiQuyen: capduyet=0 → người xử lý (1), capduyet>0 → người phê duyệt (2)
+        const loaiQuyen = field.capduyet != null ? (field.capduyet === 0 ? 1 : 2) : 2;
         return (
           <CustomChonNguoiKy
+            maBm={maBm}
+            loaiQuyen={loaiQuyen}
             maphongBan={field.maphongBan}
             disabled={isDisabled}
           />
         );
+      }
 
       case "number":
         return (
