@@ -670,6 +670,95 @@ export const menuConfig = [
     icon: <EyeOutlined />,
     children: [
       {
+        key: "sub3-nl",
+        label: "NM.NL",
+        children: [
+          {
+            key: "sub3-nl-1",
+            maBM: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
+            label: (
+              <Tooltip title="BM.18/HD.25.08 (Bảng theo dõi ben phế)">
+                <NavLink to="/xemphieu/bangtheodoibenphe">
+                  BM.18/HD.25.08 Bảng theo dõi ben phế
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
+      // {
+      //   key: "sub3-4",
+      //   label: "NM.CTD",
+      //   children: [
+      //     {
+      //       key: "3-4-1",
+      //       maBM: BM_CONFIG.CTD.CTD_STD_Sanxuat,
+      //       label: (
+      //         <Tooltip title="BM.09/QT.05.13 (Sổ theo dõi sản xuất hàng ngày)">
+      //           <NavLink to="/xemphieu/sotheodoisanxuat">
+      //             BM.09/QT.05.13 Sổ theo dõi sản xuất hàng ngày
+      //           </NavLink>
+      //         </Tooltip>
+      //       ),
+      //     },
+      //     {
+      //       key: "3-4-2",
+      //       maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
+      //       label: (
+      //         <Tooltip title="BM.05/QT.05.13 (Biên bản giao nhận phôi)">
+      //           <NavLink to="/xemphieu/bienbangiaoNhanphoi">
+      //             BM.05/QT.05.13 (Biên bản giao nhận phôi)
+      //           </NavLink>
+      //         </Tooltip>
+      //       ),
+      //     },
+      //     {
+      //       key: "3-4-3",
+      //       maBM: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
+      //       label: (
+      //         <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
+      //           <NavLink to="/xemphieu/bienbanphoinapnguoi">
+      //             BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)
+      //           </NavLink>
+      //         </Tooltip>
+      //       ),
+      //     },
+      //     {
+      //       key: "3-4-4",
+      //       maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
+      //       label: (
+      //         <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+      //           <NavLink to="/xemphieu/phieuxulykph">
+      //             BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+      //           </NavLink>
+      //         </Tooltip>
+      //       ),
+      //     },
+      //     {
+      //       key: "sub3-4-5",
+      //       maBM: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
+      //       label: (
+      //         <Tooltip title="BM.08/QT.05.13 (Biên bản xác nhận sản lượng)">
+      //           <NavLink to="/xemphieu/sanluongkcs">
+      //             BM.08/QT.05.13 Biên bản xác nhận sản lượng
+      //           </NavLink>
+      //         </Tooltip>
+      //       ),
+      //     },
+      //     {
+      //       key: "sub3-4-6",
+      //       maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
+      //       label: (
+      //         <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
+      //           <NavLink to="/xemphieu/bienbanphoinong">
+      //             BM.06/QT.05.10 Biên bản giao nhận phôi nóng (Nhận phôi)
+      //           </NavLink>
+      //         </Tooltip>
+      //       ),
+      //     },
+      //   ],
+      // },
+      {
         key: "sub4-1",
         label: "NM.HRC1",
         children: [
@@ -695,7 +784,9 @@ export const menuConfig = [
             maBM: BM_CONFIG.HRC2.HRC2_STD_NXT,
             label: (
               <Tooltip title="STD - Nhập xuất tồn">
-                <NavLink to="/xemphieu/std_nhapxuatton">STD - Nhập xuất tồn</NavLink>
+                <NavLink to="/xemphieu/std_nhapxuatton">
+                  STD - Nhập xuất tồn
+                </NavLink>
               </Tooltip>
             ),
           },

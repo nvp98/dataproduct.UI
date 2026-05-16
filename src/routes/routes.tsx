@@ -305,6 +305,14 @@ export const routes = [
           </RequireAuth>
         ),
       },
+      {
+        path: "xemphieu/bangtheodoibenphe",
+        element: (
+          <RequireAuth>
+            <BangTheoDoiBenPhe type="xemphieu" />
+          </RequireAuth>
+        ),
+      },
       // {
       //   path: "bienbantheplong",
       //   element: (
@@ -580,7 +588,7 @@ export const routes = [
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
-              <STD_NhapXuatTon type="xemphieu"/>
+              <STD_NhapXuatTon type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1120,7 +1128,7 @@ export const routes = [
             </RequireRole>
           </RequireAuth>
         ),
-      },  
+      },
       {
         path: "may-duc",
         element: (

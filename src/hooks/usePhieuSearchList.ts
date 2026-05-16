@@ -68,7 +68,7 @@ export const usePhieuSearchList = ({
       return rest;
     }
      const user = getThongTinUser();
-    if (isViecdentoi && !isPKH && !isAdminUser(user) && false) {
+    if (isViecdentoi && !isPKH && !isAdminUser(user) ) {
       const rest = { ...(fixedFilters as Record<string, unknown>) };
       rest.nguoiDuyetId =  user.iD_TaiKhoan;
       // rest.nguoiTaoId =  user.iD_TaiKhoan;
