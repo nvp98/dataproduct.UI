@@ -143,16 +143,16 @@ export const menuConfig = [
           {
             key: "sub1-4-0",
             label: (
-              <Tooltip title="Quản lý Silo Lò Cao">
-                <NavLink to="/silolocao">Quản lý Silo Lò Cao</NavLink>
+              <Tooltip title="Quản lý biểu mẫu tồn silo">
+                <NavLink to="/silolocao">Quản lý biểu mẫu tồn silo</NavLink>
               </Tooltip>
             ),
           },
           {
             key: "sub1-4-2",
             label: (
-              <Tooltip title="Quản lý Silo & NVL theo ngày và ca">
-                <NavLink to="/quanlysilonvl">Quản lý Silo & NVL</NavLink>
+              <Tooltip title="Quản lý biểu mẫu nạp liệu lò cao">
+                <NavLink to="/quanlysilonvl">Quản lý biểu mẫu nạp liệu</NavLink>
               </Tooltip>
             ),
           },
@@ -398,9 +398,9 @@ export const menuConfig = [
             key: "sub2-8-2",
             maBM: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
             label: (
-              <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
+              <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)">
                 <NavLink to="/tonsilolocao">
-                  BM.07/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
+                  BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)
                 </NavLink>
               </Tooltip>
             ),
@@ -496,9 +496,9 @@ export const menuConfig = [
             key: "sub4-7-2",
             maBM: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
             label: (
-              <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
+              <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)">
                 <NavLink to="/viecdentoi/tonsilolocao">
-                  BM.07/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
+                  BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)
                 </NavLink>
               </Tooltip>
             ),

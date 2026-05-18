@@ -40,6 +40,7 @@ export interface LGTSLNvlDto {
   id: number;
   tenNVL: string;
   tenNVLTk: string | null;
+  tenHienThi: string | null;
   ghiChu: string | null;
   ngayTao: string;
   idLoCao: number;
@@ -141,4 +142,57 @@ export interface LGTSLSiLoMappingViewDto {
 export const lgTSLSiLoMappingViewApi = {
   getList: (params?: { idLoCao?: number; ngay?: string; ca?: number }) =>
     apiService.get<LGTSLSiLoMappingViewDto[]>("/api/LGTSL/tonsilo-silo-mapping", { params }),
+};
+
+// ─── Chi tiết Tồn Silo theo Phiếu (LG_TSL_ChiTiet) ──────────────────────────
+
+export interface LGTSLChiTietDto {
+  id: number;
+  idPhieu: string;
+  idLoCao: number;
+  ngay: string;
+  ca: number;
+  idSiLo: number;
+  idMapping: number | null;
+  idNVL: number | null;
+  tenSiLo: string | null;
+  tenNVL: string | null;
+  klTonCuoiKip: number | null;
+  manualKL: boolean;
+  klGoc: number | null;
+  ghiChu: string | null;
+  thuTu: number | null;
+  ngayTao: string;
+  nguoiTao: string | null;
+}
+
+export interface UpsertLGTSLChiTietItemDto {
+  idSiLo: number;
+  idMapping: number | null;
+  idNVL: number | null;
+  tenSiLo: string | null;
+  tenNVL: string | null;
+  klTonCuoiKip: number | null;
+  ghiChu: string | null;
+  thuTu: number | null;
+}
+
+export interface UpsertLGTSLChiTietDto {
+  idPhieu: string;
+  idLoCao: number;
+  ngay: string;
+  ca: number;
+  nguoiTao?: string | null;
+  items: UpsertLGTSLChiTietItemDto[];
+}
+
+export const lgTSLChiTietApi = {
+  upsert: (dto: UpsertLGTSLChiTietDto) =>
+    apiService.post("/api/LGTSL/chitiet/upsert", dto),
+
+  getByPhieu: (idPhieu: string) =>
+    apiService.get<LGTSLChiTietDto[]>(`/api/LGTSL/chitiet/${idPhieu}`),
+
+  exportPdf: (idPhieu: string) =>
+    apiService.get<Blob>(`/api/LGTSL/export-pdf/${idPhieu}`, { responseType: "blob" }),
 };

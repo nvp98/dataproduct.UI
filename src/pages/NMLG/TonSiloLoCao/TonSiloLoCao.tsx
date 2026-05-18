@@ -81,18 +81,17 @@ const TonSiloLoCao = ({ type }: { type?: string }) => {
       width: 120,
       ellipsis: true,
     },
-     {
+    {
       title: "Ca",
       dataIndex: "ca",
       key: "ca",
       width: 120,
       ellipsis: true,
     },
-    
-     {
+    {
       title: "Lò cao",
-      dataIndex: "ca",
-      key: "ca",
+      dataIndex: "scope",
+      key: "scope",
       width: 120,
       ellipsis: true,
     },
@@ -178,7 +177,7 @@ const TonSiloLoCao = ({ type }: { type?: string }) => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => navigate("/taophieubienbantonsilolocao")}
+              onClick={() => navigate("/taophieutonsilolocao")}
             >
               Tạo phiếu mới
             </Button>

@@ -797,7 +797,7 @@ export const routes = [
         ),
       },
       {
-        path: "taophieubienbantonsilolocao",
+        path: "taophieutonsilolocao",
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>

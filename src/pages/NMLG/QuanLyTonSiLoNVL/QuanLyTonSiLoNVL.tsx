@@ -314,7 +314,7 @@ const MappingTab = ({ ngay, ca, idLoCao, loCaoOptions, siloOptions, nvlOptions }
             <Select placeholder={selectedLoCao ? "Chọn NVL" : "Chọn lò cao trước"}
               disabled={!selectedLoCao} showSearch optionFilterProp="children">
               {filteredNvlOpts.map((n) => (
-                <Option key={n.id} value={n.id}>{n.tenNVL}</Option>
+                <Option key={n.id} value={n.id}>{n.tenHienThi ?? n.tenNVL}</Option>
               ))}
             </Select>
           </Form.Item>
