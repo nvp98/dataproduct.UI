@@ -406,14 +406,13 @@ export const hrc2TableService = {
 
         // Nếu API đã set __orig (= giá trị NM gốc thực sự), dùng nó làm baseline thay vì
         // merged[baseKey] (có thể đã là manualVal do fetchAndProcessPhuLieus set khi isManual=true).
-        const existingOrig = (merged as Record<string, unknown>)[origKey];
-        const serverAutoResolved = existingOrig !== undefined
-          ? existingOrig
-          : serverAuto;
+        const existingOrig = (merged as Record<string, unknown>)[origKey] as
+          | string | number | boolean | null | undefined;
+        const serverAutoResolved = existingOrig !== undefined ? existingOrig : serverAuto;
 
         // Chỉ ghi __orig nếu API chưa set (không overwrite giá trị NM gốc chính xác).
-        if (serverAutoResolved !== undefined && existingOrig === undefined) {
-          merged[origKey] = serverAutoResolved;
+        if (existingOrig === undefined && serverAuto !== undefined) {
+          merged[origKey] = serverAuto;
         }
 
         const isStillManual = String(manualValue ?? "") !== String(serverAutoResolved ?? "");
