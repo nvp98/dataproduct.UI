@@ -15,6 +15,7 @@ import CustomFormItem from "../../../components/CustomFormItem";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { PhieuApi } from "../../../services/PhieuApi";
+import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
@@ -55,6 +56,8 @@ const TaoBangTheoDoiBenPhe = () => {
     minKhoiLuong: null,
     maxKhoiLuong: null,
   });
+
+  const [allowedChotBmList, setAllowedChotBmList] = useState<string[]>([]);
 
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
   const isSignatureReadonly = [
@@ -120,7 +123,6 @@ const TaoBangTheoDoiBenPhe = () => {
         const res = await PhieuApi.getDetail(idphieu);
         if (res) {
           const data = (res as any).jsonData || {};
-          console.log("Loaded phiếu data:", data);
           const dataPhieu = (res as any) || {};
           setPhieuInfo({
             idphieu: (res as any)?.idphieu || "",
@@ -172,6 +174,21 @@ const TaoBangTheoDoiBenPhe = () => {
   useEffect(() => {
     initData();
   }, [idphieu]);
+
+  // Lấy danh sách BM được phép chốt từ quyền user
+  useEffect(() => {
+    const userInfo = getThongTinUser();
+    const idTaiKhoan = userInfo?.iD_TaiKhoan ?? userInfo?.iD_TaiKhoan;
+    if (idTaiKhoan) {
+      BmQuyenXlApi.getMenuPermissions(idTaiKhoan)
+        .then((res) => {
+          setAllowedChotBmList(res?.chotPhieuForms ?? []);
+        })
+        .catch(() => {
+          setAllowedChotBmList([]);
+        });
+    }
+  }, []);
 
   const handleSubmit = async (values: any) => {
     try {
@@ -397,6 +414,8 @@ const TaoBangTheoDoiBenPhe = () => {
       redirectToList,
       onSuccess: handleActionSuccess,
       onError: (error) => console.error("Action error:", error),
+      phieuMaBm: config.code,
+      allowedChotBmList,
     });
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(
@@ -404,7 +423,13 @@ const TaoBangTheoDoiBenPhe = () => {
       phieuInfo.idphieu || "",
       getFormData,
     );
-  }, [getFormData, handleActionSuccess, phieuInfo, redirectToList]);
+  }, [
+    getFormData,
+    handleActionSuccess,
+    phieuInfo,
+    redirectToList,
+    allowedChotBmList,
+  ]);
 
   // Lấy danh sách ghi chú duy nhất từ dữ liệu bảng
   // const ghiChuOptions = useMemo(() => {
