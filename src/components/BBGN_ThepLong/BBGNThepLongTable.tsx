@@ -554,7 +554,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       key: "ghiChu",
       width: 110,
       render: (val: string | null, record: BBGNRow) => {
-        if (disabled || !canEditOthers) return <span>{val ?? "-"}</span>;
+        if (disabled) return <span>{val ?? "-"}</span>;
         return (
           <Input
             value={val ?? ""}
