@@ -404,12 +404,19 @@ export const hrc2TableService = {
           return;
         }
 
-        // Orig luôn cập nhật theo số liệu server mới nhất để tooltip "Cũ/Mới" đúng sau khi làm mới.
-        if (serverAuto !== undefined) {
-          merged[origKey] = serverAuto;
+        // Nếu API đã set __orig (= giá trị NM gốc thực sự), dùng nó làm baseline thay vì
+        // merged[baseKey] (có thể đã là manualVal do fetchAndProcessPhuLieus set khi isManual=true).
+        const existingOrig = (merged as Record<string, unknown>)[origKey];
+        const serverAutoResolved = existingOrig !== undefined
+          ? existingOrig
+          : serverAuto;
+
+        // Chỉ ghi __orig nếu API chưa set (không overwrite giá trị NM gốc chính xác).
+        if (serverAutoResolved !== undefined && existingOrig === undefined) {
+          merged[origKey] = serverAutoResolved;
         }
 
-        const isStillManual = String(manualValue ?? "") !== String(serverAuto ?? "");
+        const isStillManual = String(manualValue ?? "") !== String(serverAutoResolved ?? "");
 
         if (isStillManual) {
           merged[baseKey] = manualValue;
