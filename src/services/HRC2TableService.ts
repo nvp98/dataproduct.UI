@@ -293,8 +293,12 @@ export const hrc2TableService = {
       ? new Set(preserveFields)
       : null;
 
-    return serverRows.map((serverRow) => {
+    const serverKeySet = new Set<string | number>();
+    const merged = serverRows.map((serverRow) => {
       const keyValue = serverRow[keyField] as string | number | undefined;
+      if (keyValue !== undefined && keyValue !== null) {
+        serverKeySet.add(keyValue);
+      }
       if (keyValue === undefined || keyValue === null) {
         return serverRow;
       }
@@ -302,16 +306,25 @@ export const hrc2TableService = {
       if (!prevRow) {
         return serverRow;
       }
-      const merged: HRCTableRow = { ...serverRow };
+      const mergedRow: HRCTableRow = { ...serverRow };
       Object.keys(prevRow).forEach((field) => {
         const shouldPreserve =
           preserveSet !== null ? preserveSet.has(field) : field.endsWith("_adjust");
         if (shouldPreserve) {
-          merged[field] = prevRow[field];
+          mergedRow[field] = prevRow[field];
         }
       });
-      return merged;
+      return mergedRow;
     });
+
+    // Giữ lại các dòng nhập tay (IsNM=false) từ prev không có trong server rows
+    const manualRows = previousRows.filter((row) => {
+      if (row.IsNM !== false) return false;
+      const keyValue = row[keyField] as string | number | undefined;
+      return keyValue === undefined || keyValue === null || !serverKeySet.has(keyValue);
+    });
+
+    return [...merged, ...manualRows];
   },
 
   applyManualOverrides(
@@ -349,14 +362,23 @@ export const hrc2TableService = {
       const keyValue =
         idVal !== undefined && idVal !== null && idVal !== "" ? idVal : fallbackVal;
       if (keyValue === undefined || keyValue === null) {
-        return serverRow;
+        const cleaned = { ...serverRow };
+        delete (cleaned as Record<string, unknown>).__fromFilterAPI;
+        return cleaned;
       }
       const prevRow = prevMap.get(keyValue);
       if (!prevRow) {
-        return serverRow;
+        const cleaned = { ...serverRow };
+        delete (cleaned as Record<string, unknown>).__fromFilterAPI;
+        return cleaned;
       }
 
       const merged: HRCTableRow = { ...serverRow };
+
+      // Dòng nhập tay (IsNM=false) đến từ filter API: dữ liệu DB là nguồn sự thật.
+      // Không cho JSON override ngược lại vì JSON có thể lưu sai (bug save).
+      const isFilterAPIManualRow =
+        merged.__fromFilterAPI === true && merged.IsNM === false;
 
       Object.keys(prevRow).forEach((k) => {
         if (!k.endsWith(MANUAL_SUFFIX)) return;
@@ -375,6 +397,13 @@ export const hrc2TableService = {
           return;
         }
 
+        // Dòng IsNM=false từ filter API: giá trị filter là đúng, không override bằng JSON
+        if (isFilterAPIManualRow && serverAuto !== null && serverAuto !== undefined) {
+          if (merged[origKey] === undefined) merged[origKey] = serverAuto;
+          merged[k] = true;
+          return;
+        }
+
         // Orig luôn cập nhật theo số liệu server mới nhất để tooltip "Cũ/Mới" đúng sau khi làm mới.
         if (serverAuto !== undefined) {
           merged[origKey] = serverAuto;
@@ -389,6 +418,9 @@ export const hrc2TableService = {
           merged[k] = false;
         }
       });
+
+      // Dọn marker nội bộ trước khi trả về
+      delete (merged as Record<string, unknown>).__fromFilterAPI;
 
       return merged;
     });

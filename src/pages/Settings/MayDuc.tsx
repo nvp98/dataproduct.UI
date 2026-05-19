@@ -33,7 +33,7 @@ const QuanLyMayDuc = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [data, setData] = useState<MayDuc[]>([]);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
   const [filters, setFilters] = useState<FilterState>({});
   const [editingRecord, setEditingRecord] = useState<MayDuc | null>(null);
 
@@ -87,6 +87,7 @@ const QuanLyMayDuc = () => {
       tenMayDuc: record.tenMayDuc,
       nhaMay: record.nhaMay as NhaMayEnum,
       isLock: record.isLock ?? false,
+      loaiMayDuc: record.loaiMayDuc ?? undefined,
     });
     setModalVisible(true);
   };
@@ -104,7 +105,8 @@ const QuanLyMayDuc = () => {
         tenMayDuc: values.tenMayDuc.trim(),
         nhaMay: values.nhaMay as NhaMayEnum,
         isLock: values.isLock as boolean,
-      } as MayDucPayload;
+        loaiMayDuc: (values.loaiMayDuc as string) || null,
+      };
       setModalLoading(true);
       if (editingRecord) {
         await MayDucServiceApi.update(editingRecord.id, payload);
@@ -152,6 +154,17 @@ const QuanLyMayDuc = () => {
           if (v === NhaMayEnum.HRC1) return <Tag color="blue">HRC1</Tag>;
           if (v === NhaMayEnum.HRC2) return <Tag color="green">HRC2</Tag>;
           return v ?? "-";
+        },
+      },
+      {
+        title: "Loại máy đúc",
+        dataIndex: "loaiMayDuc",
+        key: "loaiMayDuc",
+        width: 130,
+        render: (v: string | null) => {
+          if (v === "DV") return <Tag color="blue">Đúc Vuông</Tag>;
+          if (v === "DT") return <Tag color="purple">Đúc Tấm</Tag>;
+          return "-";
         },
       },
       {
@@ -276,6 +289,12 @@ const QuanLyMayDuc = () => {
             rules={[{ required: true, message: "Vui lòng nhập tên máy đúc" }, { max: 100, message: "Tối đa 100 ký tự" }, { whitespace: true, message: "Không được chỉ có khoảng trắng" }]}
           >
             <Input placeholder="Nhập tên máy đúc" />
+          </Form.Item>
+          <Form.Item name="loaiMayDuc" label="Loại máy đúc">
+            <Select allowClear placeholder="Chọn loại máy đúc">
+              <Select.Option value="DV">Đúc Vuông</Select.Option>
+              <Select.Option value="DT">Đúc Tấm</Select.Option>
+            </Select>
           </Form.Item>
           <Form.Item name="isLock" label="Trạng thái khóa" valuePropName="checked" initialValue={false}>
             <Switch checkedChildren="Đã khóa" unCheckedChildren="Đang dùng" />

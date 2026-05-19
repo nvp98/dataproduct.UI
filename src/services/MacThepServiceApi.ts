@@ -30,7 +30,7 @@ export interface MacThep {
   isLock?: boolean | null;
   isXacNhan?: boolean | null;
   mayDucs?: MacThepMayDucInfo[] | null;
-  id_PhanLoaiNhomMacThep?: number | null;
+  id_NhomPhanLoaiMacThep?: number | null;
   tenNhom?: string | null;
 }
 
@@ -40,7 +40,7 @@ export interface MacThepPayload {
   isLock?: boolean | null;
   isXacNhan?: boolean | null;
   idMayDucs?: number[] | null;
-  id_PhanLoaiNhomMacThep?: number | null;
+  id_NhomPhanLoaiMacThep?: number | null;
 }
 
 export interface MacThepSearchRequest {

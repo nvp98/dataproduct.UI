@@ -61,11 +61,11 @@ export const usePhieuSearchListHRC = ({
   // ThongKe pages tự set loaiVung=4+isThongKeUser=true nên backend trả hết phiếu.
   // Non-ThongKe pages (loaiVung 1/2/3) không có userId → backend trả rỗng (đúng hành vi).
   const effectiveFixedFilters = useMemo(() => {
-    if (isPKH) {
-      const rest = { ...(fixedFilters as Record<string, unknown>) };
-      delete rest.userId;
-      return rest;
-    }
+    // if (isPKH) {
+    //   const rest = { ...(fixedFilters as Record<string, unknown>) };
+    //   delete rest.userId;
+    //   return rest;
+    // }
     return fixedFilters;
   }, [isPKH, fixedFilters]);
 

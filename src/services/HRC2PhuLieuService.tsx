@@ -247,6 +247,7 @@ export const hrc2PhuLieuService = {
         id: item.data?.id ?? undefined,
         isTrungMeThoi: isTrungMe,
         IsTrungMeThoi: isTrungMe,
+        __fromFilterAPI: true,
       };
 
       // Map các cột cơ bản từ config
@@ -328,11 +329,16 @@ export const hrc2PhuLieuService = {
           (p: HeaderKeyResponse) => p.idHeaderKey === phuLieu.idHeaderKey
         );
         if (matchedPhuLieu) {
-          const nmValue = matchedPhuLieu.klPhuGiaTotal ?? matchedPhuLieu.klPhuGia ?? "";
-          row[dataIndex] = nmValue;
           if (matchedPhuLieu.isManual === true) {
+            // isManual: giá trị hiển thị là klPhuGia_Manual, __orig là giá trị NM gốc
+            const manualVal = matchedPhuLieu.klPhuGia_Manual ?? "";
+            const origVal = matchedPhuLieu.klPhuGia ?? null;
+            row[dataIndex] = manualVal;
             row[`${dataIndex}__IsManual`] = true;
-            row[`${dataIndex}__orig`] = nmValue;
+            row[`${dataIndex}__orig`] = origVal;
+          } else {
+            // Không manual: dùng giá trị NM tự động
+            row[dataIndex] = matchedPhuLieu.klPhuGiaTotal ?? matchedPhuLieu.klPhuGia ?? "";
           }
         }
       });
@@ -477,6 +483,7 @@ export const hrc2PhuLieuService = {
         processedRow.IsNM = true;
       }
       delete processedRow._isNewRow;
+      delete processedRow.__fromFilterAPI;
 
       Object.keys(processedRow).forEach((key) => {
         if (key.startsWith("manual_col_")) {

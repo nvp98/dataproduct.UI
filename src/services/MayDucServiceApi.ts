@@ -7,12 +7,14 @@ export interface MayDuc {
   tenMayDuc: string;
   nhaMay: number;
   isLock?: boolean | null;
+  loaiMayDuc?: string | null;
 }
 
 export interface MayDucPayload {
   tenMayDuc: string;
   nhaMay: NhaMayEnum;
   isLock?: boolean | null;
+  loaiMayDuc?: string | null;
 }
 
 export interface MayDucSearchResponse {

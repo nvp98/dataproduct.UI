@@ -32,6 +32,7 @@ export interface BBGNRow {
   isThuNghiem?: boolean | null;
   klcau1?: number | null;
   klcau2?: number | null;
+  kip?: string | null;
   lastIdUserEdit?: number | null;
   lastNameUserEdit?: string | null;
   [key: string]: unknown;
