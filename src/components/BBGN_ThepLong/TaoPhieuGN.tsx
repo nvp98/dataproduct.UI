@@ -135,6 +135,7 @@ const TaoPhieuGN = ({
     idphongBan?: number | null;
     pheDuyet?: PheDuyetItem[];
     isClone?: boolean;
+    kip?: string | null;
   }>({});
 
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
@@ -157,6 +158,7 @@ const TaoPhieuGN = ({
       idphongBan: detail?.idphongBan ?? null,
       pheDuyet: detail?.pheDuyet ?? [],
       isClone: detail?.isClone ?? false,
+      kip: detail?.kip ?? null,
     });
 
     const json = detail?.jsonData ?? {};
@@ -303,6 +305,7 @@ const TaoPhieuGN = ({
 
       const values = form.getFieldsValue(true);
       const phieuScope = typeof values?.scope === "number" ? values.scope : scopeValue ?? null;
+      const kip = typeof values?.kip === "string" ? values.kip : phieuInfo.kip ?? null;
       const tenScope = typeof values?.tenScope === "string" ? values.tenScope : selectedMayDucLabel ?? null;
       const tableError = validateBBGNRows(tableData, {
         mode: isSend ? "send" : "save",
@@ -451,6 +454,7 @@ const TaoPhieuGN = ({
         ...values,
         NgaySX: values?.NgaySX ? dayjs(values.NgaySX).format("YYYY-MM-DD") : null,
         maBm: config.code,
+        kip,
         prefix: config.prefix,
         scope: phieuScope,
         tenScope: tenScope,

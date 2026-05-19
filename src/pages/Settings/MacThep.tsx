@@ -15,7 +15,7 @@ import {
   message,
 } from "antd";
 import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MacThepServiceApi, NhaMayEnum } from "../../services/MacThepServiceApi";
 import type { MacThep, MacThepMayDucInfo, MacThepPayload, NhomPhanLoaiMacThep } from "../../services/MacThepServiceApi";
 import { MayDucServiceApi } from "../../services/MayDucServiceApi";
@@ -26,6 +26,7 @@ type FilterState = {
   searchKey?: string;
   isLock?: boolean;
   idMayDucs?: number[] | null;
+  isXacNhan?: boolean | null;
 };
 
 const QuanLyMacThep = () => {
@@ -35,7 +36,7 @@ const QuanLyMacThep = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [data, setData] = useState<MacThep[]>([]);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
   const [filters, setFilters] = useState<FilterState>({});
   const [editingRecord, setEditingRecord] = useState<MacThep | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -92,6 +93,7 @@ const QuanLyMacThep = () => {
       searchKey: values.searchKey?.trim() || undefined,
       isLock: typeof values.isLock === "boolean" ? values.isLock : undefined,
       idMayDucs: (values.idMayDucs as number[] | null) ?? undefined,
+      isXacNhan: typeof values.isXacNhan === "boolean" ? values.isXacNhan : undefined,
     });
   };
 
@@ -118,7 +120,7 @@ const QuanLyMacThep = () => {
       nhaMay: record.nhaMay as NhaMayEnum,
       isLock: record.isLock ?? false,
       idMayDucs: record.mayDucs?.map((m) => m.idMayDuc) ?? [],
-      idPhanLoaiMacThep: record.id_PhanLoaiNhomMacThep ?? null
+      idPhanLoaiMacThep: record.id_NhomPhanLoaiMacThep ?? null
     });
     setModalNhaMay(record.nhaMay);
     const preselected = (record.mayDucs ?? []).map((m) => ({
@@ -173,7 +175,7 @@ const QuanLyMacThep = () => {
         nhaMay: values.nhaMay as NhaMayEnum,
         isLock: values.isLock as boolean,
         idMayDucs: (values.idMayDucs as number[] | null) ?? null,
-        id_PhanLoaiNhomMacThep: values.idPhanLoaiMacThep as number ?? null
+        id_NhomPhanLoaiMacThep: values.idPhanLoaiMacThep as number ?? null
       };
       setModalLoading(true);
       if (editingRecord) {
@@ -247,7 +249,7 @@ const QuanLyMacThep = () => {
         title: "Máy đúc",
         dataIndex: "mayDucs",
         key: "mayDucs",
-        width: 200,
+        width: 500,
         render: (v: MacThepMayDucInfo[] | null) =>
           v?.length ? v.map((m) => <Tag key={m.idMayDuc}>{m.tenMayDuc}</Tag>) : "-",
       },
@@ -333,7 +335,7 @@ const QuanLyMacThep = () => {
           }}
         >
           <Row gutter={16}>
-            <Col xs={24} md={5}>
+            <Col xs={24} md={4}>
               <Form.Item label="Nhà máy" name="nhaMay">
                 <Select allowClear placeholder="Tất cả">
                   <Select.Option value={NhaMayEnum.HRC1}>HRC1</Select.Option>
@@ -354,7 +356,7 @@ const QuanLyMacThep = () => {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={5}>
+            <Col xs={24} md={4}>
               <Form.Item label="Tìm kiếm" name="searchKey">
                 <Input placeholder="Tên mác thép..." allowClear />
               </Form.Item>
@@ -367,7 +369,15 @@ const QuanLyMacThep = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} md={5} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
+            <Col xs={24} md={4}>
+              <Form.Item label="Xác nhận" name="isXacNhan">
+                <Select allowClear placeholder="Tất cả">
+                  <Select.Option value={true}>Đã xác nhận</Select.Option>
+                  <Select.Option value={false}>Chưa xác nhận</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={3} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                   Lọc

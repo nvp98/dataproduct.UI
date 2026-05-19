@@ -8,21 +8,20 @@ import React, {
   memo,
   startTransition,
 } from "react";
-import { Table, Button, Input, Popconfirm, Select } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { Table, Button, Input, Popconfirm, Select, Modal } from "antd";
+import { DeleteOutlined, PlusOutlined, SnippetsOutlined } from "@ant-design/icons";
 import HeaderMappingModal from "./HeaderMapping";
 import type { HeaderMappingRecord } from "./HeaderMapping";
 import HeaderKeyAutocomplete from "./HeaderKeyAutocomplete";
 import { CommonAutocomplete } from "./CommonAutocomplete";
 import { SiloServiceApi } from "../services/SiloServiceApi";
-import type { Silo, SiloByHeaderKey } from "../models/SiloModel";
-import dayjs from "dayjs";
-import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
+import type { Silo } from "../models/SiloModel";
 import { isAdmin } from "../utils/helpers/checkAdminRole";
 
 /* ======================= CONSTANTS ======================= */
 const NGOAI_SILO_ID = -1;
 const NGOAI_SILO_OPTION = { id: NGOAI_SILO_ID, tenSilo: "Ngoài silo" };
+const PASTE_COLUMNS = ["nhapTrongCa", "tonCuoiCa"];
 
 /* ======================= UTILITY FUNCTIONS ======================= */
 
@@ -124,6 +123,14 @@ export default function GroupedTableSTD({
   const [mappingOpen, setMappingOpen] = useState(false);
   const [mappingRecord, setMappingRecord] =
     useState<HeaderMappingRecord | null>(null);
+
+  /* ===== PasteModal ===== */
+  const [pasteModal, setPasteModal] = useState<{
+    open: boolean;
+    columnKey: string;
+    columnTitle: string;
+  }>({ open: false, columnKey: "", columnTitle: "" });
+  const [pasteText, setPasteText] = useState("");
 
   /* ================= INIT DATA ================= */
   // Dùng ref để track initialData reference, tránh loop do khuVucList/defaultNguyenNhienLieu
@@ -273,6 +280,47 @@ export default function GroupedTableSTD({
     [emitData],
   );
 
+  /* ================= PASTE FROM EXCEL ================= */
+  const handlePasteConfirm = useCallback(() => {
+    const { columnKey } = pasteModal;
+    const currentRows = rowsRef.current;
+    const lines = pasteText
+      .split("\n")
+      .map((line) => line.split("\t")[0].trim())
+      .filter((line, index) => line !== "" || index < currentRows.length);
+
+    setRows((prev) => {
+      const next = prev.map((r, i) => {
+        if (lines[i] === undefined || lines[i] === "") return r;
+        const num = parseFloat(lines[i].replace(/,/g, ""));
+        if (isNaN(num)) return r;
+        const updated = { ...r, [columnKey]: num };
+        if (KIEMKE_CALC_FIELDS.includes(columnKey)) {
+          const rawTonDau = columnKey === "tonDauCa" ? num : r.tonDauCa;
+          const rawNhap = columnKey === "nhapTrongCa" ? num : r.nhapTrongCa;
+          const rawTonCuoi = columnKey === "tonCuoiCa" ? num : r.tonCuoiCa;
+          const hasTonDau = rawTonDau != null && rawTonDau !== "";
+          const hasTonCuoi = rawTonCuoi != null && rawTonCuoi !== "";
+          if (hasTonDau && hasTonCuoi) {
+            const tonDau = Number(rawTonDau);
+            const tonCuoi = Number(rawTonCuoi);
+            const nhap =
+              rawNhap == null || rawNhap === "" ? 0 : Number(rawNhap);
+            if (!isNaN(tonDau) && !isNaN(nhap) && !isNaN(tonCuoi)) {
+              updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+            }
+          }
+        }
+        return updated;
+      });
+      rowsRef.current = next;
+      emitData(next);
+      return next;
+    });
+    setPasteModal({ open: false, columnKey: "", columnTitle: "" });
+    setPasteText("");
+  }, [pasteModal, pasteText, emitData]);
+
   /* ================= GROUP ================= */
   const grouped = useMemo(() => {
     const map = new Map<string, any[]>();
@@ -361,7 +409,38 @@ export default function GroupedTableSTD({
               title: c.title,
               align: "center",
               children: c.children.map((child: any) => ({
-                title: child.title,
+                title:
+                  PASTE_COLUMNS.includes(child.dataIndex) && editable ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span>{child.title}</span>
+                      <Button
+                        size="small"
+                        type="primary"
+                        ghost
+                        icon={<SnippetsOutlined />}
+                        title="Paste từ Excel"
+                        style={{ lineHeight: 1, padding: "0 6px" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPasteModal({
+                            open: true,
+                            columnKey: child.dataIndex,
+                            columnTitle: child.title,
+                          });
+                          setPasteText("");
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    child.title
+                  ),
                 dataIndex: child.dataIndex,
                 align: "center",
                 width: child.dataIndex?.includes("tuongQuan") ? 90 : 100,
@@ -403,7 +482,38 @@ export default function GroupedTableSTD({
 
           // Cột đơn
           return {
-            title: c.title,
+            title:
+              PASTE_COLUMNS.includes(c.dataIndex) && editable ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                  }}
+                >
+                  <span>{c.title}</span>
+                  <Button
+                    size="small"
+                    type="primary"
+                    ghost
+                    icon={<SnippetsOutlined />}
+                    title="Paste từ Excel"
+                    style={{ lineHeight: 1, padding: "0 6px" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPasteModal({
+                        open: true,
+                        columnKey: c.dataIndex,
+                        columnTitle: c.title,
+                      });
+                      setPasteText("");
+                    }}
+                  />
+                </div>
+              ) : (
+                c.title
+              ),
             dataIndex: c.dataIndex,
             align: "center",
             width:
@@ -838,6 +948,27 @@ export default function GroupedTableSTD({
           </span>
         </div>
       </div>
+
+      <Modal
+        title={`Paste dữ liệu - ${pasteModal.columnTitle}`}
+        open={pasteModal.open}
+        onOk={handlePasteConfirm}
+        onCancel={() => {
+          setPasteModal({ open: false, columnKey: "", columnTitle: "" });
+          setPasteText("");
+        }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <Input.TextArea
+          autoFocus
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder="Paste dữ liệu từ Excel vào đây..."
+          rows={8}
+        />
+      </Modal>
 
       <HeaderMappingModal
         open={mappingOpen}

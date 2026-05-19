@@ -5,6 +5,8 @@ import {
   bbgbThepLongApi,
   type SearchThongKeBBGNThepLongRequest,
   type SumThongKeBBGNThepLongResponse,
+  type TongHopBBGNThepLongResponse,
+  type TongHopItem,
 } from "../../services/BBGNThepLongApi";
 import { MayDucServiceApi } from "../../services/MayDucServiceApi";
 
@@ -30,6 +32,11 @@ type ThongKeRow = {
   scope?: number | null;
   isTrungMeThoi?: boolean | null;
   IsTrungMeThoi?: boolean | null;
+  klLFSauThep?: number | null;
+  tenNhomPhanLoaiMacThep?: string | null;
+  klcau1?: number | null;
+  klcau2?: number | null;
+  lastNameUserEdit?: string | null;
 };
 
 const formatNumber = (value: number | null | undefined) =>
@@ -37,6 +44,28 @@ const formatNumber = (value: number | null | undefined) =>
 
 const isDuplicateMe = (record: ThongKeRow) =>
   record.isTrungMeThoi === true || record.IsTrungMeThoi === true;
+
+type SummaryRow = {
+  key: string;
+  phanLoai: TongHopItem | null;
+  ca: TongHopItem | null;
+  kip: TongHopItem | null;
+  tinhLuyenLenThang: TongHopItem | null;
+  ducVuong: TongHopItem | null;
+  ducTam: TongHopItem | null;
+  nhomPhanLoaiMacThep: TongHopItem | null;
+  isTotal?: boolean;
+};
+
+const renderSummaryCell = (item: TongHopItem | null, isTotal?: boolean) => {
+  if (!item) return null;
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontWeight: isTotal ? 600 : undefined }}>
+      <span>{item.label}</span>
+      <span>{item.soMe}</span>
+    </div>
+  );
+};
 
 type Props = {
   bieuMau: string;
@@ -58,6 +87,8 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
     pageSize: 20,
   });
   const [mayDucOptions, setMayDucOptions] = useState<Array<{ label: string; value: number }>>([]);
+  const [exporting, setExporting] = useState(false);
+  const [tongHopData, setTongHopData] = useState<TongHopBBGNThepLongResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +119,7 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
         total: searchRes.totalRecords ?? 0,
       });
       setFilters(nextFilters);
+      void bbgbThepLongApi.tongHop(nextFilters).then(setTongHopData).catch(() => {});
     } catch (error) {
       console.error(error);
       message.error("Không thể tải thống kê BBGN thép lỏng.");
@@ -123,18 +155,105 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
     void fetchData(nextFilters);
   }, [fetchData, form, pagination.pageSize, bieuMau]);
 
+  const handleExcel = useCallback(async () => {
+    try {
+      setExporting(true);
+      await bbgbThepLongApi.exportThongKe(filters);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "Xuất Excel thất bại.");
+    } finally {
+      setExporting(false);
+    }
+  }, [filters]);
+
   const handleClearFilter = useCallback(() => {
     form.resetFields();
     void fetchData({ bieuMau, page: 1, pageSize: pagination.pageSize });
   }, [fetchData, form, pagination.pageSize, bieuMau]);
 
+  const summaryRows = useMemo<SummaryRow[]>(() => {
+    if (!tongHopData) return [];
+    const { phanLoai, ca, kip, tinhLuyenLenThang, ducVuong, ducTam, nhomPhanLoaiMacThep } = tongHopData;
+    const maxLen = Math.max(phanLoai.length, ca.length, kip.length, tinhLuyenLenThang.length, ducVuong.length, ducTam.length, nhomPhanLoaiMacThep.length, 0);
+
+    const rows: SummaryRow[] = Array.from({ length: maxLen }, (_, i) => ({
+      key: `s${i}`,
+      phanLoai: phanLoai[i] ?? null,
+      ca: ca[i] ?? null,
+      kip: kip[i] ?? null,
+      tinhLuyenLenThang: tinhLuyenLenThang[i] ?? null,
+      ducVuong: ducVuong[i] ?? null,
+      ducTam: ducTam[i] ?? null,
+      nhomPhanLoaiMacThep: nhomPhanLoaiMacThep[i] ?? null,
+    }));
+
+    const sumMe = (items: TongHopItem[]) => items.reduce((acc, x) => acc + x.soMe, 0);
+
+    rows.push({
+      key: "total",
+      isTotal: true,
+      phanLoai: { label: "Tổng", soMe: sumMe(phanLoai) },
+      ca: { label: "Tổng", soMe: sumMe(ca) },
+      kip: { label: "Tổng", soMe: sumMe(kip) },
+      tinhLuyenLenThang: { label: "Tổng", soMe: sumMe(tinhLuyenLenThang) },
+      ducVuong: { label: "Tổng", soMe: sumMe(ducVuong) },
+      ducTam: { label: "Tổng", soMe: sumMe(ducTam) },
+      nhomPhanLoaiMacThep: { label: "Tổng", soMe: sumMe(nhomPhanLoaiMacThep) },
+    });
+
+    return rows;
+  }, [tongHopData]);
+
+  const summaryColumns = useMemo(
+    () => [
+      {
+        title: "Phân loại",
+        key: "phanLoai",
+        render: (_: unknown, record: SummaryRow) => renderSummaryCell(record.phanLoai, record.isTotal),
+      },
+      {
+        title: "Ca",
+        key: "ca",
+        render: (_: unknown, record: SummaryRow) => renderSummaryCell(record.ca, record.isTotal),
+      },
+      {
+        title: "Kíp",
+        key: "kip",
+        render: (_: unknown, record: SummaryRow) => renderSummaryCell(record.kip, record.isTotal),
+      },
+      {
+        title: "Tinh luyện / Lên thẳng",
+        key: "tinhLuyenLenThang",
+        render: (_: unknown, record: SummaryRow) => renderSummaryCell(record.tinhLuyenLenThang, record.isTotal),
+      },
+      {
+        title: "Đúc Vuông",
+        key: "ducVuong",
+        render: (_: unknown, record: SummaryRow) => renderSummaryCell(record.ducVuong, record.isTotal),
+      },
+      {
+        title: "Đúc Tấm",
+        key: "ducTam",
+        render: (_: unknown, record: SummaryRow) => renderSummaryCell(record.ducTam, record.isTotal),
+      },
+      {
+        title: "Nhóm phân loại mác thép",
+        key: "nhomPhanLoaiMacThep",
+        render: (_: unknown, record: SummaryRow) => renderSummaryCell(record.nhomPhanLoaiMacThep, record.isTotal),
+      },
+    ],
+    []
+  );
+
   const columns = useMemo(
     () => [
+
       {
         title: "Ngày SX",
         dataIndex: "ngaySX",
         key: "ngaySX",
         width: 120,
+        fixed: "left" as const,
         render: (value: string) => (value ? dayjs(value).format("DD/MM/YYYY") : "-"),
       },
       {
@@ -142,6 +261,7 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
         dataIndex: "ca",
         key: "ca",
         width: 80,
+        fixed: "left" as const,
         render: (value: number) => (value === 1 ? "Ngày" : value === 2 ? "Đêm" : "-"),
       },
       {
@@ -149,6 +269,7 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
         dataIndex: "mayDuc",
         key: "mayDuc",
         width: 130,
+        fixed: "left" as const,
         render: (value: string) => {
           return value;
         },
@@ -158,12 +279,25 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
         dataIndex: "me",
         key: "me",
         width: 120,
+        fixed: "left" as const,
         render: (value: string, record: ThongKeRow) =>
           isDuplicateMe(record) ? <span style={{ color: "red", fontWeight: 600 }}>{value}</span> : value,
       },
-      { title: "Mác thép", dataIndex: "macThep", key: "macThep", width: 120 },
+      { title: "Mác thép", dataIndex: "macThep", key: "macThep", width: 120, fixed: "left" as const },
       { title: "Thùng số", dataIndex: "thungSo", key: "thungSo", width: 110 },
       { title: "Thời gian", dataIndex: "thoiGian", key: "thoiGian", width: 100 },
+      ...(nhaMay === 1
+        ? [
+            {
+              title: "KL LF sau thép",
+              dataIndex: "klLFSauThep",
+              key: "klLFSauThep",
+              width: 130,
+              align: "right" as const,
+              render: (value: number) => formatNumber(value),
+            },
+          ]
+        : []),
       {
         title: "KL lần 1",
         dataIndex: "klLan1",
@@ -203,9 +337,26 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
           );
         },
       },
-      { title: "Tinh luyện lên thang", dataIndex: "tinhLuyenLenThang", key: "tinhLuyenLenThang", width: 160 },
+      { title: "Tinh luyện / Lên thẳng", dataIndex: "tinhLuyenLenThang", key: "tinhLuyenLenThang", width: 160 },
       { title: "Phân loại", dataIndex: "phanLoai", key: "phanLoai", width: 120 },
       { title: "Phân loại nhóm", dataIndex: "phanLoaiNhom", key: "phanLoaiNhom", width: 130 },
+      { title: "Nhóm mác thép", dataIndex: "tenNhomPhanLoaiMacThep", key: "tenNhomPhanLoaiMacThep", width: 150 },
+      {
+        title: "KL cầu 1",
+        dataIndex: "klcau1",
+        key: "klcau1",
+        width: 100,
+        align: "right" as const,
+        render: (value: number) => formatNumber(value),
+      },
+      {
+        title: "KL cầu 2",
+        dataIndex: "klcau2",
+        key: "klcau2",
+        width: 100,
+        align: "right" as const,
+        render: (value: number) => formatNumber(value),
+      },
       {
         title: "Trùng mẻ",
         dataIndex: "isTrungMeThoi",
@@ -215,8 +366,10 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
           value === true ? <Tag color="red">Trùng</Tag> : <Tag>Không</Tag>,
       },
       { title: "Ghi chú", dataIndex: "ghiChu", key: "ghiChu", width: 180 },
+      { title: "Người sửa", dataIndex: "lastNameUserEdit", key: "lastNameUserEdit", width: 130 },
+
     ],
-    [mayDucOptions]
+    [mayDucOptions, nhaMay]
   );
 
   return (
@@ -281,6 +434,14 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
                 Tìm
               </Button>
               <Button onClick={handleClearFilter}>Reset</Button>
+              <Button
+                type="primary"
+                style={{ backgroundColor: "#217346", borderColor: "#217346" }}
+                loading={exporting}
+                onClick={() => void handleExcel()}
+              >
+                Xuất Excel
+              </Button>
             </Space>
           </Form.Item>
         </Space>
@@ -310,8 +471,10 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
         summary={() => (
           <Table.Summary fixed>
             <Table.Summary.Row style={{ background: "#fafafa", fontWeight: 600 }}>
-              <Table.Summary.Cell index={0} colSpan={10} align="right">
-                Tổng
+              <Table.Summary.Cell index={0} colSpan={5} align="right">
+                Tổng dòng: {sumData.totalRows}
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={5} colSpan={nhaMay == 1 ? 6 : 5}>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={10} align="right">
                 <span
@@ -322,13 +485,25 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
                   {formatNumber(sumData.totalKlThepLong)}
                 </span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell index={11} colSpan={4} align="right">
-                Tổng dòng: {sumData.totalRows}
+              <Table.Summary.Cell index={11} colSpan={9} align="center">
               </Table.Summary.Cell>
             </Table.Summary.Row>
           </Table.Summary>
         )}
       />
+
+      {tongHopData && (
+        <Table<SummaryRow>
+          bordered
+          size="small"
+          columns={summaryColumns}
+          dataSource={summaryRows}
+          pagination={false}
+          rowKey="key"
+          style={{ marginTop: 16 }}
+          rowClassName={(record) => (record.isTotal ? "summary-total-row" : "")}
+        />
+      )}
     </Card>
   );
 };

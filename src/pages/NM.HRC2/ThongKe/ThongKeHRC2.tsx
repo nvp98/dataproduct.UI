@@ -90,6 +90,21 @@ const toAntdColumns = (cols: ThongKeHeaderColumn[]): any[] => {
       mapped.render = (value: unknown) => formatNumberVN(value);
     }
 
+    if (c.dataIndex === "meThoi") {
+      mapped.render = (value: unknown, record: any) => {
+        const isTrung =
+          record.isTrungMeThoi === true ||
+          record.IsTrungMeThoi === true;
+        return isTrung ? (
+          <span style={{ backgroundColor: "tomato", color: "#fff", padding: "0 4px", borderRadius: 2, display: "block" }}>
+            {String(value ?? "")}
+          </span>
+        ) : (
+          String(value ?? "")
+        );
+      };
+    }
+
     if (Array.isArray(c.children) && c.children.length > 0) {
       mapped.children = toAntdColumns(c.children);
     }
@@ -165,6 +180,7 @@ const ThongKeHRC2 = () => {
         }
         const meThoiFilter = (values.meThoi as string | undefined)?.trim();
         const isDelete = (values.isDelete as boolean | undefined) === true;
+        const isTrungMeThoi = (values.isTrungMeThoi as boolean | undefined) === true;
 
         // Cột cố định: không hardcode phụ liệu theo config nữa
         const configCols =
@@ -199,6 +215,7 @@ const ThongKeHRC2 = () => {
           Scope: scope ?? undefined,
           SearchText: meThoiFilter ?? undefined,
           IsDelete: isDelete || undefined,
+          IsTrungMeThoi: isTrungMeThoi || undefined,
         };
 
         // Nếu có đủ TuNgay + DenNgay → BE tính sum toàn range, fire độc lập
@@ -358,6 +375,9 @@ const ThongKeHRC2 = () => {
             if (di === "loThoi" || di === "tinhLuyen") return;
             row[di] = getFieldValue(di);
           });
+
+          row.isNM = getFieldValue("isNM");
+          row.isTrungMeThoi = getFieldValue("isTrungMeThoi");
 
           // Set các cột phụ liệu theo headers trả về từ BE (theo IDHeaderKey)
           headerList.forEach((h: any) => {
@@ -608,6 +628,10 @@ const ThongKeHRC2 = () => {
             <Checkbox>Đã xóa</Checkbox>
           </Form.Item>
 
+          <Form.Item name="isTrungMeThoi" valuePropName="checked">
+            <Checkbox>Mẻ trùng</Checkbox>
+          </Form.Item>
+
           <Form.Item>
             <Space>
               <Button
@@ -627,6 +651,7 @@ const ThongKeHRC2 = () => {
       </Form>
 
       {/* Bảng thống kê */}
+      <style>{`.row-not-nm td { background-color: #fffbe6 !important; }`}</style>
       <div style={{ marginTop: 24 }}>
         <Table
           bordered
@@ -634,6 +659,7 @@ const ThongKeHRC2 = () => {
           loading={loading}
           columns={columns}
           dataSource={tableData}
+          rowClassName={(record) => record.isNM === false ? "row-not-nm" : ""}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
