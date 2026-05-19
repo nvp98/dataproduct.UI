@@ -803,114 +803,90 @@ export const phieuActionService = {
       });
     }
 
-    // Trạng thái 7 - Hiệu chỉnh (phiếu clone): Lưu không đổi trạng thái, Lưu và Gửi thì đi luồng bình thường
-    if (tinhTrang === TrangThaiPhieuConst.HieuChinh && isCreatorZero) {
-      buttons.push({
-        key: PhieuActionButtonKeys.Save,
-        label: "Lưu",
-        icon: <EditOutlined />,
-        type: "default",
-        onClick: async (phieuIdParam, formDataParam) => {
-          try {
-            if (!formDataParam) {
-              message.error("Không có dữ liệu để lưu");
-              return;
+      // Trạng thái 7 - Hiệu chỉnh (phiếu clone): Lưu không đổi trạng thái, Lưu và Gửi thì đi luồng bình thường
+      if (tinhTrang === TrangThaiPhieuConst.HieuChinh) {
+        buttons.push({
+          key: PhieuActionButtonKeys.Save,
+          label: "Lưu",
+          icon: <EditOutlined />,
+          type: "default",
+          onClick: async (phieuIdParam, formDataParam) => {
+            try {
+              if (!formDataParam) {
+                message.error("Không có dữ liệu để lưu");
+                return;
+              }
+              await PhieuApi.putData(phieuIdParam, formDataParam);
+              if (customPutApi) {
+                await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
+              }
+              message.success("Lưu phiếu thành công!");
+              onSuccess?.();
+            } catch (error) {
+              handleActionError(error, onError, redirectToList, "Không thể lưu phiếu");
             }
-            await PhieuApi.putData(phieuIdParam, formDataParam);
-            if (customPutApi) {
-              await customPutApi(
+          },
+        });
+        buttons.push({
+          key: PhieuActionButtonKeys.SaveAndSend,
+          label: sendLabel,
+          icon: <SendOutlined />,
+          type: "primary",
+          confirm: {
+            title: "Xác nhận",
+            description: sendConfirmDesc,
+          },
+          onClick: async (phieuIdParam, formDataParam) => {
+            try {
+              if (!formDataParam) {
+                message.error("Không có dữ liệu để lưu");
+                return;
+              }
+              await PhieuApi.putData(phieuIdParam, formDataParam);
+              if (customPutApi) {
+                await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
+              }
+              await PhieuApi.changeStatus(
                 phieuIdParam,
-                formDataParam as Record<string, unknown>,
+                sendTargetStatus,
+                currentUserId ?? null
               );
+              await onStatusChange?.(phieuIdParam, sendTargetStatus);
+              message.success("Lưu và gửi phiếu thành công!");
+              onSuccess?.();
+            } catch (error) {
+              handleActionError(error, onError, redirectToList, "Phiếu đã được gửi, vui lòng kiểm tra lại");
             }
-            message.success("Lưu phiếu thành công!");
-            onSuccess?.();
-          } catch (error) {
-            handleActionError(
-              error,
-              onError,
-              redirectToList,
-              "Không thể lưu phiếu",
-            );
-          }
-        },
-      });
-      buttons.push({
-        key: PhieuActionButtonKeys.SaveAndSend,
-        label: sendLabel,
-        icon: <SendOutlined />,
-        type: "primary",
-        confirm: {
-          title: "Xác nhận",
-          description: sendConfirmDesc,
-        },
-        onClick: async (phieuIdParam, formDataParam) => {
-          try {
-            if (!formDataParam) {
-              message.error("Không có dữ liệu để lưu");
-              return;
-            }
-            await PhieuApi.putData(phieuIdParam, formDataParam);
-            if (customPutApi) {
-              await customPutApi(
-                phieuIdParam,
-                formDataParam as Record<string, unknown>,
-              );
-            }
-            await PhieuApi.changeStatus(
-              phieuIdParam,
-              sendTargetStatus,
-              currentUserId ?? null,
-            );
-            await onStatusChange?.(phieuIdParam, sendTargetStatus);
-            message.success("Lưu và gửi phiếu thành công!");
-            onSuccess?.();
-          } catch (error) {
-            handleActionError(
-              error,
-              onError,
-              redirectToList,
-              "Phiếu đã được gửi, vui lòng kiểm tra lại",
-            );
-          }
-        },
-      });
-    }
+          },
+        });
+      }
 
-    // Trạng thái 3 - Đã thu hồi: Lưu, Lưu và Gửi (sửa trực tiếp, không clone)
-    if (tinhTrang === TrangThaiPhieuConst.DaThuHoi && isCreatorZero) {
-      // Button Lưu (sửa trực tiếp, không clone)
-      buttons.push({
-        key: PhieuActionButtonKeys.Save,
-        label: "Lưu",
-        icon: <EditOutlined />,
-        type: "default",
-        onClick: async (phieuIdParam, formDataParam) => {
-          try {
-            if (!formDataParam) {
-              message.error("Không có dữ liệu để lưu");
-              return;
+      // Trạng thái 3 - Đã thu hồi: Lưu, Lưu và Gửi (sửa trực tiếp, không clone)
+      if (tinhTrang === TrangThaiPhieuConst.DaThuHoi) {
+        // Button Lưu (sửa trực tiếp, không clone)
+        buttons.push({
+          key: PhieuActionButtonKeys.Save,
+          label: "Lưu",
+          icon: <EditOutlined />,
+          type: "default",
+          onClick: async (phieuIdParam, formDataParam) => {
+            try {
+              if (!formDataParam) {
+                message.error("Không có dữ liệu để lưu");
+                return;
+              }
+              // Đã có idphieu, cập nhật trực tiếp (không clone)
+              await PhieuApi.putData(phieuIdParam, formDataParam);
+              if (customPutApi) {
+                await customPutApi(phieuIdParam, formDataParam as Record<string, unknown>);
+              }
+              message.success("Lưu phiếu thành công!");
+              onSuccess?.();
+            } catch (error) {
+              handleActionError(error, onError, redirectToList, "Không thể lưu phiếu");
             }
-            // Đã có idphieu, cập nhật trực tiếp (không clone)
-            await PhieuApi.putData(phieuIdParam, formDataParam);
-            if (customPutApi) {
-              await customPutApi(
-                phieuIdParam,
-                formDataParam as Record<string, unknown>,
-              );
-            }
-            message.success("Lưu phiếu thành công!");
-            onSuccess?.();
-          } catch (error) {
-            handleActionError(
-              error,
-              onError,
-              redirectToList,
-              "Không thể lưu phiếu",
-            );
-          }
-        },
-      });
+          },
+        });
 
       // Button Lưu và Gửi (sửa trực tiếp, không clone)
       buttons.push({

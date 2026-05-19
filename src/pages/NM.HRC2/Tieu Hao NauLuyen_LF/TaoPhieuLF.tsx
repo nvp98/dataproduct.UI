@@ -493,7 +493,15 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
 
           if (cap0Signatures.length > 0) {
             const overrideFields: Record<string, any> = {};
-            if (hasNguoiTaoIdFromRes) {
+            if (
+              tinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+              tinhTrang === TrangThaiPhieuConst.HieuChinh
+            ) {
+              const currentUserInfo = getUserInfo();
+              cap0Signatures.forEach((sig: any) => {
+                overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
+              });
+            } else if (hasNguoiTaoIdFromRes) {
               cap0Signatures.forEach((sig: any) => {
                 overrideFields[sig.key] = nguoiTaoIdFromRes;
               });
@@ -626,10 +634,13 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       NgaySX: formData.NgaySX ? formData.NgaySX.format("YYYY-MM-DD") : null,
       maBm: config.code,
       prefix: config.prefix,
-      // Chỉ set nguoiTaoId theo currentUser khi đang tạo mới (chưa có idphieu).
-      // Khi đã có idphieu: giữ theo `phieuInfo.nguoiTaoId` để user khác không bị ghi đè khi chỉ "Lưu".
-      // `nguoiTaoId` sẽ được BE cập nhật đúng lúc khi "Gửi" (status==1) qua ChangeStatusAsync(idUser).
-      nguoiTaoId: isCreateNew ? userInfo.iD_TaiKhoan ?? null : phieuInfo.nguoiTaoId ?? null,
+      // Trạng thái 3/7: người đang thao tác trở thành nguoiTaoId (chuyển quyền sở hữu phiếu).
+      // Các trạng thái khác khi đã có phiếu: giữ nguoiTaoId gốc.
+      nguoiTaoId: isCreateNew ||
+        phieuInfo.tinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+        phieuInfo.tinhTrang === TrangThaiPhieuConst.HieuChinh
+          ? userInfo.iD_TaiKhoan ?? null
+          : phieuInfo.nguoiTaoId ?? null,
       tenScope: scope ? 'Tinh luyện ' + scope : null,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
@@ -923,16 +934,12 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
               const hasNguoiTaoIdFromPhiếu =
                 nguoiTaoIdFromPhiếu != null && Number(nguoiTaoIdFromPhiếu) > 0;
 
-              // 2 case bạn mô tả:
-              // 1) Chưa có idphieu (tạo mới) => capduyet 0 = currentUser
-              // 2) Có idphieu:
-              //    - Nếu server chưa có nguoiTaoId và tinhTrang = 0 => capduyet 0 = currentUser (phiếu tạo tự động)
-              //    - Nếu server đã có nguoiTaoId => capduyet 0 = nguoiTaoId server
               const shouldUseCurrentUser =
                 isLevelZero &&
                 (!idphieu ||
-                  (currentTinhTrang === TrangThaiPhieuConst.DangLuu &&
-                    !hasNguoiTaoIdFromPhiếu));
+                  (currentTinhTrang === TrangThaiPhieuConst.DangLuu && !hasNguoiTaoIdFromPhiếu) ||
+                  currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+                  currentTinhTrang === TrangThaiPhieuConst.HieuChinh);
 
               const cap0InitialValue = isLevelZero
                 ? shouldUseCurrentUser

@@ -563,12 +563,12 @@ const CustomTableHRC = forwardRef(({
                 const editableStyle: React.CSSProperties = {
                   textAlign: child.align ?? "right",
                   ...(isKeyColumn && record.IsNM === false ? { backgroundColor: "#fffbe6" } : {}),
+                  ...(!(isMeThoiColumn && isTrungMeThoi) && child.highlight
+                    ? { backgroundColor: "#fff1f0" }
+                    : {}),
                   ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
                   ...(!(isMeThoiColumn && isTrungMeThoi) && isCellChanged
                     ? { backgroundColor: "#fff7b3" }
-                    : {}),
-                  ...(!(isMeThoiColumn && isTrungMeThoi) && child.highlight
-                    ? { backgroundColor: "#fff1f0" }
                     : {}),
                   ...(isNegative ? { backgroundColor: "#ffeded", borderColor: "#ff4d4f" } : {}),
                 };
@@ -698,12 +698,12 @@ const CustomTableHRC = forwardRef(({
           const editableStyle: React.CSSProperties = {
             textAlign: col.align ?? "right",
             ...(isKeyColumn && record.IsNM === false ? { backgroundColor: "#fffbe6" } : {}),
+            ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight
+              ? { backgroundColor: "#fff1f0" }
+              : {}),
             ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
             ...(!(isMeThoiColumn && isTrungMeThoi) && isCellChanged
               ? { backgroundColor: "#fff7b3" }
-              : {}),
-            ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight
-              ? { backgroundColor: "#fff1f0" }
               : {}),
             ...(isNegative ? { backgroundColor: "#ffeded", borderColor: "#ff4d4f" } : {}),
           };
