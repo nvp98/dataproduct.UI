@@ -16,6 +16,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   const userObj = userStr ? JSON.parse(userStr) : {};
   const userInfoStr = localStorage.getItem("userinfo");
   const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
+  const isAdmin = userObj?.role?.includes("admin") || false;
 
   const currentUserId: number | null =
     userInfoObj?.iD_TaiKhoan ??
@@ -234,7 +235,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={true}
+        showCreateButton={isAdmin}
         onCreateClick={() => {
           navigate("/taophieutieuhaonauluyen_lf");
         }}
