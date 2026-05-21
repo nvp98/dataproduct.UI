@@ -233,8 +233,10 @@ const Tao_STD = () => {
           Ca: caVal,
           tyLeBOF: item.tyLeBOF ?? item.TyLeBOF ?? null,
           tyLeTinhLuyen: item.tyLeTinhLuyen ?? item.TyLeTinhLuyen ?? null,
+          tyLeRH: item.tyLeRH ?? item.TyLeRH ?? null,
           KLPB_BOF: item.klpB_BOF ?? item.klpb_BOF ?? item.KLPB_BOF ?? null,
           KLPB_TL: item.klpB_TL ?? item.klpb_TL ?? item.KLPB_TL ?? null,
+          KLPB_RH: item.klpB_RH ?? item.klpb_RH ?? item.KLPB_RH ?? null,
         }));
 
         setTable1Data(mappedDetails);
@@ -558,6 +560,7 @@ const Tao_STD = () => {
           IdPhieu: idphieu,
           TyLeBOF: dto.TyLeBOF ?? null,
           TyLeTinhLuyen: dto.TyLeTinhLuyen ?? null,
+          TyLeRH: dto.TyLeRH ?? null,
         };
         setLoading(true);
         try {
@@ -610,6 +613,7 @@ const Tao_STD = () => {
           IdPhieu: idphieu,
           TyLeBOF: dto.TyLeBOF ?? null,
           TyLeTinhLuyen: dto.TyLeTinhLuyen ?? null,
+          TyLeRH: dto.TyLeRH ?? null,
         };
         setLoading(true);
         try {
@@ -775,8 +779,10 @@ const Tao_STD = () => {
           Ca: caVal,
           tyLeBOF: item.tyLeBOF ?? item.TyLeBOF ?? null,
           tyLeTinhLuyen: item.tyLeTinhLuyen ?? item.TyLeTinhLuyen ?? null,
+          tyLeRH: item.tyLeRH ?? item.TyLeRH ?? null,
           KLPB_BOF: item.klpB_BOF ?? item.klpb_BOF ?? item.KLPB_BOF ?? null,
           KLPB_TL: item.klpB_TL ?? item.klpb_TL ?? item.KLPB_TL ?? null,
+          KLPB_RH: item.klpB_RH ?? item.klpb_RH ?? item.KLPB_RH ?? null,
         }));
 
         // Giữ lại các dòng thêm tay (isManualNew) chưa lưu lên BE

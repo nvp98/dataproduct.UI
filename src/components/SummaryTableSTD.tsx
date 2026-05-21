@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useMemo, useState, useCallback, memo, useRef, useEffect } from "react";
+import React, { useMemo, useState, useCallback, memo, useEffect } from "react";
 import { Table, Input, Button, InputNumber, message, Tag, Tooltip } from "antd";
 import type { STD_NXT_HRC2_PhanBoDto } from "../models/STD_NXT_Model";
 
@@ -135,9 +135,11 @@ export default function SummaryTableSTD({
         baseRow.Ca = meta.ca ?? meta.Ca ?? undefined;
         baseRow.tyLeBOF = meta.tyLeBOF ?? meta.TyLeBOF ?? null;
         baseRow.tyLeTinhLuyen = meta.tyLeTinhLuyen ?? meta.TyLeTinhLuyen ?? null;
+        baseRow.tyLeRH = meta.tyLeRH ?? meta.TyLeRH ?? null;
         // Luồng tương tự tyLeBOF: lấy trực tiếp từ initialData (BE) đưa vào row render
         baseRow.KLPB_BOF = meta.klpB_BOF ?? meta.klpb_BOF ?? meta.KLPB_BOF ?? null;
         baseRow.KLPB_TL = meta.klpB_TL ?? meta.klpb_TL ?? meta.KLPB_TL ?? null;
+        baseRow.KLPB_RH = meta.klpB_RH ?? meta.klpb_RH ?? meta.KLPB_RH ?? null;
 
         // Ưu tiên chênh lệch từ BE (sau khi phân bổ/thu hồi BE có thể cập nhật lại)
         const chenhLechFromServer =
@@ -180,35 +182,12 @@ export default function SummaryTableSTD({
     });
   }, [summaryData]);
 
-  // State riêng cho tyLeBOF / tyLeTinhLuyen vì không derive từ table1Data
-  const [tyLeMap, setTyLeMap] = useState<Record<string, { tyLeBOF?: number | null; tyLeTinhLuyen?: number | null }>>({});
+  // State riêng cho tyLeBOF / tyLeTinhLuyen / tyLeRH vì không derive từ table1Data
+  const [tyLeMap, setTyLeMap] = useState<Record<string, { tyLeBOF?: number | null; tyLeTinhLuyen?: number | null; tyLeRH?: number | null }>>({});
 
-  const tyLeDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
-  const handleTyLeChange = useCallback((key: string, field: "tyLeBOF" | "tyLeTinhLuyen", value: number | null) => {
-    const other = field === "tyLeBOF" ? "tyLeTinhLuyen" : "tyLeBOF";
-    const timerKey = `${key}::${field}`;
-
-    // Reset timer mỗi khi user thay đổi input để chỉ tính sau khi ngừng thao tác.
-    const existingTimer = tyLeDebounceTimers.current[timerKey];
-    if (existingTimer) clearTimeout(existingTimer);
-
+  const handleTyLeChange = useCallback((key: string, field: "tyLeBOF" | "tyLeTinhLuyen" | "tyLeRH", value: number | null) => {
     setTyLeMap((prev) => {
       const currentRow = { ...prev[key] };
-
-      // Khi xóa input (null), chỉ xóa field hiện tại và KHÔNG tự tính field còn lại.
-      if (value === null) {
-        const nextRow = { ...currentRow, [field]: null };
-        const next = { ...prev, [key]: nextRow };
-        const updatedRows = dataWithChenhLech.map((row) =>
-          row.key === key ? { ...row, ...next[key] } : row
-        );
-        onDataChange?.(updatedRows);
-        return next;
-      }
-
-      // Khi đang nhập (value != null): chỉ cập nhật field hiện tại.
-      // Field còn lại sẽ được auto-tính sau 300ms (nếu user không tiếp tục sửa).
       const nextRow = { ...currentRow, [field]: value };
       const next = { ...prev, [key]: nextRow };
       const updatedRows = dataWithChenhLech.map((row) =>
@@ -217,30 +196,6 @@ export default function SummaryTableSTD({
       onDataChange?.(updatedRows);
       return next;
     });
-
-    if (value === null) return;
-
-    // Sau 300ms không đổi nữa thì mới tính field còn lại = 100 - value.
-    tyLeDebounceTimers.current[timerKey] = setTimeout(() => {
-      const otherVal = Math.max(
-        0,
-        Math.min(
-          100,
-          parseFloat(((100 - value).toFixed(10)).replace(/\.?0+$/, ""))
-        )
-      );
-
-      setTyLeMap((prev) => {
-        const currentRow = { ...prev[key] };
-        const nextRow = { ...currentRow, [other]: otherVal, [field]: value };
-        const next = { ...prev, [key]: nextRow };
-        const updatedRows = dataWithChenhLech.map((row) =>
-          row.key === key ? { ...row, ...next[key] } : row
-        );
-        onDataChange?.(updatedRows);
-        return next;
-      });
-    }, 300);
   }, [dataWithChenhLech, onDataChange]);
 
   // State local cho IsPhanBo sau mock API
@@ -278,9 +233,10 @@ export default function SummaryTableSTD({
         const rowTyLe = tyLeMap[record.key] ?? {};
         const tyLeBOF = rowTyLe.tyLeBOF ?? record.tyLeBOF ?? 0;
         const tyLeTinhLuyen = rowTyLe.tyLeTinhLuyen ?? record.tyLeTinhLuyen ?? 0;
-        onPhanBo?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: tyLeBOF, TyLeTinhLuyen: tyLeTinhLuyen });
+        const tyLeRH = rowTyLe.tyLeRH ?? record.tyLeRH ?? 0;
+        onPhanBo?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: tyLeBOF, TyLeTinhLuyen: tyLeTinhLuyen, TyLeRH: tyLeRH });
       } else {
-        onThuHoi?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: 0, TyLeTinhLuyen: 0 });
+        onThuHoi?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: 0, TyLeTinhLuyen: 0, TyLeRH: 0 });
       }
     } catch {
       message.error("Có lỗi xảy ra");
@@ -294,7 +250,7 @@ export default function SummaryTableSTD({
     try {
       await mockApiCall('thu-hoi');
       setPhanBoMap(prev => ({ ...prev, [record.key]: null }));
-      onThuHoi?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: 0, TyLeTinhLuyen: 0 });
+      onThuHoi?.({ NgaySX: record.NgaySX, Ca: record.Ca, Id_HeaderKey: record.Id_HeaderKey, ChenhLech: Number(record.totalChenhLech ?? 0), IdPhieu: idPhieu ?? "", TyLeBOF: 0, TyLeTinhLuyen: 0, TyLeRH: 0 });
     } catch {
       message.error("Có lỗi xảy ra");
     } finally {
@@ -350,12 +306,12 @@ export default function SummaryTableSTD({
     const dataIndex = col.dataIndex;
     const isReadonly = col.readOnly === true || col.isLabel === true;
     const value = record[dataIndex] ?? "";
-    const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech", "KLPB_BOF", "KLPB_TL"].includes(dataIndex);
-    const isTyLeColumn = dataIndex === "tyLeBOF" || dataIndex === "tyLeTinhLuyen";
+    const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech", "KLPB_BOF", "KLPB_TL", "KLPB_RH"].includes(dataIndex);
+    const isTyLeColumn = dataIndex === "tyLeBOF" || dataIndex === "tyLeTinhLuyen" || dataIndex === "tyLeRH";
 
     if (isTyLeColumn && !record._isTotalRow) {
       const hasPhanBo = getIsPhanBo(record) === true;
-      const tyLeVal = tyLeMap[record.key]?.[dataIndex as "tyLeBOF" | "tyLeTinhLuyen"] ?? (record[dataIndex] ?? null);
+      const tyLeVal = tyLeMap[record.key]?.[dataIndex as "tyLeBOF" | "tyLeTinhLuyen" | "tyLeRH"] ?? (record[dataIndex] ?? null);
       return (
         <InputNumber
           value={tyLeVal}
@@ -363,7 +319,7 @@ export default function SummaryTableSTD({
           max={100}
           disabled={!editable || hasPhanBo}
           style={{ width: "100%" }}
-          onChange={(v) => handleTyLeChange(record.key, dataIndex as "tyLeBOF" | "tyLeTinhLuyen", v)}
+          onChange={(v) => handleTyLeChange(record.key, dataIndex as "tyLeBOF" | "tyLeTinhLuyen" | "tyLeRH", v)}
         />
       );
     }
@@ -408,19 +364,35 @@ export default function SummaryTableSTD({
   };
 
   const tableColumns = columns.map((col) => {
-    const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech", "KLPB_BOF", "KLPB_TL"].includes(col.dataIndex || "");
+    const isNumberColumn = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung", "totalSDTrongSoSach", "totalChenhLech", "KLPB_BOF", "KLPB_TL", "KLPB_RH"].includes(col.dataIndex || "");
     const isTotalTextColumn = col.dataIndex === "totalText";
-    const isTyLeCol = col.dataIndex === "tyLeBOF" || col.dataIndex === "tyLeTinhLuyen";
+    const isTyLeCol = col.dataIndex === "tyLeBOF" || col.dataIndex === "tyLeTinhLuyen" || col.dataIndex === "tyLeRH";
     const isMaterialCol = col.dataIndex === "totalNguyenNhienLieu";
     return {
       title: col.title,
       dataIndex: col.dataIndex,
-      width: col.width || (
-        isTotalTextColumn ? 140 :
-        isMaterialCol ? 110 :
-        isTyLeCol ? 70 :
-        isNumberColumn ? 100 : 90
-      ),
+      ...(col.width && { width: col.width }),
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: "normal" as const,
+          wordBreak: "break-word" as const,
+          minWidth: isTotalTextColumn ? 80 : isMaterialCol ? 80 : isTyLeCol ? 60 : isNumberColumn ? 70 : 70,
+        },
+      }),
+      onCell: (record: any) => {
+        const minW = isTotalTextColumn ? 80 : isMaterialCol ? 80 : isTyLeCol ? 60 : isNumberColumn ? 70 : 70;
+        if (isTyLeCol && !record._isTotalRow) {
+          const rowTyLe = tyLeMap[record.key] ?? {};
+          const bof = rowTyLe.tyLeBOF ?? record.tyLeBOF ?? null;
+          const tl = rowTyLe.tyLeTinhLuyen ?? record.tyLeTinhLuyen ?? null;
+          const rh = rowTyLe.tyLeRH ?? record.tyLeRH ?? null;
+          const allFilled = bof !== null && tl !== null && rh !== null;
+          const total = allFilled ? Number(bof) + Number(tl) + Number(rh) : null;
+          const isInvalid = allFilled && Math.abs(total! - 100) > 0.001;
+          return { style: { minWidth: minW, ...(isInvalid && { backgroundColor: "#fff1f0" }) } };
+        }
+        return { style: { minWidth: minW } };
+      },
       align: isNumberColumn ? "right" as const : (isTotalTextColumn ? "left" as const : "center" as const),
       render: (value: any, record: any) => renderCell(record, col),
     };
@@ -430,7 +402,6 @@ export default function SummaryTableSTD({
     {
       title: "KL PB Lò thổi",
       dataIndex: "KLPB_BOF",
-      width: 85,
       align: "right" as const,
       render: (_: any, record: any) => {
         if (record._isTotalRow) return null;
@@ -446,7 +417,6 @@ export default function SummaryTableSTD({
     {
       title: "KL PB TL",
       dataIndex: "KLPB_TL",
-      width: 85,
       align: "right" as const,
       render: (_: any, record: any) => {
         if (record._isTotalRow) return null;
@@ -458,6 +428,21 @@ export default function SummaryTableSTD({
           "";
         return <span style={{ textAlign: "right", display: "block" }}>{v === "" ? "" : formatNumber(v)}</span>;
       },
+    } as any,
+    {
+      title: "KL PB RH",
+      dataIndex: "KLPB_RH",
+      align: "right" as const,
+      render: (_: any, record: any) => {
+        if (record._isTotalRow) return null;
+        const v =
+          record.KLPB_RH ??
+          (record as any).klpB_RH ??
+          (record as any).klpb_RH ??
+          (record as any).KLPB_RH ??
+          "";
+        return <span style={{ textAlign: "right", display: "block" }}>{v === "" ? "" : formatNumber(v)}</span>;
+      },
     } as any
   );
 
@@ -465,7 +450,6 @@ export default function SummaryTableSTD({
   tableColumns.push({
     title: "Tình trạng",
     dataIndex: "tinhTrang",
-    width: 110,
     align: "center" as const,
     render: (_: any, record: any) => {
       if (record._isTotalRow) return null;
@@ -479,8 +463,8 @@ export default function SummaryTableSTD({
   // Cột "Thao tác" — gộp Phân bổ + Không phân bổ
   tableColumns.push({
     title: "Thao tác",
+    width: 180,
     dataIndex: "thaotac",
-    width: 220,
     align: "center" as const,
     render: (_: any, record: any) => {
       if (record._isTotalRow) return null;
@@ -515,8 +499,14 @@ export default function SummaryTableSTD({
               const rowTyLe = tyLeMap[record.key] ?? {};
               const tyLeBOF = rowTyLe.tyLeBOF ?? record.tyLeBOF ?? null;
               const tyLeTinhLuyen = rowTyLe.tyLeTinhLuyen ?? record.tyLeTinhLuyen ?? null;
-              if (tyLeBOF === null || tyLeBOF === undefined || tyLeTinhLuyen === null || tyLeTinhLuyen === undefined) {
-                message.warning("Vui lòng nhập tỷ lệ phân bổ trước khi thực hiện phân bổ.");
+              const tyLeRH = rowTyLe.tyLeRH ?? record.tyLeRH ?? null;
+              if (tyLeBOF === null || tyLeBOF === undefined || tyLeTinhLuyen === null || tyLeTinhLuyen === undefined || tyLeRH === null || tyLeRH === undefined) {
+                message.warning("Vui lòng nhập đủ tỷ lệ phân bổ BOF, LF và RH trước khi thực hiện phân bổ.");
+                return;
+              }
+              const total = Number(tyLeBOF) + Number(tyLeTinhLuyen) + Number(tyLeRH);
+              if (Math.abs(total - 100) > 0.001) {
+                message.warning(`Tổng tỷ lệ phân bổ phải bằng 100% (hiện tại: ${total.toFixed(2)}%).`);
                 return;
               }
               handlePhanBoClick(record);
@@ -568,15 +558,15 @@ export default function SummaryTableSTD({
   }
 
   return (
-    <div className={className}>
+    <div className={className} style={{ width: "100%", overflowX: "auto" }}>
       <Table
         bordered
         size="small"
         columns={tableColumns}
         dataSource={dataWithChenhLech}
         pagination={false}
-        tableLayout="fixed"
         rowKey="key"
+        style={{ width: "100%" }}
       />
     </div>
   );

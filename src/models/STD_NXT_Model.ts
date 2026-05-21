@@ -39,6 +39,7 @@ export interface STD_NXT_Table2Row {
   totalChenhLech?: string | number;
   tyLeBOF?: string | number | null;
   tyLeTinhLuyen?: string | number | null;
+  tyLeRH?: string | number | null;
   /** Từ BE: đã phân bổ chênh lệch hay chưa (để hiển thị nút Thu hồi/Phân bổ) */
   HasPhanBo?: boolean | null;
   Id_HeaderKey?: number | null;
@@ -49,6 +50,7 @@ export interface STD_NXT_Table2Row {
   /** Khối lượng phân bổ theo 1 mẻ (từ BE) */
   KLPB_BOF?: string | number | null;
   KLPB_TL?: string | number | null;
+  KLPB_RH?: string | number | null;
 }
 
 /**
@@ -109,6 +111,7 @@ export interface NXTSummaryDto {
   HasPhanBo?: boolean | null; // Đã phân bổ hay chưa (từ BE)
   KLPB_BOF?: number | null;
   KLPB_TL?: number | null;
+  KLPB_RH?: number | null;
 }
 
 /**
@@ -142,6 +145,7 @@ export interface STD_NXT_HRC2_PhanBoDto {
   IdPhieu: string;
   TyLeBOF?: number | null;
   TyLeTinhLuyen?: number | null;
+  TyLeRH?: number | null;
 }
 
 export interface STD_NXT_HRC2_KhongPhanBoDto{
