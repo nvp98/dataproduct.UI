@@ -466,6 +466,8 @@ const TaoPhieuXuLyKPH = () => {
       const ngaySX = formData.NgaySX
         ? dayjs(formData.NgaySX).format("YYYY-MM-DD")
         : null;
+      const caSX = formData.ca ?? null;
+      const caXL = formData.caXL ?? null;
       const ngayXL = formData.NgayXL
         ? dayjs(formData.NgayXL).format("YYYY-MM-DD")
         : null;
@@ -475,7 +477,9 @@ const TaoPhieuXuLyKPH = () => {
       const solenh = formData.LSX || phieuInfoRef.current.lsx || "";
       console.log("Refresh params:", {
         ngaySX,
+        caSX,
         ngayXL,
+        caXL,
         order,
         xuongCan,
         solenh,
@@ -492,7 +496,9 @@ const TaoPhieuXuLyKPH = () => {
       // Call API to get fresh data
       const response = await bkcankphapi.getDetail({
         ngaySX,
+        caSX,
         ngayXL,
+        caXL,
         order,
         xuongCan,
       });
