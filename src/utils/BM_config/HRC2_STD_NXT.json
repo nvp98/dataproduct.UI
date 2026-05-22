@@ -111,8 +111,12 @@
           "dataIndex": "tyLeBOF"
         },
         {
-          "title": "Tỷ lệ PB tinh luyện %",
+          "title": "Tỷ lệ PB LF %",
           "dataIndex": "tyLeTinhLuyen"
+        },
+        {
+          "title": "Tỷ lệ PB RH %",
+          "dataIndex": "tyLeRH"
         }
       ],
       "initialData": [
