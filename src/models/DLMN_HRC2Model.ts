@@ -20,6 +20,8 @@ export type HRC2DetailRow = {
   idPhuLieu: number | null;
   tenPhuLieu: string | null;
   klPhuGia: number | null;
+  klPhuGia_Manual?: number | null;
+  isManual?: boolean | null;
   klPhuGiaTotal?: number | null; // Tổng KLPhuGia sau khi group
   keyGuid: string | null;
   tenHienThi: string | null;
@@ -63,6 +65,8 @@ export interface HRC2GroupedByReportNoModel {
   data: DLNM_HRC2MainData | null;
   mappedPhulieus: HeaderKeyResponse[];
   unmappedPhulieus: HeaderKeyResponse[];
+  phanBoPhulieus?: HeaderKeyResponse[]; // Dữ liệu phân bổ (IsPhanBo = true)
+  manualAdjustPhulieus?: HeaderKeyResponse[]; // Điều chỉnh tay (IsManual = true, IsPhanBo != true)
 }
 
 // Raw response type từ API (có thể có các biến thể tên field)
@@ -70,6 +74,8 @@ type RawHRC2GroupedResponse = {
   data?: HRC2RawData | null;
   mappedPhulieus?: HRC2RawData[] | null;
   unmappedPhulieus?: HRC2RawData[] | null;
+  phanBoPhulieus?: HRC2RawData[] | null; // Dữ liệu phân bổ
+  manualAdjustPhulieus?: HRC2RawData[] | null; // Điều chỉnh tay
 };
 
 // Helper function để normalize dữ liệu từ API response
@@ -91,6 +97,8 @@ export const normalizeHRC2GroupedResponse = (
       idPhuLieu: getValue<number>("iD_PhuLieu", "idPhuLieu", "ID_PhuLieu"),
       tenPhuLieu: getValue<string>("tenPhuLieu", "TenPhuLieu"),
       klPhuGia: getValue<number>("klPhuGia", "KLPhuGia"),
+      klPhuGia_Manual: getValue<number>("klPhuGia_Manual", "KLPhuGia_Manual"),
+      isManual: getValue<boolean>("isManual", "IsManual"),
       klPhuGiaTotal:
         getValue<number>("klPhuGiaTotal", "KLPhuGiaTotal") ??
         getValue<number>("klPhuGia", "KLPhuGia"),
@@ -164,6 +172,12 @@ export const normalizeHRC2GroupedResponse = (
     unmappedPhulieus: Array.isArray(rawObj.unmappedPhulieus)
       ? rawObj.unmappedPhulieus.map(normalizePhuLieu)
       : [],
+    phanBoPhulieus: Array.isArray(rawObj.phanBoPhulieus)
+      ? rawObj.phanBoPhulieus.map(normalizePhuLieu)
+      : [],
+    manualAdjustPhulieus: Array.isArray(rawObj.manualAdjustPhulieus)
+      ? rawObj.manualAdjustPhulieus.map(normalizePhuLieu)
+      : [],
   };
 };
 
@@ -180,4 +194,8 @@ export interface ChuyenMeThoiRequest {
 export interface FilterSTD_NXTRequest {
   NgaySX: string;
   Ca: number;
+  /** Nếu có: BE sẽ chạy sp_Init_XuatNhapTon_HRC2 để cập nhật dữ liệu phiếu hiện tại. */
+  idPhieu?: string | null;
+  /** Danh sách Id_HeaderKey đang hiển thị trên bảng (kể cả dòng mới chưa lưu). BE dùng cho Init. */
+  headerKeyIds?: number[] | null;
 }

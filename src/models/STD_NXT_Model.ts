@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * Model cho dữ liệu bảng 1 - Số liệu kiểm kê
  */
@@ -9,6 +7,8 @@ export interface STD_NXT_Table1Row {
   viTri: number; // Vị trí (Trong silo, Ngoài silo)
   nguyenNhienLieu: string; // Tên nguyên nhiên liệu (từ HeaderKey.tenHienThi)
   idNguyenNhienLieu?: number | null; // ID của HeaderKey
+  siloId?: number | null; // ID của Silo
+  tenSilo?: string | null; // Tên Silo
   tonDauCa?: string | number; // Tồn đầu ca - Khối lượng (Kg)
   tuongQuanDauCa?: string; // Tồn đầu ca - Tương quan (bao, kiện, mức...)
   nhapTrongCa?: string | number; // Nhập trong ca (Kg)
@@ -18,6 +18,7 @@ export interface STD_NXT_Table1Row {
   tonCuoiCa?: string | number; // Tồn cuối ca - Khối lượng (Kg)
   tuongQuanCuoiCa?: string; // Tồn cuối ca - Tương quan (bao, kiện, mức...)
   tongThucTe?: string | number; // Tổng thực tế sử dụng
+  luongSuDungKiemKe?: string | number; // Lượng sử dụng kiểm kê
   rawTenPhuLieu?: string; // Tên phụ liệu gốc (dùng cho unmapped items)
   isUnmapped?: boolean; // Flag để đánh dấu item chưa được map với HeaderKey
   idPhuLieu?: number | null; // ID của PhuLieu (dùng cho unmapped items)
@@ -28,14 +29,28 @@ export interface STD_NXT_Table1Row {
  */
 export interface STD_NXT_Table2Row {
   key?: string;
-  totalText?: string; // Text hiển thị (ví dụ: "Tổng cộng (cả trong và ngoài silo)")
-  totalNguyenNhienLieu?: string; // Tên nguyên nhiên liệu
-  totalTonDauCa?: string | number; // Khối lượng tồn đầu ca (tấn)
-  totalNhapTrongCa?: string | number; // Khối lượng nhập trong ca (tấn)
-  totalTonCuoiCa?: string | number; // Khối lượng tồn cuối ca (tấn)
-  totalSuDung?: string | number; // Tổng sử dụng (tấn)
-  totalSDTrongSoSach?: string | number; // Tổng sử dụng trên sổ sách (tấn)
-  totalChenhLech?: string | number; // Chênh lệch (tấn)
+  totalText?: string;
+  totalNguyenNhienLieu?: string;
+  totalTonDauCa?: string | number;
+  totalNhapTrongCa?: string | number;
+  totalTonCuoiCa?: string | number;
+  totalSuDung?: string | number;
+  totalSDTrongSoSach?: string | number;
+  totalChenhLech?: string | number;
+  tyLeBOF?: string | number | null;
+  tyLeTinhLuyen?: string | number | null;
+  tyLeRH?: string | number | null;
+  /** Từ BE: đã phân bổ chênh lệch hay chưa (để hiển thị nút Thu hồi/Phân bổ) */
+  HasPhanBo?: boolean | null;
+  Id_HeaderKey?: number | null;
+  /** Ngày sản xuất (YYYY-MM-DD) — dùng cho payload phân bổ/thu hồi */
+  NgaySX?: string;
+  /** Ca (1/2) — dùng cho payload phân bổ/thu hồi */
+  Ca?: number;
+  /** Khối lượng phân bổ theo 1 mẻ (từ BE) */
+  KLPB_BOF?: string | number | null;
+  KLPB_TL?: string | number | null;
+  KLPB_RH?: string | number | null;
 }
 
 /**
@@ -67,6 +82,7 @@ export interface NXTDetailDto {
   Scope: number; // Scope (1: Lò thổi 6, 2: Lò thổi 7, 3: Tinh luyện LF, 4: RH1, 5: RH2)
   ViTri: number; // Vị trí (Trong silo = 1, Ngoài silo = 2)
   Id_HeaderKey: number; // ID của HeaderKey
+  IDSilo?: number | null; // ID của Silo
   TenNguyenLieu: string; // Tên nguyên nhiên liệu
   TonDauCa: number; // Tồn đầu ca
   MucLieu: number; // Mức liệu
@@ -77,6 +93,7 @@ export interface NXTDetailDto {
   TonCuoiCa: number; // Tồn cuối ca
   TuongQuanCuoiCa: string; // Tương quan cuối ca
   TongThucTe: number; // Tổng thực tế
+  LuongSuDungKiemKe?: number | null; // Lượng sử dụng kiểm kê
 }
 
 /**
@@ -91,6 +108,10 @@ export interface NXTSummaryDto {
   TongSuDung: number; // Tổng sử dụng
   TongSDTrenSoSach: number; // Tổng sử dụng trên sổ sách
   ChenhLech: number; // Chênh lệch
+  HasPhanBo?: boolean | null; // Đã phân bổ hay chưa (từ BE)
+  KLPB_BOF?: number | null;
+  KLPB_TL?: number | null;
+  KLPB_RH?: number | null;
 }
 
 /**
@@ -121,4 +142,43 @@ export interface STD_NXT_HRC2_PhanBoDto {
   Ca: number;
   Id_HeaderKey: number;
   ChenhLech: number;
+  IdPhieu: string;
+  TyLeBOF?: number | null;
+  TyLeTinhLuyen?: number | null;
+  TyLeRH?: number | null;
+}
+
+export interface STD_NXT_HRC2_KhongPhanBoDto{
+  NgaySX: string;
+  Ca: number;
+  IdPhieu: string;
+  Id_HeaderKey: number;
+}
+
+export interface STD_NXT_RelatedPhieuTarget {
+  tabKey: string;
+  label: string;
+  bieuMau: string;
+  scope: number;
+}
+
+export interface STD_NXT_RelatedPhieuStatusRequest {
+  NgaySX: string;
+  Ca: number;
+  Targets: STD_NXT_RelatedPhieuTarget[];
+}
+
+export interface STD_NXT_RelatedPhieuStatusItem {
+  tabKey?: string | null;
+  label?: string | null;
+  bieuMau?: string | null;
+  scope?: number | null;
+  idPhieu?: string | null;
+  tinhTrang?: number | null;
+}
+
+export interface STD_NXT_RelatedPhieuStatusResponse {
+  items: STD_NXT_RelatedPhieuStatusItem[];
+  canPhanBo: boolean;
+  incompleteCount: number;
 }

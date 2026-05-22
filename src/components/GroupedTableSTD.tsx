@@ -8,29 +8,54 @@ import React, {
   memo,
   startTransition,
 } from "react";
-import { Table, Button, Input, Popconfirm, Select } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { headerKeyApi } from "../services/HeaderKeyApi";
+import { Table, Button, Input, Popconfirm, Select, Modal } from "antd";
+import { DeleteOutlined, PlusOutlined, SnippetsOutlined } from "@ant-design/icons";
 import HeaderMappingModal from "./HeaderMapping";
 import type { HeaderMappingRecord } from "./HeaderMapping";
+import HeaderKeyAutocomplete from "./HeaderKeyAutocomplete";
+import { CommonAutocomplete } from "./CommonAutocomplete";
+import { SiloServiceApi } from "../services/SiloServiceApi";
+import type { Silo } from "../models/SiloModel";
+import { isAdmin } from "../utils/helpers/checkAdminRole";
+
+/* ======================= CONSTANTS ======================= */
+const NGOAI_SILO_ID = -1;
+const NGOAI_SILO_OPTION = { id: NGOAI_SILO_ID, tenSilo: "Ngoài silo" };
+const PASTE_COLUMNS = ["nhapTrongCa", "tonCuoiCa"];
 
 /* ======================= UTILITY FUNCTIONS ======================= */
 
-/**
- * Kiểm tra xem có cho phép unlock (nhập liệu) trong khung giờ 8:00-20:00 ngày 1 hằng tháng không
- */
 export const canUnlockMonthly = (date = new Date()) => {
   const day = date.getDate();
   const hour = date.getHours();
 
-  return day === 1 && hour >= 8 && hour < 20;
+  // Lấy ngày cuối tháng
+  const lastDayOfMonth = new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+  ).getDate();
+
+  // Ca 2 ngày cuối tháng: 20h ngày cuối → 8h sáng ngày 1 tháng sau
+  const isLastDayEvening = day === lastDayOfMonth && hour >= 20;
+  const isFirstDayMorning = day === 1 && hour < 8;
+
+  return isLastDayEvening || isFirstDayMorning || isAdmin;
 };
 
 /* ======================= EDITABLE CELLS ======================= */
 
+const formatVi = (val: any): string => {
+  if (val === null || val === undefined || val === "") return "";
+  const num = parseFloat(String(val));
+  if (isNaN(num)) return String(val);
+  return num.toLocaleString("fr-FR", { maximumFractionDigits: 10 });
+};
+
 const EditableInput = memo(
-  ({ value, disabled, onChange, onBlur, readOnly = false }: any) => {
+  ({ value, disabled, onChange, onBlur, readOnly = false, style }: any) => {
     const [local, setLocal] = useState(value ?? "");
+    const [focused, setFocused] = useState(false);
 
     useEffect(() => {
       setLocal(value ?? "");
@@ -38,18 +63,23 @@ const EditableInput = memo(
 
     return (
       <Input
-        value={local}
+        value={focused ? local : formatVi(local)}
         disabled={disabled}
         bordered={true}
         readOnly={readOnly}
+        style={style}
         onChange={(e) => {
           setLocal(e.target.value);
           onChange(e.target.value);
         }}
-        onBlur={() => onBlur(local)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          onBlur(local);
+        }}
       />
     );
-  }
+  },
 );
 
 const EditableSelect = memo(
@@ -65,7 +95,7 @@ const EditableSelect = memo(
         { value: 2, label: "Ngoài silo" },
       ]}
     />
-  )
+  ),
 );
 
 /* ======================= MAIN COMPONENT ======================= */
@@ -79,43 +109,62 @@ export default function GroupedTableSTD({
   defaultViTri = 1,
   editable = true,
   loading = false,
+  ngaySX, // Ngày sản xuất để load silo
+  khuVucConfig, // Config khu vực để lấy BieuMau: [{label, bieuMau, scope}]
+  nhaMay = 2, // HRC2 = 2, HRC1 = 1
 }: any) {
-  const [rows, setRows] = useState<any[]>([]);
-  const rowsRef = useRef<any[]>([]);
+  const [rows, setRows] = useState<any[]>(initialData);
+  const rowsRef = useRef<any[]>(initialData);
   const rowIdRef = useRef(0);
 
-  /* ===== HeaderKey ===== */
-  const headerKeyCache = useRef<any[]>([]);
-  const [options, setOptions] = useState<any[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(false);
-  const searchTimer = useRef<any>(null);
+  // ⭐ Không cần cache và options nữa vì đã dùng HeaderKeyAutocomplete
 
   /* ===== HeaderMapping Modal ===== */
   const [mappingOpen, setMappingOpen] = useState(false);
   const [mappingRecord, setMappingRecord] =
     useState<HeaderMappingRecord | null>(null);
 
+  /* ===== PasteModal ===== */
+  const [pasteModal, setPasteModal] = useState<{
+    open: boolean;
+    columnKey: string;
+    columnTitle: string;
+  }>({ open: false, columnKey: "", columnTitle: "" });
+  const [pasteText, setPasteText] = useState("");
+
   /* ================= INIT DATA ================= */
+  // Dùng ref để track initialData reference, tránh loop do khuVucList/defaultNguyenNhienLieu
+  // luôn là array mới trên mỗi render của parent
+  const prevInitialDataRef = useRef<any[]>(initialData);
+
   useEffect(() => {
+    const initialDataChanged = prevInitialDataRef.current !== initialData;
+    prevInitialDataRef.current = initialData;
+
     if (initialData.length) {
-      setRows(initialData);
-      rowsRef.current = initialData;
+      // Chỉ update rows khi initialData thực sự thay đổi (reference mới từ parent state)
+      if (initialDataChanged) {
+        setRows(initialData);
+        rowsRef.current = initialData;
+      }
       return;
     }
 
+    // Init empty rows — chỉ chạy khi chưa có dữ liệu và initialData rỗng
+    if (!initialDataChanged) return;
+
     const init: any[] = [];
     khuVucList.forEach((kv: string) => {
-      (defaultNguyenNhienLieu.length
-        ? defaultNguyenNhienLieu
-        : [""]
-      ).forEach((nl: string) => {
-        init.push({
-          key: `${kv}_${rowIdRef.current++}`,
-          khuVuc: kv,
-          viTri: defaultViTri,
-          nguyenNhienLieu: nl,
-        });
-      });
+      (defaultNguyenNhienLieu.length ? defaultNguyenNhienLieu : [""]).forEach(
+        (nl: string) => {
+          init.push({
+            key: `${kv}_${rowIdRef.current++}`,
+            khuVuc: kv,
+            viTri: defaultViTri,
+            nguyenNhienLieu: nl,
+          });
+        },
+      );
     });
 
     setRows(init);
@@ -127,21 +176,10 @@ export default function GroupedTableSTD({
     (data: any[]) => {
       onDataChange?.(data);
     },
-    [onDataChange]
+    [onDataChange],
   );
 
-  /* ================= LOAD HEADER KEYS ================= */
-  useEffect(() => {
-    headerKeyApi.searchAutocomplete({ pageSize: 50 }).then((res) => {
-      headerKeyCache.current = res.data || [];
-      setOptions(
-        (res.data || []).map((x: any) => ({
-          label: x.tenHienThi || x.mota || x.tenNguonDuLieu,
-          value: x.id || x.ID_HeaderKey,
-        }))
-      );
-    });
-  }, []);
+  // ⭐ Không cần load header keys nữa vì HeaderKeyAutocomplete tự xử lý
 
   /* ================= ADD / DELETE ================= */
   const addRow = useCallback(
@@ -155,6 +193,7 @@ export default function GroupedTableSTD({
               khuVuc: kv,
               viTri: defaultViTri,
               nguyenNhienLieu: "",
+              isManualNew: true,
             },
           ];
           rowsRef.current = next;
@@ -163,7 +202,7 @@ export default function GroupedTableSTD({
         });
       });
     },
-    [defaultViTri, emitData]
+    [defaultViTri, emitData],
   );
 
   const deleteRow = useCallback(
@@ -175,26 +214,112 @@ export default function GroupedTableSTD({
         return next;
       });
     },
-    [emitData]
+    [emitData],
   );
 
   /* ================= UPDATE CELL ================= */
   const updateCell = useCallback((key: string, field: string, value: any) => {
     rowsRef.current = rowsRef.current.map((r) =>
-      r.key === key ? { ...r, [field]: value } : r
+      r.key === key ? { ...r, [field]: value } : r,
     );
   }, []);
 
-  const commitCell = useCallback((key: string, field: string, value: any) => {
+  const KIEMKE_CALC_FIELDS = ["tonDauCa", "nhapTrongCa", "tonCuoiCa"];
+
+  const isNegativeNumber = (val: any) =>
+    val != null && val !== "" && !Number.isNaN(Number(val)) && Number(val) < 0;
+
+  const commitCell = useCallback(
+    (key: string, field: string, value: any) => {
+      setRows((prev) => {
+        const next = prev.map((r) => {
+          if (r.key !== key) return r;
+          const updated = { ...r, [field]: value };
+
+          if (KIEMKE_CALC_FIELDS.includes(field)) {
+            const rawTonDau = field === "tonDauCa" ? value : r.tonDauCa;
+            const rawNhap = field === "nhapTrongCa" ? value : r.nhapTrongCa;
+            const rawTonCuoi = field === "tonCuoiCa" ? value : r.tonCuoiCa;
+
+            const hasTonDau =
+              rawTonDau !== null && rawTonDau !== undefined && rawTonDau !== "";
+            const hasTonCuoi =
+              rawTonCuoi !== null &&
+              rawTonCuoi !== undefined &&
+              rawTonCuoi !== "";
+
+            // Luồng mới:
+            // - tonDauCa và tonCuoiCa: bắt buộc phải có giá trị mới tính
+            // - nhapTrongCa: nếu trống thì mặc định = 0 để tính
+            if (hasTonDau && hasTonCuoi) {
+              const tonDau = Number(rawTonDau);
+              const tonCuoi = Number(rawTonCuoi);
+
+              // Nếu nhapTrongCa trống/null/undefined/"", coi như 0
+              const nhap =
+                rawNhap === null || rawNhap === undefined || rawNhap === ""
+                  ? 0
+                  : Number(rawNhap);
+
+              if (
+                !Number.isNaN(tonDau) &&
+                !Number.isNaN(nhap) &&
+                !Number.isNaN(tonCuoi)
+              ) {
+                updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+              }
+            }
+          }
+          return updated;
+        });
+        rowsRef.current = next;
+        emitData(next);
+        return next;
+      });
+    },
+    [emitData],
+  );
+
+  /* ================= PASTE FROM EXCEL ================= */
+  const handlePasteConfirm = useCallback(() => {
+    const { columnKey } = pasteModal;
+    const currentRows = rowsRef.current;
+    const lines = pasteText
+      .split("\n")
+      .map((line) => line.split("\t")[0].trim())
+      .filter((line, index) => line !== "" || index < currentRows.length);
+
     setRows((prev) => {
-      const next = prev.map((r) =>
-        r.key === key ? { ...r, [field]: value } : r
-      );
+      const next = prev.map((r, i) => {
+        if (lines[i] === undefined || lines[i] === "") return r;
+        const num = parseFloat(lines[i].replace(/,/g, ""));
+        if (isNaN(num)) return r;
+        const updated = { ...r, [columnKey]: num };
+        if (KIEMKE_CALC_FIELDS.includes(columnKey)) {
+          const rawTonDau = columnKey === "tonDauCa" ? num : r.tonDauCa;
+          const rawNhap = columnKey === "nhapTrongCa" ? num : r.nhapTrongCa;
+          const rawTonCuoi = columnKey === "tonCuoiCa" ? num : r.tonCuoiCa;
+          const hasTonDau = rawTonDau != null && rawTonDau !== "";
+          const hasTonCuoi = rawTonCuoi != null && rawTonCuoi !== "";
+          if (hasTonDau && hasTonCuoi) {
+            const tonDau = Number(rawTonDau);
+            const tonCuoi = Number(rawTonCuoi);
+            const nhap =
+              rawNhap == null || rawNhap === "" ? 0 : Number(rawNhap);
+            if (!isNaN(tonDau) && !isNaN(nhap) && !isNaN(tonCuoi)) {
+              updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+            }
+          }
+        }
+        return updated;
+      });
       rowsRef.current = next;
       emitData(next);
       return next;
     });
-  }, [emitData]);
+    setPasteModal({ open: false, columnKey: "", columnTitle: "" });
+    setPasteText("");
+  }, [pasteModal, pasteText, emitData]);
 
   /* ================= GROUP ================= */
   const grouped = useMemo(() => {
@@ -205,6 +330,55 @@ export default function GroupedTableSTD({
     });
     return map;
   }, [rows]);
+
+  /* ================= HELPER: GET BIEUMAU FROM KHU VUC ================= */
+  const getBieuMauFromKhuVuc = useCallback(
+    (khuVuc: string): string | null => {
+      if (!khuVucConfig || !Array.isArray(khuVucConfig)) return null;
+      const kv = khuVucConfig.find((k: any) => k?.label === khuVuc);
+      return kv?.bieuMau ?? null;
+    },
+    [khuVucConfig],
+  );
+
+  /* ================= LOAD SILOS FOR HEADERKEY ================= */
+  // Tạm comment: load silo theo headerKey — thay bằng autocomplete search tất cả silo theo nhaMay
+  // const loadSilosForHeaderKey = useCallback(
+  //   async (rowKey: string, headerKeyId: number, khuVuc?: string) => {
+  //     if (!ngaySX || !headerKeyId) {
+  //       console.log("loadSilosForHeaderKey: missing ngaySX or headerKeyId", { ngaySX, headerKeyId });
+  //       return;
+  //     }
+  //     try {
+  //       const ngaySXStr = dayjs(ngaySX).format("YYYY-MM-DD");
+  //       const bieuMau = khuVuc ? getBieuMauFromKhuVuc(khuVuc) : null;
+  //       console.log("loadSilosForHeaderKey: calling API", { rowKey, headerKeyId, ngaySXStr, nhaMay, bieuMau, khuVuc });
+  //       const silos = await SiloServiceApi.getSilosByHeaderKey({
+  //         headerKeyId,
+  //         ngaySX: ngaySXStr,
+  //         nhaMay,
+  //         bieuMau,
+  //       });
+  //       console.log("loadSilosForHeaderKey: received silos", silos);
+  //       if (silos.length === 1) {
+  //         const silo = silos[0];
+  //         console.log("loadSilosForHeaderKey: auto-selecting silo", silo);
+  //         commitCell(rowKey, "siloId", silo.siloId);
+  //         commitCell(rowKey, "tenSilo", silo.tenSilo);
+  //         if (silo.theTich !== undefined && silo.theTich !== null) {
+  //           commitCell(rowKey, "theTich", silo.theTich);
+  //         }
+  //       } else if (silos.length > 1) {
+  //         console.log("loadSilosForHeaderKey: multiple silos found, user needs to select", silos.length);
+  //       } else {
+  //         console.log("loadSilosForHeaderKey: no silos found");
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to load silos for headerkey:", error);
+  //     }
+  //   },
+  //   [ngaySX, commitCell, nhaMay, getBieuMauFromKhuVuc]
+  // );
 
   /* ================= OPEN MAPPING MODAL ================= */
   const openMappingModal = useCallback((row: any) => {
@@ -235,23 +409,69 @@ export default function GroupedTableSTD({
               title: c.title,
               align: "center",
               children: c.children.map((child: any) => ({
-                title: child.title,
+                title:
+                  PASTE_COLUMNS.includes(child.dataIndex) && editable ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span>{child.title}</span>
+                      <Button
+                        size="small"
+                        type="primary"
+                        ghost
+                        icon={<SnippetsOutlined />}
+                        title="Paste từ Excel"
+                        style={{ lineHeight: 1, padding: "0 6px" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPasteModal({
+                            open: true,
+                            columnKey: child.dataIndex,
+                            columnTitle: child.title,
+                          });
+                          setPasteText("");
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    child.title
+                  ),
                 dataIndex: child.dataIndex,
                 align: "center",
-                width: child.dataIndex?.includes("tuongQuan") ? 100 : 120,
+                width: child.dataIndex?.includes("tuongQuan") ? 90 : 100,
                 render: (_: any, r: any) => {
-                  const childReadOnlyBase = child.readOnly === true;
                   // Đối với cột tonDauCa, ưu tiên kiểm tra canUnlockMonthly
                   // Nếu không trong khung giờ cho phép (8:00-20:00 ngày 1) thì readOnly (override readOnly từ config)
-                  const childReadOnly = child.dataIndex === "tonDauCa"
-                    ? !canUnlockMonthly()
-                    : childReadOnlyBase;
+                  const childReadOnlyBase = child.readOnly === true;
+                  const childReadOnly =
+                    child.dataIndex === "tonDauCa"
+                      ? !canUnlockMonthly()
+                      : childReadOnlyBase;
+                  // const childReadOnly = false;
+                  const childVal = r[child.dataIndex];
+                  const childIsNeg = isNegativeNumber(childVal);
                   return (
                     <EditableInput
-                      value={r[child.dataIndex]}
+                      value={childVal}
                       disabled={!editable || child.editable === false}
                       readOnly={childReadOnly}
-                      onChange={(v: any) => updateCell(r.key, child.dataIndex, v)}
+                      style={
+                        childIsNeg
+                          ? {
+                              borderColor: "#ff4d4f",
+                              backgroundColor: "#fff2f0",
+                              color: "#ff4d4f",
+                            }
+                          : undefined
+                      }
+                      onChange={(v: any) =>
+                        updateCell(r.key, child.dataIndex, v)
+                      }
                       onBlur={(v: any) => commitCell(r.key, child.dataIndex, v)}
                     />
                   );
@@ -262,18 +482,55 @@ export default function GroupedTableSTD({
 
           // Cột đơn
           return {
-            title: c.title,
+            title:
+              PASTE_COLUMNS.includes(c.dataIndex) && editable ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                  }}
+                >
+                  <span>{c.title}</span>
+                  <Button
+                    size="small"
+                    type="primary"
+                    ghost
+                    icon={<SnippetsOutlined />}
+                    title="Paste từ Excel"
+                    style={{ lineHeight: 1, padding: "0 6px" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPasteModal({
+                        open: true,
+                        columnKey: c.dataIndex,
+                        columnTitle: c.title,
+                      });
+                      setPasteText("");
+                    }}
+                  />
+                </div>
+              ) : (
+                c.title
+              ),
             dataIndex: c.dataIndex,
             align: "center",
-            width: c.dataIndex === "nguyenNhienLieu" ? 200 : 
-                   c.dataIndex === "viTri" ? 120 :
-                   c.dataIndex === "tongThucTe" ? 150 : 120,
+            width:
+              c.dataIndex === "nguyenNhienLieu"
+                ? 160
+                : c.dataIndex === "tenSilo"
+                  ? 150
+                  : c.dataIndex === "viTri"
+                    ? 120
+                    : c.dataIndex === "tongThucTe"
+                      ? 120
+                      : 100,
             render: (_: any, r: any) => {
               // Đối với cột tonDauCa, ưu tiên kiểm tra canUnlockMonthly
               // Nếu không trong khung giờ cho phép (8:00-20:00 ngày 1) thì readOnly (override readOnly từ config)
-              const inputReadOnly = c.dataIndex === "tonDauCa" 
-                ? !canUnlockMonthly()
-                : colReadOnly;
+              const inputReadOnly =
+                c.dataIndex === "tonDauCa" ? !canUnlockMonthly() : colReadOnly;
 
               if (c.dataIndex === "viTri") {
                 return (
@@ -291,8 +548,21 @@ export default function GroupedTableSTD({
                 // Nếu là unmapped (chưa móc nối), chỉ hiển thị tên phụ liệu và button "Móc nối", ẩn Select
                 if (r.isUnmapped === true) {
                   return (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <span style={{ color: "#faad14", fontSize: "12px", fontWeight: 500 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "#faad14",
+                          fontSize: "12px",
+                          fontWeight: 500,
+                        }}
+                      >
                         {r.rawTenPhuLieu || r.nguyenNhienLieu || ""}
                       </span>
                       {r.idPhuLieu && editable && (
@@ -309,50 +579,200 @@ export default function GroupedTableSTD({
                   );
                 }
 
-                // Nếu đã được map (isUnmapped === false hoặc undefined), hiển thị Select bình thường
+                // Nếu đã được map (isUnmapped === false hoặc undefined), hiển thị HeaderKeyAutocomplete
                 return (
-                  <Select
-                    showSearch
-                    allowClear
+                  <HeaderKeyAutocomplete
+                    value={r.idNguyenNhienLieu ?? null}
                     size="small"
                     style={{ width: "100%" }}
                     disabled={!editable}
-                    value={r.idNguyenNhienLieu}
-                    options={options}
-                    loading={loadingOptions}
-                    filterOption={false}
-                    onSearch={(kw) => {
-                      clearTimeout(searchTimer.current);
-                      searchTimer.current = setTimeout(() => {
-                        setLoadingOptions(true);
-                    headerKeyApi
-                      .search({ searchKey: kw, pageSize: 20 })
-                      .then((res) =>
-                        setOptions(
-                          (res.data || []).map((x: any) => ({
-                            label: x.tenHienThi || x.mota || x.tenNguonDuLieu,
-                            value: x.id || x.ID_HeaderKey,
-                          }))
-                        )
-                      )
-                          .finally(() => setLoadingOptions(false));
-                      }, 300);
-                    }}
+                    placeholder="Chọn phụ liệu"
+                    resetOnBlur={true} // ⭐ Reset options sau khi blur/change
+                    defaultLabel={r.nguyenNhienLieu || undefined}
                     onChange={(id) => {
-                      const hk = headerKeyCache.current.find((x: any) => (x.id || x.ID_HeaderKey) === id);
-                      commitCell(r.key, "idNguyenNhienLieu", id);
-                      commitCell(r.key, "nguyenNhienLieu", hk?.tenHienThi || hk?.tenNguonDuLieu || "");
+                      // Wrap trong setTimeout để tránh setState trong render
+                      setTimeout(() => {
+                        if (id === null || id === undefined) {
+                          // Clear action
+                          commitCell(r.key, "idNguyenNhienLieu", null);
+                          commitCell(r.key, "nguyenNhienLieu", "");
+                          commitCell(r.key, "tyTrong", null);
+                          // Clear silo khi clear headerkey
+                          commitCell(r.key, "siloId", null);
+                          commitCell(r.key, "tenSilo", "");
+                          commitCell(r.key, "theTich", null);
+                          return;
+                        }
+                        commitCell(r.key, "idNguyenNhienLieu", id);
+                        // Tạm comment: tự động load silo theo headerkey — giờ dùng autocomplete search
+                        // if (ngaySX && id) {
+                        //   loadSilosForHeaderKey(r.key, id, r.khuVuc);
+                        // }
+                      }, 0);
+                    }}
+                    onSelectOption={(option) => {
+                      // Wrap trong setTimeout để tránh setState trong render
+                      setTimeout(() => {
+                        if (option) {
+                          commitCell(
+                            r.key,
+                            "nguyenNhienLieu",
+                            option.tenHienThi || option.mota || "",
+                          );
+                          // Tự động fill tyTrong khi chọn HeaderKey
+                          if (
+                            option.tyTrong !== undefined &&
+                            option.tyTrong !== null
+                          ) {
+                            commitCell(r.key, "tyTrong", option.tyTrong);
+                          }
+                          // Tạm comment: tự động load silo theo headerkey — giờ dùng autocomplete search
+                          // if (ngaySX && option.id) {
+                          //   loadSilosForHeaderKey(r.key, option.id, r.khuVuc);
+                          // }
+                        } else {
+                          commitCell(r.key, "nguyenNhienLieu", "");
+                          commitCell(r.key, "tyTrong", null);
+                          commitCell(r.key, "siloId", null);
+                          commitCell(r.key, "tenSilo", "");
+                          commitCell(r.key, "theTich", null);
+                        }
+                      }, 0);
                     }}
                   />
                 );
               }
 
+              if (c.dataIndex === "tenSilo") {
+                // Khi viTri === 2 (Ngoài silo), hiển thị sentinel -1 thay vì siloId
+                const siloDisplayValue =
+                  r.viTri === 2 ? NGOAI_SILO_ID : (r.siloId ?? null);
+                return (
+                  <CommonAutocomplete<Silo>
+                    value={siloDisplayValue}
+                    searchApi={async ({ searchKey } = {}) => {
+                      const res = await SiloServiceApi.search({
+                        nhaMay,
+                        searchKey,
+                        tinhTrang: true,
+                      });
+                      // Prepend "Ngoài silo" nếu không có từ khóa hoặc từ khóa khớp
+                      const keyword = (searchKey || "").toLowerCase();
+                      const shouldPrepend =
+                        !keyword || "ngoài silo".includes(keyword);
+                      return {
+                        ...res,
+                        data: shouldPrepend
+                          ? [
+                              NGOAI_SILO_OPTION as unknown as Silo,
+                              ...(res.data || []),
+                            ]
+                          : res.data,
+                      };
+                    }}
+                    mapOption={(item) => ({
+                      value: item.id,
+                      label: item.tenSilo,
+                    })}
+                    placeholder="Tìm silo..."
+                    pageSize={50}
+                    disabled={!editable}
+                    allowClear
+                    style={{ width: "100%" }}
+                    size="small"
+                    fallbackLabelBuilder={(value) =>
+                      value === NGOAI_SILO_ID
+                        ? "Ngoài silo"
+                        : r.tenSilo || `Silo ID: ${value}`
+                    }
+                    onChange={(siloId, option) => {
+                      setTimeout(() => {
+                        if (siloId === NGOAI_SILO_ID) {
+                          // Chọn "Ngoài silo": đặt viTri=2, xóa siloId thực
+                          commitCell(r.key, "viTri", 2);
+                          commitCell(r.key, "siloId", null);
+                          commitCell(r.key, "tenSilo", "Ngoài silo");
+                        } else if (siloId !== null && option) {
+                          // Chọn silo thực: reset viTri về mặc định
+                          commitCell(r.key, "viTri", defaultViTri);
+                          commitCell(r.key, "siloId", siloId);
+                          commitCell(r.key, "tenSilo", option.tenSilo);
+                          if (
+                            option.theTich !== undefined &&
+                            option.theTich !== null
+                          ) {
+                            commitCell(r.key, "theTich", option.theTich);
+                          }
+                        } else {
+                          // Clear: reset về mặc định
+                          commitCell(r.key, "viTri", defaultViTri);
+                          commitCell(r.key, "siloId", null);
+                          commitCell(r.key, "tenSilo", "");
+                          commitCell(r.key, "theTich", null);
+                        }
+                      }, 0);
+                    }}
+                  />
+                );
+              }
+
+              // Cột luongSuDungKiemKe: auto-calculated, readOnly, highlight đỏ nếu âm, vàng nếu không nhất quán với tongThucTe
+              if (c.dataIndex === "luongSuDungKiemKe") {
+                const kiemKeVal = r.luongSuDungKiemKe;
+                const kiemKeNum =
+                  kiemKeVal != null && kiemKeVal !== ""
+                    ? Number(kiemKeVal)
+                    : null;
+                const thucTeNum = Number(r.tongThucTe);
+                const isNegative = kiemKeNum !== null && kiemKeNum < 0;
+                // Vàng: tongThucTe=0 mà kiemKe>0, hoặc tongThucTe!=0 mà kiemKe=0/null
+                const isInconsistent =
+                  !isNegative &&
+                  ((thucTeNum === 0 && kiemKeNum !== null && kiemKeNum > 0) ||
+                    (thucTeNum !== 0 &&
+                      (kiemKeNum === null || kiemKeNum === 0)));
+                const kiemKeStyle = isNegative
+                  ? {
+                      borderColor: "#ff4d4f",
+                      backgroundColor: "#fff2f0",
+                      color: "#ff4d4f",
+                    }
+                  : isInconsistent
+                    ? {
+                        borderColor: "#faad14",
+                        backgroundColor: "#fffbe6",
+                        color: "#d46b08",
+                      }
+                    : undefined;
+                return (
+                  <EditableInput
+                    value={kiemKeVal}
+                    disabled={!editable || c.editable === false}
+                    readOnly={true}
+                    style={kiemKeStyle}
+                    onChange={() => {}}
+                    onBlur={() => {}}
+                  />
+                );
+              }
+
               // Các cột input khác
+              const colVal = r[c.dataIndex];
+              const colIsNeg = isNegativeNumber(colVal);
               return (
                 <EditableInput
-                  value={r[c.dataIndex]}
+                  value={colVal}
                   disabled={!editable || c.editable === false}
                   readOnly={inputReadOnly}
+                  style={
+                    colIsNeg
+                      ? {
+                          borderColor: "#ff4d4f",
+                          backgroundColor: "#fff2f0",
+                          color: "#ff4d4f",
+                        }
+                      : undefined
+                  }
                   onChange={(v: any) => updateCell(r.key, c.dataIndex, v)}
                   onBlur={(v: any) => commitCell(r.key, c.dataIndex, v)}
                 />
@@ -370,7 +790,7 @@ export default function GroupedTableSTD({
       title: "Khu vực",
       dataIndex: "khuVuc",
       align: "center",
-      width: 100,
+      width: 80,
       fixed: "left" as const,
       render: (_: any, r: any) => {
         return r.khuVuc || "";
@@ -392,13 +812,28 @@ export default function GroupedTableSTD({
     }
 
     return [khuVucColumn, ...base];
-  }, [columns, editable, options, loadingOptions, defaultViTri, commitCell, deleteRow, openMappingModal, updateCell]);
+  }, [
+    columns,
+    editable,
+    defaultViTri,
+    commitCell,
+    deleteRow,
+    openMappingModal,
+    updateCell,
+    ngaySX,
+    nhaMay,
+  ]);
 
   if (loading) return <div>Đang tải...</div>;
 
   return (
     <>
-      <div style={{ border: "1px solidrgb(39, 39, 39)", borderRadius: "4px 4px 0 0" }}>
+      <div
+        style={{
+          border: "1px solidrgb(39, 39, 39)",
+          borderRadius: "4px 4px 0 0",
+        }}
+      >
         {khuVucList.map((kv: string, idx: number) => {
           const isFirst = idx === 0;
           const isLast = idx === khuVucList.length - 1;
@@ -420,11 +855,7 @@ export default function GroupedTableSTD({
                 render: (_: any, __: any, rowIndex: number) => {
                   // Chỉ render text ở dòng đầu tiên
                   if (rowIndex === 0) {
-                    return (
-                      <span style={{ fontWeight: 600 }}>
-                        {kv}
-                      </span>
-                    );
+                    return <span style={{ fontWeight: 600 }}>{kv}</span>;
                   }
                   return null;
                 },
@@ -450,7 +881,12 @@ export default function GroupedTableSTD({
               />
 
               {editable && (
-                <div style={{ padding: "8px 16px", borderTop: "1px solid #d9d9d9" }}>
+                <div
+                  style={{
+                    padding: "8px 16px",
+                    borderTop: "1px solid #d9d9d9",
+                  }}
+                >
                   <Button
                     type="dashed"
                     size="small"
@@ -463,11 +899,76 @@ export default function GroupedTableSTD({
                 </div>
               )}
 
-              {!isLast && <div style={{ height: 0, borderBottom: "1px solid #d9d9d9" }} />}
+              {!isLast && (
+                <div style={{ height: 0, borderBottom: "1px solid #d9d9d9" }} />
+              )}
             </div>
           );
         })}
       </div>
+
+      {/* Chú thích màu sắc */}
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          padding: "6px 12px",
+          marginTop: 4,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: 28,
+              height: 18,
+              borderRadius: 3,
+              border: "1px solid #ff4d4f",
+              backgroundColor: "#fff2f0",
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#595959" }}>
+            Giá trị âm (không hợp lệ)
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: 28,
+              height: 18,
+              borderRadius: 3,
+              border: "1px solid #faad14",
+              backgroundColor: "#fffbe6",
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#595959" }}>
+            Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng
+          </span>
+        </div>
+      </div>
+
+      <Modal
+        title={`Paste dữ liệu - ${pasteModal.columnTitle}`}
+        open={pasteModal.open}
+        onOk={handlePasteConfirm}
+        onCancel={() => {
+          setPasteModal({ open: false, columnKey: "", columnTitle: "" });
+          setPasteText("");
+        }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <Input.TextArea
+          autoFocus
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder="Paste dữ liệu từ Excel vào đây..."
+          rows={8}
+        />
+      </Modal>
 
       <HeaderMappingModal
         open={mappingOpen}

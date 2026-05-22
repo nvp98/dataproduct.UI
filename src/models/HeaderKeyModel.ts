@@ -8,6 +8,7 @@ export interface HeaderKey {
   ngayTao?: string | null;
   thuTu?: number | null;
   isUsedNXT?: boolean | null;
+  tyTrong?: number | null;
 }
 
 export interface HeaderKeyPayload {
@@ -17,7 +18,17 @@ export interface HeaderKeyPayload {
   loaiPhieu?: string | null;
   isActive: boolean;
   thuTu?: number | null;
+  tyTrong?: number | null;
   isUsedNXT?: boolean | null;
+  isUsedThongKe?: boolean | null;
+  loaiThongKe?: number | null;
+  thuTu_TK_BOF?: number | null;
+  thuTu_TK_LFRH?: number | null;
+  isUsed_Excel?: boolean | null;
+  loaiExcel?: number | null;
+  thuTu_Excel_BOF?: number | null;
+  thuTu_Excel_LFRH?: number | null;
+  iD_NhomKey?: number | null;       // FK → Header_Nhom.Id
 }
 
 export interface HeaderKeySearchResponse {
@@ -36,7 +47,7 @@ export interface HeaderMappingType {
 // Response model cho search API (trả về "full list" gồm mapped + unmapped HeaderKey + unmapped PhuLieu_NM)
 export interface HeaderKeyMapping {
   mappingId?: number | null;
-  iD_HeaderKey?: number | null; // có thể null nếu phụ liệu NM chưa móc nối
+  iD_HeaderKey?: number | null;
   keyGuid?: string | null;
   tenHienThi?: string | null;
   mota?: string | null;
@@ -44,8 +55,19 @@ export interface HeaderKeyMapping {
   isActive?: boolean | null;
   ngayTao?: string | null;
   isUsedNXT?: boolean | null;
+  isUsedThongKe?: boolean | null;
   thuTu?: number | null;
-  iD_PhuLieu?: number | null; // có thể null nếu là HeaderKey chưa móc nối
+  tyTrong?: number | null;
+  iD_PhuLieu?: number | null;
   tenNguonDuLieu?: string | null;
   tenPhuLieu?: string | null;
+  loaiThongKe?: number | null;
+  thuTu_TK_BOF?: number | null;
+  thuTu_TK_LFRH?: number | null;
+  isUsed_Excel?: boolean | null;
+  loaiExcel?: number | null;
+  thuTu_Excel_BOF?: number | null;
+  thuTu_Excel_LFRH?: number | null;
+  iD_NhomKey?: number | null;       // FK → Header_Nhom.Id
+  tenNhom?: string | null;          // TenHienThi của Header_Nhom (enriched)
 }

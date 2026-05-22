@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { Table, Button, Input, Popconfirm, Space, Spin, Tag } from "antd";
+import {
+  Table,
+  Button,
+  Input,
+  Popconfirm,
+  Select,
+  Space,
+  Spin,
+  Tag,
+} from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 
 interface CustomFormTableProps {
@@ -9,10 +18,16 @@ interface CustomFormTableProps {
     isLabel?: boolean; // Xác định cột này là cột label
     width?: number | string;
     fixed?: "left" | "right";
+    format?: string; // ví dụ: "number-group"
+    type?: "text" | "number" | "float" | any; // Kiểu dữ liệu
     children?: Array<{
       title: string;
       dataIndex: string | number;
+      format?: string; // ví dụ: "number-group"
+      type?: "text" | "number" | "float" | any; // Kiểu dữ liệu
+      options?: Array<{ label: string; value: string | number }>;
     }>;
+    options?: Array<{ label: string; value: string | number }>;
   }>;
   initialData?: any[];
   onDataChange?: (data: any[]) => void;
@@ -37,10 +52,11 @@ interface CustomFormTableProps {
     rowIndex: number,
     dataIndex: string,
     value: any,
-    row: any
+    row: any,
   ) => void;
   compactWhenEmpty?: boolean; // Nếu true, khi không có dòng sẽ không chiếm nhiều chiều cao
   summary?: (data: readonly any[]) => React.ReactNode;
+  onRow?: (record: any, index?: number) => any;
 }
 
 export default function CustomFormTable({
@@ -67,20 +83,92 @@ export default function CustomFormTable({
   onCellChange,
   compactWhenEmpty = false,
   summary,
+  onRow,
 }: CustomFormTableProps) {
+  // Validate và filter input theo type
+  const validateAndFormatInput = (
+    value: string,
+    type?: "text" | "number" | "float",
+  ): string => {
+    if (!type || type === "text") return value;
+
+    if (type === "number") {
+      // Chỉ cho phép số nguyên dương, dấu âm ở đầu, không cho dấu thập phân
+      return value
+        .replace(/[^0-9-]/g, "")
+        .replace(/^-+/, (m) => (m.length === 1 ? "-" : "-"));
+    }
+
+    if (type === "float") {
+      // Cho phép số với dấu thập phân, dấu âm, và dấu cách (sẽ xóa sau)
+      const normalized = value.replace(/\s+/g, ""); // Xóa dấu cách
+      const match = normalized.match(/^-?[\d.]*$/);
+      if (!match) return normalized.replace(/[^0-9.-]/g, "");
+
+      // Chỉ cho phép một dấu chấm
+      const parts = normalized.split(".");
+      if (parts.length > 2) {
+        return (parts[0] || "0") + "." + parts.slice(1).join("");
+      }
+
+      return normalized;
+    }
+
+    return value;
+  };
+
+  const formatNumberGroup = (value: unknown): string => {
+    if (value === null || value === undefined || value === "") return "";
+    const raw = String(value).trim();
+    if (!raw) return "";
+    const normalized = raw.replace(/\s+/g, "").replace(",", ".");
+    const n = Number(normalized);
+    if (!Number.isFinite(n)) return raw;
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(n);
+    const [intPartRaw, fracRaw] = String(abs).split(".");
+    const intPart = intPartRaw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return fracRaw ? `${sign}${intPart}.${fracRaw}` : `${sign}${intPart}`;
+  };
+
+  const formatIfNeeded = (format: unknown, value: unknown): string => {
+    if (format === "number-group") return formatNumberGroup(value);
+    return value === null || value === undefined ? "" : String(value);
+  };
+
   const [rows, setRows] = useState(initialData);
 
   const getCellStyle = (
     dataIndex: string | number,
     value: any,
-    readonly?: boolean
+    row?: any,
+    readonly?: boolean,
   ) => {
     const style: any = {};
+    style.textAlign = "right";
     if (readonly || !editable) style.backgroundColor = "#fffbe6";
     if (String(dataIndex) === "stChuaChuyen" && Number(value) > 0) {
       style.backgroundColor = "#fff1f0";
       style.borderColor = "#ff4d4f";
     }
+
+    const key = String(dataIndex || "");
+    if (key.toLowerCase().startsWith("stdachuyen")) {
+      const suffix = key.substring("stDachuyen".length);
+      const sourceKey = `st${suffix}`;
+      const sourceVal = Number(row?.[sourceKey] ?? 0);
+      const transferredVal = Number(value ?? 0);
+
+      if (
+        !Number.isNaN(sourceVal) &&
+        !Number.isNaN(transferredVal) &&
+        sourceVal !== transferredVal
+      ) {
+        style.backgroundColor = "#fff1f0";
+        style.borderColor = "#ff4d4f";
+      }
+    }
+
     return style;
   };
 
@@ -106,12 +194,11 @@ export default function CustomFormTable({
   };
 
   // Xử lý xóa dòng
-  const handleDeleteRow = (key: string | number) => {
+  const handleDeleteRow = (rowIndex: number) => {
     if (rows.length <= minRows) {
       return; // Không cho xóa nếu đã đạt số dòng tối thiểu
     }
-    console.log("rows:", rows, key);
-    const newRows = rows.filter((row) => row.key !== key);
+    const newRows = rows.filter((_, idx) => idx !== rowIndex);
     setRows(newRows);
     onDataChange?.(newRows);
   };
@@ -138,7 +225,7 @@ export default function CustomFormTable({
   const handleCellChange = (
     value: string,
     rowIndex: number,
-    dataIndex: string
+    dataIndex: string,
   ) => {
     const newData = [...rows];
     newData[rowIndex][dataIndex] = value;
@@ -169,34 +256,54 @@ export default function CustomFormTable({
                 readonlyFields.includes(String(child.dataIndex)) ? (
                   <Input
                     placeholder={child.title}
-                    value={record[child.dataIndex] ?? ""}
+                    value={formatIfNeeded(
+                      (child as any)?.format,
+                      record[child.dataIndex],
+                    )}
                     readOnly
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
-                      true
+                      record,
+                      true,
                     )}
+                  />
+                ) : (child as any).options ? (
+                  <Select
+                    placeholder={child.title}
+                    value={record[child.dataIndex] ?? undefined}
+                    onChange={(value) => {
+                      handleCellChange(value, idx, child.dataIndex as string);
+                    }}
+                    options={(child as any).options}
+                    disabled={!editable}
+                    style={{ width: "100%" }}
                   />
                 ) : (
                   <Input
                     placeholder={child.title}
                     value={record[child.dataIndex] ?? ""}
                     onChange={(e) => {
-                      handleCellChange(
+                      const validated = validateAndFormatInput(
                         e.target.value,
+                        (child as any)?.type,
+                      );
+                      handleCellChange(
+                        validated,
                         idx,
-                        child.dataIndex as string
+                        child.dataIndex as string,
                       );
                     }}
                     disabled={!editable}
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
-                      false
+                      record,
+                      false,
                     )}
                   />
                 ),
-            })
+            }),
           ),
         };
       } else {
@@ -219,6 +326,17 @@ export default function CustomFormTable({
           };
         }
 
+        // Check if column has custom render function
+        if ((col as any).type === "index") {
+          return {
+            title: col.title,
+            dataIndex: col.dataIndex,
+            width: col.width,
+            fixed: col.fixed,
+            render: (col as any).render,
+          };
+        }
+
         // Cột bình thường
         return {
           title: col.title,
@@ -229,30 +347,46 @@ export default function CustomFormTable({
             readonlyFields.includes(String(col.dataIndex)) ? (
               <Input
                 placeholder={col.title}
-                value={record[col.dataIndex || ""] ?? ""}
+                value={formatIfNeeded(
+                  (col as any)?.format,
+                  record[col.dataIndex || ""],
+                )}
                 readOnly
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex || ""],
-                  true
+                  record,
+                  true,
                 )}
+              />
+            ) : (col as any).options ? (
+              <Select
+                placeholder={col.title}
+                value={record[col.dataIndex ?? ""] ?? undefined}
+                onChange={(value) => {
+                  handleCellChange(value, idx, col.dataIndex as string);
+                }}
+                options={(col as any).options}
+                disabled={!editable}
+                style={{ width: "100%" }}
               />
             ) : (
               <Input
                 placeholder={col.title}
                 value={record[col.dataIndex ?? ""] ?? ""}
                 onChange={(e) => {
-                  handleCellChange(
+                  const validated = validateAndFormatInput(
                     e.target.value,
-                    idx,
-                    col.dataIndex as string
+                    (col as any)?.type,
                   );
+                  handleCellChange(validated, idx, col.dataIndex as string);
                 }}
                 disabled={!editable}
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex ?? ""],
-                  false
+                  record,
+                  false,
                 )}
               />
             ),
@@ -271,8 +405,8 @@ export default function CustomFormTable({
                 t === 1
                   ? "Đã chuyển hết"
                   : t === 2
-                  ? "Đã chuyển 1 phần"
-                  : "Chưa chuyển";
+                    ? "Đã chuyển 1 phần"
+                    : "Chưa chuyển";
               const color = t === 1 ? "green" : t === 2 ? "orange" : "default";
               return <Tag color={color}>{text}</Tag>;
             },
@@ -286,13 +420,13 @@ export default function CustomFormTable({
             title: "Thao tác",
             key: "action",
             width: 80,
-            render: (_: any, record: any) => (
+            render: (_: any, _record: any, rowIndex: number) => (
               <Space>
                 <Popconfirm
                   title="Bạn có chắc chắn muốn xóa dòng này?"
                   okText="Xóa"
                   cancelText="Hủy"
-                  onConfirm={() => handleDeleteRow(record.key)}
+                  onConfirm={() => handleDeleteRow(rowIndex)}
                   disabled={rows.length <= minRows}
                 >
                   <Button
@@ -333,16 +467,23 @@ export default function CustomFormTable({
               size="small"
               columns={tableColumns}
               dataSource={rows}
+              rowKey={(record, index) => record?.key ?? record?.id ?? index}
               style={{ marginTop: 12 }}
               scroll={{ x: "max-content", y: scrollY }}
               sticky={stickyHeader}
               summary={summary}
+              onRow={onRow}
               rowSelection={
                 selectionEnabled
                   ? {
                       selectedRowKeys: selectedRowKeys as any,
                       onChange: (keys, selected) => {
-                        onSelectionChange?.(keys as any, selected as any);
+                        // Keep selected keys in the original data type (number/string)
+                        const typedKeys = (selected as any[]).map(
+                          (record, idx) =>
+                            record?.key ?? record?.id ?? keys[idx],
+                        );
+                        onSelectionChange?.(typedKeys as any, selected as any);
                       },
                       getCheckboxProps: (record: any) => ({
                         disabled: isRowSelectable

@@ -31,21 +31,29 @@
       "key": "table1",
       "columns": [
         { "title": "Khu vực", "dataIndex": "khuVuc", "isLabel": true },
-        { "title": "Vị trí", "dataIndex": "viTri" },
+        { "title": "Vị trí", "dataIndex": "viTri", "hidden": true },
         { "title": "Nguyên nhiên liệu", "dataIndex": "nguyenNhienLieu" },
-        { "title": "Tồn đầu ca", "children": [
-          { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa", "readOnly": true },
-          { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanDauCa" }
-        ]},
-        { "title": "Nhập vào trong ca (Kg)", "dataIndex": "nhapTrongCa" },
-        { "title": "Mức liệu", "dataIndex": "mucLieu" },
-        { "title": "Thể tích", "dataIndex": "theTich" },
-        { "title": "Tỷ trọng", "dataIndex": "tyTrong" },
-        { "title": "Tồn cuối ca thực tế", "children": [
-          { "title": "Khối lượng (Kg)", "dataIndex": "tonCuoiCa" },
-          { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanCuoiCa" }
-        ] },
-        { "title": "Tổng thực tế sử dụng", "dataIndex": "tongThucTe" }
+        { "title": "Silo", "dataIndex": "tenSilo" },
+        {
+          "title": "Tồn đầu ca",
+          "children": [
+            { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa" ,"readOnly": true},
+            { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanDauCa" , "hidden": true}
+          ]
+        },
+        { "title": "Nhập vào trong ca (Kg)", "dataIndex": "nhapTrongCa"},
+        { "title": "Mức liệu", "dataIndex": "mucLieu", "hidden": true },
+        { "title": "Thể tích", "dataIndex": "theTich", "readOnly": true, "hidden": true },
+        { "title": "Tỷ trọng", "dataIndex": "tyTrong", "readOnly": true, "hidden": true },
+        {
+          "title": "Tồn cuối ca thực tế",
+          "children": [
+            { "title": "Khối lượng (Kg)", "dataIndex": "tonCuoiCa" },
+            { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanCuoiCa", "hidden": true }
+          ]
+        },
+        { "title": "Lượng sử dụng kiểm kê", "dataIndex": "luongSuDungKiemKe" },
+        { "title": "Lượng sử dụng thực tế theo cân", "dataIndex": "tongThucTe","readOnly": true }
       ],
       "khuVucList": [
         {"label": "Lò thổi 6", "value": "1", "bieuMau":"BOF", "scope": 6},
@@ -68,35 +76,47 @@
         {
           "title": "",
           "dataIndex": "totalText",
-          "isLabel": true
+          "isLabel": true, "readOnly": true
         },
         {
           "title": "Nguyên nhiên liệu",
-          "dataIndex": "totalNguyenNhienLieu"
+          "dataIndex": "totalNguyenNhienLieu", "readOnly": true
         },
         {
-          "title": "Khối lượng tồn đầu ca (tấn)",
-          "dataIndex": "totalTonDauCa"
+          "title": "Khối lượng tồn đầu ca (kg)",
+          "dataIndex": "totalTonDauCa", "readOnly": true
         },
         {
-          "title": "Khối lượng nhập trong ca (tấn)",
-          "dataIndex": "totalNhapTrongCa"
+          "title": "Khối lượng nhập trong ca (kg)",
+          "dataIndex": "totalNhapTrongCa", "readOnly": true
         },
         {
-          "title": "Khối lượng tồn cuối ca (tấn)",
-          "dataIndex": "totalTonCuoiCa"
+          "title": "Khối lượng tồn cuối ca (kg)",
+          "dataIndex": "totalTonCuoiCa", "readOnly": true
         },
         {
           "title": "Tổng sử dụng",
-          "dataIndex": "totalSuDung"
+          "dataIndex": "totalSuDung", "readOnly": true
         },
         {
           "title": "Tổng sử dụng trên sổ sách",
-          "dataIndex": "totalSDTrongSoSach"
+          "dataIndex": "totalSDTrongSoSach", "readOnly": true
         },
         {
           "title": "Chênh lệch",
-          "dataIndex": "totalChenhLech"
+          "dataIndex": "totalChenhLech", "readOnly": true
+        },
+        {
+          "title": "Tỷ lệ PB BOF %",
+          "dataIndex": "tyLeBOF"
+        },
+        {
+          "title": "Tỷ lệ PB LF %",
+          "dataIndex": "tyLeTinhLuyen"
+        },
+        {
+          "title": "Tỷ lệ PB RH %",
+          "dataIndex": "tyLeRH"
         }
       ],
       "initialData": [
@@ -109,18 +129,9 @@
 
   "signatures": [
     {
-      "label": "Người giao ca",
+      "label": "Người lập",
       "type": "selectNguoiKy",
-      "key": "nguoinhanca_HRC2", 
-      "maphongBan": "NM.HRC2",
-      "capduyet": 1,
-      "isChon": true,
-      "required": true
-    },
-    {
-      "label": "Người nhận ca",
-      "type": "selectNguoiKy",
-      "key": "nguoigiaoca_HRC2",
+      "key": "nguoiLap_HRC2",
       "maphongBan": "NM.HRC2",
       "capduyet": 0,
       "isChon": true,

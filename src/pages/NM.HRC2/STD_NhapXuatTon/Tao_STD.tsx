@@ -1,53 +1,52 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC2_STD_NXT from "../../../utils/BM_config/HRC2_STD_NXT.json";
-import { Card, Form, Input, Typography, message, Button } from "antd";
+import { Card, Form, Input, Typography, message, Button, Tabs, Tag } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
-import { useLocation, useNavigate } from "react-router-dom";
+import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 // import GroupedTableSTD from "../../../components/GroupedTableSTD";
 import GroupedTableSTD from "../../../components/GroupedTableSTD";
 import SummaryTableSTD from "../../../components/SummaryTableSTD";
-import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
-import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
-import type { STD_NXT_Table1Row, STD_NXT_Table2Row, STD_NXT_HRC2_UpsertDto, NXTSummaryDto } from "../../../models/STD_NXT_Model";
+import type {
+  STD_NXT_Table1Row,
+  STD_NXT_Table2Row,
+  STD_NXT_HRC2_UpsertDto,
+  NXTSummaryDto,
+  STD_NXT_HRC2_PhanBoDto,
+  STD_NXT_RelatedPhieuTarget,
+  STD_NXT_RelatedPhieuStatusItem,
+  STD_NXT_HRC2_KhongPhanBoDto,
+} from "../../../models/STD_NXT_Model";
 import { STD_NXT_HRC2ServiceApi } from "../../../services/STD_NXT_HRC2ServiceApi";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
+import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { FileExcelOutlined } from "@ant-design/icons";
 
 const Tao_STD = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { idphieu } = location.state || {};
-  // const hasExistingPhieu = Boolean(idphieu); // hiện chưa dùng
+  const { idphieu, navigateToDetail, safeGetDetail } =
+    usePhieuNavigation("std_nxt_hrc2_idphieu", "/std_nhapxuatton");
+
   const config = HRC2_STD_NXT;
   const [form] = Form.useForm();
 
   const [table1Data, setTable1Data] = useState<STD_NXT_Table1Row[]>([]);
   const [table2Data, setTable2Data] = useState<STD_NXT_Table2Row[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // State để lưu thông tin phiếu cho action buttons
-  const [phieuInfo, setPhieuInfo] = useState<{
-    tinhTrang?: number;
-    nguoiTaoId?: number | null;
-    idphongBan?: number | null;
-    pheDuyet?: PheDuyetItem[];
-    isClone?: boolean;
-  }>({});
+  const [relatedStatusMap, setRelatedStatusMap] = useState<Record<string, STD_NXT_RelatedPhieuStatusItem>>({});
+  const [canPhanBo, setCanPhanBo] = useState(true);
+  const [isLockedByChot, setIsLockedByChot] = useState(false);
+  /** Tăng khi BE trả canPhanBo = false để remount SummaryTableSTD, đồng bộ UI với trạng thái khóa phân bổ */
+  const [summaryTableRemountKey, setSummaryTableRemountKey] = useState(0);
+  const watchedNgaySX = Form.useWatch("NgaySX", form);
+  const watchedCa = Form.useWatch("ca", form);
 
   const getUserInfo = useCallback(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
   }, []);
 
-  const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
-  const isSignatureReadonly = [
-    TrangThaiPhieuConst.HoanThanh,
-    TrangThaiPhieuConst.DangPheDuyet,
-    TrangThaiPhieuConst.DaChot,
-  ].includes(currentTinhTrang);
-  const isFormLocked = !(currentTinhTrang === TrangThaiPhieuConst.DangLuu || currentTinhTrang === TrangThaiPhieuConst.DaThuHoi);
   const currentUserInfo = useMemo(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
@@ -80,6 +79,7 @@ const Tao_STD = () => {
           Scope: scopeVal,
           ViTri: row.viTri ?? 0,
           Id_HeaderKey: row.idNguyenNhienLieu ?? 0,
+          IDSilo: row.siloId ?? null,
           TenNguyenLieu: row.nguyenNhienLieu ?? "",
           TonDauCa: row.tonDauCa ? Number(row.tonDauCa) : 0,
           TuongQuanDauCa: row.tuongQuanDauCa ?? "",
@@ -90,6 +90,7 @@ const Tao_STD = () => {
           TonCuoiCa: row.tonCuoiCa ? Number(row.tonCuoiCa) : 0,
           TuongQuanCuoiCa: row.tuongQuanCuoiCa ?? "",
           TongThucTe: row.tongThucTe ? Number(row.tongThucTe) : 0,
+          LuongSuDungKiemKe: row.luongSuDungKiemKe != null && row.luongSuDungKiemKe !== "" ? Number(row.luongSuDungKiemKe) : null,
         };
       });
 
@@ -101,64 +102,45 @@ const Tao_STD = () => {
         }
       });
 
-      // Summary: ưu tiên table2Data; nếu trống, tự tổng hợp từ details
-      let summary: NXTSummaryDto[] = [];
-
-      if (table2Data && table2Data.length > 0) {
-        summary = table2Data
-          .filter((r) => r.totalNguyenNhienLieu)
-          .map((r) => {
-            const name = r.totalNguyenNhienLieu ?? "";
-            const id = name ? idByName[name] ?? 0 : 0;
-            return {
-              Id_HeaderKey: id,
-              TenNguyenLieu: name,
-              TongTonDauCa: Number(r.totalTonDauCa || 0),
-              TongNhapTrongCa: Number(r.totalNhapTrongCa || 0),
-              TongTonCuoiCa: Number(r.totalTonCuoiCa || 0),
-              TongSuDung: Number(r.totalSuDung || 0),
-              TongSDTrenSoSach: Number(r.totalSDTrongSoSach || 0),
-              ChenhLech: Number(r.totalChenhLech || 0),
-            };
-          });
-      } else {
-        // Tự tổng hợp từ details (group theo TenNguyenLieu)
-        const grouped: Record<string, { id: number; tonDau: number; nhap: number; tonCuoi: number; sdss: number }> = {};
-        details.forEach((d) => {
-          const name = d.TenNguyenLieu || "";
-          if (!name) return;
-          if (!grouped[name]) {
-            grouped[name] = {
-              id: d.Id_HeaderKey || 0,
-              tonDau: 0,
-              nhap: 0,
-              tonCuoi: 0,
-              sdss: 0,
-            };
-          }
-          grouped[name].id = d.Id_HeaderKey || grouped[name].id;
-          grouped[name].tonDau += d.TonDauCa || 0;
-          grouped[name].nhap += d.NhapVaoTrongCa || 0;
-          grouped[name].tonCuoi += d.TonCuoiCa || 0;
-          grouped[name].sdss += d.TongThucTe || 0; // giả sử TongThucTe là số sổ sách
-        });
-
-        summary = Object.keys(grouped).map((name) => {
-          const g = grouped[name];
-          const tongSuDung = g.tonDau + g.nhap - g.tonCuoi;
-          const chenh = Math.abs(tongSuDung - g.sdss);
-          return {
-            Id_HeaderKey: g.id,
-            TenNguyenLieu: name,
-            TongTonDauCa: g.tonDau,
-            TongNhapTrongCa: g.nhap,
-            TongTonCuoiCa: g.tonCuoi,
-            TongSuDung: tongSuDung,
-            TongSDTrenSoSach: g.sdss,
-            ChenhLech: chenh,
+      // Summary: tổng hợp trực tiếp từ details (group theo TenNguyenLieu)
+      const grouped: Record<
+        string,
+        { id: number; tonDau: number; nhap: number; tonCuoi: number; sdss: number }
+      > = {};
+      details.forEach((d) => {
+        const name = d.TenNguyenLieu || "";
+        if (!name) return;
+        if (!grouped[name]) {
+          grouped[name] = {
+            id: d.Id_HeaderKey || 0,
+            tonDau: 0,
+            nhap: 0,
+            tonCuoi: 0,
+            sdss: 0,
           };
-        });
-      }
+        }
+        grouped[name].id = d.Id_HeaderKey || grouped[name].id;
+        grouped[name].tonDau += d.TonDauCa || 0;
+        grouped[name].nhap += d.NhapVaoTrongCa || 0;
+        grouped[name].tonCuoi += d.TonCuoiCa || 0;
+        grouped[name].sdss += d.TongThucTe || 0; // giả sử TongThucTe là số sổ sách
+      });
+
+      const summary: NXTSummaryDto[] = Object.keys(grouped).map((name) => {
+        const g = grouped[name];
+        const tongSuDung = g.tonDau + g.nhap - g.tonCuoi;
+        const chenh = Math.abs(tongSuDung - g.sdss);
+        return {
+          Id_HeaderKey: g.id,
+          TenNguyenLieu: name,
+          TongTonDauCa: g.tonDau,
+          TongNhapTrongCa: g.nhap,
+          TongTonCuoiCa: g.tonCuoi,
+          TongSuDung: tongSuDung,
+          TongSDTrenSoSach: g.sdss,
+          ChenhLech: chenh,
+        };
+      });
 
       return {
         IdPhieu: formValues.idphieu || null,
@@ -170,7 +152,7 @@ const Tao_STD = () => {
         Summary: summary,
       };
     },
-    [config.code, scopeMap, table1Data, table2Data]
+    [config.code, scopeMap, table1Data]
   );
 
   // Hàm khởi tạo dữ liệu ban đầu
@@ -178,15 +160,18 @@ const Tao_STD = () => {
     try {
       setLoading(true);
       if (idphieu) {
-        const res = await PhieuApi.getDetail(idphieu);
-        const formData = (res as any)?.jsonData || {};
+        const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
+        if (!res) return;
+
+        const phieuPayload = (res as any)?.data ?? res;
+        const formData = phieuPayload?.jsonData || {};
 
         // Khôi phục form values (ưu tiên jsonData). Tách NgaySX/ca để tránh bị override bởi spread.
         const { NgaySX, ca, ...restFormData } = formData;
         form.setFieldsValue({
-          idphieu: (res as any)?.idphieu,
+          idphieu: phieuPayload?.idphieu,
           NgaySX: NgaySX ? dayjs(NgaySX) : null,
-          ca: ca ?? (res as any)?.ca,
+          ca: ca ?? phieuPayload?.ca,
           ...restFormData,
         });
 
@@ -204,17 +189,19 @@ const Tao_STD = () => {
         };
 
         // Map details từ BE sang format frontend
-        const mappedDetails: STD_NXT_Table1Row[] = (data?.details || []).map((item: any) => {
+        const mappedDetails: STD_NXT_Table1Row[] = (data?.details || []).map((item: any, index: number) => {
           const scope = Number(item.scope) || 0;
           const khuVuc = getKhuVucByScope(scope);
           
           return {
-            key: `${scope}_${item.id_HeaderKey}_${item.viTri}`,
+            key: `${scope}_${item.id_HeaderKey}_${item.viTri}_${index}`,
             khuVuc: khuVuc,
             viTri: Number(item.viTri) || 1,
             nguyenNhienLieu: item.tenNguyenLieu || "",
             idNguyenNhienLieu: item.id_HeaderKey || null,
             isUnmapped: !item.id_HeaderKey, // Nếu có id_HeaderKey thì isUnmapped = false
+            siloId: item.idSilo ?? item.IDSilo ?? item.siloId ?? null,
+            tenSilo: item.tenSilo ?? item.TenSilo ?? null,
             tonDauCa: item.tonDauCa ?? null,
             tuongQuanDauCa: item.tuongQuanDauCa ?? "",
             mucLieu: item.mucLieu ?? null,
@@ -224,49 +211,65 @@ const Tao_STD = () => {
             tonCuoiCa: item.tonCuoiCa ?? null,
             tuongQuanCuoiCa: item.tuongQuanCuoiCa ?? "",
             tongThucTe: item.tongThucTe ?? null,
+            luongSuDungKiemKe: item.luongSuDungKiemKe ?? null,
           };
         });
 
-        // Map summary từ BE sang format frontend
-        const mappedSummary: STD_NXT_Table2Row[] = (data?.summary || []).map((item: any) => {
-          return {
-            key: `summary_${item.id_HeaderKey}`,
-            totalNguyenNhienLieu: item.tenNguyenLieu || "",
-            totalTonDauCa: item.tongTonDauCa ?? null,
-            totalNhapTrongCa: item.tongTonNhapTrongCa ?? null,
-            totalTonCuoiCa: item.tongTonCuoiCa ?? null,
-            totalSuDung: item.tongSuDung ?? null,
-            totalSDTrongSoSach: item.tongSDTrenSoSach ?? null,
-            totalChenhLech: item.chenhLech ?? null,
-          };
-        });
+        // Map summary từ BE sang format frontend (gồm HasPhanBo, Id_HeaderKey, NgaySX, Ca cho SummaryTableSTD)
+        const ngaySxStr = (data?.ngaySX ?? data?.NgaySX) != null ? (typeof (data?.ngaySX ?? data?.NgaySX) === "string" ? (data?.ngaySX ?? data?.NgaySX) : (data?.ngaySX ?? data?.NgaySX)?.format?.("YYYY-MM-DD")) : undefined;
+        const caVal = data?.ca ?? data?.Ca ?? undefined;
+        const mappedSummary: STD_NXT_Table2Row[] = (data?.summary || []).map((item: any) => ({
+          key: `summary_${item.id_HeaderKey ?? item.Id_HeaderKey}`,
+          totalNguyenNhienLieu: item.tenNguyenLieu ?? item.TenNguyenLieu ?? "",
+          totalTonDauCa: item.tongTonDauCa ?? item.TongTonDauCa ?? null,
+          totalNhapTrongCa: item.tongTonNhapTrongCa ?? item.TongTonNhapTrongCa ?? null,
+          totalTonCuoiCa: item.tongTonCuoiCa ?? item.TongTonCuoiCa ?? null,
+          totalSuDung: item.tongSuDung ?? item.TongSuDung ?? null,
+          totalSDTrongSoSach: item.tongSDTrenSoSach ?? item.TongSDTrenSoSach ?? null,
+          totalChenhLech: item.chenhLech ?? item.ChenhLech ?? null,
+          HasPhanBo: item.hasPhanBo ?? item.HasPhanBo ?? null,
+          Id_HeaderKey: item.id_HeaderKey ?? item.Id_HeaderKey ?? null,
+          NgaySX: ngaySxStr,
+          Ca: caVal,
+          tyLeBOF: item.tyLeBOF ?? item.TyLeBOF ?? null,
+          tyLeTinhLuyen: item.tyLeTinhLuyen ?? item.TyLeTinhLuyen ?? null,
+          tyLeRH: item.tyLeRH ?? item.TyLeRH ?? null,
+          KLPB_BOF: item.klpB_BOF ?? item.klpb_BOF ?? item.KLPB_BOF ?? null,
+          KLPB_TL: item.klpB_TL ?? item.klpb_TL ?? item.KLPB_TL ?? null,
+          KLPB_RH: item.klpB_RH ?? item.klpb_RH ?? item.KLPB_RH ?? null,
+        }));
 
         setTable1Data(mappedDetails);
         setTable2Data(mappedSummary);
 
-        // Lưu thông tin phiếu cho action buttons
-        setPhieuInfo({
-          tinhTrang: (res as any)?.tinhTrang ?? 0,
-          nguoiTaoId: (res as any)?.nguoiTaoId ?? null,
-          idphongBan: (res as any)?.idphongBan ?? null,
-          pheDuyet: (res as any)?.pheDuyet || formData.pheDuyet || [],
-          isClone: (res as any)?.isClone ?? false,
-        });
-      } else {
-        setPhieuInfo({});
       }
+
+      // Sau khi setFieldsValue (hoặc phiếu mới): nếu capduyet=0 chưa có giá trị thì set current user
+      const sigOverrides: Record<string, any> = {};
+      config.signatures
+        .filter((sig: any) => sig.isChon && sig.capduyet === 0)
+        .forEach((sig: any) => {
+          const val = form.getFieldValue(sig.key);
+          if (val == null) sigOverrides[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
+        });
+      if (Object.keys(sigOverrides).length > 0) form.setFieldsValue(sigOverrides);
     } catch (err: any) {
       console.error("Lỗi khởi tạo dữ liệu:", err);
       message.error("Không thể tải dữ liệu ban đầu!");
     } finally {
       setLoading(false);
     }
-  }, [form, idphieu, config.layout1]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, idphieu, safeGetDetail, currentUserInfo?.iD_TaiKhoan]);
 
-  // Chuẩn bị payload cho action buttons (theo pattern TaoPhieuBOF)
-  const getFormData = useCallback(async () => {
+  const getFormData = useCallback(async (skipValidation = false) => {
     const userInfo = getUserInfo();
-    const values = await form.validateFields();
+    if (!skipValidation) {
+      const headerFieldKeys = config.headerFields.map((f: any) => f.key);
+      await form.validateFields(headerFieldKeys);
+    }
+    // Lấy toàn bộ giá trị form (kể cả idphieu, chữ ký) để build payload đầy đủ
+    const values = form.getFieldsValue(true);
 
     const table1Normalized = (table1Data || []).map((row) => ({
       ...row,
@@ -276,7 +279,93 @@ const Tao_STD = () => {
       tonCuoiCa: Number(row.tonCuoiCa || 0),
       tuongQuanCuoiCa: row.tuongQuanCuoiCa ?? "",
       tongThucTe: Number(row.tongThucTe || 0),
+      luongSuDungKiemKe: row.luongSuDungKiemKe != null && row.luongSuDungKiemKe !== "" ? Number(row.luongSuDungKiemKe) : null,
     }));
+
+    if (!skipValidation) {
+      // Validation: Tất cả dòng phải chọn Silo
+      const missingSiloRows = table1Normalized.filter((row) => !row.siloId && row.viTri !== 2);
+      if (missingSiloRows.length > 0) {
+        const byTab = missingSiloRows.reduce<Record<string, string[]>>((acc, r: any) => {
+          const tab = String(r?.khuVuc ?? "Không xác định");
+          const name = String(r?.nguyenNhienLieu ?? "").trim() || "(không tên)";
+          (acc[tab] ||= []).push(name);
+          return acc;
+        }, {});
+
+        const detailLines = Object.entries(byTab)
+          .map(([tab, names]) => `- Tab ${tab}: ${names.join(", ")}`)
+          .join("\n");
+
+        message.error(
+          `Vui lòng chọn Silo cho tất cả loại liệu trước khi gửi.\nCác dòng chưa chọn theo tab:\n${detailLines}`
+        );
+        throw new Error("Validation failed: thiếu Silo");
+      }
+
+      // Validation: luongSuDungKiemKe phải nhất quán với tongThucTe
+      const inconsistentKiemKeRows = table1Normalized.filter((row) => {
+        const thucTe = Number(row.tongThucTe);
+        const kiemKe = row.luongSuDungKiemKe;
+        const kiemKeNum = kiemKe === null || kiemKe === undefined ? 0 : Number(kiemKe);
+        if (Number.isNaN(kiemKeNum)) return false;
+        return (thucTe === 0 && kiemKeNum !== 0) || (thucTe !== 0 && kiemKeNum === 0);
+      });
+      if (inconsistentKiemKeRows.length > 0) {
+        const byTabKiemKe = inconsistentKiemKeRows.reduce<Record<string, string[]>>((acc, r: any) => {
+          const tab = String(r?.khuVuc ?? "Không xác định");
+          const name = String(r?.nguyenNhienLieu ?? "").trim() || "(không tên)";
+          (acc[tab] ||= []).push(name);
+          return acc;
+        }, {});
+        const detailLinesKiemKe = Object.entries(byTabKiemKe)
+          .map(([tab, names]) => `- Tab ${tab}: ${names.join(", ")}`)
+          .join("\n");
+        message.error(
+          `Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng.\nVui lòng kiểm tra lại theo tab:\n${detailLinesKiemKe}`
+        );
+        throw new Error("Validation failed: luongSuDungKiemKe không nhất quán với tongThucTe");
+      }
+
+      // Validation: các cột số không được âm
+      const isNeg = (v: unknown) => {
+        if (v === null || v === undefined || v === "") return false;
+        const num = typeof v === "number" ? v : Number(v);
+        return !Number.isNaN(num) && num < 0;
+      };
+      const numericFields: { field: keyof typeof table1Normalized[0]; label: string }[] = [
+        { field: "tonDauCa", label: "Tồn đầu ca" },
+        { field: "nhapTrongCa", label: "Nhập trong ca" },
+        { field: "tonCuoiCa", label: "Tồn cuối ca" },
+        { field: "tongThucTe", label: "Tổng thực tế" },
+        { field: "luongSuDungKiemKe", label: "Lượng sử dụng kiểm kê" },
+      ];
+      for (const { field, label } of numericFields) {
+        const negRows = table1Normalized.filter((row) => isNeg(row[field]));
+        if (negRows.length > 0) {
+          const tenNguyenLieu = negRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+          message.error(`${label} không được âm. Vui lòng kiểm tra lại: ${tenNguyenLieu}`);
+          throw new Error(`Validation failed: ${field} âm`);
+        }
+      }
+
+      // Validation: Khi SoSuDung = 0 và SoNhapVe = 0 thì SoTonCuoi phải bằng SoTonDau
+      const invalidRows = table1Normalized.filter((row) => {
+        const soSuDung = row.tongThucTe;
+        const soNhapVe = row.nhapTrongCa;
+        const soTonDau = row.tonDauCa;
+        const soTonCuoi = row.tonCuoiCa;
+        return soSuDung === 0 && soNhapVe === 0 && soTonCuoi !== soTonDau;
+      });
+
+      if (invalidRows.length > 0) {
+        const tenNguyenLieu = invalidRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
+        message.error(
+          `Dữ liệu tồn kho không hợp lệ.\nKhi số sử dụng = 0 và số nhập về = 0 thì số tồn cuối phải bằng số tồn đầu.\nVui lòng kiểm tra lại: ${tenNguyenLieu}`
+        );
+        throw new Error("Validation failed: tồn cuối không bằng tồn đầu");
+      }
+    }
 
     const table2Normalized = (table2Data || []).map((row) => ({
       ...row,
@@ -286,32 +375,10 @@ const Tao_STD = () => {
       totalSuDung: Number(row.totalSuDung || 0),
       totalSDTrongSoSach: Number(row.totalSDTrongSoSach || 0),
       totalChenhLech: Number(row.totalChenhLech || 0),
+      tyLeBOF: row.tyLeBOF != null ? Number(row.tyLeBOF) : null,
+      tyLeTinhLuyen: row.tyLeTinhLuyen != null ? Number(row.tyLeTinhLuyen) : null,
     }));
 
-    // Flow phê duyệt giống BOF
-    const pheDuyetFlow = config.signatures
-      .filter((s) => s.isChon)
-      .map((s) => ({
-        capDuyet: s.capduyet,
-        maKyDuyet: s.key,
-        nguoiDuyetId: form.getFieldValue(s.key),
-        tinhTrang: 0,
-        ghiChu: "",
-      }));
-
-    // Thêm người tạo phiếu ở cấp 1 nếu cấu hình
-    const hasCreator = config.signatures.find(
-      (x) => x.isChon === false && x.capduyet === 1
-    );
-    if (hasCreator) {
-      pheDuyetFlow.unshift({
-        capDuyet: 1,
-        maKyDuyet: hasCreator?.key || "",
-        nguoiDuyetId: userInfo.iD_TaiKhoan ?? null,
-        tinhTrang: 1,
-        ghiChu: "Người tạo phiếu",
-      });
-    }
     return {
       ...values,
       NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
@@ -323,67 +390,308 @@ const Tao_STD = () => {
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: table1Normalized,
       table2: table2Normalized,
-      pheDuyet: pheDuyetFlow,
       nxtPayload: buildNxtUpsertPayload(values),
     };
-  }, [getUserInfo, form, config.code, config.prefix, table1Data, table2Data, config.signatures, buildNxtUpsertPayload]);
+  }, [getUserInfo, form, config.headerFields, config.code, config.prefix, table1Data, table2Data, buildNxtUpsertPayload]);
 
-  const handleActionSuccess = useCallback(
-    async (context: any) => {
-      if (context?.newPhieuId) {
-        navigate(`/tao-std`, {
-          replace: true,
-          state: { idphieu: context.newPhieuId },
-        });
-        return;
-      }
-      await initData();
-    },
-    [navigate, initData]
-  );
-
-  const actionButtons = useMemo(() => {
-    const userInfo = getUserInfo();
-    
-    const buttons = phieuActionService.getActionButtons({
-      phieuId: idphieu || "",
-      tinhTrang: phieuInfo.tinhTrang ?? 0,
-      isClone: phieuInfo.isClone ?? false,
-      currentUserId: userInfo.iD_TaiKhoan ?? null,
-      currentUserPhongBanId: userInfo.iD_PhongBan ?? null,
-      currentUserTenNgan: userInfo.tenNgan ?? null,
-      nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
-      phieuPhongBanId: phieuInfo.idphongBan ?? null,
-      pheDuyet: phieuInfo.pheDuyet ?? [],
-      // Gọi API upsert sau khi PhieuApi.postData hoặc PhieuApi.putData thành công
-      customPutApi: async (phieuIdParam, formData) => {
-        // Lấy nxtPayload từ formData
-        const nxtPayload = (formData as any)?.nxtPayload as STD_NXT_HRC2_UpsertDto | undefined;
-        if (!nxtPayload) {
-          console.warn("nxtPayload không tồn tại trong formData");
-          return;
+  const handleSave = useCallback(async () => {
+    try {
+      setLoading(true);
+      const formData = await getFormData(true);
+      const nxtPayload = (formData as any)?.nxtPayload as STD_NXT_HRC2_UpsertDto | undefined;
+      if (idphieu) {
+        await PhieuApi.putData(idphieu, formData as Record<string, unknown>);
+        if (nxtPayload) {
+          nxtPayload.IdPhieu = idphieu;
+          await STD_NXT_HRC2ServiceApi.upsert(nxtPayload);
         }
-        // Cập nhật IdPhieu từ phieuIdParam
-        nxtPayload.IdPhieu = phieuIdParam;
-        await STD_NXT_HRC2ServiceApi.upsert(nxtPayload);
-      },
-      onSuccess: handleActionSuccess,
-      onError: (error) => {
-        console.error("Action error:", error);
-      },
-    });
-
-    if (buttons.length === 0) return null;
-    return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleActionSuccess]);
+        message.success("Lưu thành công!");
+        await initData();
+      } else {
+        const res = await PhieuApi.postData(formData as Record<string, unknown>);
+         const newId = (res as any)?.idphieu || (res as any)?.data?.idphieu;
+        // if (nxtPayload && newId) {
+        //   nxtPayload.IdPhieu = newId;
+        //   await STD_NXT_HRC2ServiceApi.upsert(nxtPayload);
+        // }
+        message.success("Lưu thành công!");
+        if (newId) navigateToDetail(newId, "/tao-std");
+      }
+    } catch (err: any) {
+      if (err?.message?.startsWith("Validation")) return;
+      message.error("Lưu thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  }, [getFormData, idphieu, navigateToDetail, initData]);
 
   /** Gọi khi load lần đầu */
   useEffect(() => {
     initData();
   }, [initData]);
 
-  const layout1 = config.layout1?.[0];
+  const layout1Raw = config.layout1?.[0];
+  const layout1 = layout1Raw
+    ? {
+        ...layout1Raw,
+        columns: (layout1Raw.columns || [])
+          .filter((col: any) => !col.hidden)
+          .map((col: any) =>
+            col.children
+              ? { ...col, children: col.children.filter((c: any) => !c.hidden) }
+              : col
+          ),
+      }
+    : undefined;
   const layout2 = config.layout2?.[0];
+
+  const getRelatedTargets = useCallback((): STD_NXT_RelatedPhieuTarget[] => {
+    const kvList = config.layout1?.[0]?.khuVucList || [];
+    return kvList
+      .filter((kv: any) => kv?.bieuMau && kv?.scope != null)
+      .map((kv: any) => ({
+        tabKey: `kv_${String(kv?.label || kv?.value || "")}`,
+        label: String(kv?.label || kv?.value || ""),
+        bieuMau: String(kv?.bieuMau || ""),
+        scope: Number(kv?.scope),
+      }));
+  }, [config.layout1]);
+
+  const tinhTrangLabel = useCallback((status: number | null | undefined) => {
+    switch (status) {
+      case 0:
+        return "Đang lưu";
+      case 1:
+        return "Đã gửi";
+      case 2:
+        return "Hoàn thành";
+      case 5:
+        return "Đã chốt";
+      case 7:
+        return "Đang hiệu chỉnh";
+      default:
+        return status == null ? "Chưa có phiếu" : `Trạng thái ${status}`;
+    }
+  }, []);
+
+  const loadRelatedPhieuStatuses = useCallback(async (): Promise<boolean> => {
+    try {
+      const ngayValue = form.getFieldValue("NgaySX");
+      const caValue = form.getFieldValue("ca");
+      const ngay = ngayValue ? dayjs(ngayValue).format("YYYY-MM-DD") : null;
+      const ca = caValue != null ? Number(caValue) : null;
+      if (!ngay || !ca) {
+        setRelatedStatusMap({});
+        setCanPhanBo(true);
+        setIsLockedByChot(false);
+        return true;
+      }
+
+      const targets = getRelatedTargets();
+      const res: any = await STD_NXT_HRC2ServiceApi.getRelatedPhieuStatuses({
+        NgaySX: ngay,
+        Ca: ca,
+        Targets: targets,
+      });
+
+      const payload = (res as any)?.data ?? res;
+      const data = payload?.data ?? payload;
+      const items = (data?.items ?? data?.Items ?? []) as STD_NXT_RelatedPhieuStatusItem[];
+      const canPhanBoFromServer =
+        (data?.canPhanBo ?? data?.CanPhanBo ?? true) as boolean;
+
+      const nextMap: Record<string, STD_NXT_RelatedPhieuStatusItem> = {};
+      items.forEach((x) => {
+        const key = String(x?.tabKey ?? (x as any)?.TabKey ?? "");
+        if (key) nextMap[key] = x;
+      });
+      setRelatedStatusMap(nextMap);
+      setCanPhanBo(Boolean(canPhanBoFromServer));
+      const hasChot = items.some((x) => (x?.tinhTrang ?? (x as any)?.TinhTrang) === 5);
+      setIsLockedByChot(hasChot);
+      if (!canPhanBoFromServer) {
+        setSummaryTableRemountKey((k) => k + 1);
+      }
+      return Boolean(canPhanBoFromServer);
+    } catch (error) {
+      console.error("Không thể tải trạng thái phiếu theo tab:", error);
+      setRelatedStatusMap({});
+      setCanPhanBo(true);
+      setIsLockedByChot(false);
+      return true;
+    }
+  }, [form, getRelatedTargets]);
+
+  useEffect(() => {
+    loadRelatedPhieuStatuses();
+  }, [loadRelatedPhieuStatuses, watchedNgaySX, watchedCa]);
+
+  const refreshSummaryAndStatus = useCallback(async () => {
+    if (idphieu) {
+      await initData();
+    }
+    await loadRelatedPhieuStatuses();
+  }, [idphieu, initData, loadRelatedPhieuStatuses]);
+
+  const handlePhanBoSummary = useCallback(
+    async (dto: STD_NXT_HRC2_PhanBoDto) => {
+      try {
+        if (!idphieu) {
+          message.warning("Vui lòng lưu phiếu trước khi phân bổ.");
+          return;
+        }
+        const values = await form.validateFields(["NgaySX", "ca"]);
+        const ngay = values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null;
+        const caVal = values.ca;
+        if (!ngay || !caVal) {
+          message.warning("Vui lòng chọn Ngày và Ca trước khi phân bổ.");
+          return;
+        }
+        const canPhanBo = await loadRelatedPhieuStatuses();
+        if (!canPhanBo) {
+          message.warning("Không thể phân bổ vì có ít nhất 1 phiếu ở tab nấu luyện chưa hoàn thành.");
+          return;
+        }
+        const payload: STD_NXT_HRC2_PhanBoDto = {
+          NgaySX: ngay,
+          Ca: Number(caVal),
+          Id_HeaderKey: dto.Id_HeaderKey,
+          ChenhLech: dto.ChenhLech,
+          IdPhieu: idphieu,
+          TyLeBOF: dto.TyLeBOF ?? null,
+          TyLeTinhLuyen: dto.TyLeTinhLuyen ?? null,
+          TyLeRH: dto.TyLeRH ?? null,
+        };
+        setLoading(true);
+        try {
+          const res = await STD_NXT_HRC2ServiceApi.phanBo(payload);
+          const ok = (res as any)?.data ?? res;
+          if (ok === true) {
+            message.success("Phân bổ chênh lệch thành công.");
+            await refreshSummaryAndStatus();
+          } else {
+            message.warning("Phân bổ không thành công.");
+            await refreshSummaryAndStatus();
+          }
+        } catch (apiError: any) {
+          console.error("Phân bổ thất bại:", apiError);
+          message.error(apiError?.message || apiError || "Không thể phân bổ. Vui lòng thử lại.");
+          await refreshSummaryAndStatus();
+        } finally {
+          setLoading(false);
+        }
+      } catch (error: any) {
+        if (error?.errorFields) {
+          return;
+        }
+        console.error("Phân bổ thất bại:", error);
+        message.error(error?.message || error || "Không thể phân bổ. Vui lòng thử lại.");
+      }
+    },
+    [form, idphieu, loadRelatedPhieuStatuses, refreshSummaryAndStatus]
+  );
+
+  const handleThuHoiSummary = useCallback(
+    async (dto: STD_NXT_HRC2_PhanBoDto) => {
+      try {
+        if (!idphieu) {
+          message.warning("Vui lòng lưu phiếu trước khi thu hồi phân bổ.");
+          return;
+        }
+        const values = await form.validateFields(["NgaySX", "ca"]);
+        const ngay = values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null;
+        const caVal = values.ca;
+        if (!ngay || !caVal) {
+          message.warning("Vui lòng chọn Ngày và Ca trước khi thu hồi phân bổ.");
+          return;
+        }
+        const payload: STD_NXT_HRC2_PhanBoDto = {
+          NgaySX: ngay,
+          Ca: Number(caVal),
+          Id_HeaderKey: dto.Id_HeaderKey,
+          ChenhLech: dto.ChenhLech,
+          IdPhieu: idphieu,
+          TyLeBOF: dto.TyLeBOF ?? null,
+          TyLeTinhLuyen: dto.TyLeTinhLuyen ?? null,
+          TyLeRH: dto.TyLeRH ?? null,
+        };
+        setLoading(true);
+        try {
+          const res = await STD_NXT_HRC2ServiceApi.thuHoiPhanBo(payload);
+          const ok = (res as any)?.data ?? res;
+          if (ok === true) {
+            message.success("Thu hồi phân bổ thành công.");
+            await refreshSummaryAndStatus();
+          } else {
+            message.warning("Thu hồi phân bổ không thành công.");
+            await refreshSummaryAndStatus();
+          }
+        } catch (apiError: any) {
+          console.error("Thu hồi phân bổ thất bại:", apiError);
+          message.error(apiError?.message || "Không thể thu hồi phân bổ. Vui lòng thử lại.");
+          await refreshSummaryAndStatus();
+        } finally {
+          setLoading(false);
+        }
+      } catch (error: any) {
+        if (error?.errorFields) {
+          return;
+        }
+        console.error("Thu hồi phân bổ thất bại:", error);
+        message.error(error?.message || "Không thể thu hồi phân bổ. Vui lòng thử lại.");
+      }
+    },
+    [form, idphieu, refreshSummaryAndStatus]
+  );
+  
+  const handleKhongPhanBoSummary = useCallback(
+    async (dto: STD_NXT_HRC2_PhanBoDto) => {
+      try {
+        if (!idphieu) {
+          message.warning("Vui lòng lưu phiếu trước khi không phân bổ.");
+          return;
+        }
+        const values = await form.validateFields(["NgaySX", "ca"]);
+        const ngay = values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null;
+        const caVal = values.ca;
+        if (!ngay || !caVal) {
+          message.warning("Vui lòng chọn Ngày và Ca trước khi không phân bổ.");
+          return;
+        }
+        const payload: STD_NXT_HRC2_KhongPhanBoDto = {
+          NgaySX: ngay,
+          Ca: Number(caVal),
+          Id_HeaderKey: dto.Id_HeaderKey,
+          IdPhieu: idphieu,
+        };
+        setLoading(true);
+        try {
+          const res = await STD_NXT_HRC2ServiceApi.khongPhanBo(payload);
+          const ok = (res as any)?.data ?? res;
+          if (ok === true) {
+            message.success("Không phân bổ thành công.");
+            await refreshSummaryAndStatus();
+          } else {
+            message.warning("Không phân bổ không thành công.");
+            await refreshSummaryAndStatus();
+          }
+        } catch (apiError: any) {
+          console.error("Không phân bổ thất bại:", apiError);
+          message.error(apiError?.message || "Không thể không phân bổ. Vui lòng thử lại.");
+          await refreshSummaryAndStatus();
+        } finally {
+          setLoading(false);
+        }
+      } catch (error: any) {
+        if (error?.errorFields) {
+          return;
+        }
+        console.error("Không phân bổ thất bại:", error);
+        message.error(error?.message || "Không thể không phân bổ. Vui lòng thử lại.");
+      }
+    },
+    [form, idphieu, refreshSummaryAndStatus]
+  );
 
   const handleFilterData = useCallback(async () => {
     try {
@@ -395,104 +703,126 @@ const Tao_STD = () => {
         message.warning("Vui lòng chọn Ngày và Ca trước khi lọc dữ liệu");
         return;
       }
+      const idphieuVal = form.getFieldValue("idphieu") ?? idphieu;
+      const headerKeyIds = [...new Set(
+        table1Data
+          .map((r) => r.idNguyenNhienLieu)
+          .filter((id): id is number => id != null && id !== undefined && Number(id) > 0)
+      )];
       const res = await dlnmHRC2Api.filterSTD_NXT({
         NgaySX: ngay,
         Ca: Number(caVal),
+        ...(idphieuVal ? { idPhieu: idphieuVal } : {}),
+        ...(headerKeyIds.length > 0 ? { headerKeyIds } : {}),
       });
-      // Map dữ liệu trả về vào bảng 1
+      // Map dữ liệu trả về từ filter
       const payload = (res as any)?.data ?? res;
       const resultData = Array.isArray(payload) ? (payload as any[]) : [];
 
-      // helper tìm khu vực theo bieuMau + scope từ config
       const kvList = config.layout1?.[0]?.khuVucList || [];
       const findKhuVucLabel = (bieuMau: string | null | undefined, scope: number | null | undefined) => {
         const match = kvList.find((kv: any) => kv?.bieuMau === bieuMau && Number(kv?.scope) === Number(scope));
         return match?.label || match?.value || "";
       };
-
+      const getKhuVucByScope = (scope: number): string => {
+        const kv = kvList.find((kv: any) => {
+          const valueNum = kv?.value !== undefined ? Number(kv.value) : NaN;
+          return !Number.isNaN(valueNum) && valueNum === scope;
+        });
+        return kv?.label ? String(kv.label) : String(scope);
+      };
       const viTriDefault = config.layout1?.[0]?.defaultViTri ?? 1;
+      const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
 
-      // Update theo đúng mục đích:
-      // - Không làm ảnh hưởng danh sách phụ liệu đang hiển thị
-      // - Luôn reset tongThucTe = 0 trước, rồi đổ dữ liệu filter vào
-      // - Nếu filter có phụ liệu chưa móc nối -> thêm dòng mới (unmapped) theo đúng khu vực
-      setTable1Data((prev: STD_NXT_Table1Row[]) => {
-        const currentRows = prev.map((r) => ({
-          ...r,
-          // nếu không có dữ liệu filter trả về cho dòng này -> 0
-          tongThucTe: 0,
+      // Khi có idphieu: BE đã chạy Init và cập nhật DB → load lại detail từ BE rồi mới đổ resultData lên
+      if (idphieuVal) {
+        const detailRes: any = await STD_NXT_HRC2ServiceApi.getDetail(idphieuVal);
+        const data = detailRes?.data;
+        const mappedDetails: STD_NXT_Table1Row[] = (data?.details || []).map((item: any, index: number) => {
+          const scope = Number(item.scope) || 0;
+          const khuVuc = getKhuVucByScope(scope);
+          return {
+            key: `${scope}_${item.id_HeaderKey}_${item.viTri}_${index}`,
+            khuVuc,
+            viTri: Number(item.viTri) || 1,
+            nguyenNhienLieu: item.tenNguyenLieu || "",
+            idNguyenNhienLieu: item.id_HeaderKey || null,
+            isUnmapped: !item.id_HeaderKey,
+            siloId: item.idSilo ?? item.IDSilo ?? item.siloId ?? null,
+            tenSilo: item.tenSilo ?? item.TenSilo ?? null,
+            tonDauCa: item.tonDauCa ?? null,
+            tuongQuanDauCa: item.tuongQuanDauCa ?? "",
+            mucLieu: item.mucLieu ?? null,
+            theTich: item.theTich ?? null,
+            tyTrong: item.tyTrong ?? null,
+            nhapTrongCa: item.nhapVaoTrongCa ?? null,
+            tonCuoiCa: item.tonCuoiCa ?? null,
+            tuongQuanCuoiCa: item.tuongQuanCuoiCa ?? "",
+            tongThucTe: item.tongThucTe ?? null,
+            luongSuDungKiemKe: item.luongSuDungKiemKe ?? null,
+          };
+        });
+        const ngaySxStr = (data?.ngaySX ?? data?.NgaySX) != null ? (typeof (data?.ngaySX ?? data?.NgaySX) === "string" ? (data?.ngaySX ?? data?.NgaySX) : (data?.ngaySX ?? data?.NgaySX)?.format?.("YYYY-MM-DD")) : undefined;
+        const caVal = data?.ca ?? data?.Ca ?? undefined;
+        const mappedSummary: STD_NXT_Table2Row[] = (data?.summary || []).map((item: any) => ({
+          key: `summary_${item.id_HeaderKey ?? item.Id_HeaderKey}`,
+          totalNguyenNhienLieu: item.tenNguyenLieu ?? item.TenNguyenLieu ?? "",
+          totalTonDauCa: item.tongTonDauCa ?? item.TongTonDauCa ?? null,
+          totalNhapTrongCa: item.tongTonNhapTrongCa ?? item.TongTonNhapTrongCa ?? null,
+          totalTonCuoiCa: item.tongTonCuoiCa ?? item.TongTonCuoiCa ?? null,
+          totalSuDung: item.tongSuDung ?? item.TongSuDung ?? null,
+          totalSDTrongSoSach: item.tongSDTrenSoSach ?? item.TongSDTrenSoSach ?? null,
+          totalChenhLech: item.chenhLech ?? item.ChenhLech ?? null,
+          HasPhanBo: item.hasPhanBo ?? item.HasPhanBo ?? null,
+          Id_HeaderKey: item.id_HeaderKey ?? item.Id_HeaderKey ?? null,
+          NgaySX: ngaySxStr,
+          Ca: caVal,
+          tyLeBOF: item.tyLeBOF ?? item.TyLeBOF ?? null,
+          tyLeTinhLuyen: item.tyLeTinhLuyen ?? item.TyLeTinhLuyen ?? null,
+          tyLeRH: item.tyLeRH ?? item.TyLeRH ?? null,
+          KLPB_BOF: item.klpB_BOF ?? item.klpb_BOF ?? item.KLPB_BOF ?? null,
+          KLPB_TL: item.klpB_TL ?? item.klpb_TL ?? item.KLPB_TL ?? null,
+          KLPB_RH: item.klpB_RH ?? item.klpb_RH ?? item.KLPB_RH ?? null,
         }));
 
-        const newUnmappedRows: STD_NXT_Table1Row[] = [];
-        const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
+        // Giữ lại các dòng thêm tay (isManualNew) chưa lưu lên BE
+        const manualNewRows = table1Data
+          .filter((r: any) => r.isManualNew === true)
+          .map((r: any) => ({ ...r, tongThucTe: 0 }));
 
-        // Xử lý từng item từ API
+        const currentRows = [
+          ...mappedDetails.map((r) => ({ ...r, tongThucTe: 0 })),
+          ...manualNewRows,
+        ];
+        const newUnmappedRows: STD_NXT_Table1Row[] = [];
+
         resultData.forEach((item: any) => {
           const khuVucLabel = findKhuVucLabel(item.bieuMau, item.scope);
           if (!khuVucLabel) return;
-
           const targetHeaderId = (item.headerKeyId ?? item.HeaderKeyId) as number | null;
           const targetHeaderName = item.headerKeyName ?? item.HeaderKeyName;
           const totalKL = (item.totalKLPhuGia ?? item.TotalKLPhuGia ?? 0) as number;
           const phuLieus = Array.isArray(item.phuLieus ?? item.PhuLieus) ? (item.phuLieus ?? item.PhuLieus) : [];
 
           if (targetHeaderId) {
-            // Có headerKeyId: update tongThucTe cho TẤT CẢ các dòng cùng phụ liệu trong khu vực,
-            // kể cả dòng user tự thêm tay.
-            const matchedIndexes: number[] = [];
             currentRows.forEach((row, idx) => {
               if (row.khuVuc !== khuVucLabel) return;
-              // match chính xác theo id
-              if (row.idNguyenNhienLieu === targetHeaderId) {
-                matchedIndexes.push(idx);
-                return;
-              }
-              // fallback: nếu row chưa có id nhưng có tên, match theo headerKeyName từ API
-              if (!row.idNguyenNhienLieu && targetHeaderName && norm(row.nguyenNhienLieu) === norm(targetHeaderName)) {
-                matchedIndexes.push(idx);
+              if (row.idNguyenNhienLieu === targetHeaderId || (!row.idNguyenNhienLieu && targetHeaderName && norm(row.nguyenNhienLieu) === norm(targetHeaderName))) {
+                currentRows[idx] = { ...currentRows[idx], tongThucTe: totalKL ?? 0, isUnmapped: false, idNguyenNhienLieu: currentRows[idx].idNguyenNhienLieu ?? targetHeaderId };
               }
             });
-
-            matchedIndexes.forEach((idx) => {
-              currentRows[idx] = {
-                ...currentRows[idx],
-                tongThucTe: totalKL ?? 0,
-                isUnmapped: false,
-                // nếu row đang thiếu idNguyenNhienLieu mà match theo tên -> set lại id để lần sau match chuẩn
-                idNguyenNhienLieu: currentRows[idx].idNguyenNhienLieu ?? targetHeaderId,
-              };
-            });
-
-            // Nếu không tìm thấy -> không thêm mới (không ảnh hưởng danh sách đang hiển thị)
             return;
           }
-
-          // Unmapped: mỗi group này là theo ID_PhuLieu (BE đã group), nên phuLieus thường 1 phần tử
           phuLieus.forEach((pl: any) => {
             const fallbackName = pl?.tenPhuLieu ?? pl?.TenPhuLieu ?? "";
             const idPhuLieu = pl?.iD_PhuLieu ?? pl?.ID_PhuLieu ?? null;
             if (!idPhuLieu) return;
-
-            const existingUnmappedIndex = currentRows.findIndex(
-              (row) => row.isUnmapped && row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel
-            );
-
+            const existingUnmappedIndex = currentRows.findIndex((row) => row.isUnmapped && row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel);
             if (existingUnmappedIndex >= 0) {
-              currentRows[existingUnmappedIndex] = {
-                ...currentRows[existingUnmappedIndex],
-                tongThucTe: totalKL ?? 0,
-                rawTenPhuLieu: currentRows[existingUnmappedIndex].rawTenPhuLieu || fallbackName,
-                nguyenNhienLieu: currentRows[existingUnmappedIndex].nguyenNhienLieu || fallbackName,
-                isUnmapped: true,
-              };
+              currentRows[existingUnmappedIndex] = { ...currentRows[existingUnmappedIndex], tongThucTe: totalKL ?? 0, rawTenPhuLieu: currentRows[existingUnmappedIndex].rawTenPhuLieu || fallbackName, nguyenNhienLieu: currentRows[existingUnmappedIndex].nguyenNhienLieu || fallbackName, isUnmapped: true };
               return;
             }
-
-            // Nếu chưa có trong list đang hiển thị -> thêm dòng mới để user móc nối
-            const existsInNew = newUnmappedRows.some(
-              (row) => row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel
-            );
-            if (!existsInNew) {
+            if (!newUnmappedRows.some((row) => row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel)) {
               newUnmappedRows.push({
                 key: `${khuVucLabel}_unmapped_${idPhuLieu}_${Date.now()}`,
                 khuVuc: khuVucLabel,
@@ -502,32 +832,131 @@ const Tao_STD = () => {
                 rawTenPhuLieu: fallbackName,
                 isUnmapped: true,
                 idPhuLieu: idPhuLieu,
-                tonDauCa: "",
-                tuongQuanDauCa: "",
-                nhapTrongCa: "",
-                tonCuoiCa: "",
-                tuongQuanCuoiCa: "",
+                tonDauCa: "", tuongQuanDauCa: "", nhapTrongCa: "", tonCuoiCa: "", tuongQuanCuoiCa: "",
                 tongThucTe: totalKL ?? 0,
               });
             }
           });
         });
 
-        return [...currentRows, ...newUnmappedRows];
-      });
+        setTable1Data([...currentRows, ...newUnmappedRows]);
+        setTable2Data(mappedSummary);
+      } else {
+        // Không có phiếu: giữ logic cũ, đổ filter lên prev
+        setTable1Data((prev: STD_NXT_Table1Row[]) => {
+          const currentRows = prev.map((r) => ({ ...r, tongThucTe: 0 }));
+          const newUnmappedRows: STD_NXT_Table1Row[] = [];
+
+          resultData.forEach((item: any) => {
+            const khuVucLabel = findKhuVucLabel(item.bieuMau, item.scope);
+            if (!khuVucLabel) return;
+            const targetHeaderId = (item.headerKeyId ?? item.HeaderKeyId) as number | null;
+            const targetHeaderName = item.headerKeyName ?? item.HeaderKeyName;
+            const totalKL = (item.totalKLPhuGia ?? item.TotalKLPhuGia ?? 0) as number;
+            const phuLieus = Array.isArray(item.phuLieus ?? item.PhuLieus) ? (item.phuLieus ?? item.PhuLieus) : [];
+
+            if (targetHeaderId) {
+              currentRows.forEach((row, idx) => {
+                if (row.khuVuc !== khuVucLabel) return;
+                if (row.idNguyenNhienLieu === targetHeaderId || (!row.idNguyenNhienLieu && targetHeaderName && norm(row.nguyenNhienLieu) === norm(targetHeaderName))) {
+                  currentRows[idx] = { ...currentRows[idx], tongThucTe: totalKL ?? 0, isUnmapped: false, idNguyenNhienLieu: currentRows[idx].idNguyenNhienLieu ?? targetHeaderId };
+                }
+              });
+              return;
+            }
+            phuLieus.forEach((pl: any) => {
+              const fallbackName = pl?.tenPhuLieu ?? pl?.TenPhuLieu ?? "";
+              const idPhuLieu = pl?.iD_PhuLieu ?? pl?.ID_PhuLieu ?? null;
+              if (!idPhuLieu) return;
+              const existingUnmappedIndex = currentRows.findIndex((row) => row.isUnmapped && row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel);
+              if (existingUnmappedIndex >= 0) {
+                currentRows[existingUnmappedIndex] = { ...currentRows[existingUnmappedIndex], tongThucTe: totalKL ?? 0, rawTenPhuLieu: currentRows[existingUnmappedIndex].rawTenPhuLieu || fallbackName, nguyenNhienLieu: currentRows[existingUnmappedIndex].nguyenNhienLieu || fallbackName, isUnmapped: true };
+                return;
+              }
+              if (!newUnmappedRows.some((row) => row.idPhuLieu === idPhuLieu && row.khuVuc === khuVucLabel)) {
+                newUnmappedRows.push({
+                  key: `${khuVucLabel}_unmapped_${idPhuLieu}_${Date.now()}`,
+                  khuVuc: khuVucLabel,
+                  viTri: viTriDefault,
+                  nguyenNhienLieu: fallbackName,
+                  idNguyenNhienLieu: null,
+                  rawTenPhuLieu: fallbackName,
+                  isUnmapped: true,
+                  idPhuLieu: idPhuLieu,
+                  tonDauCa: "", tuongQuanDauCa: "", nhapTrongCa: "", tonCuoiCa: "", tuongQuanCuoiCa: "",
+                  tongThucTe: totalKL ?? 0,
+                });
+              }
+            });
+          });
+          return [...currentRows, ...newUnmappedRows];
+        });
+      }
 
       if (resultData.length === 0) {
         message.info("Không có dữ liệu phụ liệu cho Ngày/Ca đã chọn (đã reset Tổng thực tế sử dụng = 0)");
       } else {
         message.success("Đã lọc dữ liệu phụ liệu theo ngày/ca");
       }
+
+      // Sau khi lọc dữ liệu, cập nhật lại trạng thái phiếu theo tab
+      await loadRelatedPhieuStatuses();
     } catch (error: any) {
       console.error("Lọc dữ liệu thất bại:", error);
       message.error(error?.message || "Không thể lọc dữ liệu");
     }
-  }, [form, config.layout1, setTable1Data]);
+  }, [form, config.layout1, setTable1Data, table1Data, idphieu, loadRelatedPhieuStatuses]);
 
+  const handleExportExcelTieuHaoTheoCa = useCallback(async () => {
+    try {
+      const ngay = watchedNgaySX.format("YYYY-MM-DD");
+      // apiService trả thẳng response.data — với responseType: "blob" đây là Blob, không có .data
+      const raw = await dlnmHRC2Api.exportExcelTieuHaoTheoCa({ ngay, ca: watchedCa });
+      if (raw == null) {
+        message.error("Không nhận được dữ liệu Excel từ server.");
+        return;
+      }
+      const blob =
+        raw instanceof Blob
+          ? raw
+          : new Blob([raw as unknown as BlobPart], {
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+      if (blob.size === 0) {
+        message.error("File Excel tải về rỗng.");
+        return;
+      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dateStr = watchedNgaySX.format("DDMMYYYY");
+      a.download = `TieuHao_HRC2_Ca${watchedCa}_${dateStr}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      message.success("Đã tải file Excel");
+    } catch (error: unknown) {
+      console.error("Xuất Excel thất bại:", error);
+      const msg =
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string"
+          ? (error as { message: string }).message
+          : "Xuất Excel thất bại";
+      message.error(msg);
+    }
+  }, [watchedNgaySX, watchedCa]);
   return (
+
+    <>
+    <Button type="primary" icon={<FileExcelOutlined />}
+        style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
+        onClick={handleExportExcelTieuHaoTheoCa}
+        loading={loading}
+      >
+      Xuất Excel
+    </Button>
+    
     <Card className="mt-6 shadow-md">
       {/* Tiêu đề biên bản */}
       <div className="mb-6 flex items-start justify-between">
@@ -588,7 +1017,7 @@ const Tao_STD = () => {
         >
           {config.headerFields.map((f, idx) => (
             <div key={f.key || idx} style={{ flex: "0 0 260px", maxWidth: 320 }}>
-              <CustomFormItem field={f} idx={idx} />
+              <CustomFormItem field={f} idx={idx} disabled={false}/>
             </div>
           ))}
           <div style={{ flex: "0 0 160px", maxWidth: 160 }}>
@@ -601,50 +1030,120 @@ const Tao_STD = () => {
                 borderRadius: 8,
               }}
             >
-              Lọc dữ liệu
+              Làm mới
             </Button>
           </div>
         </div>
 
-        {/* TABLE 1 - Bảng nhóm theo khu vực */}
-        {layout1 && layout1.sectionType === "groupedTable" && (
-          <div style={{ marginTop: 24 }}>
-            <Typography.Title level={5}>{layout1.title}</Typography.Title>
-            {(() => {
-              const kvList = layout1.khuVucList || [];
-              const kvLabels = kvList
-                .map((k: any) => k?.label || k?.value || "")
-                .filter((x: string) => !!x);
-              return (
-            <GroupedTableSTD
-              columns={layout1.columns || []}
-              initialData={table1Data}
-              onDataChange={setTable1Data}
-              khuVucList={kvLabels}
-              defaultNguyenNhienLieu={[]}
-              defaultViTri={layout1.defaultViTri || 1}
-              editable={!isFormLocked}
-              loading={loading}
-            />
-              );
-            })()}
-          </div>
-        )}
+        {/* TABS: summaryTable + mỗi khuVuc 1 tab */}
+        {(() => {
+          const kvList = layout1?.khuVucList || [];
+          const kvLabels: string[] = kvList
+            .map((k: any) => k?.label || k?.value || "")
+            .filter((x: string) => !!x);
 
-        {/* TABLE 2 - Bảng tổng hợp */}
-        {layout2 && layout2.sectionType === "summaryTable" && (
-          <div style={{ marginTop: 24 }}>
-            <Typography.Title level={5}>{layout2.title}</Typography.Title>
-            <SummaryTableSTD
-              columns={layout2.columns || []}
-              table1Data={table1Data}
-              initialData={table2Data}
-              onDataChange={setTable2Data}
-              editable={!isFormLocked}
-              loading={loading}
+          const tabItems = [
+            // Tab 0: Tổng hợp (summaryTable)
+            ...(layout2 && layout2.sectionType === "summaryTable"
+              ? [
+                  {
+                    key: "summary",
+                    label: layout2.title || "Tổng hợp",
+                    children: (
+                      <SummaryTableSTD
+                        key={`summary-std-${idphieu ?? "new"}-${summaryTableRemountKey}`}
+                        columns={layout2.columns || []}
+                        table1Data={table1Data}
+                        initialData={table2Data}
+                        onDataChange={setTable2Data}
+                        onPhanBo={handlePhanBoSummary}
+                        onThuHoi={handleThuHoiSummary}
+                        onKhongPhanBo={handleKhongPhanBoSummary}
+                        canPhanBo={canPhanBo}
+                        idPhieu={idphieu ?? undefined}
+                        editable={true}
+                        loading={loading}
+                        lockedTooltip={isLockedByChot ? "Đã có phiếu được chốt" : undefined}
+                      />
+                    ),
+                  },
+                ]
+              : []),
+            // Tab per khuVuc
+            ...(layout1 && layout1.sectionType === "groupedTable"
+              ? kvLabels.map((kvLabel) => ({
+                  key: `kv_${kvLabel}`,
+                  label: (
+                    <span>
+                      {kvLabel}
+                      {(() => {
+                        const key = `kv_${kvLabel}`;
+                        const statusItem = relatedStatusMap[key];
+                        const status =
+                          statusItem?.tinhTrang ??
+                          (statusItem as any)?.TinhTrang;
+                        const statusKey =
+                          status !== undefined && status !== null
+                            ? String(status)
+                            : undefined;
+                        const cfg = statusKey
+                          ? PHIEU_STATUS_CONFIG[statusKey]
+                          : undefined;
+                        return cfg ? (
+                          <Tag
+                            color={cfg.color}
+                            style={{ marginLeft: 6, fontSize: 12 }}
+                          >
+                            {cfg.text}
+                          </Tag>
+                        ) : (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              fontSize: 12,
+                              opacity: 0.85,
+                            }}
+                          >
+                            ({tinhTrangLabel(status)})
+                          </span>
+                        );
+                      })()}
+                    </span>
+                  ),
+                  children: (
+                    <GroupedTableSTD
+                      columns={layout1.columns || []}
+                      initialData={table1Data.filter(
+                        (r: any) => r.khuVuc === kvLabel
+                      )}
+                      onDataChange={(kvRows: any[]) =>
+                        setTable1Data((prev: any[]) => [
+                          ...prev.filter((r: any) => r.khuVuc !== kvLabel),
+                          ...kvRows,
+                        ])
+                      }
+                      khuVucList={[kvLabel]}
+                      defaultNguyenNhienLieu={[]}
+                      defaultViTri={layout1.defaultViTri || 1}
+                      editable={true}
+                      loading={loading}
+                      ngaySX={form.getFieldValue("NgaySX")}
+                      khuVucConfig={kvList}
+                      nhaMay={2}
+                    />
+                  ),
+                }))
+              : []),
+          ];
+
+          return (
+            <Tabs
+              style={{ marginTop: 24 }}
+              items={tabItems}
+              type="card"
             />
-          </div>
-        )}
+          );
+        })()}
 
         {/* SIGNATURES - ký tên */}
         <div
@@ -658,45 +1157,31 @@ const Tao_STD = () => {
           {config.signatures
             .filter((x) => x.isChon)
             ?.map((sig, i) => {
-              const isLevelZero = sig.capduyet === 0;
-              // Khi trạng thái là DangLuu và cấp duyệt = 0, luôn lấy currentUser, không quan tâm form có giá trị hay không
-              const shouldUseCurrentUser = currentTinhTrang === TrangThaiPhieuConst.DangLuu && isLevelZero;
-              
               return (
                 <div key={sig.key || i}>
                   <CustomFormItem
                     field={sig}
                     idx={i}
-                    disabled={isSignatureReadonly || isFormLocked}
-                    initialValue={
-                      shouldUseCurrentUser
-                        ? currentUserInfo?.iD_TaiKhoan ?? null
-                        : form.getFieldValue(sig.key)
-                    }
                   />
                 </div>
               );
             })}
         </div>
-        {/* ACTION BUTTONS */}
-
-        {/* Action buttons theo workflow */}
-        {actionButtons && (
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: 12,
-              display: "flex",
-              justifyContent: "center",
-              gap: 8,
-              flexWrap: "wrap",
-            }}
-          >
-            {actionButtons}
-          </div>
-        )}
+        <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
+          {!idphieu && (
+            <Button type="primary" onClick={handleSave} loading={loading}>
+              Tạo phiếu
+            </Button>
+          )}
+          {idphieu && (
+            <Button type="primary" onClick={handleSave} loading={loading}>
+              Lưu
+            </Button>
+          )}
+        </div>
       </Form>
     </Card>
+    </>
   );
 };
 

@@ -1,17 +1,20 @@
 import {
   Button,
   Card,
+  Checkbox,
   Col,
   Form,
   Input,
   InputNumber,
   Modal,
   Popconfirm,
+  Radio,
   Row,
   Select,
   Space,
   Switch,
   Table,
+  Tabs,
   Tag,
   message,
   DatePicker,
@@ -22,8 +25,10 @@ import {
   ReloadOutlined,
   EditOutlined,
   DeleteOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
 } from "@ant-design/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TablePaginationConfig } from "antd";
 import type { SorterResult } from "antd/es/table/interface";
 import dayjs from "dayjs";
@@ -31,19 +36,24 @@ import { headerKeyApi } from "../../../services/HeaderKeyApi";
 import type {
   HeaderKeyPayload,
   HeaderKeyMapping,
-  HeaderMappingType,
 } from "../../../models/HeaderKeyModel";
 import HeaderMappingModal from "../../../components/HeaderMapping";
 import type { HeaderMappingRecord } from "../../../components/HeaderMapping";
+import { CommonAutocomplete } from "../../../components/CommonAutocomplete";
+import type { AutocompleteSearchParams } from "../../../components/CommonAutocomplete";
+import { headerNhomApi } from "../../../services/HeaderNhomApi";
+import type { HeaderNhom } from "../../../services/HeaderNhomApi";
 
 type FilterState = {
   searchKey?: string;
   LoaiPhieu?: string;
   TrangThai?: string;
   IsUsedNXT?: boolean;
+  IsUsedThongKe?: boolean;
   FromDate?: string;
   ToDate?: string;
   SortThuTu?: string;
+  IdNhom?: number;
 };
 
 type ErrorLike = {
@@ -84,6 +94,46 @@ const HeaderMapping = () => {
   const [filters, setFilters] = useState<FilterState>({});
   const [editingRecord, setEditingRecord] = useState<HeaderKeyMapping | null>(
     null
+  );
+  const [showExtraColumns, setShowExtraColumns] = useState(false);
+
+  const nhomSearchApi = useCallback(
+    async (params: AutocompleteSearchParams) => {
+      const res = await headerNhomApi.search({
+        searchKey: params.searchKey,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 20,
+      });
+      return { data: res.data, totalRecords: res.totalRecords };
+    },
+    []
+  );
+
+  // Dùng cho form search (không allowCreate)
+  const nhomFilterSearchApi = useCallback(
+    async (params: AutocompleteSearchParams) => {
+      const res = await headerNhomApi.search({
+        searchKey: params.searchKey,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 50,
+      });
+      return { data: res.data, totalRecords: res.totalRecords };
+    },
+    []
+  );
+
+  const handleCreateNhom = useCallback(
+    async (searchText: string): Promise<HeaderNhom | null> => {
+      try {
+        const created = await headerNhomApi.create({ tenHienThi: searchText });
+        message.success(`Đã tạo nhóm "${created.tenHienThi}"`);
+        return created;
+      } catch {
+        message.error("Không thể tạo nhóm mới");
+        return null;
+      }
+    },
+    []
   );
 
   const fetchData = async (
@@ -136,9 +186,12 @@ const HeaderMapping = () => {
       TrangThai: values.TrangThai || undefined,
       IsUsedNXT:
         typeof values.IsUsedNXT === "boolean" ? values.IsUsedNXT : undefined,
+      IsUsedThongKe:
+        typeof values.IsUsedThongKe === "boolean" ? values.IsUsedThongKe : undefined,
       FromDate: fromDate,
       ToDate: toDate,
       SortThuTu: values.SortThuTu || undefined,
+      IdNhom: typeof values.IdNhom === "number" ? values.IdNhom : undefined,
     };
     fetchData(1, pagination.pageSize, appliedFilters);
   };
@@ -151,7 +204,7 @@ const HeaderMapping = () => {
   const openCreateModal = () => {
     setEditingRecord(null);
     modalForm.resetFields();
-    modalForm.setFieldsValue({ isActive: true, isUsedNXT: false });
+    modalForm.setFieldsValue({ isActive: true, isUsedNXT: false, isUsedThongKe: false, isUsed_Excel: false });
     setModalVisible(true);
   };
 
@@ -163,8 +216,17 @@ const HeaderMapping = () => {
       mota: record.mota,
       isActive: record.isActive,
       keyGuid: record.keyGuid,
-      thuTu: record.thuTu,
       isUsedNXT: record.isUsedNXT ?? false,
+      tyTrong: record.tyTrong,
+      isUsedThongKe: record.isUsedThongKe ?? false,
+      loaiThongKe: record.loaiThongKe,
+      thuTu_TK_BOF: record.thuTu_TK_BOF,
+      thuTu_TK_LFRH: record.thuTu_TK_LFRH,
+      isUsed_Excel: record.isUsed_Excel ?? false,
+      loaiExcel: record.loaiExcel,
+      thuTu_Excel_BOF: record.thuTu_Excel_BOF,
+      thuTu_Excel_LFRH: record.thuTu_Excel_LFRH,
+      iD_NhomKey: record.iD_NhomKey ?? undefined,
     });
     setModalVisible(true);
   };
@@ -183,8 +245,17 @@ const HeaderMapping = () => {
         loaiPhieu: values.loaiPhieu?.trim() || null,
         mota: values.mota?.trim() || null,
         isActive: values.isActive ?? true,
-        thuTu: values.thuTu ?? null,
         isUsedNXT: values.isUsedNXT ?? false,
+        tyTrong: values.tyTrong ?? null,
+        isUsedThongKe: values.isUsedThongKe ?? false,
+        loaiThongKe: values.isUsedThongKe ? (values.loaiThongKe ?? null) : null,
+        thuTu_TK_BOF: values.isUsedThongKe ? (values.thuTu_TK_BOF ?? null) : null,
+        thuTu_TK_LFRH: values.isUsedThongKe ? (values.thuTu_TK_LFRH ?? null) : null,
+        isUsed_Excel: values.isUsed_Excel ?? false,
+        loaiExcel: values.isUsed_Excel ? (values.loaiExcel ?? null) : null,
+        thuTu_Excel_BOF: values.isUsed_Excel ? (values.thuTu_Excel_BOF ?? null) : null,
+        thuTu_Excel_LFRH: values.isUsed_Excel ? (values.thuTu_Excel_LFRH ?? null) : null,
+        iD_NhomKey: values.iD_NhomKey ?? null,
       };
       if (editingRecord?.keyGuid) {
         payload.keyGuid = editingRecord.keyGuid;
@@ -281,21 +352,29 @@ const HeaderMapping = () => {
         render: (value: string) => value || "-",
       },
       {
-        title: "Phụ liệu NM",
-        dataIndex: "headerMappings",
-        key: "headerMappings",
-        width: 250,
-        render: (value: HeaderMappingType[]) =>
-          value.map((item) => item.tenNguonDuLieu).join("; "),
+        title: "Nhóm",
+        dataIndex: "tenNhom",
+        key: "tenNhom",
+        width: 120,
+        ellipsis: true,
+        render: (value: string | null | undefined) =>
+          value ? <Tag color="purple">{value}</Tag> : "-",
       },
-      {
-        title: "Thứ tự",
-        dataIndex: "thuTu",
-        key: "thuTu",
-        width: 60,
-        render: (value: number) => value || "-",
-        sorter: true, // remote sort via API
-      },
+      // {
+      //   title: "Phụ liệu NM",
+      //   dataIndex: "headerMappings",
+      //   key: "headerMappings",
+      //   width: 250,
+      //   render: (value: HeaderMappingType[] | undefined) => {
+      //     if (!Array.isArray(value) || value.length === 0) {
+      //       return "-";
+      //     }
+      //     return value
+      //       .filter((item) => !!item?.tenNguonDuLieu)
+      //       .map((item) => item.tenNguonDuLieu)
+      //       .join("; ");
+      //   },
+      // },
       {
         title: "Loại phiếu",
         dataIndex: "loaiPhieu",
@@ -342,6 +421,74 @@ const HeaderMapping = () => {
         render: (value: boolean | null | undefined) =>
           value ? <Tag color="blue">Có</Tag> : <Tag>Không</Tag>,
       },
+      {
+        title: "Dùng cho Thống kê",
+        dataIndex: "isUsedThongKe",
+        key: "isUsedThongKe",
+        width: 100,
+        render: (value: boolean | null | undefined) =>
+          value ? <Tag color="blue">Có</Tag> : <Tag>Không</Tag>,
+      },
+      ...(showExtraColumns ? [
+        {
+          title: "Loại thống kê",
+          dataIndex: "loaiThongKe",
+          key: "loaiThongKe",
+          width: 90,
+          render: (value: number | null | undefined) =>
+            value === 1 ? <Tag color="blue">BOF</Tag> :
+            value === 2 ? <Tag color="cyan">LFRH</Tag> :
+            value === 3 ? <Tag color="geekblue">All</Tag> :
+            <Tag>-</Tag>,
+        },
+        {
+          title: "TT TK BOF",
+          dataIndex: "thuTu_TK_BOF",
+          key: "thuTu_TK_BOF",
+          width: 80,
+          render: (value: number | null | undefined) => value ?? "-",
+        },
+        {
+          title: "TT TK LFRH",
+          dataIndex: "thuTu_TK_LFRH",
+          key: "thuTu_TK_LFRH",
+          width: 80,
+          render: (value: number | null | undefined) => value ?? "-",
+        },
+        {
+          title: "Dùng cho Excel",
+          dataIndex: "isUsed_Excel",
+          key: "isUsed_Excel",
+          width: 100,
+          render: (value: boolean | null | undefined) =>
+            value ? <Tag color="blue">Có</Tag> : <Tag>Không</Tag>,
+        },
+        {
+          title: "Loại Excel",
+          dataIndex: "loaiExcel",
+          key: "loaiExcel",
+          width: 90,
+          render: (value: number | null | undefined) =>
+            value === 1 ? <Tag color="blue">BOF</Tag> :
+            value === 2 ? <Tag color="cyan">LFRH</Tag> :
+            value === 3 ? <Tag color="geekblue">All</Tag> :
+            <Tag>-</Tag>,
+        },
+        {
+          title: "TT Excel BOF",
+          dataIndex: "thuTu_Excel_BOF",
+          key: "thuTu_Excel_BOF",
+          width: 80,
+          render: (value: number | null | undefined) => value ?? "-",
+        },
+        {
+          title: "TT Excel LFRH",
+          dataIndex: "thuTu_Excel_LFRH",
+          key: "thuTu_Excel_LFRH",
+          width: 80,
+          render: (value: number | null | undefined) => value ?? "-",
+        },
+      ] as const : []),
       {
         title: "Ngày tạo",
         dataIndex: "ngayTao",
@@ -394,7 +541,7 @@ const HeaderMapping = () => {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data]
+    [data, showExtraColumns]
   );
 
   return (
@@ -402,27 +549,50 @@ const HeaderMapping = () => {
       <Card
         title="Quản lý Header Key"
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={openCreateModal}
-          >
-            Thêm Header Key
-          </Button>
+          <Space>
+            <Button
+              icon={showExtraColumns ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              onClick={() => setShowExtraColumns((v) => !v)}
+            >
+              {showExtraColumns ? "Ẩn cột BM" : "Hiện cột BM"}
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              Xóa lọc
+            </Button>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+            >
+              Lọc
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={openCreateModal}
+            >
+              Thêm Header Key
+            </Button>
+          </Space>
         }
         style={{ marginBottom: 16 }}
       >
-        <Form form={searchForm} layout="vertical">
+        <Form
+          form={searchForm}
+          layout="vertical"
+          onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+        >
           <Row gutter={16}>
-            <Col xs={24} md={8}>
+            <Col xs={24} md={4}>
               <Form.Item label="Tìm kiếm" name="searchKey">
                 <Input
-                  placeholder="Tên phụ liệu NM / Header key..."
+                  placeholder="Tên phụ liệu / Header key..."
                   allowClear
+                  onPressEnter={handleSearch}
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={8}>
+            <Col xs={24} md={4}>
               <Form.Item label="Trạng thái" name="TrangThai">
                 <Select allowClear placeholder="Tất cả">
                   <Select.Option value="DangDung">Đang dùng</Select.Option>
@@ -431,7 +601,7 @@ const HeaderMapping = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} md={8}>
+            <Col xs={24} md={4}>
               <Form.Item label="Dùng cho STD NXT" name="IsUsedNXT">
                 <Select allowClear placeholder="Tất cả">
                   <Select.Option value={true}>Có dùng</Select.Option>
@@ -439,35 +609,31 @@ const HeaderMapping = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} md={8}>
+            <Col xs={24} md={4}>
+              <Form.Item label="Dùng cho Thống kê" name="IsUsedThongKe">
+                <Select allowClear placeholder="Tất cả">
+                  <Select.Option value={true}>Có dùng</Select.Option>
+                  <Select.Option value={false}>Không dùng</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={4}>
+              <Form.Item label="Nhóm" name="IdNhom">
+                <CommonAutocomplete<HeaderNhom>
+                  searchApi={nhomFilterSearchApi}
+                  mapOption={(item) => ({ value: item.id, label: item.tenHienThi })}
+                  placeholder="Tất cả nhóm"
+                  allowClear
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={4}>
               <Form.Item label="Loại phiếu" name="LoaiPhieu">
                 <Select allowClear placeholder="Tất cả">
                   <Select.Option value="KL">KL</Select.Option>
                   <Select.Option value="PG">PG</Select.Option>
                 </Select>
               </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
-              <Form.Item label="Khoảng ngày" name="dateRange">
-                <DatePicker.RangePicker
-                  style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={8} style={{ display: "flex" }}>
-              <Space>
-                <Button
-                  type="primary"
-                  icon={<SearchOutlined />}
-                  onClick={handleSearch}
-                >
-                  Lọc
-                </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                  Xóa lọc
-                </Button>
-              </Space>
             </Col>
           </Row>
         </Form>
@@ -569,14 +735,15 @@ const HeaderMapping = () => {
             />
           </Form.Item>
           <Form.Item
-            name="thuTu"
-            label="Thứ tự"
-            tooltip="Số thứ tự để sắp xếp các phụ liệu khi hiển thị"
+            name="tyTrong"
+            label="Tỷ trọng"
+            tooltip="Tỷ trọng của nguyên nhiên liệu (đơn vị: kg/m³ hoặc tương đương)"
           >
             <InputNumber
               min={0}
-              type="number"
-              placeholder="Nhập số thứ tự"
+              step={0.001}
+              precision={3}
+              placeholder="Nhập tỷ trọng"
               style={{ width: "100%" }}
             />
           </Form.Item>
@@ -595,6 +762,135 @@ const HeaderMapping = () => {
             tooltip="Đánh dấu Header Key này sẽ được tự động chọn làm mặc định khi lọc dữ liệu STD NXT"
           >
             <Switch checkedChildren="Có" unCheckedChildren="Không" />
+          </Form.Item>
+
+          <Form.Item
+            name="iD_NhomKey"
+            label="Nhóm thống kê"
+            tooltip="Gom Header Key này vào một nhóm — giá trị sẽ được cộng dồn vào cột nhóm trong ThongKe"
+          >
+            <CommonAutocomplete<HeaderNhom>
+              searchApi={nhomSearchApi}
+              mapOption={(item) => ({ value: item.id, label: item.tenHienThi })}
+              fallbackLabelBuilder={(id) =>
+                editingRecord?.tenNhom ?? `Nhóm #${id}`
+              }
+              placeholder="Chọn nhóm hoặc tạo mới..."
+              allowClear
+              allowCreate
+              onCreate={handleCreateNhom}
+            />
+          </Form.Item>
+
+          <Form.Item label="Sử dụng cho">
+            <Space size="large">
+              <Form.Item name="isUsedThongKe" valuePropName="checked" noStyle>
+                <Checkbox>Thống kê</Checkbox>
+              </Form.Item>
+              <Form.Item name="isUsed_Excel" valuePropName="checked" noStyle>
+                <Checkbox>Excel</Checkbox>
+              </Form.Item>
+            </Space>
+          </Form.Item>
+
+          <Form.Item
+            shouldUpdate={(prev, cur) =>
+              prev.isUsedThongKe !== cur.isUsedThongKe ||
+              prev.isUsed_Excel !== cur.isUsed_Excel ||
+              prev.loaiThongKe !== cur.loaiThongKe ||
+              prev.loaiExcel !== cur.loaiExcel
+            }
+          >
+            {({ getFieldValue }) => {
+              const useThongKe = getFieldValue("isUsedThongKe");
+              const useExcel = getFieldValue("isUsed_Excel");
+              const loaiTK = getFieldValue("loaiThongKe");
+              const loaiEx = getFieldValue("loaiExcel");
+
+              if (!useThongKe && !useExcel) return null;
+
+              const tabItems = [];
+              if (useThongKe) {
+                tabItems.push({
+                  key: "thongke",
+                  label: "Thống kê",
+                  children: (
+                    <>
+                      <Form.Item
+                        name="loaiThongKe"
+                        label="Loại BM"
+                        rules={[{ required: true, message: "Vui lòng chọn loại BM" }]}
+                      >
+                        <Radio.Group>
+                          <Radio value={1}>BOF</Radio>
+                          <Radio value={2}>LFRH</Radio>
+                          <Radio value={3}>All</Radio>
+                        </Radio.Group>
+                      </Form.Item>
+                      {(loaiTK === 1 || loaiTK === 3) && (
+                        <Form.Item name="thuTu_TK_BOF" label="Thứ tự BOF">
+                          <InputNumber
+                            min={0}
+                            placeholder="Nhập số thứ tự BOF"
+                            style={{ width: "100%" }}
+                          />
+                        </Form.Item>
+                      )}
+                      {(loaiTK === 2 || loaiTK === 3) && (
+                        <Form.Item name="thuTu_TK_LFRH" label="Thứ tự LFRH">
+                          <InputNumber
+                            min={0}
+                            placeholder="Nhập số thứ tự LFRH"
+                            style={{ width: "100%" }}
+                          />
+                        </Form.Item>
+                      )}
+                    </>
+                  ),
+                });
+              }
+              if (useExcel) {
+                tabItems.push({
+                  key: "excel",
+                  label: "Excel",
+                  children: (
+                    <>
+                      <Form.Item
+                        name="loaiExcel"
+                        label="Loại BM"
+                        rules={[{ required: true, message: "Vui lòng chọn loại BM" }]}
+                      >
+                        <Radio.Group>
+                          <Radio value={1}>BOF</Radio>
+                          <Radio value={2}>LFRH</Radio>
+                          <Radio value={3}>All</Radio>
+                        </Radio.Group>
+                      </Form.Item>
+                      {(loaiEx === 1 || loaiEx === 3) && (
+                        <Form.Item name="thuTu_Excel_BOF" label="Thứ tự BOF">
+                          <InputNumber
+                            min={0}
+                            placeholder="Nhập số thứ tự BOF"
+                            style={{ width: "100%" }}
+                          />
+                        </Form.Item>
+                      )}
+                      {(loaiEx === 2 || loaiEx === 3) && (
+                        <Form.Item name="thuTu_Excel_LFRH" label="Thứ tự LFRH">
+                          <InputNumber
+                            min={0}
+                            placeholder="Nhập số thứ tự LFRH"
+                            style={{ width: "100%" }}
+                          />
+                        </Form.Item>
+                      )}
+                    </>
+                  ),
+                });
+              }
+
+              return <Tabs items={tabItems} />;
+            }}
           </Form.Item>
         </Form>
       </Modal>

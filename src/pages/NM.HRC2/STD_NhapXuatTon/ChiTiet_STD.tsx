@@ -14,6 +14,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
+import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
 import HRC2_STD_NXT from "../../../utils/BM_config/HRC2_STD_NXT.json";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
@@ -25,8 +26,11 @@ const { Title, Text } = Typography;
 
 const ChiTiet_STD = () => {
   const location = useLocation();
-  const { idphieu } = location.state || {};
   const { pheduyet } = location.state || {};
+  const { idphieu, safeGetDetail } = usePhieuNavigation(
+    "std_nxt_hrc2_idphieu",
+    "/std_nhapxuatton"
+  );
 
   const config = HRC2_STD_NXT;
 
@@ -41,23 +45,25 @@ const ChiTiet_STD = () => {
 
   useEffect(() => {
     const loadData = async () => {
+      if (!idphieu) return;
       try {
         // Thông tin phê duyệt
         if (pheduyet != null) {
           setDataPheDuyet(pheduyet);
         }
         setLoading(true);
-        const res = await PhieuApi.getDetail(idphieu);
-
+        const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
+        if (!res) return;
         setData(res);
-      } catch (error) {
-        console.error("Lỗi tải dữ liệu phiếu:", error);
+      } catch (err: any) {
+        console.error("Lỗi tải dữ liệu phiếu:", err);
+        message.error("Không thể tải phiếu.");
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [idphieu, pheduyet]);
+  }, [idphieu, pheduyet, safeGetDetail]);
 
   //   if (!data) return null;
 

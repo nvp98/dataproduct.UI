@@ -1,0 +1,103 @@
+{
+  "code": "HRC1_BBGN_ThepLong",
+  "loaiBm": "GN",
+  "prefix": "BBGN_TL_HRC1",
+  "title": "BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.16/QT.05.10",
+    "effectiveDate": "01/09/2023",
+    "revision": "00"
+  },
+
+  "headerFields": [
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true },
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    {
+      "label": "Máy đúc",
+      "type": "select",
+      "key": "scope",
+      "required": true,
+      "options": [
+        { "label": "TSC 1", "value": 1 , "tenScope": "TSC 1"},
+        { "label": "TSC 2", "value": 2 , "tenScope": "TSC 2"},
+        { "label": "Đúc vuông 1", "value": 3 , "tenScope": "Đúc vuông 1"},
+        { "label": "Đúc vuông 2", "value": 4 , "tenScope": "Đúc vuông 2"},
+        { "label": "Đúc vuông 3", "value": 5 , "tenScope": "Đúc vuông 3"}
+      ]
+    }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key": "table1",
+      "dataSource": {
+        "type": "api",
+        "url": "GiaoNhanThepLong",
+        "params": { "ngaySX": "@ngaySX", "ca": "@ca" }
+      },
+      "lyDo": { "label": "Lý do điều chỉnh" },
+      "columns": [
+        { "title": "STT", "dataIndex": "stt", "width": 60, "readonly": true },
+        { "title": "Máy đúc", "dataIndex": "mayDuc", "width": 120 ,"editable": false, "readonly": true},
+        { "title": "Mẻ", "dataIndex": "me", "width": 120 ,"editable": false, "readonly": true},
+        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false, "readonly": true},
+        {
+          "title": "Thùng số",
+          "dataIndex": "thungSo", "width": 100, "readonly": true
+        },
+        {
+          "title": "Thời gian",
+          "dataIndex": "thoiGian", "width": 100, "readonly": true
+        },
+        { "title": "KL thùng & thép lỏng vào bệ xoay ( tấn) - lần 1", "dataIndex": "klLan1", "width": 100, "readonly": true },
+        { "title": "KL thùng ( tấn) - lần 2", "dataIndex": "klLan2", "width": 100, "readonly": true },
+        { "title": "KL thùng thép lần 3 (tấn) (nếu có)", "dataIndex": "klLan3", "width": 100, "readonly": true },
+        { "title": "KL thép lỏng (tấn)", "dataIndex": "klThepLong", "width": 100, "readonly": true },
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 120 },
+        { "title": "Tinh Luyện, Lên Thẳng", "dataIndex": "tinhLuyenLenThang", "width": 120, "readonly": true },
+        { "title": "Phân loại", "dataIndex": "phanLoai", "width": 120, "readonly": true },
+        { "title": "Phân loại nhóm", "dataIndex": "phanLoaiNhom", "width": 130, "readonly": true },
+        { "title": "Mác thép BKMIS", "dataIndex": "macThepBKMIS", "width": 120, "editable": false, "readonly": true },
+        { "title": "Thử nghiệm", "dataIndex": "isThuNghiem", "width": 50},
+        { "title": "KL 1 cẩu", "dataIndex": "klcau1", "width": 50},
+        { "title": "KL 2 cẩu", "dataIndex": "klcau2", "width": 50},
+        { "title": "Người chỉnh sửa cuối", "dataIndex": "lastNameUserEdit", "width": 120, "readonly": true }
+      ]
+    }
+  ],
+  "signatures": [
+    {
+      "label": "Bên nhận",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Nhan",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Bên giao",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Giao", 
+      "maphongBan": "NM.HRC1",
+      "capduyet": 0,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

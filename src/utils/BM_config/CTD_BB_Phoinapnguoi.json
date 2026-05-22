@@ -1,0 +1,88 @@
+{
+  "code": "CTD_BB_Phoinapnguoi",
+  "prefix": "BBPNN",
+  "title": "BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI",
+   "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.02/QT.05.13",
+    "effectiveDate": "15/08/2025",
+    "revision": "03"
+  },
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true },
+    {
+      "label": "Xưởng cán",
+      "type": "select",
+      "required": true,
+      "key": "xuong",
+      "options": [
+        { "label": "Xưởng cán 1", "value": 1 },
+        { "label": "Xưởng cán 2", "value": 2 },
+        { "label": "Xưởng cán 3", "value": 3 }
+      ]
+    }
+  ],
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key": "table1",
+      "dataSource": {
+        "type": "api",
+        "url": "BKPhoiThep",
+        "params": { "kip": "@kip" }
+      },
+      "columns": [
+        { "title": "Mẻ", "dataIndex": "me" },
+        { "title": "Mác", "dataIndex": "mac" },
+        { "title": "Kích thước", "dataIndex": "kichThuoc" },
+        { "title": "Tổng số thanh", "dataIndex": "tongThanh", "type": "number" },
+        { "title": "Tổng khối lượng", "dataIndex": "tongKL", "type": "number" },
+        { "title": "Ghi chú", "dataIndex": "ghiChu" }
+      ]
+    }
+  ],
+  "footerNotes": [
+  ],
+  "signatures": [
+    {
+      "label": "NM.HRC1",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_NMHRC1",
+      "maphongBan": "NM.HRC1",
+      "capDuyet": 0,
+      "isChon": false
+    },
+    {
+      "label": "P.QLCL",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_QLCL",
+      "maphongBan": "P.QLCL",
+      "capDuyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "NM.CT Dai",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_CTD",
+      "maphongBan": "NM.CTD",
+      "capDuyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

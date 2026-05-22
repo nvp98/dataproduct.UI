@@ -1,44 +1,99 @@
 {
-  "code": "BM.09-QT.05.13",
+  "code": "CTD_STD_Sanxuat",
+  "prefix": "CTDSTDSX",
   "title": "SỔ THEO DÕI SẢN XUẤT HÀNG NGÀY",
-   "isoInfo": {
-    "code": "BM.06/QT.05.11",
-    "effectiveDate": "16/05/2025",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.09/QT.05.13",
+    "effectiveDate": "15/04/2025",
     "revision": "01"
   },
   "headerFields": [
-    { "label": "Kíp", "type": "text", "value": "2C" },
-    { "label": "Thời gian từ", "type": "datetime", "value": "2025-08-17T20:00:00" },
-    { "label": "Đến", "type": "datetime", "value": "2025-08-18T08:00:00" }
-  ],
-  "sections": [
     {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value":1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày", "type": "date", "key": "NgaySX","required": true },
+    { "label": "Xưởng cán", "type": "select","required": true, "key": "xuong","options": [
+        { "label": "Xưởng cán 1", "value": 1 },
+        { "label": "Xưởng cán 2", "value": 2 },
+        { "label": "Xưởng cán 3", "value": 3 }
+      ]
+    }
+  ],
+  "layout": [
+    {
+      "sectionType": "table",
       "title": "1. Nguyên liệu và sản phẩm",
+      "key": "table1",
       "columns": [
-        { "title": "Mác phôi loại", "dataIndex": "macPhoi" },
-        { "title": "Kích thước", "dataIndex": "kichThuoc" },
-        { "title": "Số phôi ra khỏi lò", "dataIndex": "soPhoiRaKhoiLo" },
-        { "title": "Số phôi lỗi", "dataIndex": "soPhoiLoi" },
-        { "title": "Số phôi cán ra sản phẩm", "dataIndex": "soPhoiTP" },
-        { "title": "Số phôi phế công nghệ", "dataIndex": "soPhoiPheCN" },
-        { "title": "Loại sản phẩm", "dataIndex": "loaiSP" },
-        { "title": "Lệnh sản xuất", "dataIndex": "lenhSX" }
+        { "title": "Loại mác phôi", "dataIndex": "MacPhoiLoai", "isLabel": true, "width": 120 },
+        { "title": "Mác phôi", "dataIndex": "macPhoi", "width": 130 },
+        { "title": "Kích thước", "dataIndex": "kichThuoc", "width": 150 },
+        { "title": "Số phôi ra khỏi lò", "dataIndex": "soPhoiRaKhoiLo", "width": 130 },
+        { "title": "Số phôi hồi lò", "dataIndex": "soPhoiHoiLo", "width": 120 },
+        { "title": "Số phôi cán ra SP(T/P)", "dataIndex": "soPhoiCanRaSanPham", "width": 160 },
+        { "title": "Số phôi phế Công nghệ", "dataIndex": "soPhoiPheCongNghe", "width": 130 },
+        { "title": "Loại sản phẩm", "dataIndex": "loaiSanPham", "width": 140 },
+        { "title": "Mác thép", "dataIndex": "macThep", "width": 140 },
+        { "title": "Lệnh sản xuất", "dataIndex": "lenhSanXuat", "width": 140 },
+        {
+          "title": "Loại phôi",
+          "dataIndex": "loaiPhoi",
+          "width": 140,
+          "options": [
+            { "label": "1 - Phôi nóng", "value": 1 },
+            { "label": "2 - Phôi nguội", "value": 2 }
+          ]
+        }
+      ],
+      "initialData": [
+        { "key": "1", "MacPhoiLoai": "Loại I" },
+        { "key": "2", "MacPhoiLoai": "Loại II" },
+        { "key": "3", "MacPhoiLoai": "Loại III" }
       ]
     },
     {
+      "sectionType": "table",
       "title": "2. Diễn biến sản xuất",
+      "key": "table2",
       "columns": [
-        { "title": "Từ giờ", "dataIndex": "tuGio" },
-        { "title": "Đến giờ", "dataIndex": "denGio" },
-        { "title": "Thiết bị", "dataIndex": "thietBi" },
-        { "title": "Mô tả sự cố / dừng sản xuất", "dataIndex": "moTa" },
-        { "title": "Loại sự cố", "dataIndex": "loaiSuCo" },
-        { "title": "Phế công nghệ", "dataIndex": "pheCN" }
+        { "title": "Từ giờ", "dataIndex": "tuGio", "width": 110 },
+        { "title": "Đến giờ", "dataIndex": "denGio", "width": 110 },
+        { "title": "Thiết bị", "dataIndex": "thietBi", "width": 140 },
+        { "title": "Mô tả sự cố / dừng sản xuất", "dataIndex": "moTaSuCo", "width": 260 },
+        { "title": "Loại sự cố", "dataIndex": "loaiSuCo", "width": 140 },
+        { "title": "Phế công nghệ", "dataIndex": "pheCongNghe", "width": 140 }
       ]
     }
   ],
   "signatures": [
-    { "label": "Trưởng kíp", "signer": "Mai Châu Tòng" },
-    { "label": "NV vận hành", "signer": "Lê Văn Anh" }
+    {
+      "label": "Trưởng kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_TruongKip",
+      "maphongBan": "NM.CTD",
+      "capDuyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "NV vận hành",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_NVVanHanh",
+      "maphongBan": "NM.CTD",
+      "capDuyet": 0,
+      "isChon": true,
+      "required": true
+    }
   ]
 }

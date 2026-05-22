@@ -6,6 +6,7 @@ export const TrangThaiPhieuConst = {
   KhongXacNhan: 4,
   DaChot: 5,
   DangPheDuyet: 6,
+  HieuChinh: 7
 }
 
 

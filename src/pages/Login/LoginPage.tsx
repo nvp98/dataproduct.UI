@@ -52,12 +52,22 @@ const LoginPage = () => {
       localStorage.setItem("username", user.name);
       localStorage.setItem("userinfo", JSON.stringify(res));
 
+      // Lấy quyền riêng sau khi login
+      try {
+        const quyenData = await TaiKhoanApi.getQuyen(user.username) as any;
+        localStorage.setItem("bmQuyenXlList", JSON.stringify(quyenData.bmQuyenXlList || []));
+        const userinfo = { ...res, bmQuyenXlList: quyenData.bmQuyenXlList || [], quyenTheoLo: quyenData.quyenTheoLo || [] };
+        localStorage.setItem("userinfo", JSON.stringify(userinfo));
+      } catch {
+        // fail silently
+      }
+
       dispatch(
         showNotification({
           message: "Đăng nhập thành công",
           description: `Chào mừng ${user.name}!`,
           type: "success",
-        })
+        }),
       );
       navigate(from, { replace: true });
     } catch (e: any) {
@@ -66,7 +76,7 @@ const LoginPage = () => {
           message: "Đăng nhập thất bại",
           description: e?.message || "Kiểm tra lại tài khoản và mật khẩu!",
           type: "error",
-        })
+        }),
       );
     }
     setSubmitting(false);
@@ -88,7 +98,7 @@ const LoginPage = () => {
       <Row style={{ width: "100%" }} justify="center">
         <Col xs={24} sm={20} md={12} lg={8} xl={6}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{
               borderRadius: 12,
               boxShadow: "0 8px 24px rgba(0,0,0,0.12)",

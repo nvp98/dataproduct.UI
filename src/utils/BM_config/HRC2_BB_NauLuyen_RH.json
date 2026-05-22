@@ -1,5 +1,6 @@
 {
   "code": "HRC2_BB_NauLuyen_RH",
+  "loaiBm": "RH",
   "prefix": "BBTL_RH",
   "title": "BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
   "headerInfo": {
@@ -7,8 +8,8 @@
     "subCompany": "HÒA PHÁT GANG THÉP"
   },
   "isoInfo": {
-    "code": "BM.16/QT.05.155",
-    "effectiveDate": "10/011/2025",
+    "code": "BM.16/QT.05.15",
+    "effectiveDate": "10/01/2025",
     "revision": "00"
   },
 
@@ -19,8 +20,8 @@
       "key": "scope",
       "required": true,
       "options": [
-        { "label": "Khu vực 1", "value": 1 },
-        { "label": "Khu vực 2", "value": 2 }
+        { "label": "RH 1", "value": 1, "tenScope": "RH 1" },
+        { "label": "RH 2", "value": 2, "tenScope": "RH 2" }
       ]
     },
     {
@@ -46,12 +47,20 @@
         "url": "TieuHaoNauLuyen_RH",
         "params": { "ngaySX": "@ngaySX", "ca": "@ca" }
       },
+      "lyDo": { "label": "Lý do điều chỉnh" },
       "columns": [
-        { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 150 ,"editable": false},
-        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false},
+        {
+          "title": "STT",
+          "dataIndex": "stt",
+          "width": 60,
+          "editable": false,
+          "readonly": true
+        },
+        { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 120 ,"editable": false, "readonly": true},
+        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false, "readonly": true},
         {
           "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
-          "dataIndex": "klThepLong", "width": 100
+          "dataIndex": "klThepLong", "width": 100, "readonly": true
         },
         {
           "title": "Chất hợp kim hóa", "dataIndex": "KL", "editable": false
@@ -60,14 +69,14 @@
           "title": "Phụ gia và chất khử oxy", "dataIndex": "PG", "editable": false
         },
         {
-          "title": "Khác", "dataIndex": "others", "editable": false, "width": 100
+          "dataIndex": "dieuChinh"
         },
         {
           "title": "Khí (m³)",
           "children": [
-            { "title": "Argon", "dataIndex": "ar_RH", "width": 100 },
-            { "title": "Nito", "dataIndex": "n2", "width": 100 },
-            { "title": "Oxi", "dataIndex": "o2", "width": 100 }
+            { "title": "Argon", "dataIndex": "ar_RH", "width": 100, "readonly": true },
+            { "title": "Nito", "dataIndex": "n2", "width": 100, "readonly": true },
+            { "title": "Oxi", "dataIndex": "o2", "width": 100, "readonly": true }
           ]
         },
         { "title": "Que lấy mẫu (Cái)", "dataIndex": "queLayMau", "width": 100 },
@@ -108,7 +117,7 @@
     {
       "label": "Tổ trưởng",
       "type": "selectNguoiKy",
-      "key": "toTruong_HRC2", 
+      "key": "nguoiKy_Duyet",
       "maphongBan": "NM.HRC2",
       "capduyet": 1,
       "isChon": true,
@@ -117,7 +126,7 @@
     {
       "label": "Người lập",
       "type": "selectNguoiKy",
-      "key": "nguoiLap_HRC2",
+      "key": "nguoiKy_Kip",
       "maphongBan": "NM.HRC2",
       "capduyet": 0,
       "isChon": true,

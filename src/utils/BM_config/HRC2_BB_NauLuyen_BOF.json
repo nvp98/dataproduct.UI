@@ -1,6 +1,7 @@
 {
   "code": "HRC2_BB_NauLuyen_BOF",
   "prefix": "BBNL_BOF",
+  "loaiBm": "BOF",
   "title": "BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
   "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
@@ -21,11 +22,13 @@
       "options": [
         {
           "label": "Lò thổi 6",
-          "value": 6
+          "value": 6,
+          "tenScope": "Lò thổi 6"
         },
         {
           "label": "Lò thổi 7",
-          "value": 7
+          "value": 7,
+          "tenScope": "Lò thổi 7"
         }
       ]
     },
@@ -58,18 +61,28 @@
       "sectionType": "table",
       "title": "Chi tiết tiêu hao nấu luyện lò thổi",
       "key": "table1",
+      "lyDo": { "label": "Lý do điều chỉnh" },
       "columns": [
+        {
+          "title": "STT",
+          "dataIndex": "stt",
+          "width": 60,
+          "editable": false,
+          "readonly": true
+        },
         {
           "title": "Mẻ nấu số",
           "dataIndex": "meThoi",
-          "width": 110,
-          "editable": false
+          "width": 115,
+          "editable": false,
+          "readonly": true
         },
         {
           "title": "Mác thép",
           "dataIndex": "macThep",
           "width": 130,
-          "editable": false
+          "editable": false,
+          "readonly": true
         },
         {
           "title": "Nguyên liệu đầu vào (tấn)",
@@ -78,23 +91,32 @@
               "title": "Gang lỏng",
               "dataIndex": "klGangLong",
               "editable": false,
-              "width": 90
+              "width": 90,
+              "format": "number-group",
+              "align": "right",
+              "sum": true,
+              "readonly": true
             },
             {
               "title": "Thép phế",
               "dataIndex": "klThepPhe",
               "editable": false,
-              "width": 90
+              "width": 90,
+              "format": "number-group",
+              "align": "right",
+              "sum": true,
+              "readonly": true
             }
           ]
         },
         {
           "title": "Phụ gia công nghệ (Kg)",
           "dataIndex": "BOF_PhuGia",
-          "editable": false
+          "editable": false,
+          "sum": true
         },
         {
-          "title": "Khác", "dataIndex": "others" , "width": 100
+          "dataIndex": "dieuChinh"
         },
         {
           "title": "Nhiên liệu (m3)",
@@ -102,12 +124,20 @@
             {
               "title": "Oxy",
               "dataIndex": "o2",
-              "width": 100
+              "width": 100,
+              "format": "number-group",
+              "align": "right",
+              "readonly": true,
+              "sum": true
             },
             {
               "title": "Nitơ",
               "dataIndex": "n2",
-              "width": 100
+              "width": 100,
+              "format": "number-group",
+              "align": "right",
+              "readonly": true,
+              "sum": true
             }
           ]
         },
@@ -132,15 +162,21 @@
         },
         {
           "title": "Tồn đầu kíp",
-          "dataIndex": "tonDauKip"
+          "dataIndex": "tonDauKip",
+          "format": "number-group",
+          "align": "right"
         },
         {
           "title": "Nhập trong kíp",
-          "dataIndex": "nhapTrongKip"
+          "dataIndex": "nhapTrongKip",
+          "format": "number-group",
+          "align": "right"
         },
         {
           "title": "Tồn cuối kíp",
-          "dataIndex": "tonCuoiKip"
+          "dataIndex": "tonCuoiKip",
+          "format": "number-group",
+          "align": "right"
         }
       ],
       "initialData": []
@@ -153,9 +189,9 @@
 
   "signatures": [
     {
-      "label": "Trưởng kíp",
+      "label": "Tổ trưởng",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_TruongKip",
+      "key": "nguoiKy_Duyet",
       "maphongBan": "NM.HRC2",
       "capduyet": 1,
       "isChon": true,
@@ -164,7 +200,7 @@
     {
       "label": "Người lập",
       "type": "selectNguoiKy",
-      "key": "nguoiKy_Nhan",
+      "key": "nguoiKy_Kip",
       "maphongBan": "NM.HRC2",
       "capduyet": 0,
       "isChon": true,
