@@ -51,6 +51,10 @@ export const PhieuApi = {
     apiService.get(`/api/Phieus/${id}/export-excel-detail`, {
       responseType: "blob",
     }),
+  exportDynamicExcelPhieu: (id: string) =>
+    apiService.get(`/api/Phieus/${id}/export-excel`, {
+      responseType: "blob",
+    }),
   exportDynamicExcelTH: (params?: Record<string, unknown>) =>
     apiService.get(`/api/Phieus/export-excel-tonghop`, {
       params,
