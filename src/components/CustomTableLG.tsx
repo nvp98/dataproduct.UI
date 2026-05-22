@@ -44,6 +44,9 @@ interface CustomTableLGProps {
   showAddButton?: boolean;
   showDeleteButton?: boolean;
   minRows?: number;
+  // DoAm: controlled từ parent để persist khi save/load phiếu
+  initialDoAmMap?: Record<string, number>;
+  onDoAmChange?: (map: Record<string, number>) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -82,6 +85,8 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
       showAddButton,
       showDeleteButton,
       minRows,
+      initialDoAmMap,
+      onDoAmChange,
     },
     ref
   ) {
@@ -155,11 +160,19 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
       [mergedColumns]
     );
 
-    const [doAmMap, setDoAmMap] = useState<Record<string, number>>({});
+    const [doAmMap, setDoAmMap] = useState<Record<string, number>>(initialDoAmMap ?? {});
 
+    // Sync lại khi parent truyền giá trị mới (ví dụ: sau khi load từ chi tiết API)
     useEffect(() => {
-      setDoAmMap({});
-    }, [summaryIndexes]);
+      if (initialDoAmMap && Object.keys(initialDoAmMap).length > 0)
+        setDoAmMap(initialDoAmMap);
+    }, [initialDoAmMap]);
+
+    // Reset khi columns thay đổi hoàn toàn (chỉ reset nếu chưa có initial)
+    useEffect(() => {
+      if (!initialDoAmMap || Object.keys(initialDoAmMap).length === 0)
+        setDoAmMap({});
+    }, [summaryIndexes]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const summaryRenderer = (pageData: readonly any[]) => {
       if (summaryIndexes.length === 0) return null;
@@ -213,9 +226,11 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
                       max={100}
                       precision={2}
                       value={doAmMap[di] ?? undefined}
-                      onChange={(val) =>
-                        setDoAmMap((prev) => ({ ...prev, [di]: val ?? 0 }))
-                      }
+                      onChange={(val) => {
+                        const next = { ...doAmMap, [di]: val ?? 0 };
+                        setDoAmMap(next);
+                        onDoAmChange?.(next);
+                      }}
                       style={{ width: "100%" }}
                       size="small"
                       addonAfter="%"
@@ -267,6 +282,7 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
         summary={summaryIndexes.length > 0 ? summaryRenderer : undefined}
         stickyHeader
         scrollY={500}
+        manualTrackPattern={editable ? /^\d+$/ : undefined}
       />
     );
   }

@@ -442,7 +442,7 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
               loading={modalNvlLoading}
             >
               {modalNvlOptions.map((n) => (
-                <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL_NM}</Option>
+                <Option key={n.id} value={n.id}>[{n.id}] {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}</Option>
               ))}
             </Select>
           </Form.Item>
@@ -490,7 +490,7 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
               {nvlOptions
                 .filter((n) => n.id !== doiNVLRow?.idNVL)
                 .map((n) => (
-                  <Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL_NM}</Option>
+                  <Option key={n.id} value={n.id}>[{n.id}] {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}</Option>
                 ))}
             </Select>
           </Form.Item>

@@ -919,9 +919,6 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
             </Form.Item>
             {!editingNvlId && (
               <>
-                <Form.Item name="tenNVLTk" label="Tên NVL P.KH">
-                  <Input maxLength={200} placeholder="Tên NVL phòng kế hoạch (nếu có)" />
-                </Form.Item>
                 <Form.Item name="ghiChu" label="Ghi chú">
                   <Input.TextArea rows={2} maxLength={500} placeholder="Nhập ghi chú (nếu có)" />
                 </Form.Item>

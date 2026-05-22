@@ -257,3 +257,35 @@ export const lgnlDuLieuSiLoApi = {
   getPivot: (params: { ngay: string; idCa: number; idLoCao: number }): Promise<LGNLDuLieuSiLoResult> =>
     apiService.get("/api/LGNL/dulieu-silo", { params }),
 };
+
+// ─── Chi tiết nạp liệu theo phiếu (LG_NL_ChiTiet) ───────────────────────────
+
+export interface LGNLChiTietDto {
+  id: number;
+  idPhieu: string;
+  idLoCao: number | null;
+  ngay: string | null;
+  idCa: number | null;
+  thoiGianNapLieu: string | null;
+  soMe: number | null;
+  meGio: string | null;
+  cheDo: string | null;
+  thuocThamLieu1: number | null;
+  thuocThamLieu2: number | null;
+  ghiChu: string | null;
+  idNVL: number;
+  giaTri: number | null;
+  thuTu: number | null;
+  doAm: number | null;
+  quyKho: number | null;
+  manualGiaTri: boolean;
+  giaTri_Goc: number | null;
+}
+
+export const lgnlChiTietApi = {
+  getByPhieu: (idPhieu: string): Promise<LGNLChiTietDto[]> =>
+    apiService.get(`/api/LGNL/chitiet/${idPhieu}`),
+
+  exportPdf: (idPhieu: string) =>
+    apiService.get<Blob>(`/api/LGNL/export-pdf/${idPhieu}`, { responseType: "blob" }),
+};

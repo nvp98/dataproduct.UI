@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_NapLieuLoCao from "../../../utils/BM_config/LG_BB_NapLieuLoCao.json";
 import { Alert, Button, Card, DatePicker, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography, message } from "antd";
-import { FilterOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from "@ant-design/icons";
+import { FilePdfOutlined, FilterOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -16,6 +16,7 @@ import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import {
+  lgnlChiTietApi,
   lgnlMappingApi,
   lgnlNhomNvlApi,
   lgnlNvlApi,
@@ -43,6 +44,7 @@ const TaoPhieuNapLieuLoCao = () => {
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [materialColumnsOverride, setMaterialColumnsOverride] = useState<TableColumnDef[] | null>(null);
+  const [doAmMap, setDoAmMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   // Config hiệu lực: khác null khi đang dùng cấu hình từ ngày/ca khác (fallback)
   const [configHieuLuc, setConfigHieuLuc] = useState<{
@@ -445,25 +447,16 @@ const TaoPhieuNapLieuLoCao = () => {
           setSoPhieu((res as any)?.soPhieu || "");
           const data = (res as any)?.jsonData || {};
 
+          // Signatures luôn lấy từ BM_PheDuyet (DB) theo idPhieu, không parse JSON
           const signatureFields: Record<string, any> = {};
-          const pheDuyetFromJson = data.pheDuyet || [];
-
-          if (pheDuyetFromJson.length > 0) {
-            pheDuyetFromJson.forEach((pd: any) => {
-              if (pd.maKyDuyet && pd.nguoiDuyetId) {
-                signatureFields[pd.maKyDuyet] = pd.nguoiDuyetId;
-              }
-            });
-          } else {
-            ((res as any)?.pheDuyet || []).forEach((pd: any) => {
-              const sig = config.signatures.find(
-                (s) => getCapDuyet(s) === pd.capDuyet && s.type === "selectNguoiKy"
-              );
-              if (sig && pd.nguoiDuyetId) {
-                signatureFields[sig.key] = pd.nguoiDuyetId;
-              }
-            });
-          }
+          ((res as any)?.pheDuyet || []).forEach((pd: any) => {
+            const sig = config.signatures.find(
+              (s: any) => getCapDuyet(s) === pd.capDuyet && s.type === "selectNguoiKy"
+            );
+            if (sig && pd.nguoiDuyetId) {
+              signatureFields[sig.key] = pd.nguoiDuyetId;
+            }
+          });
 
           const dateFields = config.headerFields
             .filter((f: any) => f.type === "date")
@@ -504,10 +497,56 @@ const TaoPhieuNapLieuLoCao = () => {
             }
           }
 
-          setTableData(formValues.table1 || []);
           // Khôi phục cột động đã lưu để render đúng dataIndex khi xem chi tiết
           if (Array.isArray(data.materialColumns) && data.materialColumns.length > 0) {
             setMaterialColumnsOverride(data.materialColumns);
+          }
+
+          // Dùng API chi tiết để render bảng — fallback về table1 trong JSON nếu chưa có
+          try {
+            const chiTietList = await lgnlChiTietApi.getByPhieu(idPhieu);
+            if (chiTietList.length > 0) {
+              const rowMap = new Map<number, Record<string, any>>();
+              for (const item of chiTietList) {
+                const thuTu = item.thuTu ?? 0;
+                if (!rowMap.has(thuTu)) {
+                  rowMap.set(thuTu, {
+                    key: `row-${thuTu}`,
+                    thoiGianNapLieu: item.thoiGianNapLieu ?? "",
+                    soMe: item.soMe,
+                    meGio: item.meGio,
+                    cheDoNapLieu: item.cheDo,
+                    thuocThamLieu1: item.thuocThamLieu1,
+                    thuocThamLieu2: item.thuocThamLieu2,
+                    ghiChu: item.ghiChu,
+                  });
+                }
+                // Lưu _manual_ và _goc_ vào row để frontend biết ô nào đã nhập tay
+                if (item.manualGiaTri) {
+                  rowMap.get(thuTu)![`_manual_${item.idNVL}`] = true;
+                  if (item.giaTri_Goc != null)
+                    rowMap.get(thuTu)![`_goc_${item.idNVL}`] = item.giaTri_Goc;
+                }
+                rowMap.get(thuTu)![String(item.idNVL)] = item.giaTri;
+              }
+              setTableData(Array.from(rowMap.values()));
+
+              // Restore doAmMap từ chi tiết (lấy DoAm từ bất kỳ record nào của mỗi NVL)
+              const restoredDoAm: Record<string, number> = {};
+              for (const item of chiTietList) {
+                const key = String(item.idNVL);
+                if (item.doAm != null && !(key in restoredDoAm))
+                  restoredDoAm[key] = item.doAm;
+              }
+              setDoAmMap(restoredDoAm);
+            } else {
+              setTableData(formValues.table1 || []);
+              // Fallback: restore doAm từ JSON nếu có
+              if (data.doAm && typeof data.doAm === "object")
+                setDoAmMap(data.doAm as Record<string, number>);
+            }
+          } catch {
+            setTableData(formValues.table1 || []);
           }
           setPhieuInfo({
             tinhTrang,
@@ -589,10 +628,12 @@ const TaoPhieuNapLieuLoCao = () => {
       table1: processedTable1,
       // Lưu cột động để khôi phục khi mở lại phiếu (xem chi tiết)
       materialColumns: materialColumnsOverride ?? [],
+      // Lưu độ ẩm per NVL để backend persist vào LG_NL_ChiTiet
+      doAm: doAmMap,
       pheDuyet: pheDuyetFlow,
       prefix: (config as any).prefix,
     };
-  }, [getUserInfo, form, config, tableData, getCapDuyet]);
+  }, [getUserInfo, form, config, tableData, doAmMap, getCapDuyet]);
 
   const handleStatusChange = useCallback(async () => {
     try {
@@ -633,6 +674,28 @@ const TaoPhieuNapLieuLoCao = () => {
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
   }, [getUserInfo, idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess]);
+
+  const handleExportPdf = async () => {
+    if (!idphieu) { message.warning("Vui lòng lưu phiếu trước khi xuất PDF!"); return; }
+    try {
+      setLoading(true);
+      const response = await lgnlChiTietApi.exportPdf(idphieu);
+      const blob = new Blob([response as any], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `NapLieuLoCao_${soPhieu || idphieu}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success("Xuất PDF thành công!");
+    } catch (error: any) {
+      message.error(error?.message || "Xuất file PDF thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -694,6 +757,14 @@ const TaoPhieuNapLieuLoCao = () => {
             Kiểm tra Silo
           </Button>
           {actionButtons}
+          {idphieu && (
+            currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
+            currentTinhTrang === TrangThaiPhieuConst.DaChot
+          ) && (
+            <Button icon={<FilePdfOutlined />} onClick={handleExportPdf} loading={loading}>
+              Xuất PDF
+            </Button>
+          )}
         </div>
 
         <Modal
@@ -727,9 +798,6 @@ const TaoPhieuNapLieuLoCao = () => {
                   </Select.Option>
                 ))}
               </Select>
-            </Form.Item>
-            <Form.Item name="tenNVL_TK" label="Tên NVL P.KH">
-              <Input maxLength={200} placeholder="Tên NVL P.KH" />
             </Form.Item>
             <Form.Item name="ghiChu" label="Ghi chú">
               <Input.TextArea rows={2} maxLength={500} placeholder="Nhập ghi chú (nếu có)" />
@@ -847,7 +915,7 @@ const TaoPhieuNapLieuLoCao = () => {
                             >
                               {scopeNvlOptions.map((n) => (
                                 <Select.Option key={n.id} value={n.id}>
-                                  [{n.id}] {n.tenNVL_NM}
+                                  [{n.id}] {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}
                                 </Select.Option>
                               ))}
                             </Select>
@@ -923,7 +991,7 @@ const TaoPhieuNapLieuLoCao = () => {
                 {nvlOptions
                   .filter((n) => n.id !== doiNVLRow?.idNVL)
                   .map((n) => (
-                    <Select.Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL_NM}</Select.Option>
+                    <Select.Option key={n.id} value={n.id}>[{n.id}] {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}</Select.Option>
                   ))}
               </Select>
             </Form.Item>
@@ -967,7 +1035,7 @@ const TaoPhieuNapLieuLoCao = () => {
             <Form.Item name="idNVL" label="NVL">
               <Select allowClear placeholder="Chọn NVL (tuỳ chọn)" showSearch optionFilterProp="children">
                 {scopeNvlOptions.map((n) => (
-                  <Select.Option key={n.id} value={n.id}>[{n.id}] {n.tenNVL_NM}</Select.Option>
+                  <Select.Option key={n.id} value={n.id}>[{n.id}] {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}</Select.Option>
                 ))}
               </Select>
             </Form.Item>
@@ -997,6 +1065,8 @@ const TaoPhieuNapLieuLoCao = () => {
             showAddButton={!isFormLocked}
             showDeleteButton={!isFormLocked}
             minRows={0}
+            initialDoAmMap={doAmMap}
+            onDoAmChange={setDoAmMap}
           />
         )}
 
