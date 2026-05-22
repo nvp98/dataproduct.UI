@@ -69,6 +69,14 @@ import TaoPhieuBienBanSanLuongKCS from "../pages/NMCTD/BienBanSanLuongKCS/TaoPhi
 import ChiTietBienBanSanLuongKCS from "../pages/NMCTD/BienBanSanLuongKCS/ChiTietBienBanSanLuongKCS";
 import QuanLySilo from "../pages/KhoDuLieu/NM.HRC2/Silo";
 import ThongKeHRC2 from "../pages/NM.HRC2/ThongKe/ThongKeHRC2";
+import NapLieuLoCao from "../pages/NMLG/NapLieuLoCao/NapLieuLoCao";
+import TaoPhieuNapLieuLoCao from "../pages/NMLG/NapLieuLoCao/TaoPhieuNapLieuLoCao";
+import ChiTietNapLieuLoCao from "../pages/NMLG/NapLieuLoCao/ChiTietNapLieuLoCao";
+import TonSiloLoCao from "../pages/NMLG/TonSiloLoCao/TonSiloLoCao";
+import TaoPhieuTonSiLo from "../pages/NMLG/TonSiloLoCao/TaoPhieuTonSiLo";
+import ChiTietTonSiLo from "../pages/NMLG/TonSiloLoCao/ChiTietTonSiLo";
+import QuanLySiLoNVL from "../pages/NMLG/QuanLySiLoNVL/QuanLySiLoNVL";
+import QuanLyTonSiLoNVL from "../pages/NMLG/QuanLyTonSiLoNVL/QuanLyTonSiLoNVL";
 import GiaoNhanThepLong from "../pages/NM.HRC2/GiaoNhanThepLong/GiaoNhanThepLong";
 import TaoPhieuGN from "../pages/NM.HRC2/GiaoNhanThepLong/TaoPhieuGN";
 import ChiTietGN from "../pages/NM.HRC2/GiaoNhanThepLong/ChiTietGN";
@@ -989,6 +997,11 @@ export const routes = [
         ),
       },
       {
+        path: "naplieulocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <NapLieuLoCao />
         path: "thongkephieuhrc2",
         element: (
           <RequireAuth>
@@ -999,6 +1012,11 @@ export const routes = [
         ),
       },
       {
+        path: "viecdentoi/naplieulocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <NapLieuLoCao type="viecdentoi" />
         path: "thongkehrc1",
         element: (
           <RequireAuth>
@@ -1009,6 +1027,11 @@ export const routes = [
         ),
       },
       {
+        path: "taophieubienbannaplieulocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuNapLieuLoCao />
         path: "thongkephieuhrc1",
         element: (
           <RequireAuth>
@@ -1019,6 +1042,11 @@ export const routes = [
         ),
       },
       {
+        path: "taophieubienbannaplieulocao/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuNapLieuLoCao />
         path: "giaonhantheplong",
         element: (
           <RequireAuth>
@@ -1029,6 +1057,11 @@ export const routes = [
         ),
       },
       {
+        path: "chitietbienbannaplieulocao/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietNapLieuLoCao />
         path: "viecdentoi/giaonhantheplong",
         element: (
           <RequireAuth>
@@ -1039,6 +1072,11 @@ export const routes = [
         ),
       },
       {
+        path: "tonsilolocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TonSiloLoCao />
         path: "xemphieu/giaonhantheplong",
         element: (
           <RequireAuth>
@@ -1049,6 +1087,11 @@ export const routes = [
         ),
       },
       {
+        path: "viecdentoi/tonsilolocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TonSiloLoCao type="viecdentoi" />
         path: "taophieugiaonhantheplong",
         element: (
           <RequireAuth>
@@ -1059,6 +1102,11 @@ export const routes = [
         ),
       },
       {
+        path: "taophieutonsilolocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuTonSiLo />
         path: "chitietgiaonhantheplong",
         element: (
           <RequireAuth>
@@ -1068,6 +1116,12 @@ export const routes = [
           </RequireAuth>
         ),
       },
+      {
+        path: "taophieutonsilolocao/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuTonSiLo />
       // ========== GIAO NHẬN THÉP LỎNG - HRC1 ==========
       {
         path: "giaonhantheplong_hrc1",
@@ -1080,6 +1134,11 @@ export const routes = [
         ),
       },
       {
+        path: "chitiettonsilolocao/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTonSiLo />
         path: "viecdentoi/giaonhantheplong_hrc1",
         element: (
           <RequireAuth>
@@ -1090,6 +1149,11 @@ export const routes = [
         ),
       },
       {
+        path: "silolocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyTonSiLoNVL />
         path: "xemphieu/giaonhantheplong_hrc1",
         element: (
           <RequireAuth>
@@ -1100,6 +1164,11 @@ export const routes = [
         ),
       },
       {
+        path: "quanlysilonvl",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLySiLoNVL />
         path: "taophieugiaonhantheplong_hrc1",
         element: (
           <RequireAuth>
@@ -1110,6 +1179,11 @@ export const routes = [
         ),
       },
       {
+        path: "quanlytonsilonvl",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyTonSiLoNVL />
         path: "chitietgiaonhantheplong_hrc1",
         element: (
           <RequireAuth>
