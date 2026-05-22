@@ -107,12 +107,47 @@
                     "width": 130
                 },
                 {
+                    "title": "Ngày SX",
+                    "dataIndex": "ngaySX",
+                    "width": 120
+                },
+                {
+                    "title": "Ca SX",
+                    "dataIndex": "ca",
+                    "width": 50
+                },
+                 {
+                    "title": "ST Ca trước chuyển",
+                    "dataIndex": "sT_CaTruocChuyen",
+                    "width": 50
+                },
+                {
+                    "title": "ST Nhập trong ca",
+                    "dataIndex": "sT_NhapTrongCa",
+                    "width": 50
+                },
+                {
+                    "title": "ST Ca sau chuyển",
+                    "dataIndex": "sT_CaSauChuyen",
+                    "width": 50
+                },
+                {
+                    "title": "Tình trạng",
+                    "dataIndex": "tinhTrang_Chuyen",
+                    "width": 150
+                },
+                {
                     "title": "Loại I",
                     "children": [
                         {
                             "title": "Số thanh",
                             "dataIndex": "stLoai1",
                             "width": 80
+                        },
+                        {
+                            "title": "Đã chuyển",
+                            "dataIndex": "stDachuyenLoai1",
+                            "width": 90
                         },
                         {
                             "title": "Khối lượng (Kg)",
@@ -131,6 +166,11 @@
                             "width": 80
                         },
                         {
+                            "title": "Đã chuyển",
+                            "dataIndex": "stDachuyenLoai2",
+                            "width": 90
+                        },
+                        {
                             "title": "Khối lượng (Kg)",
                             "dataIndex": "klLoai2",
                             "width": 105
@@ -146,6 +186,11 @@
                             "width": 80
                         },
                         {
+                            "title": "Đã chuyển",
+                            "dataIndex": "stDachuyenLoai2tp",
+                            "width": 90
+                        },
+                        {
                             "title": "Khối lượng (Kg)",
                             "dataIndex": "klLoai2tp",
                             "width": 105
@@ -159,6 +204,11 @@
                             "title": "Số thanh",
                             "dataIndex": "stPhoiNgan",
                             "width": 80
+                        },
+                        {
+                            "title": "Đã chuyển",
+                            "dataIndex": "stDachuyenPhoiNgan",
+                            "width": 90
                         },
                          {
                             "title": "Chiều dài (m)",
@@ -179,6 +229,11 @@
                             "title": "Số thanh",
                             "dataIndex": "stLoai3",
                             "width": 80
+                        },
+                        {
+                            "title": "Đã chuyển",
+                            "dataIndex": "stDachuyenLoai3",
+                            "width": 90
                         },
                         {
                             "title": "Khối lượng (Kg)",

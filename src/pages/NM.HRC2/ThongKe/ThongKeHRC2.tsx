@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Card,
+  Checkbox,
   Table,
   Tooltip,
   Typography,
@@ -22,6 +23,7 @@ import {
   type ThongKeHeaderColumn,
   type ThongKeLoaiBMKey,
 } from "../../../utils/configs/thongKeHRC2HeaderConfig";
+import ThongKeBBGNThepLong from "./ThongKeBBGNThepLong";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -38,16 +40,21 @@ const renderHkCell = (cellData: HkCellData | null | unknown) => {
   if (cellData === null || cellData === undefined) return "";
   const { value, manualValue, klPhanBo, totalKLPhuGia, isManual } = cellData as HkCellData;
 
-  const displayValue = totalKLPhuGia ?? (manualValue != null ? manualValue : value);
+  // isManual=true → dùng manualValue (null nếu user đã xóa → show "0")
+  // isManual=false/undefined → dùng value (giá trị NM gốc)
+  const effectiveValue = isManual ? (manualValue ?? 0) : value;
+  const displayValue = totalKLPhuGia ?? effectiveValue;
   const formatted = formatNumberVN(displayValue);
 
   const hasPhanBo = klPhanBo != null;
-  const hasManual = manualValue != null;
+  // hasManual = true khi có giá trị chỉnh tay, hoặc isManual=true (kể cả khi user đã xóa → manualValue=null)
+  const hasManual = isManual === true || manualValue != null;
 
   if (hasPhanBo || hasManual) {
     const tooltipParts: string[] = [];
     tooltipParts.push(`Tự động: ${formatNumberVN(value)}`);
-    if (hasManual) tooltipParts.push(`Chỉnh tay: ${formatNumberVN(manualValue)}`);
+    if (manualValue != null) tooltipParts.push(`Chỉnh tay: ${formatNumberVN(manualValue)}`);
+    else if (isManual) tooltipParts.push(`Chỉnh tay: (đã xóa)`);
     if (hasPhanBo) tooltipParts.push(`Phân bổ: ${formatNumberVN(klPhanBo)}`);
 
     const bg = hasPhanBo && hasManual ? "#d4edda" : hasPhanBo ? "#d6f0ff" : "#fff7b3";
@@ -81,6 +88,21 @@ const toAntdColumns = (cols: ThongKeHeaderColumn[]): any[] => {
 
     if (c.dataIndex === "klGangLongCCT" || c.dataIndex === "klThepPhe") {
       mapped.render = (value: unknown) => formatNumberVN(value);
+    }
+
+    if (c.dataIndex === "meThoi") {
+      mapped.render = (value: unknown, record: any) => {
+        const isTrung =
+          record.isTrungMeThoi === true ||
+          record.IsTrungMeThoi === true;
+        return isTrung ? (
+          <span style={{ backgroundColor: "tomato", color: "#fff", padding: "0 4px", borderRadius: 2, display: "block" }}>
+            {String(value ?? "")}
+          </span>
+        ) : (
+          String(value ?? "")
+        );
+      };
     }
 
     if (Array.isArray(c.children) && c.children.length > 0) {
@@ -133,6 +155,7 @@ const ThongKeHRC2 = () => {
   const [columns, setColumns] = useState<any[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
   const [loaiBmKey, setLoaiBmKey] = useState<LoaiBMKey>("BOF");
+  const [mainTabKey, setMainTabKey] = useState<"tieuhao" | "bbgn">("tieuhao");
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
 
   const handleSearch = useCallback(
@@ -156,6 +179,8 @@ const ThongKeHRC2 = () => {
           scope = 6;
         }
         const meThoiFilter = (values.meThoi as string | undefined)?.trim();
+        const isDelete = (values.isDelete as boolean | undefined) === true;
+        const isTrungMeThoi = (values.isTrungMeThoi as boolean | undefined) === true;
 
         // Cột cố định: không hardcode phụ liệu theo config nữa
         const configCols =
@@ -189,6 +214,8 @@ const ThongKeHRC2 = () => {
           LoaiBM: currentLoaiBm,
           Scope: scope ?? undefined,
           SearchText: meThoiFilter ?? undefined,
+          IsDelete: isDelete || undefined,
+          IsTrungMeThoi: isTrungMeThoi || undefined,
         };
 
         // Nếu có đủ TuNgay + DenNgay → BE tính sum toàn range, fire độc lập
@@ -233,7 +260,7 @@ const ThongKeHRC2 = () => {
             tenPhuLieu: String(h?.tenPhuLieu ?? h?.TenPhuLieu ?? "").trim(),
             loaiThongKe: h?.loaiThongKe ?? h?.LoaiThongKe,
           }))
-          .filter((h: any) => h.idHeaderKey > 0 && !!h.tenPhuLieu);
+          .filter((h: any) => h.idHeaderKey !== 0 && !!h.tenPhuLieu);
 
         const totalRecords: number =
           payload?.totalRecords ??
@@ -247,59 +274,17 @@ const ThongKeHRC2 = () => {
           (Array.isArray(payload?.Data) && payload.Data) ||
           [];
 
-        // Nhóm phụ liệu theo 2 list (LF/RH): KL & PG, giữ nguyên thứ tự trong từng nhóm
-        let headerColumns: any[];
-        if (currentLoaiBm === "LF" || currentLoaiBm === "RH") {
-          const klHeaders = headerList.filter(
-            (h: any) => Number(h.loaiThongKe ?? 0) === 2
-          );
-          const pgHeaders = headerList.filter(
-            (h: any) => Number(h.loaiThongKe ?? 0) === 3
-          );
-
-          const phuLieuGroups: any[] = [];
-          if (klHeaders.length > 0) {
-            phuLieuGroups.push({
-              title: "Chất hợp kim hóa",
-              children: klHeaders.map((h: any) => ({
-                key: `hk_${h.idHeaderKey}`,
-                dataIndex: `hk_${h.idHeaderKey}`,
-                title: h.tenPhuLieu,
-                width: 90,
-                align: "right" as const,
-                render: (value: unknown) => renderHkCell(value),
-              })),
-            });
-          }
-          if (pgHeaders.length > 0) {
-            phuLieuGroups.push({
-              title: "Phụ gia và chất khử oxy",
-              children: pgHeaders.map((h: any) => ({
-                key: `hk_${h.idHeaderKey}`,
-                dataIndex: `hk_${h.idHeaderKey}`,
-                title: h.tenPhuLieu,
-                width: 90,
-                align: "right" as const,
-                render: (value: unknown) => renderHkCell(value),
-              })),
-            });
-          }
-
-          headerColumns = [...fixedColumns, ...phuLieuGroups];
-        } else {
-          // BOF: giữ layout phẳng như hiện tại
-          headerColumns = [
-            ...fixedColumns,
-            ...headerList.map((h: any) => ({
-              key: `hk_${h.idHeaderKey}`,
-              dataIndex: `hk_${h.idHeaderKey}`,
-              title: h.tenPhuLieu,
-              width: 90,
-              align: "right" as const,
-              render: (value: unknown) => renderHkCell(value),
-            })),
-          ];
-        }
+        const headerColumns: any[] = [
+          ...fixedColumns,
+          ...headerList.map((h: any) => ({
+            key: `hk_${h.idHeaderKey}`,
+            dataIndex: `hk_${h.idHeaderKey}`,
+            title: h.tenPhuLieu,
+            width: 90,
+            align: "right" as const,
+            render: (value: unknown) => renderHkCell(value),
+          })),
+        ];
 
         if (!rawList.length) {
           message.info("Không có dữ liệu phù hợp với điều kiện lọc.");
@@ -391,6 +376,9 @@ const ThongKeHRC2 = () => {
             row[di] = getFieldValue(di);
           });
 
+          row.isNM = getFieldValue("isNM");
+          row.isTrungMeThoi = getFieldValue("isTrungMeThoi");
+
           // Set các cột phụ liệu theo headers trả về từ BE (theo IDHeaderKey)
           headerList.forEach((h: any) => {
             const di = `hk_${h.idHeaderKey}`;
@@ -414,7 +402,8 @@ const ThongKeHRC2 = () => {
               if (!key.startsWith("hk_")) return;
               const cell = row[key] as HkCellData | null;
               if (!cell) return;
-              const val = cell.totalKLPhuGia ?? (cell.manualValue != null ? cell.manualValue : cell.value);
+              const effectiveVal = cell.isManual ? cell.manualValue : cell.value;
+              const val = cell.totalKLPhuGia ?? effectiveVal;
               if (val != null) localSum[key] = (localSum[key] ?? 0) + val;
             });
           });
@@ -436,7 +425,7 @@ const ThongKeHRC2 = () => {
         setLoading(false);
       }
     },
-    [form, loaiBmKey]
+    [form, loaiBmKey, pagination.pageSize]
   );
 
   useEffect(() => {
@@ -466,6 +455,7 @@ const ThongKeHRC2 = () => {
       scope = 6;
     }
     const meThoiFilter = (values.meThoi as string | undefined)?.trim();
+    const isDelete = (values.isDelete as boolean | undefined) === true;
 
     const payload: Record<string, unknown> = {
       TuNgay: fromDate.format("YYYY-MM-DD"),
@@ -474,6 +464,7 @@ const ThongKeHRC2 = () => {
       LoaiBM: loaiBmKey,
       Scope: scope ?? undefined,
       SearchText: meThoiFilter ?? undefined,
+      IsDelete: isDelete || undefined,
     };
 
     try {
@@ -544,7 +535,20 @@ const ThongKeHRC2 = () => {
   );
 
   return (
-    <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
+    <div style={{ margin: 2 }}>
+      <Tabs
+        activeKey={mainTabKey}
+        onChange={(k) => setMainTabKey(k as "tieuhao" | "bbgn")}
+        items={[
+          { key: "tieuhao", label: "Thống kê tiêu hao HRC2" },
+          { key: "bbgn", label: "Thống kê BBGN thép lỏng" },
+        ]}
+      />
+
+      {mainTabKey === "bbgn" ? (
+        <ThongKeBBGNThepLong />
+      ) : (
+    <Card style={{ boxShadow: "0 2px 8px #f0f1f2" }}>
       <Title level={3} style={{ textAlign: "center", marginBottom: 24 }}>
         BẢNG TỔNG HỢP DỮ LIỆU TIÊU HAO HRC2
       </Title>
@@ -620,6 +624,14 @@ const ThongKeHRC2 = () => {
             <Input placeholder="Nhập mã mẻ thép" style={{ minWidth: 160 }} />
           </Form.Item>
 
+          <Form.Item name="isDelete" valuePropName="checked">
+            <Checkbox>Đã xóa</Checkbox>
+          </Form.Item>
+
+          <Form.Item name="isTrungMeThoi" valuePropName="checked">
+            <Checkbox>Mẻ trùng</Checkbox>
+          </Form.Item>
+
           <Form.Item>
             <Space>
               <Button
@@ -630,7 +642,7 @@ const ThongKeHRC2 = () => {
                 Tìm
               </Button>
               <Button onClick={handleReset}>Reset</Button>
-              <Button onClick={() => void handleExcel()}>
+              <Button type="primary" style={{ backgroundColor: "green" }} onClick={() => void handleExcel()}>
                 Excel
               </Button>
             </Space>
@@ -639,6 +651,7 @@ const ThongKeHRC2 = () => {
       </Form>
 
       {/* Bảng thống kê */}
+      <style>{`.row-not-nm td { background-color: #fffbe6 !important; }`}</style>
       <div style={{ marginTop: 24 }}>
         <Table
           bordered
@@ -646,6 +659,7 @@ const ThongKeHRC2 = () => {
           loading={loading}
           columns={columns}
           dataSource={tableData}
+          rowClassName={(record) => record.isNM === false ? "row-not-nm" : ""}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
@@ -700,6 +714,8 @@ const ThongKeHRC2 = () => {
         />
       </div>
     </Card>
+      )}
+    </div>
   );
 };
 

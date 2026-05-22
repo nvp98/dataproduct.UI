@@ -5,6 +5,7 @@ import type {
   HRCTableRow,
 } from "../components/CustomTableHRC";
 import type { HeaderMappingRecord } from "../components/HeaderMapping";
+import { PhieuApi } from "./PhieuApi";
 
 export type DynamicColumnMeta = {
   dataIndex: string;
@@ -28,6 +29,22 @@ export type AdjustColumnMeta = {
 };
 
 const DEFAULT_EXCLUDED_KEYS = ["meThoi", "macThep", "ghiChu", "stt", "STT"];
+
+const canCurrentUserMap = (): boolean => {
+  try {
+    if (typeof window === "undefined") return false;
+    const raw = window.localStorage.getItem("userinfo");
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as {
+      iD_Quyen?: number;
+      tenNgan?: string;
+    };
+    if (!parsed) return false;
+    return parsed.iD_Quyen === 1 || parsed.tenNgan === "P.KH";
+  } catch {
+    return false;
+  }
+};
 
 const resolveLabel = (title: ReactNode, fallback?: string) => {
   if (typeof title === "string") return title;
@@ -69,6 +86,7 @@ const mapChildWithAdjust = (
 };
 
 export const hrc2TableService = {
+  canCurrentUserMap,
   mergeAdjustMetas(
     prev: AdjustColumnMeta[] = [],
     incoming: AdjustColumnMeta[] = []
@@ -191,6 +209,7 @@ export const hrc2TableService = {
     if (!items?.length) {
       return [];
     }
+    const canMap = canCurrentUserMap();
     return items.map((item) => ({
       title: renderTitle(item.label, item),
       dataIndex: item.dataIndex,
@@ -198,8 +217,8 @@ export const hrc2TableService = {
       highlight: item.highlight ?? item.metaGroup === "others",
       metaLabel: item.label,
       editable: false,
-      // Luôn set allowMapping = true để hiển thị button móc nối cho tất cả phụ liệu
-      allowMapping: item.allowMapping ?? true,
+      // Chỉ cho phép mapping khi user có quyền và meta cho phép
+      allowMapping: canMap && (item.allowMapping ?? true),
       mappingPayload: item.mappingPayload,
       metaGroup: item.metaGroup,
       variant: item.variant ?? "source",
@@ -274,8 +293,12 @@ export const hrc2TableService = {
       ? new Set(preserveFields)
       : null;
 
-    return serverRows.map((serverRow) => {
+    const serverKeySet = new Set<string | number>();
+    const merged = serverRows.map((serverRow) => {
       const keyValue = serverRow[keyField] as string | number | undefined;
+      if (keyValue !== undefined && keyValue !== null) {
+        serverKeySet.add(keyValue);
+      }
       if (keyValue === undefined || keyValue === null) {
         return serverRow;
       }
@@ -283,16 +306,25 @@ export const hrc2TableService = {
       if (!prevRow) {
         return serverRow;
       }
-      const merged: HRCTableRow = { ...serverRow };
+      const mergedRow: HRCTableRow = { ...serverRow };
       Object.keys(prevRow).forEach((field) => {
         const shouldPreserve =
           preserveSet !== null ? preserveSet.has(field) : field.endsWith("_adjust");
         if (shouldPreserve) {
-          merged[field] = prevRow[field];
+          mergedRow[field] = prevRow[field];
         }
       });
-      return merged;
+      return mergedRow;
     });
+
+    // Giữ lại các dòng nhập tay (IsNM=false) từ prev không có trong server rows
+    const manualRows = previousRows.filter((row) => {
+      if (row.IsNM !== false) return false;
+      const keyValue = row[keyField] as string | number | undefined;
+      return keyValue === undefined || keyValue === null || !serverKeySet.has(keyValue);
+    });
+
+    return [...merged, ...manualRows];
   },
 
   applyManualOverrides(
@@ -330,14 +362,23 @@ export const hrc2TableService = {
       const keyValue =
         idVal !== undefined && idVal !== null && idVal !== "" ? idVal : fallbackVal;
       if (keyValue === undefined || keyValue === null) {
-        return serverRow;
+        const cleaned = { ...serverRow };
+        delete (cleaned as Record<string, unknown>).__fromFilterAPI;
+        return cleaned;
       }
       const prevRow = prevMap.get(keyValue);
       if (!prevRow) {
-        return serverRow;
+        const cleaned = { ...serverRow };
+        delete (cleaned as Record<string, unknown>).__fromFilterAPI;
+        return cleaned;
       }
 
       const merged: HRCTableRow = { ...serverRow };
+
+      // Dòng nhập tay (IsNM=false) đến từ filter API: dữ liệu DB là nguồn sự thật.
+      // Không cho JSON override ngược lại vì JSON có thể lưu sai (bug save).
+      const isFilterAPIManualRow =
+        merged.__fromFilterAPI === true && merged.IsNM === false;
 
       Object.keys(prevRow).forEach((k) => {
         if (!k.endsWith(MANUAL_SUFFIX)) return;
@@ -356,12 +397,25 @@ export const hrc2TableService = {
           return;
         }
 
-        // Orig luôn cập nhật theo số liệu server mới nhất để tooltip "Cũ/Mới" đúng sau khi làm mới.
-        if (serverAuto !== undefined) {
+        // Dòng IsNM=false từ filter API: giá trị filter là đúng, không override bằng JSON
+        if (isFilterAPIManualRow && serverAuto !== null && serverAuto !== undefined) {
+          if (merged[origKey] === undefined) merged[origKey] = serverAuto;
+          merged[k] = true;
+          return;
+        }
+
+        // Nếu API đã set __orig (= giá trị NM gốc thực sự), dùng nó làm baseline thay vì
+        // merged[baseKey] (có thể đã là manualVal do fetchAndProcessPhuLieus set khi isManual=true).
+        const existingOrig = (merged as Record<string, unknown>)[origKey] as
+          | string | number | boolean | null | undefined;
+        const serverAutoResolved = existingOrig !== undefined ? existingOrig : serverAuto;
+
+        // Chỉ ghi __orig nếu API chưa set (không overwrite giá trị NM gốc chính xác).
+        if (existingOrig === undefined && serverAuto !== undefined) {
           merged[origKey] = serverAuto;
         }
 
-        const isStillManual = String(manualValue ?? "") !== String(serverAuto ?? "");
+        const isStillManual = String(manualValue ?? "") !== String(serverAutoResolved ?? "");
 
         if (isStillManual) {
           merged[baseKey] = manualValue;
@@ -370,6 +424,9 @@ export const hrc2TableService = {
           merged[k] = false;
         }
       });
+
+      // Dọn marker nội bộ trước khi trả về
+      delete (merged as Record<string, unknown>).__fromFilterAPI;
 
       return merged;
     });
@@ -473,6 +530,11 @@ export const hrc2TableService = {
     }
 
     return processedColumns;
+  },
+
+  checkChotPhieuTieuHao: async (ngaySX: string, ca: number): Promise<boolean> => {
+    const res = await PhieuApi.checkChotPhieuTieuHao(ngaySX, ca);
+    return res.data === 2 ? true : false;
   },
 };
 

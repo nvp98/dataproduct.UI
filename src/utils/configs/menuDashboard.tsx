@@ -11,6 +11,11 @@ export const MenuDataDashboard = [
       //   title: "BM.06/QT.05.01 NHẬT KÝ THAO TÁC PHỐI TRỘN QUẶNG TRUNG HÒA",
       //   maBm: "NL_BB_Quangtrunghoa",
       // },
+      {
+        code: "bangtheodoibenphe",
+        title: "BM.18/HD.25.08 BẢNG THEO DÕI BEN PHẾ",
+        maBm: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
+      },
     ],
   },
   {
@@ -48,6 +53,11 @@ export const MenuDataDashboard = [
         title: "BM.12/QT.05.11 BIÊN BẢN GIAO NHẬN PHÔI NHẬP KHO",
         maBm: BM_CONFIG.HRC1.HRC1_BB_GiaoNhanPhoiNhapKho,
       },
+      {
+        code: "giaonhantheplong_hrc1",
+        title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+        maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
+      },
     ],
   },
   {
@@ -55,21 +65,26 @@ export const MenuDataDashboard = [
     icon: "nmhrc2",
     color: "#019221ff",
     items: [
-      // {
-      //   code: "tieuhaonauluyen_lf",
-      //   title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
-      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
-      // },
-      // {
-      //   code: "tieuhaonauluyen_bof",
-      //   title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
-      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
-      // },
-      // {
-      //   code: "tieuhaonauluyen_rf",
-      //   title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
-      //   maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
-      // },
+      {
+        code: "tieuhaonauluyen_lf",
+        title: "BM.14/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN LF",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
+      },
+      {
+        code: "tieuhaonauluyen_bof",
+        title: "BM.08/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
+      },
+      {
+        code: "tieuhaonauluyen_rf",
+        title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
+        maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
+      },
+      {
+        code: "giaonhantheplong",
+        title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+        maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
+      },
     ],
   },
   {
@@ -88,9 +103,24 @@ export const MenuDataDashboard = [
         maBm: BM_CONFIG.CTD.CTD_BB_Phoinong,
       },
       {
+        code: "viecdentoi/bienbangiaoNhanphoi",
+        title: "BM.05/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI",
+        maBm: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
+      },
+      {
         code: "bienbanphoinapnguoi",
         title: "BM.02/QT.05.13 BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI (NHẬN PHÔI)",
         maBm: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
+      },
+      {
+        code: "phieuxulykph",
+        title: "BM.01C/QT.11 PHIẾU XỬ LÝ THÀNH PHẨM/ SẢN PHẨM KHÔNG PHÙ HỢP",
+        maBm: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
+      },
+      {
+        code: "sanluongkcs",
+        title: "BM.08/QT.05.13 BIÊN BẢN XÁC NHẬN SẢN LƯỢNG",
+        maBm: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
       },
     ],
   },

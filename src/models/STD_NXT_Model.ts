@@ -39,6 +39,7 @@ export interface STD_NXT_Table2Row {
   totalChenhLech?: string | number;
   tyLeBOF?: string | number | null;
   tyLeTinhLuyen?: string | number | null;
+  tyLeRH?: string | number | null;
   /** Từ BE: đã phân bổ chênh lệch hay chưa (để hiển thị nút Thu hồi/Phân bổ) */
   HasPhanBo?: boolean | null;
   Id_HeaderKey?: number | null;
@@ -46,6 +47,10 @@ export interface STD_NXT_Table2Row {
   NgaySX?: string;
   /** Ca (1/2) — dùng cho payload phân bổ/thu hồi */
   Ca?: number;
+  /** Khối lượng phân bổ theo 1 mẻ (từ BE) */
+  KLPB_BOF?: string | number | null;
+  KLPB_TL?: string | number | null;
+  KLPB_RH?: string | number | null;
 }
 
 /**
@@ -104,6 +109,9 @@ export interface NXTSummaryDto {
   TongSDTrenSoSach: number; // Tổng sử dụng trên sổ sách
   ChenhLech: number; // Chênh lệch
   HasPhanBo?: boolean | null; // Đã phân bổ hay chưa (từ BE)
+  KLPB_BOF?: number | null;
+  KLPB_TL?: number | null;
+  KLPB_RH?: number | null;
 }
 
 /**
@@ -137,4 +145,40 @@ export interface STD_NXT_HRC2_PhanBoDto {
   IdPhieu: string;
   TyLeBOF?: number | null;
   TyLeTinhLuyen?: number | null;
+  TyLeRH?: number | null;
+}
+
+export interface STD_NXT_HRC2_KhongPhanBoDto{
+  NgaySX: string;
+  Ca: number;
+  IdPhieu: string;
+  Id_HeaderKey: number;
+}
+
+export interface STD_NXT_RelatedPhieuTarget {
+  tabKey: string;
+  label: string;
+  bieuMau: string;
+  scope: number;
+}
+
+export interface STD_NXT_RelatedPhieuStatusRequest {
+  NgaySX: string;
+  Ca: number;
+  Targets: STD_NXT_RelatedPhieuTarget[];
+}
+
+export interface STD_NXT_RelatedPhieuStatusItem {
+  tabKey?: string | null;
+  label?: string | null;
+  bieuMau?: string | null;
+  scope?: number | null;
+  idPhieu?: string | null;
+  tinhTrang?: number | null;
+}
+
+export interface STD_NXT_RelatedPhieuStatusResponse {
+  items: STD_NXT_RelatedPhieuStatusItem[];
+  canPhanBo: boolean;
+  incompleteCount: number;
 }

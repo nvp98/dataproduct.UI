@@ -12,6 +12,7 @@ import PhieuFilterCard, {
 } from "../../../components/PhieuFilterCard";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 // Dữ liệu mẫu
 
 const BienBanPhoiNong = ({ type }: { type?: string }) => {
@@ -19,9 +20,9 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
-  const userInfoStr = localStorage.getItem("userinfo");
-  const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
-
+  // const userInfoStr = localStorage.getItem("userinfo");
+  // const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
+  const userInfoObj = getThongTinUser();
   const fixedFilters = useMemo(
     () => ({ usercode: userObj?.maNV || "" }),
     [userObj?.maNV],

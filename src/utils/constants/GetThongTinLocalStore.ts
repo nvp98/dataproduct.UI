@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface UserInfo {
-  iD_TaiKhoan: number | null;
+  iD_TaiKhoan: number | null | any;
   iD_PhongBan: number | null;
   iD_PhanXuong: number | null;
   iD_Quyen: number | null;

@@ -19,10 +19,12 @@ interface CustomFormTableProps {
     width?: number | string;
     fixed?: "left" | "right";
     format?: string; // ví dụ: "number-group"
+    type?: "text" | "number" | "float" | any; // Kiểu dữ liệu
     children?: Array<{
       title: string;
       dataIndex: string | number;
       format?: string; // ví dụ: "number-group"
+      type?: "text" | "number" | "float" | any; // Kiểu dữ liệu
       options?: Array<{ label: string; value: string | number }>;
     }>;
     options?: Array<{ label: string; value: string | number }>;
@@ -56,6 +58,7 @@ interface CustomFormTableProps {
   summary?: (data: readonly any[]) => React.ReactNode;
   // Nếu dataIndex khớp pattern này → tự động lưu _manual_{di}=true + _goc_{di}=oldVal khi người dùng sửa
   manualTrackPattern?: RegExp;
+  onRow?: (record: any, index?: number) => any;
 }
 
 export default function CustomFormTable({
@@ -83,7 +86,40 @@ export default function CustomFormTable({
   compactWhenEmpty = false,
   summary,
   manualTrackPattern,
+  onRow,
 }: CustomFormTableProps) {
+  // Validate và filter input theo type
+  const validateAndFormatInput = (
+    value: string,
+    type?: "text" | "number" | "float",
+  ): string => {
+    if (!type || type === "text") return value;
+
+    if (type === "number") {
+      // Chỉ cho phép số nguyên dương, dấu âm ở đầu, không cho dấu thập phân
+      return value
+        .replace(/[^0-9-]/g, "")
+        .replace(/^-+/, (m) => (m.length === 1 ? "-" : "-"));
+    }
+
+    if (type === "float") {
+      // Cho phép số với dấu thập phân, dấu âm, và dấu cách (sẽ xóa sau)
+      const normalized = value.replace(/\s+/g, ""); // Xóa dấu cách
+      const match = normalized.match(/^-?[\d.]*$/);
+      if (!match) return normalized.replace(/[^0-9.-]/g, "");
+
+      // Chỉ cho phép một dấu chấm
+      const parts = normalized.split(".");
+      if (parts.length > 2) {
+        return (parts[0] || "0") + "." + parts.slice(1).join("");
+      }
+
+      return normalized;
+    }
+
+    return value;
+  };
+
   const formatNumberGroup = (value: unknown): string => {
     if (value === null || value === undefined || value === "") return "";
     const raw = String(value).trim();
@@ -108,6 +144,7 @@ export default function CustomFormTable({
   const getCellStyle = (
     dataIndex: string | number,
     value: any,
+    row?: any,
     readonly?: boolean,
   ) => {
     const style: any = {};
@@ -117,6 +154,24 @@ export default function CustomFormTable({
       style.backgroundColor = "#fff1f0";
       style.borderColor = "#ff4d4f";
     }
+
+    const key = String(dataIndex || "");
+    if (key.toLowerCase().startsWith("stdachuyen")) {
+      const suffix = key.substring("stDachuyen".length);
+      const sourceKey = `st${suffix}`;
+      const sourceVal = Number(row?.[sourceKey] ?? 0);
+      const transferredVal = Number(value ?? 0);
+
+      if (
+        !Number.isNaN(sourceVal) &&
+        !Number.isNaN(transferredVal) &&
+        sourceVal !== transferredVal
+      ) {
+        style.backgroundColor = "#fff1f0";
+        style.borderColor = "#ff4d4f";
+      }
+    }
+
     return style;
   };
 
@@ -221,6 +276,7 @@ export default function CustomFormTable({
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
+                      record,
                       true,
                     )}
                   />
@@ -240,8 +296,12 @@ export default function CustomFormTable({
                     placeholder={child.title}
                     value={record[child.dataIndex] ?? ""}
                     onChange={(e) => {
-                      handleCellChange(
+                      const validated = validateAndFormatInput(
                         e.target.value,
+                        (child as any)?.type,
+                      );
+                      handleCellChange(
+                        validated,
                         idx,
                         child.dataIndex as string,
                       );
@@ -250,6 +310,7 @@ export default function CustomFormTable({
                     style={getCellStyle(
                       child.dataIndex,
                       record[child.dataIndex],
+                      record,
                       false,
                     )}
                   />
@@ -277,6 +338,17 @@ export default function CustomFormTable({
           };
         }
 
+        // Check if column has custom render function
+        if ((col as any).type === "index") {
+          return {
+            title: col.title,
+            dataIndex: col.dataIndex,
+            width: col.width,
+            fixed: col.fixed,
+            render: (col as any).render,
+          };
+        }
+
         // Cột bình thường
         return {
           title: col.title,
@@ -295,6 +367,7 @@ export default function CustomFormTable({
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex || ""],
+                  record,
                   true,
                 )}
               />
@@ -314,16 +387,17 @@ export default function CustomFormTable({
                 placeholder={col.title}
                 value={record[col.dataIndex ?? ""] ?? ""}
                 onChange={(e) => {
-                  handleCellChange(
+                  const validated = validateAndFormatInput(
                     e.target.value,
-                    idx,
-                    col.dataIndex as string,
+                    (col as any)?.type,
                   );
+                  handleCellChange(validated, idx, col.dataIndex as string);
                 }}
                 disabled={!editable}
                 style={getCellStyle(
                   col.dataIndex as string,
                   record[col.dataIndex ?? ""],
+                  record,
                   false,
                 )}
               />
@@ -410,6 +484,7 @@ export default function CustomFormTable({
               scroll={{ x: "max-content", y: scrollY }}
               sticky={stickyHeader}
               summary={summary}
+              onRow={onRow}
               rowSelection={
                 selectionEnabled
                   ? {
@@ -417,7 +492,8 @@ export default function CustomFormTable({
                       onChange: (keys, selected) => {
                         // Keep selected keys in the original data type (number/string)
                         const typedKeys = (selected as any[]).map(
-                          (record, idx) => record?.key ?? record?.id ?? keys[idx],
+                          (record, idx) =>
+                            record?.key ?? record?.id ?? keys[idx],
                         );
                         onSelectionChange?.(typedKeys as any, selected as any);
                       },

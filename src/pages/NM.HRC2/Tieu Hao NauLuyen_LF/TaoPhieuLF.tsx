@@ -5,12 +5,12 @@ import { FilterOutlined, LinkOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOu
 import HeaderKeyAutocomplete from "../../../components/HeaderKeyAutocomplete";
 import type { HeaderKey } from "../../../models/HeaderKeyModel";
 import dayjs from "dayjs";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import CustomTableHRC from "../../../components/CustomTableHRC";
-import type { HRCChildColumn, HRCTableRow, HRCParentColumn } from "../../../components/CustomTableHRC";
+import type { HRCChildColumn, HRCTableRow, HRCParentColumn, CustomTableHRCHandle } from "../../../components/CustomTableHRC";
 import CustomFormTable from "../../../components/CustomFormTable";
 import { hrc2PhuLieuService } from "../../../services/HRC2PhuLieuService";
 import { hrc2TableService, type DynamicColumnMeta, type AdjustColumnMeta } from "../../../services/HRC2TableService";
@@ -18,11 +18,12 @@ import HeaderMappingModal from "../../../components/HeaderMapping";
 import type { HeaderMappingRecord } from "../../../components/HeaderMapping";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
+import HRC2ExportBienBanButtons from "../../../components/HRC2ExportBienBanButtons";
 
 const DEFAULT_EXCLUDED_KEYS = ["meThoi", "macThep","queLayMau","queDoNhiet", "ghiChu", "stt", "STT"];
 
 const TaoPhieuTieuHaoNauLuyen_LF = () => {
-  const { idphieu, navigateToDetail, safeGetDetail } = usePhieuNavigation(
+  const { idphieu, navigateToDetail, safeGetDetail, redirectToList } = usePhieuNavigation(
     "phieu_lf_id",
     "/tieuhaonauluyen_lf"
   );
@@ -31,8 +32,10 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
   const config = HRC2_BB_NauLuyen_LF;
   const [form] = Form.useForm();
 
+  const table1Ref = useRef<CustomTableHRCHandle>(null);
   const [tableData, setTableData] = useState<HRCTableRow[]>([]);
   const [table2Data, setTable2Data] = useState<HRCTableRow[]>([]);
+  const [table1LyDo, setTable1LyDo] = useState("");
   const [phuGiaColumns, setPhuGiaColumns] = useState<HRCChildColumn[]>([]); // Phụ liệu loại PG (Phụ gia và chất khử oxy)
   const [chatHopKimColumns, setChatHopKimColumns] = useState<HRCChildColumn[]>([]); // Phụ liệu loại KL (Chất hợp kim hóa)
   const [khacColumns, setKhacColumns] = useState<HRCChildColumn[]>([]); // Phụ liệu chưa mapped → render vào "Khác"
@@ -53,10 +56,6 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
   const ngaySX = Form.useWatch("NgaySX", form);
   const ca = Form.useWatch("ca", form);
   const scope = Form.useWatch("scope", form);
-  const currentUserInfo = useMemo(() => {
-    const stored = localStorage.getItem("userinfo");
-    return stored ? JSON.parse(stored) : {};
-  }, []);
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
   const isSignatureReadonly = [
     TrangThaiPhieuConst.HoanThanh,
@@ -217,6 +216,8 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
               placeholder="Chọn header key..."
               style={{ minWidth: 120 }}
               allowClear={false}
+              allowCreateFromSearch
+              loaiPhieu={config.code}
             />
             <Button
               type="text"
@@ -234,7 +235,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
         metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
       headerKeyId: meta.headerKeyId ?? null,
     }));
-  }, [adjustColumnMetas, handleColumnHeaderChange, handleRemoveAdjustColumn]);
+  }, [adjustColumnMetas, config.code, handleColumnHeaderChange, handleRemoveAdjustColumn]);
 
   const restoreDynamicColumns = useCallback(
     (map?: Record<string, DynamicColumnMeta[]>) => {
@@ -299,6 +300,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
         {
           onOpenMappingModal: openMappingModalWithRecord,
           baseColumns,
+          mergeMappedPhuLieus: true,
         }
       );
 
@@ -316,10 +318,13 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
         return;
       }
 
-      // Set columns và table data
-      setPhuGiaColumns(result.phuGiaColumns);
-      setChatHopKimColumns(result.chatHopKimColumns);
-      setKhacColumns(result.khacColumns);
+      // Set columns và table data (readonly - không cho chỉnh sửa header)
+      const readonlyPhuGia = (result.phuGiaColumns ?? []).map((col) => ({ ...col, editable: false }));
+      const readonlyChatHopKim = (result.chatHopKimColumns ?? []).map((col) => ({ ...col, editable: false }));
+      const readonlyKhac = (result.khacColumns ?? []).map((col) => ({ ...col, editable: false }));
+      setPhuGiaColumns(readonlyPhuGia);
+      setChatHopKimColumns(readonlyChatHopKim);
+      setKhacColumns(readonlyKhac);
 
       // Tự động tạo columns từ dữ liệu phân bổ (tách riêng) và cột điều chỉnh tay
       const phanBoMetas = (result.phanBoColumns ?? []).map((col) => ({
@@ -475,14 +480,37 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
           };
           form.setFieldsValue(formValues);
           
-          // Nếu trạng thái là DangLuu, override lại các field có capduyet === 0 bằng currentUser
-          if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
+          // Đồng bộ select cấp duyệt 0 theo đúng luồng:
+          // - Nếu server trả về `nguoiTaoId` => set capduyet 0 = `nguoiTaoId`
+          // - Nếu server chưa có `nguoiTaoId` và phiếu đang ở trạng thái DangLuu(0) => coi như phiếu tạo tự động => set capduyet 0 = currentUser
+          const nguoiTaoIdFromRes = (res as any)?.nguoiTaoId ?? null;
+          const hasNguoiTaoIdFromRes =
+            nguoiTaoIdFromRes != null && Number(nguoiTaoIdFromRes) > 0;
+
+          const cap0Signatures = config.signatures.filter(
+            (s: any) => s.isChon && s.capduyet === 0
+          );
+
+          if (cap0Signatures.length > 0) {
             const overrideFields: Record<string, any> = {};
-            config.signatures
-              .filter((sig) => sig.isChon && sig.capduyet === 0)
-              .forEach((sig) => {
+            if (
+              tinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+              tinhTrang === TrangThaiPhieuConst.HieuChinh
+            ) {
+              const currentUserInfo = getUserInfo();
+              cap0Signatures.forEach((sig: any) => {
                 overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
               });
+            } else if (hasNguoiTaoIdFromRes) {
+              cap0Signatures.forEach((sig: any) => {
+                overrideFields[sig.key] = nguoiTaoIdFromRes;
+              });
+            } else if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
+              const currentUserInfo = getUserInfo();
+              cap0Signatures.forEach((sig: any) => {
+                overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
+              });
+            }
             if (Object.keys(overrideFields).length > 0) {
               form.setFieldsValue(overrideFields);
             }
@@ -505,6 +533,8 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
             }));
             setTable2Data(processedTable2);
           }
+
+          setTable1LyDo(formValues.table1_lyDo || "");
 
           if (formValues.table1DynamicColumns) {
             restoreDynamicColumns(
@@ -533,7 +563,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       // Sau khi khôi phục phiếu, tự động load dữ liệu NM (nếu đủ filter)
       await loadFromNM();
     }
-  }, [form, idphieu, restoreDynamicColumns, config.signatures, loadFromNM, currentUserInfo]);
+  }, [form, idphieu, restoreDynamicColumns, config.signatures, loadFromNM, getUserInfo, safeGetDetail]);
 
   /** Gọi khi load lần đầu */
   useEffect(() => {
@@ -544,10 +574,12 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
   const getFormData = useCallback(async (actionKey?: string) => {
     const userInfo = getUserInfo();
     const isSend = actionKey === "saveAndSend" || actionKey === "gui";
+    const isCreateNew = !idphieu;
     const headerFieldKeys = config.headerFields.map((f: any) => f.key);
     const signatureKeys = config.signatures.filter((s) => s.isChon).map((s) => s.key);
     const fieldsToValidate = isSend ? [...headerFieldKeys, ...signatureKeys] : headerFieldKeys;
     await form.validateFields(fieldsToValidate);
+    if (!(table1Ref.current?.validate() ?? true)) throw new Error("validation");
     const formData = form.getFieldsValue(true);
 
     const pheDuyetFlow = config.signatures
@@ -573,6 +605,9 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       });
     }
 
+    // Giữ nguyên toàn bộ key trong row (kể cả *__orig) để BE nhận đủ phụ liệu manual (IsManual, KLPhuGia_Manual)
+    const processedTable1 = hrc2PhuLieuService.sanitizeRowsBeforeSubmit(tableData);
+
     const dynamicColumnMap = hrc2TableService.buildDynamicColumnMap({
       PG: phuGiaColumns,
       KL: chatHopKimColumns,
@@ -580,19 +615,10 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     });
     // Chỉ lưu meta các cột điều chỉnh do user thêm (isManuallyAdded === true).
     // Các cột phân bổ/điều chỉnh phát sinh từ API (phanBo_*, manual_col_{id} do phân bổ) không lưu vào json phiếu.
-    dynamicColumnMap.adjust = hrc2TableService.adjustMetaToDynamic(
-      adjustColumnMetas.filter((m) => m.isManuallyAdded === true)
+    dynamicColumnMap.adjust = hrc2PhuLieuService.buildAdjustDynamicWithValues(
+      adjustColumnMetas.filter((m) => m.isManuallyAdded === true),
+      tableData
     );
-
-    // Giữ nguyên toàn bộ key trong row (kể cả *__orig) để BE nhận đủ phụ liệu manual (IsManual, KLPhuGia_Manual)
-    const processedTable1 = tableData.map((row) => {
-      const processedRow = { ...row };
-      if (processedRow.IsNM === undefined) {
-        processedRow.IsNM = true;
-      }
-      delete processedRow._isNewRow;
-      return processedRow;
-    });
 
     const processedTable2 = table2Data.map((row) => {
       const processedRow = { ...row };
@@ -608,10 +634,18 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       NgaySX: formData.NgaySX ? formData.NgaySX.format("YYYY-MM-DD") : null,
       maBm: config.code,
       prefix: config.prefix,
-      // nguoiTaoId: userInfo.iD_TaiKhoan ?? null,
+      // Trạng thái 3/7: người đang thao tác trở thành nguoiTaoId (chuyển quyền sở hữu phiếu).
+      // Các trạng thái khác khi đã có phiếu: giữ nguoiTaoId gốc.
+      nguoiTaoId: isCreateNew ||
+        phieuInfo.tinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+        phieuInfo.tinhTrang === TrangThaiPhieuConst.HieuChinh
+          ? userInfo.iD_TaiKhoan ?? null
+          : phieuInfo.nguoiTaoId ?? null,
+      tenScope: scope ? 'Tinh luyện ' + scope : null,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: processedTable1,
+      table1_lyDo: table1LyDo,
       table2: processedTable2,
       table1DynamicColumns: dynamicColumnMap,
       pheDuyet: pheDuyetFlow,
@@ -623,13 +657,30 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     config.signatures,
     config.code,
     config.prefix,
+    idphieu,
+    phieuInfo.nguoiTaoId,
+    scope,
     phuGiaColumns,
     chatHopKimColumns,
     khacColumns,
     adjustColumnMetas,
     tableData,
+    table1LyDo,
     table2Data,
   ]);
+
+  const handleAutoSave = useCallback(async () => {
+    if (!idphieu) return;
+    try {
+      const formData = await getFormData("save");
+      await PhieuApi.putData(idphieu, formData);
+      message.success("Lưu phiếu thành công!");
+      await initData();
+    } catch (err) {
+      console.error("Auto save error:", err);
+      message.error("Không thể tự động lưu phiếu");
+    }
+  }, [idphieu, getFormData, initData]);
 
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
@@ -657,6 +708,15 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
       pheDuyet: phieuInfo.pheDuyet ?? [],
+      preConfirmCheck: async () => {
+        const isChot = await hrc2TableService.checkChotPhieuTieuHao(dayjs(ngaySX).format("YYYY-MM-DD"), ca);
+        if (isChot) {
+          return true;
+        }
+        message.error("Sổ theo dõi nhập xuất tồn chưa được chốt.");
+        return false;
+      },
+      redirectToList,
       onSuccess: handleActionSuccess,
       onError: (error) => {
         console.error("Action error:", error);
@@ -666,9 +726,22 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
     if (buttons.length === 0) return null;
 
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleActionSuccess]);
+  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleActionSuccess, redirectToList]);
 
   return (
+    <>
+    {idphieu && (
+      <HRC2ExportBienBanButtons
+        templateCode={config.code}
+        bieuMau={config.loaiBm}
+        idPhieu={idphieu}
+        soPhieu={soPhieu}
+        ngaySX={ngaySX}
+        ca={ca}
+        scope={scope}
+        containerStyle={{ marginBottom: 8 }}
+      />
+    )}
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
       {/* Tiêu đề biên bản */}
       <div
@@ -766,6 +839,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
         {config.layout.map((layout, idx) => (
           <div key={idx}>
             {layout.sectionType === "table" && layout.key === "table1" ? (
+              <>
               <CustomTableHRC
                 maBm={config.code}
                 ngaySX={ngaySX}
@@ -786,7 +860,16 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
                 stickyFirstColumn
                 stickyColumnKeys={["meThoi", "macThep"]}
                 scrollX="1500px"
+                lyDoLabel={(layout as any).lyDo?.label}
+                lyDoValue={table1LyDo}
+                onLyDoChange={setTable1LyDo}
+                onSave={handleAutoSave}
+                ref={table1Ref}
               />
+              <div style={{ fontWeight: 600, marginTop: 12 }}>
+                Phần điều chỉnh số liệu nằm ở cuối bảng (scroll ngang → cột "Điều chỉnh số liệu").
+              </div>
+              </>
             ) : (
               layout.sectionType === "table" && (
                 <CustomFormTable
@@ -847,16 +930,32 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
             .filter((x) => x.isChon)
             ?.map((sig, i) => {
               const isLevelZero = sig.capduyet === 0;
-              const autoValue = isLevelZero
-                ? currentUserInfo?.iD_TaiKhoan ?? null
+              const nguoiTaoIdFromPhiếu = phieuInfo.nguoiTaoId ?? null;
+              const hasNguoiTaoIdFromPhiếu =
+                nguoiTaoIdFromPhiếu != null && Number(nguoiTaoIdFromPhiếu) > 0;
+
+              const shouldUseCurrentUser =
+                isLevelZero &&
+                (!idphieu ||
+                  (currentTinhTrang === TrangThaiPhieuConst.DangLuu && !hasNguoiTaoIdFromPhiếu) ||
+                  currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+                  currentTinhTrang === TrangThaiPhieuConst.HieuChinh);
+
+              const cap0InitialValue = isLevelZero
+                ? shouldUseCurrentUser
+                  ? getUserInfo()?.iD_TaiKhoan ?? null
+                  : hasNguoiTaoIdFromPhiếu
+                    ? nguoiTaoIdFromPhiếu
+                    : undefined
                 : undefined;
               return (
                 <div key={sig.key || i}>
                   <CustomFormItem
+                    maBm={config.code}
                     field={sig}
                     idx={i}
                     disabled={isLevelZero || isSignatureReadonly || isFormLocked}
-                    initialValue={autoValue ?? form.getFieldValue(sig.key)}
+                    initialValue={cap0InitialValue}
                   />
                 </div>
               );
@@ -882,6 +981,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
         onSuccess={handleMappingSuccess}
       />
     </Card>
+    </>
   );
 };
 

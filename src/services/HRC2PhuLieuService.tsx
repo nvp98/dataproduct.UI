@@ -5,6 +5,7 @@ import { normalizeHRC2GroupedResponse } from "../models/DLMN_HRC2Model";
 import type { HRC2GroupedByReportNoModel, HeaderKeyResponse } from "../models/DLMN_HRC2Model";
 import type { HRCChildColumn, HRCTableRow, HRCParentColumn } from "../components/CustomTableHRC";
 import type { HeaderMappingRecord } from "../components/HeaderMapping";
+import { hrc2TableService, type AdjustColumnMeta, type DynamicColumnMeta } from "./HRC2TableService";
 
 export interface FetchPhuLieusParams {
   NgaySX?: string | null;
@@ -14,6 +15,9 @@ export interface FetchPhuLieusParams {
 }
 
 type MappingPayload = HeaderMappingRecord;
+type HRC2GroupedWithManual = HRC2GroupedByReportNoModel & {
+  manualAdjustPhulieus?: HeaderKeyResponse[];
+};
 
 export interface ProcessedPhuLieusResult {
   mappedPhuLieus: HeaderKeyResponse[];
@@ -151,7 +155,7 @@ export const hrc2PhuLieuService = {
       </div>
     );
 
-    const allowMappingButtons = !!onOpenMappingModal;
+    const allowMappingButtons = hrc2TableService.canCurrentUserMap() && !!onOpenMappingModal;
 
     const phuGiaColumns: HRCChildColumn[] = sortedPhuGiaPhuLieus.map(phuLieu => {
       const label = phuLieu.tenHienThi || phuLieu.tenNguonDuLieu || phuLieu.tenPhuLieu || "";
@@ -161,6 +165,7 @@ export const hrc2PhuLieuService = {
         dataIndex: `phuLieu_${phuLieu.idHeaderKey}`,
         width: 100,
         format: "number-group",
+        sum: true,
         metaLabel: label,
         metaGroup: "PG",
         allowMapping: allowMappingButtons,
@@ -179,6 +184,7 @@ export const hrc2PhuLieuService = {
         dataIndex: `phuLieu_${phuLieu.idHeaderKey}`,
         width: 100,
         format: "number-group",
+        sum: true,
         metaLabel: label,
         metaGroup: "KL",
         allowMapping: allowMappingButtons,
@@ -206,6 +212,7 @@ export const hrc2PhuLieuService = {
         highlight: true,
         width: 100,
         format: "number-group",
+        sum: true,
         metaLabel: label,
         metaGroup: "others",
         allowMapping: allowMappingButtons,
@@ -230,11 +237,17 @@ export const hrc2PhuLieuService = {
     };
 
     const tableData: HRCTableRow[] = data.map((item, index) => {
+      const isTrungMe =
+        item.data?.isTrungMeThoi === true ||
+        ((item.data as unknown as { IsTrungMeThoi?: boolean } | null)?.IsTrungMeThoi === true);
+
       const row: HRCTableRow = {
         key: `row-${item.data?.reportNo || index}`,
         IsNM: item.data?.isNM ?? true,
         id: item.data?.id ?? undefined,
-        isTrungMeThoi: item.data?.isTrungMeThoi ?? false,
+        isTrungMeThoi: isTrungMe,
+        IsTrungMeThoi: isTrungMe,
+        __fromFilterAPI: true,
       };
 
       // Map các cột cơ bản từ config
@@ -316,7 +329,17 @@ export const hrc2PhuLieuService = {
           (p: HeaderKeyResponse) => p.idHeaderKey === phuLieu.idHeaderKey
         );
         if (matchedPhuLieu) {
-          row[dataIndex] = matchedPhuLieu.klPhuGiaTotal ?? matchedPhuLieu.klPhuGia ?? "";
+          if (matchedPhuLieu.isManual === true) {
+            // isManual: giá trị hiển thị là klPhuGia_Manual, __orig là giá trị NM gốc
+            const manualVal = matchedPhuLieu.klPhuGia_Manual ?? "";
+            const origVal = matchedPhuLieu.klPhuGia ?? null;
+            row[dataIndex] = manualVal;
+            row[`${dataIndex}__IsManual`] = true;
+            row[`${dataIndex}__orig`] = origVal;
+          } else {
+            // Không manual: dùng giá trị NM tự động
+            row[dataIndex] = matchedPhuLieu.klPhuGiaTotal ?? matchedPhuLieu.klPhuGia ?? "";
+          }
         }
       });
 
@@ -346,9 +369,10 @@ export const hrc2PhuLieuService = {
         });
       }
 
-      // Điều chỉnh tay trả về từ API (manualAdjustPhulieus). Fallback: dùng phanBoPhulieus có isManual (cho BE cũ).
+      // Map manualAdjustPhulieus từ API để hiển thị lại các cột điều chỉnh đã có.
+      // Lưu ý: đây là manual đã tồn tại trong DB (ID_PhuLieu = null), không phải marker của phuLieu_*.
       const manualAdjustList =
-        (item as any).manualAdjustPhulieus ??
+        (item as HRC2GroupedWithManual).manualAdjustPhulieus ??
         (item.phanBoPhulieus ?? []).filter((x) => x?.isManual === true);
       if (manualAdjustList && manualAdjustList.length > 0) {
         manualAdjustList.forEach((adj: HeaderKeyResponse) => {
@@ -395,7 +419,7 @@ export const hrc2PhuLieuService = {
       });
 
       const manualAdjustList =
-        (item as any).manualAdjustPhulieus ??
+        (item as HRC2GroupedWithManual).manualAdjustPhulieus ??
         (item.phanBoPhulieus ?? []).filter((x) => x?.isManual === true);
       manualAdjustList?.forEach((phuLieu: HeaderKeyResponse) => {
         if (!phuLieu.idHeaderKey) return;
@@ -420,7 +444,7 @@ export const hrc2PhuLieuService = {
       };
     });
 
-    // Cột điều chỉnh tay — chỉ khi có isManual
+    // Cột điều chỉnh tay từ dữ liệu API (manualAdjustPhulieus) để hiển thị lại dữ liệu đã lưu.
     const adjustColumns: HRCChildColumn[] = Object.values(allManualCols).map(phuLieu => {
       const label = phuLieu.tenHienThi || `Điều chỉnh #${phuLieu.idHeaderKey}`;
       return {
@@ -444,6 +468,88 @@ export const hrc2PhuLieuService = {
       adjustColumns,
       tableData,
     };
+  },
+
+  /**
+   * Chuẩn hóa table rows trước khi gửi payload:
+   * - đảm bảo IsNM mặc định = true
+   * - xóa _isNewRow
+   * - nếu giá trị hiện tại == __orig thì xóa marker __orig và __IsManual
+   */
+  sanitizeRowsBeforeSubmit(rows: HRCTableRow[]): HRCTableRow[] {
+    return rows.map((row) => {
+      const processedRow: Record<string, unknown> = { ...row };
+      if (processedRow.IsNM === undefined) {
+        processedRow.IsNM = true;
+      }
+      delete processedRow._isNewRow;
+      delete processedRow.__fromFilterAPI;
+
+      Object.keys(processedRow).forEach((key) => {
+        if (key.startsWith("manual_col_")) {
+          delete processedRow[key];
+          return;
+        }
+        if (!key.endsWith("__orig")) return;
+        const baseKey = key.slice(0, -6);
+        const origVal = processedRow[key];
+        const curVal = processedRow[baseKey];
+         const curNum = curVal === null || curVal === undefined || curVal === "" ? null : Number(curVal);
+        const origNum = origVal === null || origVal === undefined || origVal === "" ? null : Number(origVal);
+
+        // Khi user xóa giá trị của một cột có dữ liệu NM (origNum !== null), gửi 0 thay vì ""
+        // để BE lưu KLPhuGia_Manual = 0 (override = 0) thay vì revert về giá trị NM gốc.
+        // if ((curVal === "" || curVal === null || curVal === undefined) && origNum !== null) {
+        //   processedRow[baseKey] = 0;
+        // }
+
+        // const curNum = processedRow[baseKey] === null || processedRow[baseKey] === undefined || processedRow[baseKey] === ""
+        //   ? null : Number(processedRow[baseKey]);
+        const isSame =
+          (curNum === null && origNum === null) ||
+          (curNum !== null &&
+            origNum !== null &&
+            Number.isFinite(curNum) &&
+            Number.isFinite(origNum) &&
+            Math.abs(curNum - origNum) < 0.000001);
+
+        if (isSame) {
+          delete processedRow[key];
+          delete processedRow[`${baseKey}__IsManual`];
+        }
+      });
+
+      return processedRow as HRCTableRow;
+    });
+  },
+
+  /**
+   * Build metadata cho adjust columns kèm giá trị theo từng dòng.
+   * Dùng khi FE không gửi manual_col_* trực tiếp trong table1.
+   */
+  buildAdjustDynamicWithValues(
+    adjustMetas: AdjustColumnMeta[],
+    rows: HRCTableRow[]
+  ): (DynamicColumnMeta & {
+    values?: Array<{ rowId?: number | null; meThoi?: string | null; value?: string | number | null }>;
+  })[] {
+    const dynamic = hrc2TableService.adjustMetaToDynamic(adjustMetas);
+    return dynamic.map((meta) => {
+      const values = rows
+        .map((row) => ({
+          rowId: typeof row.id === "number" ? row.id : null,
+          meThoi: typeof row.meThoi === "string" ? row.meThoi : null,
+          value:
+            row[meta.dataIndex] === undefined || row[meta.dataIndex] === ""
+              ? null
+              : (row[meta.dataIndex] as string | number | null),
+        }))
+        .filter((v) => v.value !== null);
+      return {
+        ...meta,
+        values,
+      };
+    });
   },
 };
 

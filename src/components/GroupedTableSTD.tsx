@@ -8,19 +8,20 @@ import React, {
   memo,
   startTransition,
 } from "react";
-import { Table, Button, Input, Popconfirm, Select } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { Table, Button, Input, Popconfirm, Select, Modal } from "antd";
+import { DeleteOutlined, PlusOutlined, SnippetsOutlined } from "@ant-design/icons";
 import HeaderMappingModal from "./HeaderMapping";
 import type { HeaderMappingRecord } from "./HeaderMapping";
 import HeaderKeyAutocomplete from "./HeaderKeyAutocomplete";
 import { CommonAutocomplete } from "./CommonAutocomplete";
 import { SiloServiceApi } from "../services/SiloServiceApi";
-import type { Silo, SiloByHeaderKey } from "../models/SiloModel";
-import dayjs from "dayjs";
+import type { Silo } from "../models/SiloModel";
+import { isAdmin } from "../utils/helpers/checkAdminRole";
 
 /* ======================= CONSTANTS ======================= */
 const NGOAI_SILO_ID = -1;
 const NGOAI_SILO_OPTION = { id: NGOAI_SILO_ID, tenSilo: "Ngoài silo" };
+const PASTE_COLUMNS = ["nhapTrongCa", "tonCuoiCa"];
 
 /* ======================= UTILITY FUNCTIONS ======================= */
 
@@ -29,13 +30,17 @@ export const canUnlockMonthly = (date = new Date()) => {
   const hour = date.getHours();
 
   // Lấy ngày cuối tháng
-  const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const lastDayOfMonth = new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+  ).getDate();
 
   // Ca 2 ngày cuối tháng: 20h ngày cuối → 8h sáng ngày 1 tháng sau
   const isLastDayEvening = day === lastDayOfMonth && hour >= 20;
   const isFirstDayMorning = day === 1 && hour < 8;
 
-  return isLastDayEvening || isFirstDayMorning;
+  return isLastDayEvening || isFirstDayMorning || isAdmin;
 };
 
 /* ======================= EDITABLE CELLS ======================= */
@@ -74,7 +79,7 @@ const EditableInput = memo(
         }}
       />
     );
-  }
+  },
 );
 
 const EditableSelect = memo(
@@ -90,7 +95,7 @@ const EditableSelect = memo(
         { value: 2, label: "Ngoài silo" },
       ]}
     />
-  )
+  ),
 );
 
 /* ======================= MAIN COMPONENT ======================= */
@@ -119,6 +124,14 @@ export default function GroupedTableSTD({
   const [mappingRecord, setMappingRecord] =
     useState<HeaderMappingRecord | null>(null);
 
+  /* ===== PasteModal ===== */
+  const [pasteModal, setPasteModal] = useState<{
+    open: boolean;
+    columnKey: string;
+    columnTitle: string;
+  }>({ open: false, columnKey: "", columnTitle: "" });
+  const [pasteText, setPasteText] = useState("");
+
   /* ================= INIT DATA ================= */
   // Dùng ref để track initialData reference, tránh loop do khuVucList/defaultNguyenNhienLieu
   // luôn là array mới trên mỗi render của parent
@@ -142,17 +155,16 @@ export default function GroupedTableSTD({
 
     const init: any[] = [];
     khuVucList.forEach((kv: string) => {
-      (defaultNguyenNhienLieu.length
-        ? defaultNguyenNhienLieu
-        : [""]
-      ).forEach((nl: string) => {
-        init.push({
-          key: `${kv}_${rowIdRef.current++}`,
-          khuVuc: kv,
-          viTri: defaultViTri,
-          nguyenNhienLieu: nl,
-        });
-      });
+      (defaultNguyenNhienLieu.length ? defaultNguyenNhienLieu : [""]).forEach(
+        (nl: string) => {
+          init.push({
+            key: `${kv}_${rowIdRef.current++}`,
+            khuVuc: kv,
+            viTri: defaultViTri,
+            nguyenNhienLieu: nl,
+          });
+        },
+      );
     });
 
     setRows(init);
@@ -164,7 +176,7 @@ export default function GroupedTableSTD({
     (data: any[]) => {
       onDataChange?.(data);
     },
-    [onDataChange]
+    [onDataChange],
   );
 
   // ⭐ Không cần load header keys nữa vì HeaderKeyAutocomplete tự xử lý
@@ -190,7 +202,7 @@ export default function GroupedTableSTD({
         });
       });
     },
-    [defaultViTri, emitData]
+    [defaultViTri, emitData],
   );
 
   const deleteRow = useCallback(
@@ -202,13 +214,13 @@ export default function GroupedTableSTD({
         return next;
       });
     },
-    [emitData]
+    [emitData],
   );
 
   /* ================= UPDATE CELL ================= */
   const updateCell = useCallback((key: string, field: string, value: any) => {
     rowsRef.current = rowsRef.current.map((r) =>
-      r.key === key ? { ...r, [field]: value } : r
+      r.key === key ? { ...r, [field]: value } : r,
     );
   }, []);
 
@@ -217,16 +229,87 @@ export default function GroupedTableSTD({
   const isNegativeNumber = (val: any) =>
     val != null && val !== "" && !Number.isNaN(Number(val)) && Number(val) < 0;
 
-  const commitCell = useCallback((key: string, field: string, value: any) => {
+  const commitCell = useCallback(
+    (key: string, field: string, value: any) => {
+      setRows((prev) => {
+        const next = prev.map((r) => {
+          if (r.key !== key) return r;
+          const updated = { ...r, [field]: value };
+
+          if (KIEMKE_CALC_FIELDS.includes(field)) {
+            const rawTonDau = field === "tonDauCa" ? value : r.tonDauCa;
+            const rawNhap = field === "nhapTrongCa" ? value : r.nhapTrongCa;
+            const rawTonCuoi = field === "tonCuoiCa" ? value : r.tonCuoiCa;
+
+            const hasTonDau =
+              rawTonDau !== null && rawTonDau !== undefined && rawTonDau !== "";
+            const hasTonCuoi =
+              rawTonCuoi !== null &&
+              rawTonCuoi !== undefined &&
+              rawTonCuoi !== "";
+
+            // Luồng mới:
+            // - tonDauCa và tonCuoiCa: bắt buộc phải có giá trị mới tính
+            // - nhapTrongCa: nếu trống thì mặc định = 0 để tính
+            if (hasTonDau && hasTonCuoi) {
+              const tonDau = Number(rawTonDau);
+              const tonCuoi = Number(rawTonCuoi);
+
+              // Nếu nhapTrongCa trống/null/undefined/"", coi như 0
+              const nhap =
+                rawNhap === null || rawNhap === undefined || rawNhap === ""
+                  ? 0
+                  : Number(rawNhap);
+
+              if (
+                !Number.isNaN(tonDau) &&
+                !Number.isNaN(nhap) &&
+                !Number.isNaN(tonCuoi)
+              ) {
+                updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+              }
+            }
+          }
+          return updated;
+        });
+        rowsRef.current = next;
+        emitData(next);
+        return next;
+      });
+    },
+    [emitData],
+  );
+
+  /* ================= PASTE FROM EXCEL ================= */
+  const handlePasteConfirm = useCallback(() => {
+    const { columnKey } = pasteModal;
+    const currentRows = rowsRef.current;
+    const lines = pasteText
+      .split("\n")
+      .map((line) => line.split("\t")[0].trim())
+      .filter((line, index) => line !== "" || index < currentRows.length);
+
     setRows((prev) => {
-      const next = prev.map((r) => {
-        if (r.key !== key) return r;
-        const updated = { ...r, [field]: value };
-        if (KIEMKE_CALC_FIELDS.includes(field)) {
-          const tonDau = Number(field === "tonDauCa" ? value : r.tonDauCa) || 0;
-          const nhap = Number(field === "nhapTrongCa" ? value : r.nhapTrongCa) || 0;
-          const tonCuoi = Number(field === "tonCuoiCa" ? value : r.tonCuoiCa) || 0;
-          updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+      const next = prev.map((r, i) => {
+        if (lines[i] === undefined || lines[i] === "") return r;
+        const num = parseFloat(lines[i].replace(/,/g, ""));
+        if (isNaN(num)) return r;
+        const updated = { ...r, [columnKey]: num };
+        if (KIEMKE_CALC_FIELDS.includes(columnKey)) {
+          const rawTonDau = columnKey === "tonDauCa" ? num : r.tonDauCa;
+          const rawNhap = columnKey === "nhapTrongCa" ? num : r.nhapTrongCa;
+          const rawTonCuoi = columnKey === "tonCuoiCa" ? num : r.tonCuoiCa;
+          const hasTonDau = rawTonDau != null && rawTonDau !== "";
+          const hasTonCuoi = rawTonCuoi != null && rawTonCuoi !== "";
+          if (hasTonDau && hasTonCuoi) {
+            const tonDau = Number(rawTonDau);
+            const tonCuoi = Number(rawTonCuoi);
+            const nhap =
+              rawNhap == null || rawNhap === "" ? 0 : Number(rawNhap);
+            if (!isNaN(tonDau) && !isNaN(nhap) && !isNaN(tonCuoi)) {
+              updated.luongSuDungKiemKe = tonDau + nhap - tonCuoi;
+            }
+          }
         }
         return updated;
       });
@@ -234,7 +317,9 @@ export default function GroupedTableSTD({
       emitData(next);
       return next;
     });
-  }, [emitData]);
+    setPasteModal({ open: false, columnKey: "", columnTitle: "" });
+    setPasteText("");
+  }, [pasteModal, pasteText, emitData]);
 
   /* ================= GROUP ================= */
   const grouped = useMemo(() => {
@@ -247,11 +332,14 @@ export default function GroupedTableSTD({
   }, [rows]);
 
   /* ================= HELPER: GET BIEUMAU FROM KHU VUC ================= */
-  const getBieuMauFromKhuVuc = useCallback((khuVuc: string): string | null => {
-    if (!khuVucConfig || !Array.isArray(khuVucConfig)) return null;
-    const kv = khuVucConfig.find((k: any) => k?.label === khuVuc);
-    return kv?.bieuMau ?? null;
-  }, [khuVucConfig]);
+  const getBieuMauFromKhuVuc = useCallback(
+    (khuVuc: string): string | null => {
+      if (!khuVucConfig || !Array.isArray(khuVucConfig)) return null;
+      const kv = khuVucConfig.find((k: any) => k?.label === khuVuc);
+      return kv?.bieuMau ?? null;
+    },
+    [khuVucConfig],
+  );
 
   /* ================= LOAD SILOS FOR HEADERKEY ================= */
   // Tạm comment: load silo theo headerKey — thay bằng autocomplete search tất cả silo theo nhaMay
@@ -321,27 +409,69 @@ export default function GroupedTableSTD({
               title: c.title,
               align: "center",
               children: c.children.map((child: any) => ({
-                title: child.title,
+                title:
+                  PASTE_COLUMNS.includes(child.dataIndex) && editable ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span>{child.title}</span>
+                      <Button
+                        size="small"
+                        type="primary"
+                        ghost
+                        icon={<SnippetsOutlined />}
+                        title="Paste từ Excel"
+                        style={{ lineHeight: 1, padding: "0 6px" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPasteModal({
+                            open: true,
+                            columnKey: child.dataIndex,
+                            columnTitle: child.title,
+                          });
+                          setPasteText("");
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    child.title
+                  ),
                 dataIndex: child.dataIndex,
                 align: "center",
                 width: child.dataIndex?.includes("tuongQuan") ? 90 : 100,
                 render: (_: any, r: any) => {
                   // Đối với cột tonDauCa, ưu tiên kiểm tra canUnlockMonthly
                   // Nếu không trong khung giờ cho phép (8:00-20:00 ngày 1) thì readOnly (override readOnly từ config)
-                  // const childReadOnlyBase = child.readOnly === true;
-                  // const childReadOnly = child.dataIndex === "tonDauCa"
-                  //   ? !canUnlockMonthly()
-                  //   : childReadOnlyBase;
-                    const childReadOnly = false;
-                    const childVal = r[child.dataIndex];
-                    const childIsNeg = isNegativeNumber(childVal);
+                  const childReadOnlyBase = child.readOnly === true;
+                  const childReadOnly =
+                    child.dataIndex === "tonDauCa"
+                      ? !canUnlockMonthly()
+                      : childReadOnlyBase;
+                  // const childReadOnly = false;
+                  const childVal = r[child.dataIndex];
+                  const childIsNeg = isNegativeNumber(childVal);
                   return (
                     <EditableInput
                       value={childVal}
                       disabled={!editable || child.editable === false}
                       readOnly={childReadOnly}
-                      style={childIsNeg ? { borderColor: "#ff4d4f", backgroundColor: "#fff2f0", color: "#ff4d4f" } : undefined}
-                      onChange={(v: any) => updateCell(r.key, child.dataIndex, v)}
+                      style={
+                        childIsNeg
+                          ? {
+                              borderColor: "#ff4d4f",
+                              backgroundColor: "#fff2f0",
+                              color: "#ff4d4f",
+                            }
+                          : undefined
+                      }
+                      onChange={(v: any) =>
+                        updateCell(r.key, child.dataIndex, v)
+                      }
                       onBlur={(v: any) => commitCell(r.key, child.dataIndex, v)}
                     />
                   );
@@ -352,19 +482,55 @@ export default function GroupedTableSTD({
 
           // Cột đơn
           return {
-            title: c.title,
+            title:
+              PASTE_COLUMNS.includes(c.dataIndex) && editable ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                  }}
+                >
+                  <span>{c.title}</span>
+                  <Button
+                    size="small"
+                    type="primary"
+                    ghost
+                    icon={<SnippetsOutlined />}
+                    title="Paste từ Excel"
+                    style={{ lineHeight: 1, padding: "0 6px" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPasteModal({
+                        open: true,
+                        columnKey: c.dataIndex,
+                        columnTitle: c.title,
+                      });
+                      setPasteText("");
+                    }}
+                  />
+                </div>
+              ) : (
+                c.title
+              ),
             dataIndex: c.dataIndex,
             align: "center",
-            width: c.dataIndex === "nguyenNhienLieu" ? 160 : 
-                   c.dataIndex === "tenSilo" ? 150 :
-                   c.dataIndex === "viTri" ? 120 :
-                   c.dataIndex === "tongThucTe" ? 120 : 100,
+            width:
+              c.dataIndex === "nguyenNhienLieu"
+                ? 160
+                : c.dataIndex === "tenSilo"
+                  ? 150
+                  : c.dataIndex === "viTri"
+                    ? 120
+                    : c.dataIndex === "tongThucTe"
+                      ? 120
+                      : 100,
             render: (_: any, r: any) => {
               // Đối với cột tonDauCa, ưu tiên kiểm tra canUnlockMonthly
               // Nếu không trong khung giờ cho phép (8:00-20:00 ngày 1) thì readOnly (override readOnly từ config)
-              const inputReadOnly = c.dataIndex === "tonDauCa" 
-                ? !canUnlockMonthly()
-                : colReadOnly;
+              const inputReadOnly =
+                c.dataIndex === "tonDauCa" ? !canUnlockMonthly() : colReadOnly;
 
               if (c.dataIndex === "viTri") {
                 return (
@@ -382,8 +548,21 @@ export default function GroupedTableSTD({
                 // Nếu là unmapped (chưa móc nối), chỉ hiển thị tên phụ liệu và button "Móc nối", ẩn Select
                 if (r.isUnmapped === true) {
                   return (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <span style={{ color: "#faad14", fontSize: "12px", fontWeight: 500 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "#faad14",
+                          fontSize: "12px",
+                          fontWeight: 500,
+                        }}
+                      >
                         {r.rawTenPhuLieu || r.nguyenNhienLieu || ""}
                       </span>
                       {r.idPhuLieu && editable && (
@@ -435,9 +614,16 @@ export default function GroupedTableSTD({
                       // Wrap trong setTimeout để tránh setState trong render
                       setTimeout(() => {
                         if (option) {
-                          commitCell(r.key, "nguyenNhienLieu", option.tenHienThi || option.mota || "");
+                          commitCell(
+                            r.key,
+                            "nguyenNhienLieu",
+                            option.tenHienThi || option.mota || "",
+                          );
                           // Tự động fill tyTrong khi chọn HeaderKey
-                          if (option.tyTrong !== undefined && option.tyTrong !== null) {
+                          if (
+                            option.tyTrong !== undefined &&
+                            option.tyTrong !== null
+                          ) {
                             commitCell(r.key, "tyTrong", option.tyTrong);
                           }
                           // Tạm comment: tự động load silo theo headerkey — giờ dùng autocomplete search
@@ -459,19 +645,28 @@ export default function GroupedTableSTD({
 
               if (c.dataIndex === "tenSilo") {
                 // Khi viTri === 2 (Ngoài silo), hiển thị sentinel -1 thay vì siloId
-                const siloDisplayValue = r.viTri === 2 ? NGOAI_SILO_ID : (r.siloId ?? null);
+                const siloDisplayValue =
+                  r.viTri === 2 ? NGOAI_SILO_ID : (r.siloId ?? null);
                 return (
                   <CommonAutocomplete<Silo>
                     value={siloDisplayValue}
                     searchApi={async ({ searchKey } = {}) => {
-                      const res = await SiloServiceApi.search({ nhaMay, searchKey, tinhTrang: true });
+                      const res = await SiloServiceApi.search({
+                        nhaMay,
+                        searchKey,
+                        tinhTrang: true,
+                      });
                       // Prepend "Ngoài silo" nếu không có từ khóa hoặc từ khóa khớp
                       const keyword = (searchKey || "").toLowerCase();
-                      const shouldPrepend = !keyword || "ngoài silo".includes(keyword);
+                      const shouldPrepend =
+                        !keyword || "ngoài silo".includes(keyword);
                       return {
                         ...res,
                         data: shouldPrepend
-                          ? [NGOAI_SILO_OPTION as unknown as Silo, ...(res.data || [])]
+                          ? [
+                              NGOAI_SILO_OPTION as unknown as Silo,
+                              ...(res.data || []),
+                            ]
                           : res.data,
                       };
                     }}
@@ -486,7 +681,9 @@ export default function GroupedTableSTD({
                     style={{ width: "100%" }}
                     size="small"
                     fallbackLabelBuilder={(value) =>
-                      value === NGOAI_SILO_ID ? "Ngoài silo" : (r.tenSilo || `Silo ID: ${value}`)
+                      value === NGOAI_SILO_ID
+                        ? "Ngoài silo"
+                        : r.tenSilo || `Silo ID: ${value}`
                     }
                     onChange={(siloId, option) => {
                       setTimeout(() => {
@@ -500,7 +697,10 @@ export default function GroupedTableSTD({
                           commitCell(r.key, "viTri", defaultViTri);
                           commitCell(r.key, "siloId", siloId);
                           commitCell(r.key, "tenSilo", option.tenSilo);
-                          if (option.theTich !== undefined && option.theTich !== null) {
+                          if (
+                            option.theTich !== undefined &&
+                            option.theTich !== null
+                          ) {
                             commitCell(r.key, "theTich", option.theTich);
                           }
                         } else {
@@ -519,19 +719,31 @@ export default function GroupedTableSTD({
               // Cột luongSuDungKiemKe: auto-calculated, readOnly, highlight đỏ nếu âm, vàng nếu không nhất quán với tongThucTe
               if (c.dataIndex === "luongSuDungKiemKe") {
                 const kiemKeVal = r.luongSuDungKiemKe;
-                const kiemKeNum = kiemKeVal != null && kiemKeVal !== "" ? Number(kiemKeVal) : null;
+                const kiemKeNum =
+                  kiemKeVal != null && kiemKeVal !== ""
+                    ? Number(kiemKeVal)
+                    : null;
                 const thucTeNum = Number(r.tongThucTe);
                 const isNegative = kiemKeNum !== null && kiemKeNum < 0;
                 // Vàng: tongThucTe=0 mà kiemKe>0, hoặc tongThucTe!=0 mà kiemKe=0/null
                 const isInconsistent =
                   !isNegative &&
                   ((thucTeNum === 0 && kiemKeNum !== null && kiemKeNum > 0) ||
-                   (thucTeNum !== 0 && (kiemKeNum === null || kiemKeNum === 0)));
+                    (thucTeNum !== 0 &&
+                      (kiemKeNum === null || kiemKeNum === 0)));
                 const kiemKeStyle = isNegative
-                  ? { borderColor: "#ff4d4f", backgroundColor: "#fff2f0", color: "#ff4d4f" }
+                  ? {
+                      borderColor: "#ff4d4f",
+                      backgroundColor: "#fff2f0",
+                      color: "#ff4d4f",
+                    }
                   : isInconsistent
-                  ? { borderColor: "#faad14", backgroundColor: "#fffbe6", color: "#d46b08" }
-                  : undefined;
+                    ? {
+                        borderColor: "#faad14",
+                        backgroundColor: "#fffbe6",
+                        color: "#d46b08",
+                      }
+                    : undefined;
                 return (
                   <EditableInput
                     value={kiemKeVal}
@@ -552,7 +764,15 @@ export default function GroupedTableSTD({
                   value={colVal}
                   disabled={!editable || c.editable === false}
                   readOnly={inputReadOnly}
-                  style={colIsNeg ? { borderColor: "#ff4d4f", backgroundColor: "#fff2f0", color: "#ff4d4f" } : undefined}
+                  style={
+                    colIsNeg
+                      ? {
+                          borderColor: "#ff4d4f",
+                          backgroundColor: "#fff2f0",
+                          color: "#ff4d4f",
+                        }
+                      : undefined
+                  }
                   onChange={(v: any) => updateCell(r.key, c.dataIndex, v)}
                   onBlur={(v: any) => commitCell(r.key, c.dataIndex, v)}
                 />
@@ -592,13 +812,28 @@ export default function GroupedTableSTD({
     }
 
     return [khuVucColumn, ...base];
-  }, [columns, editable, defaultViTri, commitCell, deleteRow, openMappingModal, updateCell, ngaySX, nhaMay]);
+  }, [
+    columns,
+    editable,
+    defaultViTri,
+    commitCell,
+    deleteRow,
+    openMappingModal,
+    updateCell,
+    ngaySX,
+    nhaMay,
+  ]);
 
   if (loading) return <div>Đang tải...</div>;
 
   return (
     <>
-      <div style={{ border: "1px solidrgb(39, 39, 39)", borderRadius: "4px 4px 0 0" }}>
+      <div
+        style={{
+          border: "1px solidrgb(39, 39, 39)",
+          borderRadius: "4px 4px 0 0",
+        }}
+      >
         {khuVucList.map((kv: string, idx: number) => {
           const isFirst = idx === 0;
           const isLast = idx === khuVucList.length - 1;
@@ -620,11 +855,7 @@ export default function GroupedTableSTD({
                 render: (_: any, __: any, rowIndex: number) => {
                   // Chỉ render text ở dòng đầu tiên
                   if (rowIndex === 0) {
-                    return (
-                      <span style={{ fontWeight: 600 }}>
-                        {kv}
-                      </span>
-                    );
+                    return <span style={{ fontWeight: 600 }}>{kv}</span>;
                   }
                   return null;
                 },
@@ -650,7 +881,12 @@ export default function GroupedTableSTD({
               />
 
               {editable && (
-                <div style={{ padding: "8px 16px", borderTop: "1px solid #d9d9d9" }}>
+                <div
+                  style={{
+                    padding: "8px 16px",
+                    borderTop: "1px solid #d9d9d9",
+                  }}
+                >
                   <Button
                     type="dashed"
                     size="small"
@@ -663,29 +899,76 @@ export default function GroupedTableSTD({
                 </div>
               )}
 
-              {!isLast && <div style={{ height: 0, borderBottom: "1px solid #d9d9d9" }} />}
+              {!isLast && (
+                <div style={{ height: 0, borderBottom: "1px solid #d9d9d9" }} />
+              )}
             </div>
           );
         })}
       </div>
 
       {/* Chú thích màu sắc */}
-      <div style={{ display: "flex", gap: 16, padding: "6px 12px", marginTop: 4, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          padding: "6px 12px",
+          marginTop: 4,
+          flexWrap: "wrap",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{
-            display: "inline-block", width: 28, height: 18, borderRadius: 3,
-            border: "1px solid #ff4d4f", backgroundColor: "#fff2f0",
-          }} />
-          <span style={{ fontSize: 12, color: "#595959" }}>Giá trị âm (không hợp lệ)</span>
+          <span
+            style={{
+              display: "inline-block",
+              width: 28,
+              height: 18,
+              borderRadius: 3,
+              border: "1px solid #ff4d4f",
+              backgroundColor: "#fff2f0",
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#595959" }}>
+            Giá trị âm (không hợp lệ)
+          </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{
-            display: "inline-block", width: 28, height: 18, borderRadius: 3,
-            border: "1px solid #faad14", backgroundColor: "#fffbe6",
-          }} />
-          <span style={{ fontSize: 12, color: "#595959" }}>Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng</span>
+          <span
+            style={{
+              display: "inline-block",
+              width: 28,
+              height: 18,
+              borderRadius: 3,
+              border: "1px solid #faad14",
+              backgroundColor: "#fffbe6",
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#595959" }}>
+            Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng
+          </span>
         </div>
       </div>
+
+      <Modal
+        title={`Paste dữ liệu - ${pasteModal.columnTitle}`}
+        open={pasteModal.open}
+        onOk={handlePasteConfirm}
+        onCancel={() => {
+          setPasteModal({ open: false, columnKey: "", columnTitle: "" });
+          setPasteText("");
+        }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <Input.TextArea
+          autoFocus
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder="Paste dữ liệu từ Excel vào đây..."
+          rows={8}
+        />
+      </Modal>
 
       <HeaderMappingModal
         open={mappingOpen}

@@ -15,9 +15,9 @@ import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/Phi
 import { useMemo } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
-import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 // Dữ liệu mẫu
 
 const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
@@ -25,11 +25,41 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
+  const userInfoStr = localStorage.getItem("userinfo");
+  const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
+  const isAdmin = userObj?.role?.includes("admin") || false;
 
-  const fixedFilters = useMemo(
-    () => ({ usercode: userObj?.maNV || "" }),
-    [userObj?.maNV]
-  );
+  const currentUserId: number | null =
+    userInfoObj?.iD_TaiKhoan ??
+    userInfoObj?.ID_TaiKhoan ??
+    userInfoObj?.idTaiKhoan ??
+    userInfoObj?.IdTaiKhoan ??
+    userObj?.iD_TaiKhoan ??
+    userObj?.ID_TaiKhoan ??
+    userObj?.idTaiKhoan ??
+    userObj?.IdTaiKhoan ??
+    null;
+
+  // [API cũ] phân biệt "việc tôi tạo" vs "việc đến tôi" bằng 2 param riêng
+  // const fixedFilters = useMemo(() => {
+  //   const base: Record<string, string | number | null | undefined> = {
+  //     usercode: userObj?.maNV || "",
+  //   };
+  //   if (type === "viecdentoi") {
+  //     base.nguoiDuyetId = currentUserId;
+  //   } else {
+  //     base.nguoiTaoId = currentUserId;
+  //   }
+  //   return base;
+  // }, [currentUserId, type, userObj?.maNV]);
+
+  // [API mới] dùng userId + loaiVung — backend tách vùng 1 / vùng 2
+  const fixedFilters = useMemo(() => {
+    return {
+      userId: currentUserId,
+      loaiVung: type === "xemphieu" ? 3 : type === "viecdentoi" ? 2 : 1,
+    };
+  }, [currentUserId, type]);
 
   const {
     data,
@@ -38,7 +68,8 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
-  } = usePhieuSearchList({
+    getAllowedScopeOptions,
+  } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
   });
@@ -59,7 +90,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
-            if (type === "viecdentoi") {
+            if (type === "viecdentoi" || type === "xemphieu") {
               return navigate("/chitiettieuhaonauluyen_rh", {
                 state: {
                   idphieu: record.idphieu,
@@ -86,13 +117,15 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       ellipsis: true,
     },
     {
-      title: "Lò",
-      dataIndex: "scope",
-      key: "scope",
+      title: "Khu vực",
+      dataIndex: "tenScope",
+      key: "tenScope",
       width: 220,
       ellipsis: true,
-      render: (value: number) => {
-        return value === 1 ? "Lò thổi 1" : "Lò thổi 2";
+      render: (value: string | null | undefined, record: { scope?: number | string | null }) => {
+        if (value) return value;
+        if (record.scope !== null && record.scope !== undefined) return "RH " + String(record.scope);
+        return null;
       },
     },
     {
@@ -111,6 +144,16 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       ellipsis: true,
       render: (value: number) => {
         return value === 1 ? "Ca Ngày" : "Ca Đêm";
+      },
+    },
+    {
+      title: "Kíp",
+      dataIndex: "kip",
+      key: "kip",
+      width: 100,
+      ellipsis: true,
+      render: (value: string) => {
+        return value;
       },
     },
     {
@@ -153,7 +196,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   ];
 
   // Config cho các filter fields theo model phiếu
-  const filterFieldsConfig: FilterFieldConfig[] = [
+  const filterFieldsConfig = useMemo((): FilterFieldConfig[] => [
     {
       key: "soPhieu",
       label: "Số phiếu",
@@ -181,27 +224,16 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
       label: "Lò",
       type: "select",
       placeholder: "Chọn lò",
-      options: [
-        { label: "Lò thổi 1", value: 1 },
-        { label: "Lò thổi 2", value: 2 },
-      ],
+      options: getAllowedScopeOptions(config.code as string),
     },
     // {
     //   key: "tinhTrang",
     //   label: "Trạng thái",
     //   type: "select",
     //   placeholder: "Chọn trạng thái",
-    //   options: [
-    //     { label: "Đang lưu", value: 0 },
-    //     { label: "Đã gửi", value: 1 },
-    //     { label: "Hoàn thành", value: 2 },
-    //     { label: "Đã thu hồi", value: 3 },
-    //     { label: "Không xác nhận", value: 4 },
-    //     { label: "Chốt", value: 5 },
-    //     { label: "Đang phê duyệt", value: 6 },
-    //   ],
+    //   options: [...],
     // },
-  ];
+  ], [getAllowedScopeOptions]);
 
   return (
     <div>
@@ -211,7 +243,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={true}
+        showCreateButton={isAdmin}
         onCreateClick={() => {
           navigate("/taophieutieuhaonauluyen_rh");
         }}

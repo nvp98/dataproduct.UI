@@ -59,7 +59,11 @@ const TaoYeuCau = () => {
         if (isAdminUser(userData)) {
           setProcessingForms([]);
         } else {
-          const raw = userData.iD_TaiKhoan ?? userData.ID_TaiKhoan ?? userData.idTaiKhoan ?? userData.IdTaiKhoan;
+          const raw =
+            userData.iD_TaiKhoan ??
+            userData.ID_TaiKhoan ??
+            userData.idTaiKhoan ??
+            userData.IdTaiKhoan;
           const idTaiKhoan = typeof raw === "number" ? raw : Number(raw);
           if (!Number.isFinite(idTaiKhoan) || idTaiKhoan <= 0) {
             setProcessingForms([]);
@@ -133,12 +137,18 @@ const TaoYeuCau = () => {
           </Title>
 
           <Row gutter={[16, 16]}>
-            {group.items.map((item: any) => (
-              <Col xs={24} sm={12} md={8} lg={6}>
+            {group.items.map((item: any, index: number) => (
+              <Col
+                key={`${group.category}-${item.maBm || item.code || item.title || index}`}
+                xs={24}
+                sm={12}
+                md={8}
+                lg={6}
+              >
                 <Tooltip title="Nhấn để tạo phiếu">
                   <Card
                     hoverable
-                    bordered
+                    variant="outlined"
                     style={{
                       padding: "6px 10px", //
                       display: "flex",
@@ -148,9 +158,7 @@ const TaoYeuCau = () => {
                       borderRadius: 8,
                       height: 64, //
                     }}
-                    bodyStyle={{
-                      padding: 0, //
-                    }}
+                    styles={{ body: { padding: 0 } }}
                     onClick={() => handleSelect(item.code)}
                   >
                     <div

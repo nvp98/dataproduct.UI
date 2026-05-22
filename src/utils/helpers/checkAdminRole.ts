@@ -129,3 +129,74 @@ export const getAllowedBmList = (userPermissions: any[]): string[] => {
   if (!Array.isArray(userPermissions)) return [];
   return userPermissions.map((p) => p.maBm).filter((bm) => bm);
 };
+
+/** Giá trị `QuyenChucNang` = Xem (BE: QuyenChucNangEnum.XEM) */
+export const QUYEN_CHUC_NANG_XEM = 5;
+
+/** Một dòng từ `bmQuyenXlList` sau login (api/TaiKhoan/login) */
+export type BmQuyenXlItem = {
+  maBm?: string | null;
+  quyenChucNang?: number | null;
+};
+
+function readUserFromStorage(): unknown {
+  try {
+    const s = localStorage.getItem("userinfo");
+    return s ? JSON.parse(s) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Danh sách phân quyền biểu mẫu đang lưu trong localStorage (cặp maBm + quyenChucNang).
+ */
+export const getBmQuyenXlList = (): BmQuyenXlItem[] => {
+  try {
+    const raw = localStorage.getItem("bmQuyenXlList");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((x): x is BmQuyenXlItem => x != null && typeof x === "object");
+  } catch {
+    return [];
+  }
+};
+
+function normalizeMaBm(ma: string): string {
+  return (ma ?? "").trim().toUpperCase();
+}
+
+/**
+ * Các dòng BM_QuyenXL khớp `maBm` (so sánh không phân biệt hoa thường, trim).
+ */
+export const getBmQuyenRowsForMa = (maBm: string): BmQuyenXlItem[] => {
+  const key = normalizeMaBm(maBm);
+  if (!key) return [];
+  return getBmQuyenXlList().filter(
+    (r) => normalizeMaBm(String(r.maBm ?? "")) === key
+  );
+};
+
+/**
+ * Trạng thái UI theo mã biểu mẫu: `isView === true` khi user (không phải admin)
+ * có ít nhất một dòng phân quyền cho `maBm` và **mọi** dòng đó đều là quyền Xem (5).
+ * Không có dòng nào cho `maBm` → `isView === false` (giữ hành vi nút như trước).
+ */
+export const getBmQuyenUiFlags = (
+  maBm: string,
+  user?: unknown
+): { isView: boolean } => {
+  const u = user !== undefined ? user : readUserFromStorage();
+  if (isAdminUser(u as Parameters<typeof isAdminUser>[0])) return { isView: false };
+
+  const rows = getBmQuyenRowsForMa(maBm);
+  if (rows.length === 0) return { isView: false };
+
+  const onlyView = rows.every((r) => {
+    const q = r.quyenChucNang;
+    return q != null && Number(q) === QUYEN_CHUC_NANG_XEM;
+  });
+
+  return { isView: onlyView };
+};

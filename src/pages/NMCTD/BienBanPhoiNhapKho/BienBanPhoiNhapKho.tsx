@@ -1,18 +1,12 @@
 import HRC1_BB_GiaoNhanPhoiNhapKho from "../../../utils/BM_config/HRC1_BB_GiaoNhanPhoiNhapKho.json";
-import {
-  Button,
-  Card,
-  Space,
-  Table,
-  Tag,
-} from "antd";
-import {
-  EyeOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
-import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
+import { Button, Card, Space, Table, Tag, message } from "antd";
+import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import PhieuFilterCard, {
+  type FilterFieldConfig,
+} from "../../../components/PhieuFilterCard";
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
@@ -26,6 +20,7 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
   const [currentFilter, setCurrentFilter] = useState<any>({});
+  const [draftFilter, setDraftFilter] = useState<Record<string, unknown>>({});
   const [canCreatePhieu, setCanCreatePhieu] = useState(false);
 
   useEffect(() => {
@@ -70,7 +65,7 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
 
   const fixedFilters = useMemo(
     () => ({ usercode: userObj?.maNV || "" }),
-    [userObj?.maNV]
+    [userObj?.maNV],
   );
 
   const {
@@ -111,14 +106,16 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
           onClick={() => {
             // Nếu là việc đến tôi, luôn mở trang chi tiết
             if (type === "viecdentoi") {
-              return navigate(`/chitietbienbanphoinapkho/${record.idphieu}`);
+              return navigate(`/chitietbienbanphoinapkho/${record.idphieu}`, {
+                state: { type: "viecdentoi" },
+              });
             }
-            
+
             // Nếu phiếu đang ở trạng thái Đang lưu (0), mở trang chỉnh sửa
             if (record.tinhTrang === 0) {
               return navigate(`/taophieubienbanphoinapkho/${record.idphieu}`);
             }
-            
+
             // Các trạng thái khác, mở trang chi tiết
             return navigate(`/chitietbienbanphoinapkho/${record.idphieu}`);
           }}
@@ -158,12 +155,120 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
       ellipsis: true,
       render: (value: number) => `Đúc ${value}`,
     },
+    // {
+    //   title: "Người tạo",
+    //   dataIndex: "nguoiTaoId",
+    //   key: "nguoiTaoId",
+    //   width: 270,
+    //   ellipsis: true,
+    // },
+    // {
+    //   title: "Cấp 0 (Xuống/Factory)",
+    //   dataIndex: "pheDuyet",
+    //   key: "pheduyetCap0",
+    //   width: 200,
+    //   render: (_: unknown, record: TableRecord) => {
+    //     const approversCap0 = (record.pheDuyet || []).filter(
+    //       (item: any) => item.capDuyet === 0
+    //     );
+    //     if (approversCap0.length === 0) return "-";
+    //     return (
+    //       <Space direction="vertical" size="small" style={{ width: "100%" }}>
+    //         {approversCap0.map((approver: any, idx: number) => (
+    //           <Space key={idx} size="small">
+    //             <span>{approver.hoVaTen}</span>
+    //             <Tag
+    //               color={
+    //                 approver.tinhTrang === 1
+    //                   ? "green"
+    //                   : approver.tinhTrang === 0
+    //                     ? "gold"
+    //                     : "red"
+    //               }
+    //             >
+    //               {approver.tinhTrang === 1
+    //                 ? "✓ Đã duyệt"
+    //                 : approver.tinhTrang === 0
+    //                   ? "Chờ duyệt"
+    //                   : "Từ chối"}
+    //             </Tag>
+    //           </Space>
+    //         ))}
+    //       </Space>
+    //     );
+    //   },
+    // },
     {
-      title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
-      width: 270,
-      ellipsis: true,
+      title: "Cấp 1 (QLCL/QC)",
+      dataIndex: "pheDuyet",
+      key: "pheduyetCap1",
+      width: 200,
+      render: (_: unknown, record: TableRecord) => {
+        const approversCap1 = (record.pheDuyet || []).filter(
+          (item: any) => item.capDuyet === 1,
+        );
+        if (approversCap1.length === 0) return "-";
+        return (
+          <Space direction="vertical" size="small" style={{ width: "100%" }}>
+            {approversCap1.map((approver: any, idx: number) => (
+              <Space key={idx} size="small">
+                {/* <span>{approver.hoVaTen}</span> */}
+                <Tag
+                  color={
+                    approver.tinhTrang === 1
+                      ? "green"
+                      : approver.tinhTrang === 0
+                        ? "gold"
+                        : "red"
+                  }
+                >
+                  {approver.tinhTrang === 1
+                    ? `${approver.hoVaTen} -  Đã duyệt`
+                    : approver.tinhTrang === 0
+                      ? `${approver.hoVaTen} - Chờ duyệt`
+                      : `${approver.hoVaTen} - Từ chối`}
+                </Tag>
+              </Space>
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Cấp 2 (Đúc/Casting)",
+      dataIndex: "pheDuyet",
+      key: "pheduyetCap2",
+      width: 200,
+      render: (_: unknown, record: TableRecord) => {
+        const approversCap2 = (record.pheDuyet || []).filter(
+          (item: any) => item.capDuyet === 2,
+        );
+        if (approversCap2.length === 0) return "-";
+        return (
+          <Space direction="vertical" size="small" style={{ width: "100%" }}>
+            {approversCap2.map((approver: any, idx: number) => (
+              <Space key={idx} size="small">
+                {/* <span>{approver.hoVaTen}</span> */}
+                <Tag
+                  color={
+                    approver.tinhTrang === 1
+                      ? "green"
+                      : approver.tinhTrang === 0
+                        ? "gold"
+                        : "red"
+                  }
+                >
+                  {approver.tinhTrang === 1
+                    ? `${approver.hoVaTen} -  Đã duyệt`
+                    : approver.tinhTrang === 0
+                      ? `${approver.hoVaTen} - Chờ duyệt`
+                      : `${approver.hoVaTen} - Từ chối`}
+                </Tag>
+              </Space>
+            ))}
+          </Space>
+        );
+      },
     },
     {
       title: "Trạng thái",
@@ -186,7 +291,10 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
             type="text"
             icon={<EyeOutlined twoToneColor="#1890ff" />}
             onClick={() =>
-              navigate(`/chitietbienbanphoinapkho/${record.idphieu}`)
+              navigate(`/chitietbienbanphoinapkho/${record.idphieu}`, {
+                state:
+                  type === "viecdentoi" ? { type: "viecdentoi" } : undefined,
+              })
             }
           />
         </Space>
@@ -196,10 +304,79 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
 
   const handleExportExcel = async () => {
     try {
-      const fromDate = currentFilter?.ngaySXFrom;
-      const toDate = currentFilter?.ngaySXTo;
+      const selectedNgaySX = draftFilter?.ngaySX as
+        | [Dayjs | null, Dayjs | null]
+        | null
+        | undefined;
+
+      const fromDate =
+        currentFilter?.ngaySXFrom ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[0]
+          ? selectedNgaySX[0].format("YYYY-MM-DD")
+          : undefined);
+
+      const toDate =
+        currentFilter?.ngaySXTo ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[1]
+          ? selectedNgaySX[1].format("YYYY-MM-DD")
+          : undefined);
+
+      if (!fromDate || !toDate) {
+        message.warning(
+          "Vui lòng chọn khoảng Ngày sản xuất trước khi xuất Excel",
+        );
+        return;
+      }
 
       const res = await phoiNhapKhoApi.exportExcelPhoiNhapKho({
+        fromDate,
+        toDate,
+      });
+
+      const blob = new Blob([res as unknown as BlobPart], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TongHopPhoiNhapKho_${fromDate || ""}_${toDate || ""}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export Excel lỗi:", error);
+    }
+  };
+
+  const handleExportExcelPKH = async () => {
+    try {
+      const selectedNgaySX = draftFilter?.ngaySX as
+        | [Dayjs | null, Dayjs | null]
+        | null
+        | undefined;
+
+      const fromDate =
+        currentFilter?.ngaySXFrom ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[0]
+          ? selectedNgaySX[0].format("YYYY-MM-DD")
+          : undefined);
+
+      const toDate =
+        currentFilter?.ngaySXTo ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[1]
+          ? selectedNgaySX[1].format("YYYY-MM-DD")
+          : undefined);
+
+      if (!fromDate || !toDate) {
+        message.warning(
+          "Vui lòng chọn khoảng Ngày sản xuất trước khi xuất Excel",
+        );
+        return;
+      }
+
+      const res = await phoiNhapKhoApi.exportExcelPhoiNhapKhoPKH({
         fromDate,
         toDate,
       });
@@ -264,8 +441,12 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}
+        onFilterFieldChange={(key, value) => {
+          setDraftFilter((prev) => ({ ...prev, [key]: value }));
+        }}
         onClearFilter={() => {
           setCurrentFilter({});
+          setDraftFilter({});
           handleClearFilter();
         }}
         filterFields={filterFieldsConfig}
@@ -274,9 +455,8 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
       <Card
         extra={
           <Space>
-            <Button onClick={handleExportExcel}>
-              Xuất Excel
-            </Button>
+            <Button onClick={handleExportExcelPKH}>Xuất Excel PKH</Button>
+            <Button onClick={handleExportExcel}>Xuất Excel</Button>
             {type !== "viecdentoi" && canCreatePhieu && (
               <Button
                 type="primary"
@@ -303,7 +483,6 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
               `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: onPageChange,
           }}
-          scroll={{ x: 1100 }}
           summary={() => (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={8} align="right">

@@ -112,7 +112,7 @@
       "type": "selectNguoiKy",
       "key": "nguoiKy_QLCL",
       "maphongBan": "P.QLCL",
-      "capDuyet": 1,
+      "capDuyet": 0,
       "required": true
     },
     {
@@ -120,7 +120,7 @@
       "type": "selectNguoiKy",
       "key": "nguoiKy_XuongDuc",
       "maphongBan": "NM.HRC1",
-      "capDuyet": 0,
+      "capDuyet": 1,
       "required": true
     }]
 }

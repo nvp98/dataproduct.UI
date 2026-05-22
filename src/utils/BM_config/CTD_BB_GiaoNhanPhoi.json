@@ -1,0 +1,109 @@
+{
+  "code": "CTD_BB_GNP",
+  "prefix": "BBGNP",
+  "title": "BIÊN BẢN GIAO NHẬN PHÔI",
+   "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.05/QT.05.13",
+    "effectiveDate": "15/04/2025",
+    "revision": "01"
+  },
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true },
+    {
+      "label": "Xưởng cán",
+      "type": "select",
+      "required": true,
+      "key": "xuong",
+      "options": [
+        { "label": "Xưởng cán 1", "value": 1 },
+        { "label": "Xưởng cán 2", "value": 2 },
+        { "label": "Xưởng cán 3", "value": 3 }
+      ]
+    }
+  ],
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key": "table1",
+      "dataSource": {
+        "type": "manual",
+        "url": ""
+      },
+      "initData": [
+        { "key": "fixed-1-1","mavitri": "dong1", "vitri": "Đống 1", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-1-2", "mavitri": "dong1", "vitri": "Đống 1", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-2-1", "mavitri": "dong2", "vitri": "Đống 2", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-2-2", "mavitri": "dong2", "vitri": "Đống 2", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-3-1", "mavitri": "dong3", "vitri": "Đống 3", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-3-2", "mavitri": "dong3", "vitri": "Đống 3", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-4-1", "mavitri": "dong4","vitri": "Đống 4", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-4-2", "mavitri": "dong4","vitri": "Đống 4", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-5-1", "mavitri": "sannguoi","vitri": "Sàn nguội chứa phôi", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-5-2", "mavitri": "sannguoi","vitri": "Sàn nguội chứa phôi", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-6-1", "mavitri": "tronglo","vitri": "Trong lò", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-6-2", "mavitri": "tronglo","vitri": "Trong lò", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-7-1", "mavitri": "banthuphoisauLo","vitri": "Bàn thu phôi sau lò", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-7-2", "mavitri": "banthuphoisauLo","vitri": "Bàn thu phôi sau lò", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-8-1", "mavitri": "banthuphoidtl","vitri": "Bàn thu phôi từ ĐLT sang", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-8-2", "mavitri": "banthuphoidtl","vitri": "Bàn thu phôi từ ĐLT sang", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-9-1", "mavitri": "xegoong","vitri": "Trên xe goong/ ô tô", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
+        { "key": "fixed-9-2", "mavitri": "xegoong","vitri": "Trên xe goong/ ô tô", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" }
+      ],
+      "columns": [
+        { "title": "Vị trí", "dataIndex": "vitri" },
+        {
+                    "title": "Loại phôi",
+                    "children": [
+                        {
+                            "title": "Mác thép",
+                            "dataIndex": "macThep"
+                        },
+                        {
+                            "title": "Kích thước",
+                            "dataIndex": "kichThuoc"
+                        }
+                    ]
+        },
+        { "title": "Số cây", "dataIndex": "soCay" },
+        { "title": "Ghi chú", "dataIndex": "ghiChu" }
+      ]
+    }
+  ],
+  "footerNotes": [
+    "Lưu ý: Đầu kíp, 2 tổ trưởng Lò nung của 2 kíp bàn giao cho nhau toàn bộ phôi trong nhà theo mẫu trên."
+  ],
+  "signatures": [
+    {
+      "label": "Người nhận kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_nhankip",
+      "maphongBan": "NM.CTD",
+      "capDuyet": 1,
+      "isChon": true,
+       "required": true
+    },
+    {
+      "label": "Người giao kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_giaokip",
+      "maphongBan": "NM.CTD",
+      "capDuyet": 0,
+      "isChon": false
+    }
+  ]
+}

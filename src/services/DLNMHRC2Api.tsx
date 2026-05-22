@@ -20,5 +20,28 @@ export const dlnmHRC2Api = {
   deleteRowByKey: (rowKey: number) => apiService.delete(`/api/DLNMHRC2/${rowKey}`),
   filterSTD_NXT: (payload: FilterSTD_NXTRequest) =>
     apiService.post("/api/DLNMHRC2/filterSTD_NXT", payload),
-};
+  exportBienBan: (params?: Record<string, unknown>) =>
+    apiService.get("/api/DLNMHRC2/export-excel-detail", {
+      params,
+      responseType: "blob",
+      headers: {
+        Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    }),
+  exportBienBanPDF: (params?: Record<string, unknown>) =>
+    apiService.get("/api/DLNMHRC2/export-pdf-detail", {
+      params,
+      responseType: "blob",
+      headers: { Accept: "application/pdf" },
+    }),
+  exportExcelTieuHaoTheoCa: (params?: Record<string, unknown>) =>
+    apiService.get("/api/DLNMHRC2/export-excel-tieuhao", {
+      params,
+      responseType: "blob",
+      headers: {
+        Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    }),
+  deleteRowNM: (rowKey: number) => apiService.delete(`/api/DLNMHRC2/delete-row-nm/${rowKey}`),
+  };
 

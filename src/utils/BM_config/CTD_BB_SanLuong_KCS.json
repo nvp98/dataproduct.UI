@@ -1,0 +1,79 @@
+{
+  "code": "CTD_BienBan_SanLuong",
+  "prefix": "CTD_SANLUONG",
+  "title": "BIÊN BẢN XÁC NHẬN SẢN LƯỢNG",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.08/QT.05.13",
+    "effectiveDate": "15/04/2025",
+    "revision": "01"
+  },
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value":1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    },
+    { "label": "Ngày", "type": "date", "key": "NgaySX","required": true },
+    { "label": "Xưởng cán", "type": "select","required": true, "key": "xuong","options": [
+        { "label": "Xưởng cán 1", "value": 1 },
+        { "label": "Xưởng cán 2", "value": 2 },
+        { "label": "Xưởng cán 3", "value": 3 }
+      ]
+    }
+  ],
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "",
+      "key": "table1",
+      "columns": [
+        { "title": "STT", "dataIndex": "stt", "isLabel": true, "width": 50 },
+        { "title": "Sản phẩm", "dataIndex": "sanPham"  },
+        { "title": "Mác thép", "dataIndex": "macThep" },
+        { "title": "Chiều dài", "dataIndex": "chieuDai" },
+        { "title": "Số bó", "dataIndex": "soBo" },
+        { "title": "KL Cân", "dataIndex": "klCan" },
+        { "title": "Số thanh", "dataIndex": "soThanh" },
+        { "title": "Ghi chú", "dataIndex": "ghiChu" }
+      ]
+    }
+  ],
+  "signatures": [
+     {
+      "label": "Trưởng kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_TruongKip",
+      "maphongBan": "NM.CTD",
+      "capDuyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Tổ trưởng KCS",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_ToTruongKCS",
+      "maphongBan": "P.QLCL",
+      "capDuyet": 0,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Thủ kho",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_ThuKho",
+      "maphongBan": "BP. LOG",
+      "capDuyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

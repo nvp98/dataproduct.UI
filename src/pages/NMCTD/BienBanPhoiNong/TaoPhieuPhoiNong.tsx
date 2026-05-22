@@ -34,11 +34,13 @@ import {
 import { CtdPhoiNongApi } from "../../../services/CtdPhoiNongApi";
 import { getFileNameFromContentDisposition } from "../../../utils/helpers";
 import { PheDuyetApi } from "../../../services/PheDuyetApi";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 
 const TaoPhieuPhoiNong = () => {
   const location = useLocation();
   const { idphieu, thongtinphieu, type, userInfo } = location.state || {};
   // console.log(thongtinphieu);
+  const thongtinuser = getThongTinUser();
   const config = CTD_BB_Phoinong;
   const [form] = Form.useForm();
 
@@ -524,7 +526,6 @@ const TaoPhieuPhoiNong = () => {
     xacNhanInfo?: { maKyDuyet: string; nguoiXuLyId: number; tinhTrang: number },
   ) => {
     try {
-      const stored = localStorage.getItem("userinfo");
       const values = form.getFieldsValue();
 
       // Build mới từ config và sau đó map với flow api nếu có
@@ -642,8 +643,8 @@ const TaoPhieuPhoiNong = () => {
         NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
         maBm: config.code,
         // nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
-        xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
-        idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
+        xuongId: thongtinuser.iD_PhanXuong,
+        idphongBan: thongtinuser.iD_PhongBan,
         table1: normalizedTable,
         chuyenData: normalizedThung,
         pheDuyet: pheDuyetFlow,
@@ -785,6 +786,7 @@ const TaoPhieuPhoiNong = () => {
         const params = {
           NgaySX: filterNgay ? filterNgay.format("YYYY-MM-DD") : null,
           Ca: filterCa ? Number(filterCa) : null,
+          Xuong: filterXuong ? filterXuong : null,
         };
         res = await CtdPhoiNongApi.getData(params);
       }
@@ -880,8 +882,6 @@ const TaoPhieuPhoiNong = () => {
    */
   const handleSubmit = async (values: any) => {
     try {
-      const stored = localStorage.getItem("userinfo");
-
       // Thông tin phê duyệt
       const pheDuyetFlow = config.signatures
         .filter((s) => s.isChon)
@@ -901,7 +901,7 @@ const TaoPhieuPhoiNong = () => {
         pheDuyetFlow.unshift({
           capDuyet: 1,
           maKyDuyet: hasCreator?.key || "", //
-          nguoiDuyetId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
+          nguoiDuyetId: thongtinuser.iD_TaiKhoan,
           tinhTrang: 1, // 1 = đã duyệt (vì chính người tạo)
           ghiChu: "Người tạo phiếu",
         });
@@ -919,9 +919,9 @@ const TaoPhieuPhoiNong = () => {
         ...values,
         NgaySX: values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null,
         maBm: config.code,
-        nguoiTaoId: stored ? JSON.parse(stored).iD_TaiKhoan : null,
-        xuongId: stored ? JSON.parse(stored).iD_PhanXuong : null,
-        idphongBan: stored ? JSON.parse(stored).iD_PhongBan : null,
+        nguoiTaoId: thongtinuser.iD_TaiKhoan,
+        xuongId: thongtinuser.iD_PhanXuong,
+        idphongBan: thongtinuser.iD_PhongBan,
         table1: normalizedTable,
         chuyenData: normalizedThung,
         pheDuyet: pheDuyetFlow,
@@ -957,7 +957,7 @@ const TaoPhieuPhoiNong = () => {
   // Lưu phiếu nhưng không gửi trình ký
   // const handleSaveOnly = async () => {
   //   try {
-  //     const stored = localStorage.getItem("userinfo");
+  //     const stored = thongtinuser;
   //     const values = form.getFieldsValue();
   //     const normalizedTable = (tableData || []).map((r: any) => ({
   //       ...r,
@@ -1118,8 +1118,7 @@ const TaoPhieuPhoiNong = () => {
     const values = form.getFieldsValue();
     if (values.idphieu) {
       try {
-        const stored = localStorage.getItem("userinfo");
-        const nguoiTaoId = stored ? JSON.parse(stored).iD_TaiKhoan : null;
+        const nguoiTaoId = thongtinuser.iD_TaiKhoan;
         await PhieuApi.syncNguoiTaoPhieu(values.idphieu, nguoiTaoId);
         console.log("📝 Đã đồng bộ người tạo phiếu:", nguoiTaoId);
       } catch (e) {
@@ -1248,8 +1247,7 @@ const TaoPhieuPhoiNong = () => {
     const values = form.getFieldsValue();
     if (values.idphieu) {
       try {
-        const stored = localStorage.getItem("userinfo");
-        const nguoiTaoId = stored ? JSON.parse(stored).iD_TaiKhoan : null;
+        const nguoiTaoId = thongtinuser.iD_TaiKhoan;
         await PhieuApi.syncNguoiTaoPhieu(values.idphieu, nguoiTaoId);
         console.log("📝 Đã đồng bộ người tạo phiếu:", nguoiTaoId);
       } catch (e) {
@@ -1889,10 +1887,7 @@ const TaoPhieuPhoiNong = () => {
                               setSelectedProcessedKeys([]);
 
                               // Lưu thông tin người xử lý QLCL xác nhận
-                              const stored = localStorage.getItem("userinfo");
-                              const userId = stored
-                                ? JSON.parse(stored).iD_TaiKhoan
-                                : null;
+                              const userId = thongtinuser.iD_TaiKhoan;
                               await saveAfterTransfer(tableData, next, {
                                 maKyDuyet: "nguoiKy_QLCL",
                                 nguoiXuLyId: userId,
@@ -1965,10 +1960,7 @@ const TaoPhieuPhoiNong = () => {
                               setSelectedProcessedKeys([]);
 
                               // Lưu thông tin người xử lý QLCL thu hồi
-                              const stored = localStorage.getItem("userinfo");
-                              const userId = stored
-                                ? JSON.parse(stored).iD_TaiKhoan
-                                : null;
+                              const userId = thongtinuser.iD_TaiKhoan;
                               await saveAfterTransfer(tableData, next, {
                                 maKyDuyet: "nguoiKy_QLCL",
                                 nguoiXuLyId: userId,
@@ -2047,10 +2039,7 @@ const TaoPhieuPhoiNong = () => {
                               setSelectedProcessedKeys([]);
 
                               // Lưu thông tin người xử lý CTD xác nhận
-                              const stored = localStorage.getItem("userinfo");
-                              const userId = stored
-                                ? JSON.parse(stored).iD_TaiKhoan
-                                : null;
+                              const userId = thongtinuser.iD_TaiKhoan;
                               await saveAfterTransfer(tableData, next, {
                                 maKyDuyet: "nguoiKy_CTD",
                                 nguoiXuLyId: userId,
@@ -2121,10 +2110,7 @@ const TaoPhieuPhoiNong = () => {
                               setSelectedProcessedKeys([]);
 
                               // Lưu thông tin người xử lý CTD thu hồi
-                              const stored = localStorage.getItem("userinfo");
-                              const userId = stored
-                                ? JSON.parse(stored).iD_TaiKhoan
-                                : null;
+                              const userId = thongtinuser.iD_TaiKhoan;
                               await saveAfterTransfer(tableData, next, {
                                 maKyDuyet: "nguoiKy_CTD",
                                 nguoiXuLyId: userId,
