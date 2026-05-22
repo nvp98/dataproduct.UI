@@ -8,6 +8,7 @@ export const PhieuActionButtonKeys = {
   Lock: "lock",
   Unlock: "unlock",
   ExportPdf: "exportPdf",
+  ExportExcel: "exportExcel",
 } as const;
 
 /**
@@ -19,4 +20,5 @@ export const DETAIL_HIDDEN_BUTTON_KEYS = new Set<string>([
   PhieuActionButtonKeys.SaveAndSend,
   PhieuActionButtonKeys.Recall,
   PhieuActionButtonKeys.RequestEdit,
+  PhieuActionButtonKeys.ExportExcel,
 ]);

@@ -6,7 +6,9 @@ export const bkcankphapi = {
 
   getDetail: (params: {
     ngaySX?: string;
+    caSX?: string;
     ngayXL?: string;
+    caXL?: string;
     order?: string;
     xuongCan?: number;
   }) => apiService.get("/api/BKKcscanBbxlSanxuat", { params }),

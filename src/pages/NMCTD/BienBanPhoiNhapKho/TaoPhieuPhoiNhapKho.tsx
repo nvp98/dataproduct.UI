@@ -948,7 +948,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
     const userInfo = getUserInfo();
     const buttons = phieuActionService.getActionButtons({
       phieuId: idphieu || "",
-      tinhTrang: phieuInfo.tinhTrang ?? 0,
+      tinhTrang: 2, // set mặc định là hoàn tất
       isClone: phieuInfo.isClone ?? false,
       currentUserId: userInfo.iD_TaiKhoan ?? null,
       currentUserPhongBanId: userInfo.iD_PhongBan ?? null,
@@ -1558,6 +1558,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                 >
                   Tìm kiếm
                 </Button>
+                {actionButtons}
                 {!isViecDenToi && (
                   <Button
                     danger
@@ -1712,7 +1713,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                   <Table.Summary.Row
                     style={{ fontWeight: "bold", background: "#fafafa" }}
                   >
-                    <Table.Summary.Cell index={0} colSpan={6} align="center">
+                    <Table.Summary.Cell index={0} colSpan={10} align="center">
                       TỔNG CỘNG
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1} align="right">
