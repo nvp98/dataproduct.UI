@@ -579,6 +579,16 @@ const TaoPhieuBienBanSanLuongKCS = () => {
 
     // Group by ghiChu (which contains tenPhanLoai)
     const groups: Record<string, any[]> = {};
+    // sap xep lai neu tenphanloai co ton tai so 1 thì sắp xếp lên trên
+    tableData.sort((a, b) => {
+      // Kiểm tra xem chuỗi có chứa số '1' hay không
+      const aHasOne = a.tenPhanLoai && a.tenPhanLoai.includes("1");
+      const bHasOne = b.tenPhanLoai && b.tenPhanLoai.includes("1");
+
+      if (aHasOne && !bHasOne) return -1; // a có '1', b không có -> đưa a lên trên
+      if (!aHasOne && bHasOne) return 1; // b có '1', a không có -> đưa b lên trên
+      return 0; // cả hai đều có hoặc đều không có -> giữ nguyên vị trí
+    });
     tableData.forEach((row) => {
       const groupKey = row.tenPhanLoai || "Khác";
       if (!groups[groupKey]) groups[groupKey] = [];
@@ -684,6 +694,20 @@ const TaoPhieuBienBanSanLuongKCS = () => {
         col.dataIndex === "soThanh"
           ? "right"
           : "left",
+      render:
+        col.dataIndex === "klCan"
+          ? (value: any) => {
+              if (value === "" || value === undefined || value === null)
+                return "";
+              const num = parseFloat(value);
+              return isNaN(num)
+                ? value
+                : num.toLocaleString("en-US", {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3,
+                  });
+            }
+          : col.render,
     }));
   }, [tableSection]);
 
