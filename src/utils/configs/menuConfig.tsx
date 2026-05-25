@@ -248,9 +248,9 @@ export const menuConfig = [
             key: "sub2-4-5",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
-              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+              <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
                 <NavLink to="/phieuxulykph">
-                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                  BM.01C/QT.11 Phiếu xử lý sản phẩm không phù hợp
                 </NavLink>
               </Tooltip>
             ),
@@ -504,9 +504,9 @@ export const menuConfig = [
             key: "3-4-4",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
-              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+              <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
                 <NavLink to="/viecdentoi/phieuxulykph">
-                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                  BM.01C/QT.11 Phiếu xử lý sản phẩm không phù hợp
                 </NavLink>
               </Tooltip>
             ),
@@ -727,9 +727,9 @@ export const menuConfig = [
             key: "3-4-4",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
-              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+              <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
                 <NavLink to="/xemphieu/phieuxulykph">
-                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                  BM.01C/QT.11 Phiếu xử lý sản phẩm không phù hợp
                 </NavLink>
               </Tooltip>
             ),
@@ -911,9 +911,9 @@ export const menuConfig = [
             key: "5-1-4",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
-              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+              <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
                 <NavLink to="/viecdentoi/phieuxulykph">
-                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                  BM.01C/QT.11 Phiếu xử lý sản phẩm không phù hợp
                 </NavLink>
               </Tooltip>
             ),
