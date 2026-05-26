@@ -62,32 +62,106 @@ const makeKey = () => Date.now().toString() + Math.random().toString(36).slice(2
 const makeSubRow = (): SubRow => ({ key: makeKey(), maKhuVucs: [], quyenChucNangs: [] });
 const makeBmRow = (): BmRow => ({ key: makeKey(), subRows: [makeSubRow()], khuVucPhus: [] });
 
+// Prefix dùng để nhận biết value khu vực phụ có targetMaBm trong maKhuVucs
+const KVP_PREFIX = "kvp:";
+const makeKvpVal = (khuVucPhu: string) => `${KVP_PREFIX}${khuVucPhu}`;
+
+// True nếu BM có khuVucPhus với targetMaBm → gộp vào selector khu vực chính
+const useMergedScopeMode = (maBm?: string): boolean => {
+  const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
+  return (bm?.khuVucPhus ?? []).some((k) => !!k.targetMaBm);
+};
+
+const getTargetBmLabel = (targetMaBm: string): string =>
+  bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === targetMaBm)?.tenBm ?? targetMaBm;
+
+// Trả grouped options: scope chính + các nhóm khuVucPhu-with-targetMaBm
+const getMergedScopeOptions = (maBm?: string) => {
+  if (!maBm) return [{ value: ALL_KHU_VUC, label: "Tất cả" }];
+  const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
+  const groups: { label: string; options: { value: string; label: string }[] }[] = [];
+
+  if ((bm?.scope ?? []).length > 0) {
+    groups.push({
+      label: "Máy đúc",
+      options: [
+        { value: ALL_KHU_VUC, label: "Tất cả (máy đúc)" },
+        ...(bm!.scope!.map((s) => ({ value: s.maKhuVuc, label: s.tenKhuVuc }))),
+      ],
+    });
+  }
+
+  const byTarget = new Map<string, { label: string; options: { value: string; label: string }[] }>();
+  for (const kvp of bm?.khuVucPhus ?? []) {
+    if (kvp.targetMaBm) {
+      if (!byTarget.has(kvp.targetMaBm))
+        byTarget.set(kvp.targetMaBm, { label: getTargetBmLabel(kvp.targetMaBm), options: [] });
+      byTarget.get(kvp.targetMaBm)!.options.push({ value: makeKvpVal(kvp.khuVucPhu), label: kvp.tenKhuVuc });
+    }
+  }
+  for (const g of byTarget.values()) groups.push(g);
+
+  return groups;
+};
+
+/**
+ * Bảng reverse: (targetMaBm + targetScope) → { parentMaBm, khuVucPhu }
+ * Dùng để gom các record HRC1_LoThoi / HRC1_TinhLuyen về BmRow cha (HRC1_BBGN_ThepLong).
+ */
+function buildKvpReverseMap(): Map<string, { parentMaBm: string; khuVucPhu: string }> {
+  const map = new Map<string, { parentMaBm: string; khuVucPhu: string }>();
+  for (const bm of bmQuyenConfig.danhSachBieuMau) {
+    for (const kvp of bm.khuVucPhus ?? []) {
+      if (kvp.targetMaBm && kvp.targetScope) {
+        map.set(`${kvp.targetMaBm}:${kvp.targetScope}`, {
+          parentMaBm: bm.maBm,
+          khuVucPhu: kvp.khuVucPhu,
+        });
+      }
+    }
+  }
+  return map;
+}
+
 /**
  * Reconstruct BmRows từ danh sách flat records của một user.
- * Thuật toán:
- *  1. Group theo maBm
- *  2. Trong mỗi BM, group theo quyenChucNang → map kv list
- *  3. Merge những quyen có cùng tập KV → 1 SubRow
+ * - Record có targetMaBm (HRC1_LoThoi/TinhLuyen) → displayVal = "kvp:<khuVucPhu>" trong subRow cha.
+ * - Record old-style có khuVucPhu (HRC2) → giữ trong BmRow.khuVucPhus như cũ.
  */
 function buildBmRowsFromRecords(records: any[]): BmRow[] {
-  const byBm = new Map<string, any[]>();
+  const reverseMap = buildKvpReverseMap();
+
+  type NRec = { parentMaBm: string; displayVal: string; quyenChucNang: number; khuVucPhu?: string };
+  const normalized: NRec[] = [];
+
   for (const rec of records) {
-    const bm = rec.maBm ?? "";
-    if (!byBm.has(bm)) byBm.set(bm, []);
-    byBm.get(bm)!.push(rec);
+    const maBm: string     = rec.maBm ?? "";
+    const maKhuVuc: string = rec.maKhuVuc ?? "";
+    const quyenChucNang    = rec.quyenChucNang as number;
+    const khuVucPhu        = (rec.khuVucPhu ?? rec.KhuVucPhu) as string | undefined;
+    const reverse          = reverseMap.get(`${maBm}:${maKhuVuc}`);
+
+    if (reverse) {
+      // targetMaBm record → hiện lại là kvp value trong BmRow cha (merged mode)
+      normalized.push({ parentMaBm: reverse.parentMaBm, displayVal: makeKvpVal(reverse.khuVucPhu), quyenChucNang });
+    } else {
+      normalized.push({ parentMaBm: maBm, displayVal: maKhuVuc || ALL_KHU_VUC, quyenChucNang, khuVucPhu });
+    }
+  }
+
+  const byBm = new Map<string, NRec[]>();
+  for (const r of normalized) {
+    if (!byBm.has(r.parentMaBm)) byBm.set(r.parentMaBm, []);
+    byBm.get(r.parentMaBm)!.push(r);
   }
 
   return Array.from(byBm.entries()).map(([maBm, recs]) => {
-    // quyen → danh sách KV có quyen đó
     const byQuyen = new Map<number, string[]>();
-    for (const rec of recs) {
-      const q = rec.quyenChucNang as number;
-      const kv: string = rec.maKhuVuc ?? ALL_KHU_VUC;
-      if (!byQuyen.has(q)) byQuyen.set(q, []);
-      byQuyen.get(q)!.push(kv);
+    for (const r of recs) {
+      if (!byQuyen.has(r.quyenChucNang)) byQuyen.set(r.quyenChucNang, []);
+      byQuyen.get(r.quyenChucNang)!.push(r.displayVal);
     }
 
-    // Merge các quyen có cùng tập KV (sorted) vào 1 SubRow
     const byKvSet = new Map<string, { kvs: string[]; quyens: number[] }>();
     for (const [quyen, kvs] of byQuyen) {
       const kvsSorted = [...new Set(kvs)].sort();
@@ -96,17 +170,16 @@ function buildBmRowsFromRecords(records: any[]): BmRow[] {
       byKvSet.get(key)!.quyens.push(quyen);
     }
 
-    const subRows: SubRow[] = Array.from(byKvSet.values()).map(({ kvs, quyens }) => ({
-      key: makeKey(),
-      maKhuVucs: kvs,
-      quyenChucNangs: quyens,
-    }));
+    const subRows: SubRow[] = byKvSet.size > 0
+      ? Array.from(byKvSet.values()).map(({ kvs, quyens }) => ({
+          key: makeKey(), maKhuVucs: kvs, quyenChucNangs: quyens,
+        }))
+      : [makeSubRow()];
 
-    const khuVucPhus = [...new Set(
-      recs.map((r: any) => r.khuVucPhu).filter((k: any): k is string => !!k)
-    )];
+    // Old-style khuVucPhus cho BMs không dùng merged mode (HRC2, v.v.)
+    const oldStyleKvps = [...new Set(recs.filter((r) => r.khuVucPhu).map((r) => r.khuVucPhu!))];
 
-    return { key: makeKey(), maBm, subRows, khuVucPhus };
+    return { key: makeKey(), maBm, subRows, khuVucPhus: oldStyleKvps };
   });
 }
 
@@ -232,15 +305,17 @@ const PhanQuyenBieuMau = () => {
     );
 
   const handleKhuVucChange = (bmKey: string, subKey: string, newValues: string[]) => {
-    const prev =
-      bmRows.find((r) => r.key === bmKey)?.subRows.find((s) => s.key === subKey)?.maKhuVucs ?? [];
-    let result = newValues;
-    if (newValues.includes(ALL_KHU_VUC) && newValues.length > 1) {
-      result = !prev.includes(ALL_KHU_VUC)
+    const prev        = bmRows.find((r) => r.key === bmKey)?.subRows.find((s) => s.key === subKey)?.maKhuVucs ?? [];
+    const kvpVals     = newValues.filter((v) => v.startsWith(KVP_PREFIX));
+    const regularNew  = newValues.filter((v) => !v.startsWith(KVP_PREFIX));
+    const prevRegular = prev.filter((v) => !v.startsWith(KVP_PREFIX));
+    let resultRegular = regularNew;
+    if (regularNew.includes(ALL_KHU_VUC) && regularNew.length > 1) {
+      resultRegular = !prevRegular.includes(ALL_KHU_VUC)
         ? [ALL_KHU_VUC]
-        : newValues.filter((v) => v !== ALL_KHU_VUC);
+        : regularNew.filter((v) => v !== ALL_KHU_VUC);
     }
-    updateSubRow(bmKey, subKey, { maKhuVucs: result });
+    updateSubRow(bmKey, subKey, { maKhuVucs: [...resultRegular, ...kvpVals] });
   };
 
   // ── Modal helpers ──────────────────────────────────────────────────────────
@@ -291,7 +366,11 @@ const PhanQuyenBieuMau = () => {
       const invalid = bmRows.some(
         (bmRow) =>
           !bmRow.maBm ||
-          bmRow.subRows.some((s) => s.maKhuVucs.length === 0 || s.quyenChucNangs.length === 0)
+          bmRow.subRows.some(
+            (s) =>
+              (s.maKhuVucs.length === 0 && bmRow.khuVucPhus.length === 0) ||
+              s.quyenChucNangs.length === 0
+          )
       );
       if (invalid) {
         message.warning("Vui lòng điền đủ thông tin cho tất cả các biểu mẫu");
@@ -299,17 +378,52 @@ const PhanQuyenBieuMau = () => {
       }
 
       const { idTaiKhoan } = form.getFieldsValue();
+
+      const expandedItems = bmRows.flatMap((bmRow) => {
+        const bm     = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === bmRow.maBm);
+        const merged = useMergedScopeMode(bmRow.maBm);
+        const items: any[] = [];
+
+        if (merged) {
+          // Merged mode: maKhuVucs chứa cả scope thường lẫn "kvp:" items
+          for (const subRow of bmRow.subRows) {
+            if (subRow.quyenChucNangs.length === 0) continue;
+            const regularKvs = subRow.maKhuVucs.filter((v) => !v.startsWith(KVP_PREFIX));
+            const kvpVals    = subRow.maKhuVucs.filter((v) => v.startsWith(KVP_PREFIX));
+
+            if (regularKvs.length > 0)
+              items.push({ maBm: bmRow.maBm!, maKhuVucs: regularKvs, quyenChucNangs: subRow.quyenChucNangs, khuVucPhus: [] });
+
+            const byTarget = new Map<string, string[]>();
+            for (const kvpVal of kvpVals) {
+              const khuVucPhu = kvpVal.slice(KVP_PREFIX.length);
+              const def = (bm?.khuVucPhus ?? []).find((k) => k.khuVucPhu === khuVucPhu);
+              if (def?.targetMaBm && def?.targetScope) {
+                if (!byTarget.has(def.targetMaBm)) byTarget.set(def.targetMaBm, []);
+                byTarget.get(def.targetMaBm)!.push(def.targetScope);
+              }
+            }
+            for (const [targetMaBm, scopes] of byTarget)
+              items.push({ maBm: targetMaBm, maKhuVucs: scopes, quyenChucNangs: subRow.quyenChucNangs, khuVucPhus: [] });
+          }
+        } else {
+          // Old-style: khuVucPhus không có targetMaBm (HRC2, v.v.)
+          const oldStyleKvps = bmRow.khuVucPhus.filter((v) => {
+            const def = (bm?.khuVucPhus ?? []).find((k) => k.khuVucPhu === v);
+            return !def?.targetMaBm;
+          });
+          bmRow.subRows.filter((s) => s.maKhuVucs.length > 0).forEach((subRow) => {
+            items.push({ maBm: bmRow.maBm!, maKhuVucs: subRow.maKhuVucs, quyenChucNangs: subRow.quyenChucNangs, khuVucPhus: oldStyleKvps });
+          });
+        }
+
+        return items;
+      });
+
       await BmQuyenXlApi.bulkSave({
         idTaiKhoan,
         idsToDelete: editingUserRecordIds,
-        items: bmRows.flatMap((bmRow) =>
-          bmRow.subRows.map((subRow) => ({
-            maBm: bmRow.maBm!,
-            maKhuVucs: subRow.maKhuVucs,
-            quyenChucNangs: subRow.quyenChucNangs,
-            khuVucPhus: bmRow.khuVucPhus,
-          }))
-        ),
+        items: expandedItems,
       });
 
       message.success(isEditing ? "Cập nhật quyền thành công" : "Thêm quyền thành công");
@@ -548,7 +662,7 @@ const PhanQuyenBieuMau = () => {
                             title="Xóa biểu mẫu này"
                           />
                         </div>
-                        {hasKhuVucPhu(bmRow.maBm) && (
+                        {hasKhuVucPhu(bmRow.maBm) && !useMergedScopeMode(bmRow.maBm) && (
                           <Select
                             mode="multiple"
                             style={{ width: "100%", marginTop: 4 }}
@@ -568,7 +682,11 @@ const PhanQuyenBieuMau = () => {
                         placeholder={bmRow.maBm ? "Chọn khu vực" : "Chọn biểu mẫu trước"}
                         disabled={!bmRow.maBm}
                         value={subRow.maKhuVucs}
-                        options={getScopeOptions(bmRow.maBm)}
+                        options={
+                          useMergedScopeMode(bmRow.maBm)
+                            ? getMergedScopeOptions(bmRow.maBm)
+                            : getScopeOptions(bmRow.maBm)
+                        }
                         onChange={(vals) => handleKhuVucChange(bmRow.key, subRow.key, vals)}
                       />
                     </td>

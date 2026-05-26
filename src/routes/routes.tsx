@@ -1074,7 +1074,9 @@ export const routes = [
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
-              <GiaoNhanThepLong_HRC1 />
+              <GiaoNhanThepLong_HRC1
+                maBmFilter={["HRC1_LoThoi", "HRC1_TinhLuyen"]}
+              />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1084,7 +1086,10 @@ export const routes = [
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
-              <GiaoNhanThepLong_HRC1 type="viecdentoi" />
+              <GiaoNhanThepLong_HRC1
+                type="viecdentoi"
+                maBmFilter={["HRC1_BBGN_ThepLong"]}
+              />
             </RequireRole>
           </RequireAuth>
         ),

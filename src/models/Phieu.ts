@@ -28,6 +28,7 @@ export interface SearchPhieuByUserRequest {
   denNgay?: string | null;
   ca?: number | null;
   scope?: number | null;
+  scopeFilters?: string[] | null;
   mayDuc?: number | null ;
   maBm?: string | null;
   maBmList?: string[] | null;

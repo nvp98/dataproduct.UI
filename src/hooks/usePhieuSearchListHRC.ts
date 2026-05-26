@@ -97,9 +97,9 @@ export const usePhieuSearchListHRC = ({
    * - Không có record nào cho BM đó → fallback trả tất cả (graceful).
    */
   const getAllowedScopeOptions = useCallback(
-    (maBm: string): Array<{ label: string; value: number }> => {
+    (maBm: string, customAllOptions?: Array<{ label: string; value: number }>): Array<{ label: string; value: number }> => {
       const bmDef = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
-      const allOptions = (bmDef?.scope ?? []).map((s) => ({
+      const allOptions = customAllOptions ?? (bmDef?.scope ?? []).map((s) => ({
         value: Number(s.maKhuVuc),
         label: s.tenKhuVuc,
       }));
@@ -127,6 +127,30 @@ export const usePhieuSearchListHRC = ({
 
       const allowed = new Set(bmRecords.map((r) => r.maKhuVuc));
       return allOptions.filter((opt) => allowed.has(String(opt.value)));
+    },
+    [userQuyenRecords, effectiveFixedFilters]
+  );
+
+  const getAllowedBmOptions = useCallback(
+    (bmOptions: Array<{ label: string; value: string }>): Array<{ label: string; value: string }> => {
+      const ctx = effectiveFixedFilters as Record<string, unknown>;
+      if (ctx.isThongKeUser === true || !userQuyenRecords) return bmOptions;
+
+      const loaiVung = Number(ctx.loaiVung ?? 1);
+      const relevantQuyens =
+        loaiVung === 2 ? new Set([2, 4]) :
+        loaiVung === 3 ? new Set([5]) :
+        new Set([1, 4]);
+
+      const accessibleBms = new Set(
+        userQuyenRecords
+          .filter((r) => r.quyenChucNang != null && relevantQuyens.has(Number(r.quyenChucNang)))
+          .map((r) => r.maBm)
+          .filter(Boolean)
+      );
+
+      if (accessibleBms.size === 0) return bmOptions;
+      return bmOptions.filter((opt) => accessibleBms.has(opt.value));
     },
     [userQuyenRecords, effectiveFixedFilters]
   );
@@ -244,6 +268,7 @@ export const usePhieuSearchListHRC = ({
     handleClearFilter,
     onPageChange,
     getAllowedScopeOptions,
+    getAllowedBmOptions,
     refetch: () => {
       if (currentFilter) {
         fetchData(currentFilter);

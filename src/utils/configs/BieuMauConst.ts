@@ -21,7 +21,9 @@ export const BM_CONFIG = {
     },
     HRC1: {
         HRC1_BB_Lothoi: 'HRC1_BB_Lothoi',
-        HRC1_BBGN_ThepLong: 'HRC1_BBGN_ThepLong',
+        HRC1_BBGN_ThepLong: 'HRC1_BBGN_ThepLong',   // phiếu máy đúc (scope = MayDuc.Id)
+        HRC1_LoThoi:    'HRC1_LoThoi',               // phiếu lò thổi (scope 1-5)
+        HRC1_TinhLuyen: 'HRC1_TinhLuyen',            // phiếu tinh luyện (scope 1-5)
         HRC1_BB_GiaoNhanPhoiNhapKho: 'HRC1_BB_GiaoNhanPhoiNhapKho',
         HRC1_BB_Sanluongphoi: 'HRC1_BB_Sanluongphoi',
     },
