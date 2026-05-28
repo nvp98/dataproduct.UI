@@ -15,6 +15,10 @@ export const PhieuApi = {
   putData: (id: string, data: Record<string, unknown>) =>
     apiService.put(`/api/Phieus/${id}`, data),
 
+  /// Update only table data without form status constraints (for users with chốt permission)
+  putTableDataOnly: (id: string, data: Record<string, unknown>) =>
+    apiService.put(`/api/Phieus/${id}/update-table-data`, data),
+
   deleteData: (id: string) => apiService.delete(`/api/Phieus/${id}`),
 
   changeStatus: (id: string, status: number, idUser?: number | null) =>

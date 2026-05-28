@@ -130,8 +130,12 @@ export const getAllowedBmList = (userPermissions: any[]): string[] => {
   return userPermissions.map((p) => p.maBm).filter((bm) => bm);
 };
 
-/** Giá trị `QuyenChucNang` = Xem (BE: QuyenChucNangEnum.XEM) */
-export const QUYEN_CHUC_NANG_XEM = 5;
+/** QuyenChucNang constants (from QuyenChucNangEnum in backend) */
+export const QUYEN_CHUC_NANG_XULY = 1; // Xử lý
+export const QUYEN_CHUC_NANG_PHEDUYET = 2; // Phê duyệt
+export const QUYEN_CHUC_NANG_CHOT = 3; // Chốt
+export const QUYEN_CHUC_NANG_XULY_VA_PHEDUYET = 4; // Xử lý + Phê duyệt
+export const QUYEN_CHUC_NANG_XEM = 5; // Xem
 
 /** Một dòng từ `bmQuyenXlList` sau login (api/TaiKhoan/login) */
 export type BmQuyenXlItem = {
@@ -176,6 +180,92 @@ export const getBmQuyenRowsForMa = (maBm: string): BmQuyenXlItem[] => {
   return getBmQuyenXlList().filter(
     (r) => normalizeMaBm(String(r.maBm ?? "")) === key
   );
+};
+
+/**
+ * Kiểm tra user có quyền chốt một BM cụ thể
+ * Admin luôn có quyền, non-admin cần kiểm tra trong bmQuyenXlList
+ * @param user User object
+ * @param maBm Mã BM cần kiểm tra quyền chốt
+ */
+export const canChotBm = (user: any, maBm: string): boolean => {
+  if (!user || !maBm) return false;
+
+  // Admin luôn có quyền chốt tất cả BM
+  if (isAdmin(user)) return true;
+
+  // Non-admin: kiểm tra trong danh sách quyền
+  const bmRows = getBmQuyenRowsForMa(maBm);
+  console.log("BM_QuyenXL rows for", maBm, bmRows);
+  
+  // Kiểm tra xem user có quyền CHOT (3) hoặc XULY_VA_PHEDUYET (4) không
+  return bmRows.some(
+    (row) =>
+      row.quyenChucNang === QUYEN_CHUC_NANG_CHOT 
+  );
+};
+
+/**
+ * Kiểm tra user có quyền xử lý một BM cụ thể
+ * @param user User object
+ * @param maBm Mã BM cần kiểm tra quyền xử lý
+ */
+export const canXulyBm = (user: any, maBm: string): boolean => {
+  if (!user || !maBm) return false;
+
+  // Admin luôn có quyền
+  if (isAdmin(user)) return true;
+
+  // Non-admin: kiểm tra quyền XULY (1) hoặc XULY_VA_PHEDUYET (4)
+  const bmRows = getBmQuyenRowsForMa(maBm);
+  return bmRows.some(
+    (row) =>
+      row.quyenChucNang === QUYEN_CHUC_NANG_XULY ||
+      row.quyenChucNang === QUYEN_CHUC_NANG_XULY_VA_PHEDUYET
+  );
+};
+
+/**
+ * Kiểm tra user có quyền phê duyệt một BM cụ thể
+ * @param user User object
+ * @param maBm Mã BM cần kiểm tra quyền phê duyệt
+ */
+export const canPheDuyetBm = (user: any, maBm: string): boolean => {
+  if (!user || !maBm) return false;
+
+  // Admin luôn có quyền
+  if (isAdmin(user)) return true;
+
+  // Non-admin: kiểm tra quyền PHEDUYET (2) hoặc XULY_VA_PHEDUYET (4)
+  const bmRows = getBmQuyenRowsForMa(maBm);
+  return bmRows.some(
+    (row) =>
+      row.quyenChucNang === QUYEN_CHUC_NANG_PHEDUYET ||
+      row.quyenChucNang === QUYEN_CHUC_NANG_XULY_VA_PHEDUYET
+  );
+};
+
+/**
+ * Lấy danh sách mã BM mà user có quyền chốt
+ * @param user User object
+ */
+export const getAllowedChotBmList = (user: any): string[] => {
+  if (!user) return [];
+
+  // Admin có quyền chốt tất cả BM (trả về rỗng vì admin check riêng)
+  if (isAdmin(user)) return [];
+
+  // Non-admin: lấy danh sách BM có quyền CHOT hoặc XULY_VA_PHEDUYET
+  const bmList = getBmQuyenXlList();
+  return bmList
+    .filter(
+      (row) =>
+        row.quyenChucNang === QUYEN_CHUC_NANG_CHOT ||
+        row.quyenChucNang === QUYEN_CHUC_NANG_XULY_VA_PHEDUYET
+    )
+    .map((row) => String(row.maBm ?? "").trim())
+    .filter((bm) => bm)
+    .filter((bm, idx, arr) => arr.indexOf(bm) === idx); // Unique
 };
 
 /**
