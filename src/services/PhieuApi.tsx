@@ -76,4 +76,9 @@ export const PhieuApi = {
     if (ca) params.ca = ca;
     return apiService.get("/api/Phieus/so-phieu", { params });
   },
+
+  getKipByDateCa: (ngayLamViec: string, ca: number) =>
+    apiService.get("/api/Kip/by-date-ca", {
+      params: { ngayLamViec, ca },
+    }),
 };

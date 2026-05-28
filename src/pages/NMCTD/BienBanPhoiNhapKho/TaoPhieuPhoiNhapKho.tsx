@@ -1060,13 +1060,17 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
       const ngayNhanPhoi = ngayNhanPhoiValue?.format
         ? ngayNhanPhoiValue.format("YYYY-MM-DD")
         : ngayNhanPhoiValue;
-
+      // API get CaKip
+      const caKip = await PhieuApi.getKipByDateCa(
+        ngayNhanPhoi,
+        Number(caNhanPhoiValue || 0),
+      );
       const payload: InsertPhoiNhapKhoRequest = {
         idPhieu: idphieu || "",
         soPhieu: soPhieu || "",
         ngaySX: ngayNhanPhoi,
         ca: Number(caNhanPhoiValue || 0),
-        kip: String(form.getFieldValue("kip") || ""),
+        kip: String((caKip as any)?.tenKip || ""), // chỉnh để lấy đúng Kip theo Tbl_Kip
         mayDuc: Number(mayDucValue || 0),
         nguoiTaoId: Number(getUserInfo()?.iD_TaiKhoan || 0),
         table1: chuyenThanhItems.map((item) => {
@@ -1081,7 +1085,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
             soPhieu: soPhieu || "",
             ngaySX: ngayNhanPhoi,
             ca: Number(caNhanPhoiValue || 0),
-            kip: String(form.getFieldValue("kip") || ""),
+            kip: String((caKip as any)?.tenKip || ""), // chỉnh để lấy đúng Kip theo Tbl_Kip
             mayDuc: Number(mayDucValue || 0),
             me: item.me,
             mac: item.mac,
@@ -1563,9 +1567,7 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
                   <Button
                     danger
                     disabled={
-                      isFormLocked ||
-                      nhanPhoiLoading ||
-                      selectedNhanPhoiRowKeys.length === 0
+                      nhanPhoiLoading || selectedNhanPhoiRowKeys.length === 0
                     }
                     onClick={handleThuHoiNhanPhoi}
                   >
