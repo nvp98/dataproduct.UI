@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Button, Card, Checkbox, Col, Divider, InputNumber,
+  AutoComplete, Button, Card, Checkbox, Col, Divider, InputNumber, Modal,
   Popconfirm, Row, Select, Space, Spin, Tag, TimePicker, Tooltip, Typography, Input, message, Empty,
 } from "antd";
 import { DeleteOutlined, SyncOutlined } from "@ant-design/icons";
@@ -14,19 +14,28 @@ import {
   type HRC1_PhieuDataVm,
   type HRC1_LoThoiUpdateRequest,
   type HRC1_TinhLuyenUpdateRequest,
+  type HRC1_TrungMeInfo,
 } from "../../../services/HRC1_BBGNApi";
 import MeThepTable from "./components/MeThepTable";
 import ChoNhanMePanel from "./components/ChoNhanMePanel";
 import { bmQuyenConfig } from "../../../utils/configs/bmQuyenConfig";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
+import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
+import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 
 // ── Helper hiển thị ───────────────────────────────────────────────────────────
 
 const _mayDucScopes = bmQuyenConfig.danhSachBieuMau
   .find((b) => b.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)?.scope ?? [];
 
-export const getScopeName = (maBm: string, scope: number, tenScope?: string | null): string => {
+export const getScopeName = (maBm: string, scope: number | null | undefined, tenScope?: string | null): string => {
   if (tenScope) return tenScope;
+  if (!scope) {
+    if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi)    return "Lò thổi";
+    if (maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen) return "Tinh luyện";
+    return maBm;
+  }
   if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi)    return `Lò thổi ${scope}`;
   if (maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen) return `Tinh luyện ${scope}`;
   if (maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)
@@ -56,6 +65,27 @@ const calcKlThepLong = (dichChuyen: string | null | undefined, kllf: number | nu
   return null;
 };
 
+// Ghi chú dùng chung cả 3 công đoạn — auto-save khi blur
+const GhiChuInput = ({ meId, value, locked }: { meId: number; value?: string | null; locked: boolean }) => {
+  const [local, setLocal] = useState(value ?? "");
+  useEffect(() => { setLocal(value ?? ""); }, [value]);
+  if (locked) return <>{value ?? ""}</>;
+  return (
+    <Input
+      size="small"
+      style={{ width: 85 }}
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={async () => {
+        const newVal = local.trim() || null;
+        if (newVal === (value ?? null)) return;
+        try { await HRC1Api.updateGhiChu(meId, newVal); }
+        catch { message.error("Lỗi lưu ghi chú"); setLocal(value ?? ""); }
+      }}
+    />
+  );
+};
+
 const getDichDisplay = (me: HRC1_MeThepVm): string => {
   if (me.dichChuyen === "tinh_luyen") return me.tlDichSo ? `TL ${me.tlDichSo}` : "Tinh luyện";
   if (me.dichChuyen === "len_thang")  return me.tenMayDucDich ?? (me.idMayDucDich ? `Máy ${me.idMayDucDich}` : "Lên thẳng");
@@ -70,7 +100,6 @@ const checkDucReady = (me: HRC1_MeThepVm): string[] => {
   if (me.kllfSauThep == null)                              missing.push("KL thùng LF sau khi ra thép");
   if (me.dichChuyen === "tinh_luyen" && me.klLan1 == null) missing.push("KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)");
   if (me.klLan2 == null)                                   missing.push("KL bì - Lần 2 (tấn)");
-  if (me.klLan3 == null)                                   missing.push("KL bì - Lần 3 (tấn)");
   if (me.klThepLong == null)                               missing.push("KL thép lỏng");
   if (me.dichChuyen === "tinh_luyen" && !me.tlDichSo)      missing.push("Đích TL");
   if (!me.idMayDucDich)                                    missing.push("Máy đúc");
@@ -82,12 +111,18 @@ const checkDucReady = (me: HRC1_MeThepVm): string[] => {
 export const LoThoiPanel = ({
   phieuData,
   readOnly,
+  loSo = null,
+  onLoSoChange = () => {},
+  allowedLoScopes = [],
   onReload,
   onDataUpdated,
   onExtraChange,
 }: {
   phieuData: HRC1_PhieuDataVm;
   readOnly?: boolean;
+  loSo?: number | null;
+  onLoSoChange?: (v: number | null) => void;
+  allowedLoScopes?: number[];
   onReload: () => Promise<void>;
   onDataUpdated?: (data: HRC1_PhieuDataVm) => void;
   onExtraChange?: (node: ReactNode) => void;
@@ -124,7 +159,12 @@ export const LoThoiPanel = ({
   const setDich = (meId: number, val: string | undefined) => {
     if (!val) return;
     if (val.startsWith("TL:")) {
-      setEdits((p) => ({ ...p, [meId]: { ...p[meId], dichChuyen: "tinh_luyen", tlDichSo: Number(val.slice(3)), idMayDucDich: null } }));
+      setEdits((p) => {
+        // Loại bỏ idMayDucDich khỏi edit để backend giữ nguyên giá trị tinh luyện đã chọn.
+        // Nếu trước đó là len_thang trong cùng session editing thì cũng không gửi lên — backend xử lý.
+        const { idMayDucDich: _removed, ...rest } = p[meId] ?? {};
+        return { ...p, [meId]: { ...rest, dichChuyen: "tinh_luyen", tlDichSo: Number(val.slice(3)) } };
+      });
     } else {
       setEdits((p) => ({ ...p, [meId]: { ...p[meId], dichChuyen: "len_thang", tlDichSo: null, idMayDucDich: Number(val.slice(3)) } }));
     }
@@ -133,9 +173,44 @@ export const LoThoiPanel = ({
   const handleSaveAll = async () => {
     const dirty = Object.entries(edits);
     if (dirty.length === 0) return;
+
+    // Validate: mẻ lên thẳng phải nhập đủ thungSo, thoiGian, kllfSauThep trước khi lưu
+    const saveErrors: string[] = [];
+    for (const [meIdStr, req] of dirty) {
+      const me = phieuData.danhSachMe.find((m) => m.id === Number(meIdStr));
+      const dich = ("dichChuyen" in req ? req.dichChuyen : me?.dichChuyen) ?? null;
+      if (dich === "len_thang") {
+        const thungSo     = ("thungSo"      in req ? req.thungSo      : me?.thungSo)      ?? null;
+        const thoiGian    = ("thoiGian"     in req ? req.thoiGian     : me?.thoiGian)     ?? null;
+        const kllfSauThep = ("kllfSauThep"  in req ? req.kllfSauThep  : me?.kllfSauThep)  ?? null;
+        const missing: string[] = [];
+        if (!thungSo)            missing.push("Thùng số");
+        if (!thoiGian)           missing.push("Thời gian");
+        if (kllfSauThep == null) missing.push("KL thùng LF sau khi ra thép");
+        if (missing.length > 0)
+          saveErrors.push(`Mẻ ${me?.maMe ?? meIdStr}: ${missing.join(", ")}`);
+      }
+    }
+    if (saveErrors.length > 0) {
+      message.error(`Mẻ lên thẳng cần nhập đủ:\n${saveErrors.join("\n")}`);
+      return;
+    }
+
     setSaving(true);
     try {
-      await Promise.all(dirty.map(([meIdStr, req]) => HRC1Api.updateLoThoi(Number(meIdStr), req)));
+      await Promise.all(dirty.map(([meIdStr, req]) => {
+        const meId = Number(meIdStr);
+        const me = phieuData.danhSachMe.find((m) => m.id === meId);
+        const dich = ("dichChuyen" in req ? req.dichChuyen : me?.dichChuyen) ?? null;
+        let finalReq: Partial<HRC1_LoThoiUpdateRequest> = { ...req };
+        if (dich === "len_thang") {
+          const kllf = ("kllfSauThep" in req ? req.kllfSauThep : me?.kllfSauThep) ?? undefined;
+          const l2   = ("klLan2"      in req ? req.klLan2      : me?.klLan2)      ?? undefined;
+          const computed = calcKlThepLong(dich, kllf, me?.klLan1 ?? undefined, l2);
+          if (computed != null) finalReq = { ...finalReq, klThepLong: computed };
+        }
+        return HRC1Api.updateLoThoi(meId, finalReq);
+      }));
       message.success(`Đã lưu ${dirty.length} mẻ`);
       setEdits({});
       await onReload();
@@ -162,10 +237,24 @@ export const LoThoiPanel = ({
   const saveRef = useRef(handleSaveAll);
   saveRef.current = handleSaveAll;
 
+  const loScopeOpts = useMemo(() =>
+    allowedLoScopes.map((n) => ({ label: `Lò thổi ${n}`, value: n })),
+    [allowedLoScopes]
+  );
+
   useEffect(() => {
     if (!onExtraChange || readOnly) { onExtraChange?.(null); return; }
     onExtraChange(
       <Space>
+        <Select
+          size="small"
+          style={{ width: 120 }}
+          placeholder="Chọn lò thổi..."
+          value={loSo ?? undefined}
+          options={loScopeOpts}
+          onChange={(v) => onLoSoChange(v ?? null)}
+          allowClear
+        />
         {ghostCount > 0 && (
           <Typography.Text type="warning" style={{ fontSize: 13 }}>
             {ghostCount} mẻ ghost
@@ -177,7 +266,7 @@ export const LoThoiPanel = ({
         </Button>
       </Space>
     );
-  }, [onExtraChange, readOnly, saving, dirtyCount, ghostCount]);
+  }, [onExtraChange, readOnly, saving, dirtyCount, ghostCount, loSo, loScopeOpts, onLoSoChange]);
 
   const get = (me: HRC1_MeThepVm, f: keyof HRC1_MeThepVm) => {
     const e = edits[me.id];
@@ -199,53 +288,102 @@ export const LoThoiPanel = ({
     },
     {
       title: "Thùng số", key: "thungSo", width: 45,
-      render: (_, me) =>
-        lk(me) ? (me.thungSo ?? "") : (
+      render: (_, me) => {
+        const locked = lk(me);
+        return (
           <Input size="small" style={{ width: 40 }}
-            value={get(me, "thungSo") ?? ""}
-            onChange={(e) => set(me.id, "thungSo", e.target.value || null)} />
-        ),
+            value={locked ? (me.thungSo ?? "") : (get(me, "thungSo") ?? "")}
+            disabled={locked}
+            onChange={locked ? undefined : (e) => set(me.id, "thungSo", e.target.value || null)} />
+        );
+      },
     },
-    { title: "Thời gian", dataIndex: "thoiGian", width: 65, render: fmtTime },
+    {
+      title: "Thời gian", key: "thoiGian", width: 75,
+      render: (_, me) => {
+        const effectiveDich = (edits[me.id] && "dichChuyen" in edits[me.id]) ? edits[me.id].dichChuyen : me.dichChuyen;
+        const disabled = lk(me) || effectiveDich !== "len_thang";
+        const raw = (disabled ? me.thoiGian : get(me, "thoiGian")) as string | null;
+        const timeVal = raw ? dayjs(raw, "HH:mm") : null;
+        return (
+          <TimePicker
+            size="small" format="HH:mm" style={{ width: 70 }}
+            value={timeVal?.isValid() ? timeVal : null}
+            disabled={disabled}
+            onChange={disabled ? undefined : (t) => set(me.id, "thoiGian", t ? t.format("HH:mm") : null)}
+          />
+        );
+      },
+    },
     {
       title: "KL thùng LF sau khi ra thép", key: "kllfSauThep", width: 75,
-      render: (_, me) =>
-        lk(me) ? (me.kllfSauThep ?? "") : (
+      render: (_, me) => {
+        const locked = lk(me);
+        return (
           <InputNumber size="small" style={{ width: 65 }}
-            value={get(me, "kllfSauThep")} onChange={(v) => set(me.id, "kllfSauThep", v)} />
-        ),
+            value={locked ? me.kllfSauThep : get(me, "kllfSauThep")}
+            disabled={locked}
+            onChange={locked ? undefined : (v) => set(me.id, "kllfSauThep", v)} />
+        );
+      },
     },
-    { title: "KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)", dataIndex: "klLan1",  width: 75, render: (v) => v ?? "" },
-    { title: "KL bì - Lần 2 (tấn)", dataIndex: "klLan2",  width: 75, render: (v) => v ?? "" },
+    { title: "KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)", dataIndex: "klLan1", width: 75, render: (v) => <InputNumber size="small" style={{ width: 65 }} value={v ?? undefined} disabled /> },
+    {
+      title: "KL bì - Lần 2 (tấn)", key: "klLan2", width: 75,
+      render: (_, me) => {
+        const effectiveDich = (edits[me.id] && "dichChuyen" in edits[me.id]) ? edits[me.id].dichChuyen : me.dichChuyen;
+        const disabled = lk(me) || effectiveDich !== "len_thang";
+        return (
+          <InputNumber size="small" style={{ width: 65 }}
+            value={disabled ? me.klLan2 : (get(me, "klLan2") as number)}
+            disabled={disabled}
+            onChange={disabled ? undefined : (v) => set(me.id, "klLan2", v)} />
+        );
+      },
+    },
     {
       title: "KL bì - Lần 3 (tấn)", key: "klLan3", width: 75,
-      render: (_, me) =>
-        lk(me) ? (me.klLan3 ?? "") : (
+      render: (_, me) => {
+        const klLan3Locked = readOnly || !!me.isChot;
+        return (
           <InputNumber size="small" style={{ width: 65 }}
-            value={get(me, "klLan3")} onChange={(v) => set(me.id, "klLan3", v)} />
-        ),
+            value={klLan3Locked ? me.klLan3 : get(me, "klLan3")}
+            disabled={klLan3Locked}
+            onChange={klLan3Locked ? undefined : (v) => set(me.id, "klLan3", v)} />
+        );
+      },
     },
     {
       title: "KL thép lỏng", key: "klThepLong", width: 80,
       render: (_, me) => {
-        const dich = (edits[me.id] && "dichChuyen" in edits[me.id]) ? edits[me.id].dichChuyen : me.dichChuyen;
-        const kllf = (edits[me.id] && "kllfSauThep" in edits[me.id]) ? edits[me.id].kllfSauThep as number : me.kllfSauThep;
-        const l1 = me.klLan1;
-        const l2 = me.klLan2;
+        const dich = (edits[me.id] && "dichChuyen"   in edits[me.id]) ? edits[me.id].dichChuyen   : me.dichChuyen;
+        const kllf = (edits[me.id] && "kllfSauThep"  in edits[me.id]) ? edits[me.id].kllfSauThep  as number : me.kllfSauThep;
+        const l1   = me.klLan1;
+        const l2   = (edits[me.id] && "klLan2"       in edits[me.id]) ? edits[me.id].klLan2       as number : me.klLan2;
         const computed = calcKlThepLong(dich, kllf, l1, l2);
-        return computed ?? me.klThepLong ?? "";
+        return <InputNumber size="small" style={{ width: 73 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
-    { title: "Ghi chú", dataIndex: "ghiChuLo", width: 90, render: (v) => v ?? "" },
+    {
+      title: "Ghi chú", key: "ghiChuLo", width: 95,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={isLocked(me)} />,
+    },
     {
       title: "Tinh luyện/Lên thẳng", key: "dichChuyen", width: 125,
       render: (_, me) => {
-        if (lk(me)) return getDichDisplay(me);
+        if (lk(me)) {
+          return (
+            <Select size="small" style={{ width: 125 }}
+              value={getDichEncoded(me) ?? undefined}
+              options={dichChuyenOpts}
+              disabled />
+          );
+        }
         const optsForMe = (me.trangThaiTL ?? 0) >= 1
           ? dichChuyenOpts.slice(0, 1)   // TL đã nhận → chỉ hiện nhóm Tinh luyện (tham khảo)
           : dichChuyenOpts;
         return (
-          <Select size="small" style={{ width: 120 }} showSearch optionFilterProp="label"
+          <Select size="small" style={{ width: 125 }} showSearch optionFilterProp="label"
             value={getDichEncoded(me) ?? undefined}
             options={optsForMe}
             placeholder="Chọn đích..."
@@ -261,9 +399,9 @@ export const LoThoiPanel = ({
           onChange={(e) => set(me.id, "isThuNghiem", e.target.checked)} />
       ),
     },
-    { title: "Máy đúc",   dataIndex: "tenMayDucDich", width: 90, render: (v) => v ?? "" },
-    { title: "Phân loại", dataIndex: "phanLoai",      width: 80,  render: (v) => v ?? "" },
-    { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 90, render: (v) => v ?? "" },
+    { title: "Máy đúc",   dataIndex: "tenMayDucDich", width: 90, render: (v) => <Input size="small" style={{ width: 84 }} value={v ?? ""} disabled /> },
+    { title: "Phân loại", dataIndex: "phanLoai",      width: 80, render: (v) => <Input size="small" style={{ width: 74 }} value={v ?? ""} disabled /> },
+    { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 90, render: (v) => <Input size="small" style={{ width: 84 }} value={v ?? ""} disabled /> },
     {
       title: "TL nhận", key: "soTinhLuyenNhan", width: 70,
       render: (_, me) => me.soTinhLuyenNhan ? (
@@ -296,6 +434,10 @@ export const LoThoiPanel = ({
   const isLocked = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiLo ?? 0) >= 1 || !!me.isGhost;
   const columns = buildColumns(isLocked);
 
+  if (!readOnly && !loSo) return (
+    <Empty description="Chọn lò thổi để xem và nhập dữ liệu" style={{ padding: "40px 0" }} />
+  );
+
   return (
     <MeThepTable
       columns={columns}
@@ -313,32 +455,36 @@ export const LoThoiPanel = ({
 export const TinhLuyenPanel = ({
   phieuData,
   readOnly,
+  tlSo = null,
+  onTlSoChange = () => {},
+  allowedTLScopes = [],
   onReload,
   onExtraChange,
 }: {
   phieuData: HRC1_PhieuDataVm;
   readOnly?: boolean;
+  tlSo?: number | null;
+  onTlSoChange?: (v: number | null) => void;
+  allowedTLScopes?: number[];
   onReload: () => Promise<void>;
   onExtraChange?: (node: ReactNode) => void;
 }) => {
   const [edits, setEdits] = useState<Record<number, Partial<HRC1_TinhLuyenUpdateRequest>>>({});
   const [saving, setSaving] = useState(false);
-  const [themDongMeId, setThemDongMeId] = useState<number | null>(null);
-  const [addingDong, setAddingDong] = useState(false);
   const [selectedHuyNhan, setSelectedHuyNhan] = useState<number[]>([]);
   const [huyNhanBusy, setHuyNhanBusy] = useState(false);
   const [choNhanRefreshKey, setChoNhanRefreshKey] = useState(0);
 
+  // Thêm mẻ tay
+  const [showThemMeTay, setShowThemMeTay] = useState(false);
+  const [themMeTaySearch, setThemMeTaySearch] = useState("");
+  const [themMeTayMaMe, setThemMeTayMaMe] = useState<string | null>(null);
+  const [themMeTayOptions, setThemMeTayOptions] = useState<{ value: string; label: string }[]>([]);
+  const [themMeTayBusy, setThemMeTayBusy] = useState(false);
+  const [xoaMeTayBusy, setXoaMeTayBusy] = useState<Set<number>>(new Set());
+
   const dirtyCount = Object.keys(edits).length;
   const mayDucOpts = phieuData.danhSachMayDuc.map((m) => ({ label: m.tenMayDuc, value: m.id }));
-
-  // Mẻ đủ điều kiện thêm dòng lần 2+ (đã được nhận, unique)
-  const eligibleThemDong = useMemo(() => {
-    const seen = new Set<number>();
-    return phieuData.danhSachMe
-      .filter((m) => (m.trangThaiTL ?? 0) >= 1 && !seen.has(m.id) && !!seen.add(m.id))
-      .map((m) => ({ label: m.maMe ?? String(m.id), value: m.id }));
-  }, [phieuData.danhSachMe]);
 
   const get = (me: HRC1_MeThepVm, f: keyof HRC1_TinhLuyenUpdateRequest) => {
     const e = edits[me.mePhanCongId!];
@@ -377,27 +523,12 @@ export const TinhLuyenPanel = ({
     }
   };
 
-  const handleThemDong = async () => {
-    if (!themDongMeId) return;
-    setAddingDong(true);
-    try {
-      await HRC1Api.themDong(themDongMeId, phieuData.idPhieu);
-      message.success("Đã thêm dòng TL");
-      setThemDongMeId(null);
-      await onReload();
-    } catch (e: any) {
-      message.error(e?.message ?? "Lỗi thêm dòng");
-    } finally {
-      setAddingDong(false);
-    }
-  };
-
   const handleHuyNhanMe = async () => {
     if (selectedHuyNhan.length === 0) return;
     setHuyNhanBusy(true);
     try {
       await Promise.all(
-        selectedHuyNhan.map((meId) => HRC1Api.huyNhanMe(meId, String(phieuData.idPhieu)))
+        selectedHuyNhan.map((meId) => HRC1Api.huyNhanMe(meId, String(phieuData.idPhieu), tlSo))
       );
       message.success(`Đã hủy nhận ${selectedHuyNhan.length} mẻ`);
       setSelectedHuyNhan([]);
@@ -410,12 +541,90 @@ export const TinhLuyenPanel = ({
     }
   };
 
+  const resetThemMeTay = () => {
+    setShowThemMeTay(false);
+    setThemMeTaySearch("");
+    setThemMeTayMaMe(null);
+    setThemMeTayOptions([]);
+  };
+
+  const handleSearchMeTay = async (q: string) => {
+    setThemMeTaySearch(q);
+    setThemMeTayMaMe(null);
+    if (q.trim().length < 1) { setThemMeTayOptions([]); return; }
+    try {
+      const results = await HRC1Api.searchMeThep(q.trim());
+      setThemMeTayOptions(results.map((m) => ({
+        value: m.maMe,
+        label: m.thungSo ? `${m.maMe} — ${m.thungSo}` : m.maMe,
+      })));
+    } catch { /* ignore search errors */ }
+  };
+
+  const handleThemMeTay = async () => {
+    if (!themMeTayMaMe) return;
+    const maMe = themMeTayMaMe;
+    setThemMeTayBusy(true);
+    try {
+      const result = await HRC1Api.themMeTay({ maMe, idPhieu: String(phieuData.idPhieu), xacNhanTrung: false, scopePhieu: tlSo });
+      if (result.daThemVao) {
+        message.success("Đã thêm dòng mẻ");
+        resetThemMeTay();
+        await onReload();
+        return;
+      }
+      if (result.trungVoi.length > 0) {
+        Modal.confirm({
+          title: `Mẻ "${maMe}" đã được nhận ở nơi khác`,
+          content: (
+            <div>
+              <p>Mẻ này đã được nhận tại:</p>
+              <ul style={{ paddingLeft: 20 }}>
+                {result.trungVoi.map((t: HRC1_TrungMeInfo, i: number) => (
+                  <li key={i}><b>{t.tenTinhLuyen}</b> — Phiếu {t.soPhieu}</li>
+                ))}
+              </ul>
+              <p>Tiếp tục thêm và đánh dấu trùng?</p>
+            </div>
+          ),
+          okText: "Xác nhận thêm",
+          okButtonProps: { danger: true },
+          cancelText: "Hủy",
+          onOk: async () => {
+            await HRC1Api.themMeTay({ maMe, idPhieu: String(phieuData.idPhieu), xacNhanTrung: true, scopePhieu: tlSo });
+            message.success("Đã thêm mẻ (đã đánh dấu trùng)");
+            resetThemMeTay();
+            await onReload();
+          },
+        });
+      }
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi thêm mẻ");
+    } finally {
+      setThemMeTayBusy(false);
+    }
+  };
+
+  const handleXoaMeTay = async (mePhanCongId: number) => {
+    setXoaMeTayBusy((prev) => new Set(prev).add(mePhanCongId));
+    try {
+      await HRC1Api.xoaMeTay(mePhanCongId);
+      message.success("Đã xóa dòng mẻ");
+      await onReload();
+      setChoNhanRefreshKey((k) => k + 1);
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi xóa mẻ");
+    } finally {
+      setXoaMeTayBusy((prev) => { const s = new Set(prev); s.delete(mePhanCongId); return s; });
+    }
+  };
+
   const isLenThang = (me: HRC1_MeThepVm) => me.dichChuyen === "len_thang";
   const isLocked   = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiDuc ?? 0) >= 1;
 
-  // Mẻ đủ điều kiện hủy nhận: đã nhận, đúc chưa XN, chỉ lấy dòng đầu (thuTuTL==null)
+  // Mẻ đủ điều kiện hủy nhận: đã nhận tự động (không phải thêm tay), đúc chưa XN, dòng đầu
   const eligibleHuyNhan = useMemo(() => phieuData.danhSachMe.filter(
-    (m) => m.thuTuTL == null && !m.isChot && (m.trangThaiTL ?? 0) >= 1 && (m.trangThaiDuc ?? 0) < 1
+    (m) => m.thuTuTL == null && !m.isChot && !m.isManualTL && (m.trangThaiTL ?? 0) >= 1 && (m.trangThaiDuc ?? 0) < 1
   ), [phieuData.danhSachMe]);
 
   const saveRef2 = useRef(handleSaveAll);
@@ -423,10 +632,24 @@ export const TinhLuyenPanel = ({
   const huyNhanRef = useRef(handleHuyNhanMe);
   huyNhanRef.current = handleHuyNhanMe;
 
+  const tlScopeOpts = useMemo(() =>
+    allowedTLScopes.map((n) => ({ label: `Tinh luyện ${n}`, value: n })),
+    [allowedTLScopes]
+  );
+
   useEffect(() => {
     if (!onExtraChange || readOnly) { onExtraChange?.(null); return; }
     onExtraChange(
       <Space>
+        <Select
+          size="small"
+          style={{ width: 130 }}
+          placeholder="Chọn tinh luyện..."
+          value={tlSo ?? undefined}
+          options={tlScopeOpts}
+          onChange={(v) => onTlSoChange(v ?? null)}
+          allowClear
+        />
         <Button type="primary" loading={saving} disabled={dirtyCount === 0}
           onClick={() => saveRef2.current()}>
           Lưu{dirtyCount > 0 ? ` (${dirtyCount} dòng)` : ""}
@@ -444,7 +667,7 @@ export const TinhLuyenPanel = ({
         )}
       </Space>
     );
-  }, [onExtraChange, readOnly, saving, dirtyCount, huyNhanBusy, selectedHuyNhan.length, eligibleHuyNhan.length]);
+  }, [onExtraChange, readOnly, saving, dirtyCount, huyNhanBusy, selectedHuyNhan.length, eligibleHuyNhan.length, tlSo, tlScopeOpts, onTlSoChange]);
 
   // Cột bảng TL chính — toàn bộ cột, TL nhập thoiGian/klLan1/klLan2/idMayDucDich
   const mainCols: TableColumnsType<HRC1_MeThepVm> = [
@@ -458,7 +681,7 @@ export const TinhLuyenPanel = ({
       ),
       key: "chkHuyNhan", width: 40, fixed: "left",
       render: (_, me) => {
-        if (readOnly || me.isChot || me.thuTuTL != null) return null;
+        if (readOnly || me.isChot || me.thuTuTL != null || me.isManualTL) return null;
         const eligible = (me.trangThaiTL ?? 0) >= 1 && (me.trangThaiDuc ?? 0) < 1;
         if (!eligible) return null;
         return (
@@ -471,76 +694,112 @@ export const TinhLuyenPanel = ({
     },
     { title: "STT",        key: "stt",     width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
     { title: "Mẻ thổi",   dataIndex: "maMe",    width: 90, fixed: "left", render: (v) => v ?? "" },
-    { title: "Thùng số",  dataIndex: "thungSo", width: 40, render: (v) => v ?? "" },
+    { title: "Thùng số",  dataIndex: "thungSo", width: 40, render: (v) => <Input size="small" style={{ width: 34 }} value={v ?? ""} disabled /> },
     {
       title: "Thời gian", key: "thoiGian", width: 75,
       render: (_, me) => {
-        if (isLocked(me)) return fmtTime(me.thoiGian);
-        const raw = get(me, "thoiGian") as string | null;
+        const locked = isLocked(me);
+        const raw = (locked ? me.thoiGian : get(me, "thoiGian")) as string | null;
         const timeVal = raw ? dayjs(raw, "HH:mm") : null;
         return (
           <TimePicker
             size="small" format="HH:mm" style={{ width: 70 }}
             value={timeVal?.isValid() ? timeVal : null}
-            onChange={(t) => set(me.mePhanCongId!, "thoiGian", t ? t.format("HH:mm") : null)}
+            disabled={locked}
+            onChange={locked ? undefined : (t) => set(me.mePhanCongId!, "thoiGian", t ? t.format("HH:mm") : null)}
           />
         );
       },
     },
-    { title: "KL thùng LF sau khi ra thép",   dataIndex: "kllfSauThep", width: 70, render: (v) => v ?? "" },
+    { title: "KL thùng LF sau khi ra thép",   dataIndex: "kllfSauThep", width: 70, render: (v) => <InputNumber size="small" style={{ width: 64 }} value={v ?? undefined} disabled /> },
     {
       title: "KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)", key: "klLan1", width: 75,
       render: (_, me) => {
-        if (isLocked(me) || isLenThang(me)) return me.klLan1 ?? "";
+        const disabled = isLocked(me) || isLenThang(me);
         return (
-          <InputNumber size="small" style={{ width: 68 }} 
-            value={get(me, "klLan1") as number}
-            onChange={(v) => set(me.mePhanCongId!, "klLan1", v)} />
+          <InputNumber size="small" style={{ width: 68 }}
+            value={disabled ? me.klLan1 : (get(me, "klLan1") as number)}
+            disabled={disabled}
+            onChange={disabled ? undefined : (v) => set(me.mePhanCongId!, "klLan1", v)} />
         );
       },
     },
     {
       title: "KL bì - Lần 2 (tấn)", key: "klLan2", width: 75,
-      render: (_, me) =>
-        isLocked(me) ? (me.klLan2 ?? "") : (
+      render: (_, me) => {
+        const locked = isLocked(me);
+        return (
           <InputNumber size="small" style={{ width: 68 }}
-            value={get(me, "klLan2") as number}
-            onChange={(v) => set(me.mePhanCongId!, "klLan2", v)} />
-        ),
+            value={locked ? me.klLan2 : (get(me, "klLan2") as number)}
+            disabled={locked}
+            onChange={locked ? undefined : (v) => set(me.mePhanCongId!, "klLan2", v)} />
+        );
+      },
     },
-    { title: "KL bì - Lần 3 (tấn)",  dataIndex: "klLan3", width: 70, render: (v) => v ?? "" },
+    { title: "KL bì - Lần 3 (tấn)",  dataIndex: "klLan3", width: 70, render: (v) => <InputNumber size="small" style={{ width: 64 }} value={v ?? undefined} disabled /> },
     {
       title: "KL thép lỏng", key: "klThepLong", width: 80,
       render: (_, me) => {
         const l1 = (edits[me.mePhanCongId!] && "klLan1" in edits[me.mePhanCongId!]) ? edits[me.mePhanCongId!].klLan1 as number : me.klLan1;
         const l2 = (edits[me.mePhanCongId!] && "klLan2" in edits[me.mePhanCongId!]) ? edits[me.mePhanCongId!].klLan2 as number : me.klLan2;
         const computed = calcKlThepLong(me.dichChuyen, me.kllfSauThep, l1, l2);
-        return computed ?? me.klThepLong ?? "";
+        return <InputNumber size="small" style={{ width: 73 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
-    { title: "Ghi chú",   dataIndex: "ghiChuLo",   width: 80, render: (v) => v ?? "" },
-    { title: "Tinh luyện/Lên thẳng", key: "dichDisp",         width: 75, render: (_, me) => getDichDisplay(me) },
-    { title: "Thử nghiệm", dataIndex: "isThuNghiem", width: 44,  render: (v) => v ? "✓" : "" },
+    {
+      title: "Ghi chú", key: "ghiChuLo", width: 80,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={readOnly || !!me.isChot} />,
+    },
+    { title: "Tinh luyện/Lên thẳng", key: "dichDisp", width: 75, render: (_, me) => <Input size="small" style={{ width: 69 }} value={getDichDisplay(me)} disabled /> },
+    { title: "Thử nghiệm", dataIndex: "isThuNghiem", width: 44, render: (v) => <Checkbox checked={!!v} disabled /> },
     {
       title: "Máy đúc", key: "idMayDucDich", width: 110,
       render: (_, me) => {
-        if (isLocked(me) || isLenThang(me)) return me.tenMayDucDich ?? "";
+        const disabled = isLocked(me) || isLenThang(me);
         return (
           <Select size="small" style={{ width: 106 }} showSearch optionFilterProp="label"
-            value={(get(me, "idMayDucDich") as number) ?? undefined}
-            options={mayDucOpts} allowClear
-            onChange={(v) => set(me.mePhanCongId!, "idMayDucDich", v ?? null)} />
+            value={disabled ? (me.idMayDucDich ?? undefined) : ((get(me, "idMayDucDich") as number) ?? undefined)}
+            options={mayDucOpts}
+            allowClear={!disabled}
+            disabled={disabled}
+            onChange={disabled ? undefined : (v) => set(me.mePhanCongId!, "idMayDucDich", v ?? null)} />
         );
       },
     },
-    { title: "Phân loại", dataIndex: "phanLoai",     width: 70,  render: (v) => v ?? "" },
-    { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 80, render: (v) => v ?? "" },
+    { title: "Phân loại", dataIndex: "phanLoai",     width: 70, render: (v) => <Input size="small" style={{ width: 64 }} value={v ?? ""} disabled /> },
+    { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 80, render: (v) => <Input size="small" style={{ width: 74 }} value={v ?? ""} disabled /> },
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 150, render: (v) => v ?? "" },
     {
-      title: "Tình trạng", key: "tinhTrang", width: 100, fixed: "right",
-      render: (_, me) => tinhTrangTag(me.trangThaiDuc, me.isChot),
+      title: "Tình trạng", key: "tinhTrang", width: 150, fixed: "right",
+      render: (_, me) => (
+        <Space size={4}>
+          {tinhTrangTag(me.trangThaiDuc, me.isChot)}
+          {me.isTrungMeThoi && <Tag color="orange" style={{ fontSize: 11 }}>Trùng</Tag>}
+        </Space>
+      ),
+    },
+    {
+      title: "", key: "xoaTay", width: 36, fixed: "right",
+      render: (_, me) => {
+        if (readOnly || !me.isManualTL) return null;
+        return (
+          <Popconfirm
+            title="Xóa dòng mẻ thêm tay này?"
+            okText="Xóa" okButtonProps={{ danger: true }}
+            cancelText="Không"
+            onConfirm={() => handleXoaMeTay(me.mePhanCongId!)}>
+            <Button
+              size="small" type="text" danger icon={<DeleteOutlined />}
+              loading={xoaMeTayBusy.has(me.mePhanCongId ?? -1)} />
+          </Popconfirm>
+        );
+      },
     },
   ];
+
+  if (!readOnly && !tlSo) return (
+    <Empty description="Chọn tinh luyện để xem và nhận mẻ" style={{ padding: "40px 0" }} />
+  );
 
   return (
     <Row gutter={16} align="top" style={{ flexWrap: "nowrap" }}>
@@ -551,6 +810,9 @@ export const TinhLuyenPanel = ({
           readOnly={readOnly}
           onNhanSuccess={onReload}
           refreshTrigger={choNhanRefreshKey}
+          scopePhieu={tlSo}
+          ngayPhieu={phieuData.ngaySX}
+          caPhieu={phieuData.ca}
         />
       </Col>
 
@@ -560,23 +822,34 @@ export const TinhLuyenPanel = ({
           columns={mainCols}
           dataSource={phieuData.danhSachMe}
           rowKey={(r) => `${r.id}-${r.mePhanCongId}`}
-          scrollX={1430}
+          scrollX={1466}
         />
 
-        {!readOnly && eligibleThemDong.length > 0 && (
-          <Space style={{ marginTop: 12 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>Thêm dòng TL lần 2+:</Typography.Text>
-            <Select
-              size="small" style={{ width: 140 }} showSearch optionFilterProp="label"
-              placeholder="Chọn mẻ..." value={themDongMeId ?? undefined}
-              options={eligibleThemDong}
-              onChange={(v) => setThemDongMeId(v)} />
-            <Popconfirm
-              title="Thêm dòng TL lần 2+ cho mẻ đã chọn?"
-              disabled={!themDongMeId}
-              onConfirm={handleThemDong}>
-              <Button size="small" loading={addingDong} disabled={!themDongMeId}>+ Thêm dòng</Button>
-            </Popconfirm>
+        {!readOnly && (
+          <Space style={{ marginTop: 8 }}>
+            {!showThemMeTay ? (
+              <Button size="small" onClick={() => setShowThemMeTay(true)}>+ Thêm dòng mẻ</Button>
+            ) : (
+              <>
+                <AutoComplete
+                  size="small"
+                  style={{ width: 200 }}
+                  placeholder="Nhập mã mẻ để tìm..."
+                  value={themMeTaySearch}
+                  options={themMeTayOptions}
+                  onSearch={handleSearchMeTay}
+                  onSelect={(val) => { setThemMeTayMaMe(val); setThemMeTaySearch(val); }}
+                />
+                <Button
+                  size="small" type="primary"
+                  loading={themMeTayBusy}
+                  disabled={!themMeTayMaMe}
+                  onClick={handleThemMeTay}>
+                  Thêm
+                </Button>
+                <Button size="small" onClick={resetThemMeTay}>Hủy</Button>
+              </>
+            )}
           </Space>
         )}
       </Col>
@@ -591,49 +864,157 @@ export const DucPanel = ({
   readOnly,
   onReload,
   onExtraChange,
+  canXacNhan = true,
+  canChot = true,
 }: {
   phieuData: HRC1_PhieuDataVm;
   readOnly?: boolean;
   onReload: () => Promise<void>;
   onExtraChange?: (node: ReactNode) => void;
+  canXacNhan?: boolean;
+  canChot?: boolean;
 }) => {
   const [selected, setSelected] = useState<number[]>([]);
 
-  const batchAction = useCallback(async (fn: () => Promise<void>) => {
+  const batchAction = useCallback(async (fn: () => Promise<unknown>) => {
     if (selected.length === 0) { message.warning("Chưa chọn mẻ nào"); return; }
     try { await fn(); setSelected([]); await onReload(); }
     catch (e: any) { message.error(e?.message ?? "Lỗi thao tác"); }
   }, [selected, onReload]);
 
-  const eligibleMes = useMemo(
-    () => phieuData.danhSachMe.filter((m) => !m.isChot && checkDucReady(m).length === 0),
-    [phieuData.danhSachMe]
-  );
+  // vùng 4 (chốt only): chọn mẻ đã xác nhận (trangThaiDuc >= 1), kể cả đã chốt (cho hủy chốt)
+  // vùng 3 (xác nhận only): chọn mẻ chưa chốt mà đủ điều kiện xác nhận hoặc đã xác nhận
+  // cả hai: giữ logic cũ
+  const eligibleMes = useMemo(() => {
+    const mes = phieuData.danhSachMe;
+    if (canChot && !canXacNhan)
+      return mes.filter((m) => (m.trangThaiDuc ?? 0) >= 1);
+    if (canXacNhan && !canChot)
+      return mes.filter((m) => !m.isChot && (checkDucReady(m).length === 0 || (m.trangThaiDuc ?? 0) >= 1));
+    return mes.filter((m) => !m.isChot && checkDucReady(m).length === 0);
+  }, [phieuData.danhSachMe, canXacNhan, canChot]);
 
   const batchRef = useRef(batchAction);
   batchRef.current = batchAction;
+
+  const idMayDuc = phieuData.scope ?? 0;
 
   useEffect(() => {
     if (!onExtraChange || readOnly) { onExtraChange?.(null); return; }
     onExtraChange(
       <Space>
-        <Popconfirm title={`Xác nhận ${selected.length} mẻ?`}
-          disabled={selected.length === 0}
-          onConfirm={() => batchRef.current(() => HRC1Api.xacNhanDuc(selected).then(() => message.success("Đã xác nhận")))}>
-          <Button type="primary" disabled={selected.length === 0}>
-            Xác nhận ({selected.length})
-          </Button>
-        </Popconfirm>
-        <Popconfirm title={`Bỏ xác nhận ${selected.length} mẻ?`}
-          disabled={selected.length === 0}
-          onConfirm={() => batchRef.current(() => HRC1Api.boXacNhanDuc(selected).then(() => message.success("Đã bỏ XN")))}>
-          <Button danger disabled={selected.length === 0}>
-            Bỏ xác nhận ({selected.length})
-          </Button>
-        </Popconfirm>
+        {canXacNhan && (
+          <>
+            {/* <Popconfirm title={`Xác nhận ${selected.length} mẻ?`}
+              disabled={selected.length === 0}
+              onConfirm={() => batchRef.current(() => HRC1Api.xacNhanDuc(selected).then(() => message.success("Đã xác nhận")))}>
+              <Button type="primary" disabled={selected.length === 0}>
+                Xác nhận ({selected.length})
+              </Button>
+            </Popconfirm> 
+            <Popconfirm title={`Bỏ xác nhận ${selected.length} mẻ?`}
+              disabled={selected.length === 0}
+              onConfirm={() => batchRef.current(() => HRC1Api.boXacNhanDuc(selected).then(() => message.success("Đã bỏ XN")))}>
+              <Button danger disabled={selected.length === 0}>
+                Bỏ xác nhận ({selected.length})
+              </Button>
+            </Popconfirm>*/}
+            <Popconfirm
+              title={`Xác nhận ${selected.length} mẻ?`}
+              disabled={selected.length === 0}
+              onConfirm={async () => {
+              await batchRef.current?.(async () => {
+                await HRC1Api.xacNhanDuc(selected);
+              });
+
+              message.success("Đã xác nhận");
+            }}
+            >
+              <Button type="primary" disabled={selected.length === 0}>
+                Xác nhận ({selected.length})
+              </Button>
+            </Popconfirm>
+            <Popconfirm
+              title={`Bỏ xác nhận ${selected.length} mẻ?`}
+              disabled={selected.length === 0}
+              onConfirm={async () => {
+              await batchRef.current?.(async () => {
+                await HRC1Api.boXacNhanDuc(selected);
+              });
+
+              message.success("Đã bỏ xác nhận");
+            }}
+            >
+              <Button type="primary" disabled={selected.length === 0}>
+                Xác nhận ({selected.length})
+              </Button>
+            </Popconfirm>
+            
+          </>
+        )}
+        {canChot && (
+          <>
+            {/* <Popconfirm title={`Chốt ${selected.length} mẻ?`}
+              disabled={selected.length === 0}
+              onConfirm={() => batchRef.current(() =>
+                HRC1Api.chotMe({ meIds: selected, idPhieu: String(phieuData.idPhieu), idMayDuc })
+                  .then(() => message.success("Đã chốt")))}>
+              <Button type="default" disabled={selected.length === 0}>
+                Chốt ({selected.length})
+              </Button>
+            </Popconfirm>
+            <Popconfirm title={`Bỏ chốt ${selected.length} mẻ?`}
+              disabled={selected.length === 0}
+              onConfirm={() => batchRef.current(() =>
+                HRC1Api.boChotMe({ meIds: selected, idPhieu: String(phieuData.idPhieu), idMayDuc })
+                  .then(() => message.success("Đã bỏ chốt")))}>
+              <Button disabled={selected.length === 0}>
+                Bỏ chốt ({selected.length})
+              </Button>
+            </Popconfirm> */}
+            <Popconfirm
+              title={`Bỏ chốt ${selected.length} mẻ?`}
+              disabled={selected.length === 0}
+              onConfirm={() => {
+                return batchRef.current(() =>
+                  HRC1Api.chotMe({
+                    meIds: selected,
+                    idPhieu: String(phieuData.idPhieu),
+                    idMayDuc
+                  }).then(() => {
+                    message.success("Đã chốt");
+                  })
+                );
+              }}
+            >
+              <Button disabled={selected.length === 0}>
+                Chốt ({selected.length})
+              </Button>
+            </Popconfirm>
+            <Popconfirm
+              title={`Bỏ chốt ${selected.length} mẻ?`}
+              disabled={selected.length === 0}
+              onConfirm={() => {
+                return batchRef.current(() =>
+                  HRC1Api.boChotMe({
+                    meIds: selected,
+                    idPhieu: String(phieuData.idPhieu),
+                    idMayDuc
+                  }).then(() => {
+                    message.success("Đã bỏ chốt");
+                  })
+                );
+              }}
+            >
+              <Button disabled={selected.length === 0}>
+                Bỏ chốt ({selected.length})
+              </Button>
+            </Popconfirm>
+          </>
+        )}
       </Space>
     );
-  }, [onExtraChange, readOnly, selected.length]);
+  }, [onExtraChange, readOnly, canXacNhan, canChot, selected.length, idMayDuc, phieuData.idPhieu]);
 
   const columns: TableColumnsType<HRC1_MeThepVm> = [
     {
@@ -647,24 +1028,24 @@ export const DucPanel = ({
       key: "chk", width: 40, fixed: "left",
       render: (_, me) => {
         if (readOnly) return null;
-        if (me.isChot)
-          return (
-            <Tooltip title="Mẻ đã chốt, không thể thao tác">
-              <Checkbox disabled />
-            </Tooltip>
-          );
-        const missing = checkDucReady(me);
-        if (missing.length > 0) {
-          return (
-            <Tooltip title={`Thiếu: ${missing.join(", ")}`} placement="right">
-              <Checkbox disabled />
-            </Tooltip>
-          );
+        const toggle = (e: { target: { checked: boolean } }) =>
+          setSelected((p) => e.target.checked ? [...p, me.id] : p.filter((id) => id !== me.id));
+
+        // vùng 4: enable cho mẻ đã xác nhận (kể cả đã chốt → để hủy chốt); disabled nếu chưa xác nhận
+        if (canChot && !canXacNhan) {
+          if ((me.trangThaiDuc ?? 0) < 1)
+            return <Tooltip title="Mẻ chưa được xác nhận" placement="right"><Checkbox disabled /></Tooltip>;
+          return <Checkbox checked={selected.includes(me.id)} onChange={toggle} />;
         }
-        return (
-          <Checkbox checked={selected.includes(me.id)}
-            onChange={(e) => setSelected((p) => e.target.checked ? [...p, me.id] : p.filter((id) => id !== me.id))} />
-        );
+
+        // vùng 3 hoặc cả hai: không cho thao tác mẻ đã chốt
+        if (me.isChot)
+          return <Tooltip title="Mẻ đã chốt, không thể thao tác"><Checkbox disabled /></Tooltip>;
+        const missing = checkDucReady(me);
+        // chưa đủ thông tin VÀ chưa xác nhận → disabled
+        if (missing.length > 0 && (me.trangThaiDuc ?? 0) < 1)
+          return <Tooltip title={`Thiếu: ${missing.join(", ")}`} placement="right"><Checkbox disabled /></Tooltip>;
+        return <Checkbox checked={selected.includes(me.id)} onChange={toggle} />;
       },
     },
     { title: "STT",       key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
@@ -676,7 +1057,10 @@ export const DucPanel = ({
     { title: "KL bì - Lần 2 (tấn)", dataIndex: "klLan2",       width: 75,  render: (v) => v ?? "" },
     { title: "KL bì - Lần 3 (tấn)", dataIndex: "klLan3",       width: 75,  render: (v) => v ?? "" },
     { title: "KL thép lỏng", dataIndex: "klThepLong", width: 80, render: (v) => v ?? "" },
-    { title: "Ghi chú",  dataIndex: "ghiChuLo",     width: 90, render: (v) => v ?? "" },
+    {
+      title: "Ghi chú", key: "ghiChuLo", width: 90,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={readOnly || !!me.isChot} />,
+    },
     { title: "Tinh luyện/Lên thẳng", key: "dichDisp",         width: 90, render: (_, me) => getDichDisplay(me) },
     { title: "Thử nghiệm",  dataIndex: "isThuNghiem", width: 50, render: (v) => v ? "✓" : "" },
     { title: "Máy đúc",  dataIndex: "tenMayDucDich", width: 90, render: (v) => v ?? "" },
@@ -712,12 +1096,63 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cardExtra,  setCardExtra]  = useState<ReactNode>(null);
 
+  // Scope state cho lò thổi và tinh luyện
+  const [loSo,  setLoSo]  = useState<number | null>(null);
+  const [tlSo,  setTlSo]  = useState<number | null>(null);
+  const [allowedLoScopes,  setAllowedLoScopes]  = useState<number[]>([]);
+  const [allowedTLScopes,  setAllowedTLScopes]  = useState<number[]>([]);
+  const [hasQuyenXacNhanBBGN, setHasQuyenXacNhanBBGN] = useState(false);
+  const [hasQuyenChotBBGN,    setHasQuyenChotBBGN]    = useState(false);
+
+  const isPKHAdmin = useMemo(() => {
+    const u = getThongTinUser();
+    return u.tenNgan === "P.KH" || u.iD_PhongBan === 70 || isAdminUser(u);
+  }, []);
+
+  // Ref để loadPhieu luôn thấy loSo/tlSo mới nhất
+  const loSoRef = useRef(loSo);
+  loSoRef.current = loSo;
+  const tlSoRef = useRef(tlSo);
+  tlSoRef.current = tlSo;
+
+  // ── Fetch quyền xử lý của user ──────────────────────────────────────────────
+  useEffect(() => {
+    const userId = getThongTinUser().iD_TaiKhoan;
+    if (!userId) return;
+    BmQuyenXlApi.getByTaiKhoan(userId).then((res: any) => {
+      const list: Array<{ maBm: string; maKhuVuc: string; quyenChucNang: number }> = Array.isArray(res) ? res : res?.data ?? [];
+      const loScopes = list
+        .filter((r) => r.maBm === BM_CONFIG.HRC1.HRC1_LoThoi)
+        .map((r) => Number(r.maKhuVuc))
+        .filter((n) => n > 0 && n <= 5);
+      const tlScopes = list
+        .filter((r) => r.maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen)
+        .map((r) => Number(r.maKhuVuc))
+        .filter((n) => n > 0 && n <= 5);
+      setAllowedLoScopes([...new Set(loScopes)].sort());
+      setAllowedTLScopes([...new Set(tlScopes)].sort());
+      setHasQuyenXacNhanBBGN(
+        list.some((r) => r.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong && Number(r.quyenChucNang) === 2)
+      );
+      setHasQuyenChotBBGN(
+        list.some((r) => r.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong && Number(r.quyenChucNang) === 3)
+      );
+    }).catch(() => {/* ignore permission load errors */});
+  }, []);
+
   // ── Load nội dung 1 phiếu ────────────────────────────────────────────────────
-  const loadPhieu = useCallback(async (idPhieu: string) => {
+  const loadPhieu = useCallback(async (
+    idPhieu: string,
+    opts?: { loSo?: number | null; tlSo?: number | null },
+  ) => {
     setLoading(true);
-    setCardExtra(null);
+    const effectiveLoSo = opts?.loSo !== undefined ? opts.loSo : loSoRef.current;
+    const effectiveTlSo = opts?.tlSo !== undefined ? opts.tlSo : tlSoRef.current;
     try {
-      const data = await HRC1Api.getPhieu(idPhieu);
+      const data = await HRC1Api.getPhieu(idPhieu, {
+        loSo:       effectiveLoSo  ?? undefined,
+        scopePhieu: effectiveTlSo  ?? undefined,
+      });
       setPhieuData(data);
       setSelectedId(idPhieu);
       sessionStorage.setItem(SESSION_KEY, idPhieu);
@@ -734,23 +1169,43 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
     if (selectedId) await loadPhieu(selectedId);
   }, [selectedId, loadPhieu]);
 
-  // Làm mới: lò thổi → sync gang lỏng rồi reload; các công đoạn khác → reload
+  // Reload khi loSo hoặc tlSo thay đổi (sau khi đã có phiếu)
+  const prevLoSo = useRef(loSo);
+  const prevTlSo = useRef(tlSo);
+  useEffect(() => {
+    if (prevLoSo.current === loSo && prevTlSo.current === tlSo) return;
+    prevLoSo.current = loSo;
+    prevTlSo.current = tlSo;
+    if (selectedId) loadPhieu(selectedId, { loSo, tlSo });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loSo, tlSo]);
+
+  // Làm mới: lò thổi → sync gang lỏng rồi sync phân loại rồi reload; các công đoạn khác → sync phân loại rồi reload
   const handleRefresh = useCallback(async () => {
-    if (phieuData?.congDoan === "lo_thoi") {
-      setSyncing(true);
-      try {
-        const updated = await HRC1Api.syncLoThoi(phieuData.idPhieu);
-        setPhieuData(updated);
+    if (!phieuData) return;
+    setSyncing(true);
+    try {
+      let maMes = phieuData.danhSachMe
+        .map((m) => m.maMe)
+        .filter((m): m is string => !!m);
+
+      if (phieuData.congDoan === "lo_thoi") {
+        if (!loSoRef.current) { message.warning("Chọn lò thổi trước khi đồng bộ"); return; }
+        const updated = await HRC1Api.syncLoThoi(phieuData.idPhieu, loSoRef.current);
+        maMes = updated.danhSachMe.map((m) => m.maMe).filter((m): m is string => !!m);
         message.success(`Đồng bộ thành công — ${updated.danhSachMe.length} mẻ`);
-      } catch (e: any) {
-        message.error(e?.message ?? "Lỗi đồng bộ mẻ từ gang lỏng");
-      } finally {
-        setSyncing(false);
       }
-    } else {
+
+      if (maMes.length > 0) {
+        await HRC1Api.syncPhanLoaiMeThep(maMes);
+      }
       await handleReload();
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi đồng bộ");
+    } finally {
+      setSyncing(false);
     }
-  }, [phieuData?.congDoan, phieuData?.idPhieu, handleReload]);
+  }, [phieuData, handleReload]);
 
   // ── Mount: ưu tiên idphieu từ navigation state ────────────────────────────────
   useEffect(() => {
@@ -762,8 +1217,14 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
   // ── Tiêu đề phiếu đang xem ──────────────────────────────────────────────────
   const phieuTitle = useMemo(() => {
     if (!phieuData) return null;
-    const scopeName = getScopeName(phieuData.maBm ?? "", phieuData.scope ?? 0);
-    return `${getGroupLabel(phieuData.maBm ?? "")} — ${scopeName}`;
+    const groupLabel = getGroupLabel(phieuData.maBm ?? "");
+    const maBm = phieuData.maBm ?? "";
+    // Lò thổi / Tinh luyện: scope lưu ở mẻ, không ở phiếu
+    if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi || maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen) {
+      return groupLabel;
+    }
+    const scopeName = getScopeName(maBm, phieuData.scope);
+    return `${groupLabel} — ${scopeName}`;
   }, [phieuData]);
 
   return (
@@ -801,6 +1262,9 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
               <LoThoiPanel
                 phieuData={phieuData}
                 readOnly={readOnly}
+                loSo={loSo}
+                onLoSoChange={setLoSo}
+                allowedLoScopes={allowedLoScopes}
                 onReload={handleReload}
                 onDataUpdated={(d) => setPhieuData(d)}
                 onExtraChange={setCardExtra}
@@ -810,6 +1274,9 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
               <TinhLuyenPanel
                 phieuData={phieuData}
                 readOnly={readOnly}
+                tlSo={tlSo}
+                onTlSoChange={setTlSo}
+                allowedTLScopes={allowedTLScopes}
                 onReload={handleReload}
                 onExtraChange={setCardExtra}
               />
@@ -820,6 +1287,8 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
                 readOnly={readOnly}
                 onReload={handleReload}
                 onExtraChange={setCardExtra}
+                canXacNhan={hasQuyenXacNhanBBGN}
+                canChot={isPKHAdmin || hasQuyenChotBBGN}
               />
             )}
           </Card>

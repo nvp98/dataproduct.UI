@@ -5,7 +5,7 @@ import {
   Pagination, Select, Space, Table, Tag, Tooltip, Typography, message,
 } from "antd";
 import type { TableColumnsType } from "antd";
-import { type Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { HRC1Api, type HRC1_ChoNhanMeVm } from "../../../../services/HRC1_BBGNApi";
 
 const CA_OPTIONS = [
@@ -20,15 +20,18 @@ interface ChoNhanMePanelProps {
   readOnly?: boolean;
   onNhanSuccess: () => Promise<void>;
   refreshTrigger?: number;
+  scopePhieu?: number | null;  // TL số đang thao tác (dùng để ghi ScopePhieu vào MePhanCong)
+  ngayPhieu?: string | null;   // Ngày của phiếu — dùng làm filter mặc định
+  caPhieu?: number | null;     // Ca của phiếu — dùng làm filter mặc định
 }
 
-const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger }: ChoNhanMePanelProps) => {
+const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger, scopePhieu, ngayPhieu, caPhieu }: ChoNhanMePanelProps) => {
   const [selectedChoNhan, setSelectedChoNhan] = useState<number[]>([]);
   const [nhanBusy, setNhanBusy] = useState(false);
 
-  const [filterTuNgay,  setFilterTuNgay]  = useState<Dayjs | null>(null);
-  const [filterDenNgay, setFilterDenNgay] = useState<Dayjs | null>(null);
-  const [filterCa,      setFilterCa]      = useState<number | null>(null);
+  const [filterTuNgay,  setFilterTuNgay]  = useState<Dayjs | null>(() => ngayPhieu ? dayjs(ngayPhieu) : null);
+  const [filterDenNgay, setFilterDenNgay] = useState<Dayjs | null>(() => ngayPhieu ? dayjs(ngayPhieu) : null);
+  const [filterCa,      setFilterCa]      = useState<number | null>(() => caPhieu ?? null);
   const [filterMaMe,    setFilterMaMe]    = useState("");
   const [filterThungSo, setFilterThungSo] = useState("");
   const [filterLoSo,    setFilterLoSo]    = useState<number | null>(null);
@@ -68,9 +71,10 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger }: 
     }
   }, []);
 
-  // Tải lần đầu khi panel mount (không filter)
+  // Tải lần đầu khi panel mount — áp dụng filter mặc định theo ngày/ca của phiếu nếu có
   useEffect(() => {
-    fetchChoNhan(1, null, null, null, "", "", null);
+    const defaultNgay = ngayPhieu ? dayjs(ngayPhieu) : null;
+    fetchChoNhan(1, defaultNgay, defaultNgay, caPhieu ?? null, "", "", null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -92,7 +96,7 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger }: 
     setNhanBusy(true);
     const errs: string[] = [];
     for (const meId of selectedChoNhan) {
-      try { await HRC1Api.nhanMe(meId, caPhieuId); }
+      try { await HRC1Api.nhanMe(meId, caPhieuId, scopePhieu); }
       catch (e: any) { errs.push(e?.message ?? `Lỗi mẻ ${meId}`); }
     }
     if (errs.length) message.error(errs.join("; "));
@@ -140,16 +144,16 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger }: 
         );
       },
     },
+    {
+      title: "Ngày thổi", dataIndex: "ngayTao", width: 60,
+      render: (v: string | null | undefined) => v ? dayjs(v).format("DD/MM/YYYY") : "",
+    },
+    {
+      title: "Ngày TL", dataIndex: "ngayNhanTL", width: 60,
+      render: (v: string | null | undefined) => v ? dayjs(v).format("DD/MM/YYYY") : "",
+    },
     { title: "Mã mẻ",    dataIndex: "maMe",    width: 60 },
     { title: "Thùng số", dataIndex: "thungSo", width: 40  },
-    { title: "Lò",       dataIndex: "loSo",    width: 40  },
-    {
-      title: "Trạng thái", key: "tt", width: 60,
-      render: (_, row) =>
-        row.trangThaiTL
-          ? <Tag color="green">Đã nhận</Tag>
-          : <Tag color="default">Chờ nhận</Tag>,
-    },
     {
       title: "Đích / TL nhận", key: "dich", width: 60,
       render: (_, row) => {
@@ -162,6 +166,15 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger }: 
         return "-";
       },
     },
+    { title: "Lò",       dataIndex: "loSo",    width: 40  },
+    {
+      title: "Trạng thái", key: "tt", width: 60,
+      render: (_, row) =>
+        row.trangThaiTL
+          ? <Tag color="green">Đã nhận</Tag>
+          : <Tag color="default">Chờ nhận</Tag>,
+    },
+    
     { title: "Người nhận", dataIndex: "tenNguoiNhan", width: 130, render: (v) => v ?? "-" },
   ];
 
@@ -238,7 +251,7 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger }: 
         rowKey="meId"
         size="small"
         pagination={false}
-        scroll={{ x: 640 }}
+        scroll={{ x: 860 }}
         loading={choNhanLoading}
         locale={{ emptyText: "Chưa có mẻ chờ nhận" }}
       />

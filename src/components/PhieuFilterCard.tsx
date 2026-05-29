@@ -98,27 +98,62 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   });
 
   // When filterFields options change, drop any selected values that no longer exist in the options list.
+  // useEffect(() => {
+  //   setFilterStates((prev) => {
+  //     let changed = false;
+  //     const next = { ...prev };
+  //     filterFields.forEach((field) => {
+  //       if ((field.type === "multiselect" || field.type === "select") && field.options) {
+  //         const curr = prev[field.key];
+  //         if (Array.isArray(curr) && curr.length > 0) {
+  //           const validSet = new Set(field.options.map((o) => String(o.value)));
+  //           const filtered = curr.filter((v) => validSet.has(String(v)));
+  //           if (filtered.length !== curr.length) {
+  //             next[field.key] = filtered;
+  //             onFilterFieldChange?.(field.key, filtered);
+  //             changed = true;
+  //           }
+  //         }
+  //       }
+  //     });
+  //     return changed ? next : prev;
+  //   });
+  // }, [filterFields]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    setFilterStates((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      filterFields.forEach((field) => {
-        if ((field.type === "multiselect" || field.type === "select") && field.options) {
-          const curr = prev[field.key];
-          if (Array.isArray(curr) && curr.length > 0) {
-            const validSet = new Set(field.options.map((o) => String(o.value)));
-            const filtered = curr.filter((v) => validSet.has(String(v)));
-            if (filtered.length !== curr.length) {
-              next[field.key] = filtered;
-              onFilterFieldChange?.(field.key, filtered);
-              changed = true;
-            }
+  setFilterStates((prev) => {
+    let changed = false;
+    const next = { ...prev };
+
+    filterFields.forEach((field) => {
+      if (
+        (field.type === "multiselect" || field.type === "select") &&
+        field.options
+      ) {
+        const curr = prev[field.key];
+
+        if (Array.isArray(curr) && curr.length > 0) {
+          const validSet = new Set(
+            field.options.map((o) => String(o.value))
+          );
+
+          const filtered = (curr as (string | number | unknown)[]).filter(
+            (v): v is string | number =>
+              (typeof v === "string" || typeof v === "number") &&
+              validSet.has(String(v))
+          );
+
+          if (filtered.length !== curr.length) {
+            next[field.key] = filtered;
+            onFilterFieldChange?.(field.key, filtered);
+            changed = true;
           }
         }
-      });
-      return changed ? next : prev;
+      }
     });
-  }, [filterFields]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return changed ? next : prev;
+  });
+}, [filterFields]);
 
   const [soPhieu, setSoPhieu] = useState<string>(initialValues?.soPhieu || "");
   const [dateRange, setDateRange] = useState<

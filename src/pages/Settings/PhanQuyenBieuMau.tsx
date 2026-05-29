@@ -683,9 +683,10 @@ const PhanQuyenBieuMau = () => {
                         disabled={!bmRow.maBm}
                         value={subRow.maKhuVucs}
                         options={
-                          useMergedScopeMode(bmRow.maBm)
+                          (useMergedScopeMode(bmRow.maBm)
                             ? getMergedScopeOptions(bmRow.maBm)
                             : getScopeOptions(bmRow.maBm)
+                          ) as { value: string; label: string }[]
                         }
                         onChange={(vals) => handleKhuVucChange(bmRow.key, subRow.key, vals)}
                       />

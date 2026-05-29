@@ -47,6 +47,11 @@ const getScopeOptions = (maBm: string) => {
   return (bmDef?.scope ?? []).map((s) => ({ label: s.tenKhuVuc, value: Number(s.maKhuVuc) }));
 };
 
+const SCOPE_OPTIONAL_MABM = new Set([
+  BM_CONFIG.HRC1.HRC1_LoThoi,
+  BM_CONFIG.HRC1.HRC1_TinhLuyen,
+]);
+
 const TaoPhieuModal = ({
   open, onClose, onCreated,
   congDoanOptions = CONG_DOAN_OPTIONS,
@@ -61,6 +66,7 @@ const TaoPhieuModal = ({
   const [maBm, setMaBm] = useState<string>(congDoanOptions[0]?.value ?? BM_CONFIG.HRC1.HRC1_LoThoi);
 
   const scopeOptions = useMemo(() => getScopeOptions(maBm), [maBm]);
+  const scopeRequired = !SCOPE_OPTIONAL_MABM.has(maBm);
 
   const handleOpen = () => {
     const defaultMaBm = congDoanOptions[0]?.value ?? BM_CONFIG.HRC1.HRC1_LoThoi;
@@ -69,17 +75,20 @@ const TaoPhieuModal = ({
   };
 
   const handleSubmit = async () => {
-    let values: { maBm: string; scope: number; ngaySX: Dayjs; ca: number };
+    let values: { maBm: string; scope?: number | null; ngaySX: Dayjs; ca: number };
     try { values = await form.validateFields(); }
     catch { return; }
 
     setSubmitting(true);
     try {
-      const scopeLabel = getScopeOptions(values.maBm).find((o) => o.value === values.scope)?.label;
+      const scopeVal = scopeRequired ? values.scope : undefined;
+      const scopeLabel = scopeVal != null
+        ? getScopeOptions(values.maBm).find((o) => o.value === scopeVal)?.label
+        : undefined;
       const res: any = await PhieuApi.postData({
         maBm:       values.maBm,
         prefix:     MABM_PREFIX[values.maBm] ?? "HRC1",
-        scope:      values.scope,
+        scope:      scopeVal ?? null,
         NgaySX:     values.ngaySX.format("YYYY-MM-DD"),
         ca:         values.ca,
         tenScope:   scopeLabel ?? null,
@@ -122,9 +131,11 @@ const TaoPhieuModal = ({
             onChange={(v) => { setMaBm(v); form.setFieldValue("scope", undefined); }}
           />
         </Form.Item>
-        <Form.Item name="scope" label="Thiết bị / Khu vực" rules={[{ required: true, message: "Chọn thiết bị" }]}>
-          <Select options={scopeOptions} placeholder="Chọn thiết bị..." />
-        </Form.Item>
+        {scopeRequired && (
+          <Form.Item name="scope" label="Thiết bị / Khu vực" rules={[{ required: true, message: "Chọn thiết bị" }]}>
+            <Select options={scopeOptions} placeholder="Chọn thiết bị..." />
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   );
@@ -143,8 +154,13 @@ const TRANG_THAI_FILTER_OPTIONS = Object.entries(PHIEU_STATUS_CONFIG).map(
 );
 
 
-const getScopeName = (maBm: string, scope: number, tenScope?: string | null): string => {
+const getScopeName = (maBm: string, scope: number | null | undefined, tenScope?: string | null): string => {
   if (tenScope) return tenScope;
+  if (!scope) {
+    if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi)    return "Tất cả lò thổi";
+    if (maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen) return "Tất cả tinh luyện";
+    return "-";
+  }
   if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi)         return `Lò thổi ${scope}`;
   if (maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen)      return `Tinh luyện ${scope}`;
   if (maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)
@@ -216,18 +232,15 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
     const activeBms = selectedBms.length > 0
       ? allowedCongDoanOptions.filter((bm) => selectedBms.includes(bm.value))
       : allowedCongDoanOptions;
-    return activeBms.flatMap((bm) => {
-      const customAll =
-        bm.value === BM_CONFIG.HRC1.HRC1_LoThoi
-          ? [1,2,3,4,5].map((i) => ({ label: `Lò thổi ${i}`, value: i }))
-          : bm.value === BM_CONFIG.HRC1.HRC1_TinhLuyen
-          ? [1,2,3,4,5].map((i) => ({ label: `Tinh luyện ${i}`, value: i }))
-          : undefined;
-      return getAllowedScopeOptions(bm.value, customAll).map((opt) => ({
-        label: opt.label,
-        value: `${bm.value}::${opt.value}`,
-      }));
-    });
+    // Lò thổi và Tinh luyện: scope = null ở phiếu, không dùng scope filter
+    return activeBms
+      .filter((bm) => !SCOPE_OPTIONAL_MABM.has(bm.value))
+      .flatMap((bm) =>
+        getAllowedScopeOptions(bm.value).map((opt) => ({
+          label: opt.label,
+          value: `${bm.value}::${opt.value}`,
+        }))
+      );
   }, [selectedBms, allowedCongDoanOptions, getAllowedScopeOptions]);
 
   const filterFields = useMemo((): FilterFieldConfig[] => [
@@ -258,8 +271,12 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
   ], [allowedCongDoanOptions, allowedScopeOptions]);
 
   const handleNavigate = (record: TableRecord, forceDetail = false) => {
-    if (forceDetail || type === "viecdentoi" || type === "xemphieu") {
+    if (forceDetail || type === "xemphieu") {
       navigate(routeDetail, { state: { idphieu: record.idphieu } });
+    } else if (type === "viecdentoi") {
+      // Phiếu máy đúc: mở trang tạo/chỉnh sửa để tick xác nhận mẻ
+      const isEditable = record.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong;
+      navigate(isEditable ? routeCreate : routeDetail, { state: { idphieu: record.idphieu } });
     } else {
       navigate(routeCreate, { state: { idphieu: record.idphieu } });
     }
@@ -349,7 +366,7 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
         onClearFilter={handleClearFilter}
         filterFields={filterFields}
         onFilterFieldChange={handleFieldChange}
-        showCreateButton={type !== "viecdentoi" && type !== "xemphieu"}
+        showCreateButton={type !== "xemphieu"}
         onCreateClick={() => setModalOpen(true)}
         createButtonText="Tạo phiếu"
       />

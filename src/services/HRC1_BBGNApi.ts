@@ -29,6 +29,7 @@ export interface HRC1_MeThepVm {
   isTrungMeThoi?: boolean | null;
   isGhost?: boolean | null;
   isChot?: boolean | null;
+  isManualTL?: boolean | null;
   ghiChuLo?: string | null;
   phanLoai?: string | null;
   macThep?: string | null;
@@ -61,6 +62,8 @@ export interface HRC1_ChoNhanMeVm {
   soTinhLuyenNhan?: number | null;  // scope TL đã nhận; null = chưa nhận
   trangThaiTL?: number | null;      // 0/null=chờ nhận, 1=đã nhận
   tenNguoiNhan?: string | null;
+  ngayTao?: string | null;
+  ngayNhanTL?: string | null;
 }
 
 export interface HRC1_MeChoNhanQuery {
@@ -94,12 +97,43 @@ export interface HRC1_PhieuDataVm {
   danhSachMayDuc: HRC1_MayDucOptionVm[];
 }
 
+export interface HRC1_TrungMeInfo {
+  soPhieu: string;
+  tenTinhLuyen: string;
+}
+
+export interface HRC1_ThemMeTayResult {
+  trungVoi: HRC1_TrungMeInfo[];
+  daThemVao: boolean;
+}
+
+export interface HRC1_MeThepSearchVm {
+  meId: number;
+  maMe: string;
+  thungSo?: string | null;
+  loSo?: number | null;
+}
+
+export interface HRC1_ChotPhieuBatchThatBai {
+  idPhieu: string;
+  soPhieu: string;
+  lyDo: string[];
+}
+
+export interface HRC1_ChotPhieuBatchResult {
+  thanhCong: string[];
+  thatBai: HRC1_ChotPhieuBatchThatBai[];
+}
+
 // ── Request types ───────────────────────────────────────────────────────────
 
 export interface HRC1_LoThoiUpdateRequest {
   thungSo?: string | null;
   kllfSauThep?: number | null;
   klLan3?: number | null;
+  thoiGian?: string | null;      // chỉ dùng khi len_thang
+  klLan2?: number | null;        // chỉ dùng khi len_thang
+  klThepLong?: number | null;    // chỉ dùng khi len_thang
   dichChuyen?: string | null;
   tlDichSo?: number | null;
   idMayDucDich?: number | null;
@@ -124,8 +158,11 @@ export interface HRC1_TinhLuyenUpdateRequest {
 // ── API ──────────────────────────────────────────────────────────────────────
 
 export const HRC1Api = {
-  getPhieu: (idPhieu: string): Promise<HRC1_PhieuDataVm> =>
-    apiService.get(`/api/hrc1/phieu/${idPhieu}`) as Promise<HRC1_PhieuDataVm>,
+  getPhieu: (
+    idPhieu: string,
+    params?: { loSo?: number | null; scopePhieu?: number | null; idMayDuc?: number | null }
+  ): Promise<HRC1_PhieuDataVm> =>
+    apiService.get(`/api/hrc1/phieu/${idPhieu}`, { params }) as Promise<HRC1_PhieuDataVm>,
 
   // Lò thổi
   updateLoThoi: (meId: number, req: HRC1_LoThoiUpdateRequest) =>
@@ -142,25 +179,54 @@ export const HRC1Api = {
     apiService.get("/api/hrc1/tinh-luyen/cho-nhan") as Promise<HRC1_ChoNhanMeVm[]>,
   getMeChoNhan: (q: HRC1_MeChoNhanQuery): Promise<{ items: HRC1_ChoNhanMeVm[]; total: number }> =>
     apiService.get("/api/hrc1/tinh-luyen/me-cho-nhan", { params: q }) as Promise<{ items: HRC1_ChoNhanMeVm[]; total: number }>,
-  nhanMe: (meId: number, idPhieu: string) =>
-    apiService.post("/api/hrc1/tinh-luyen/nhan-me", { meId, idPhieu }, { headers: userHeaders() }),
+  nhanMe: (meId: number, idPhieu: string, scopePhieu?: number | null) =>
+    apiService.post("/api/hrc1/tinh-luyen/nhan-me", { meId, idPhieu, scopePhieu }, { headers: userHeaders() }),
   updateTinhLuyen: (mePhanCongId: number, req: HRC1_TinhLuyenUpdateRequest) =>
     apiService.put(`/api/hrc1/tinh-luyen/${mePhanCongId}`, req, { headers: userHeaders() }),
   themDong: (meId: number, idPhieu: string) =>
     apiService.post("/api/hrc1/tinh-luyen/them-dong", { meId, idPhieu }, { headers: userHeaders() }),
-  huyNhanMe: (meId: number, idPhieu: string) =>
-    apiService.post("/api/hrc1/tinh-luyen/huy-nhan-me", { meId, idPhieu }, { headers: userHeaders() }),
+  huyNhanMe: (meId: number, idPhieu: string, scopePhieu?: number | null) =>
+    apiService.post("/api/hrc1/tinh-luyen/huy-nhan-me", { meId, idPhieu, scopePhieu }, { headers: userHeaders() }),
+
   // Máy đúc
   xacNhanDuc: (meIds: number[]) =>
     apiService.post("/api/hrc1/duc/xac-nhan", { meIds }, { headers: userHeaders() }),
   boXacNhanDuc: (meIds: number[]) =>
     apiService.post("/api/hrc1/duc/bo-xac-nhan", { meIds }, { headers: userHeaders() }),
+  chotMe: (req: { meIds: number[]; idPhieu: string; idMayDuc: number }) =>
+    apiService.post("/api/hrc1/duc/chot-me", req, { headers: userHeaders() }),
+  boChotMe: (req: { meIds: number[]; idPhieu: string; idMayDuc: number }) =>
+    apiService.post("/api/hrc1/duc/bo-chot-me", req, { headers: userHeaders() }),
 
   // Đồng bộ mẻ thổi từ gang lỏng → trả về phiếu cập nhật
-  syncLoThoi: (idPhieu: string): Promise<HRC1_PhieuDataVm> =>
-    apiService.post(`/api/hrc1/phieu/${idPhieu}/sync-lo-thoi`, null) as Promise<HRC1_PhieuDataVm>,
+  syncLoThoi: (idPhieu: string, loSo: number): Promise<HRC1_PhieuDataVm> =>
+    apiService.post(`/api/hrc1/phieu/${idPhieu}/sync-lo-thoi`, { loSo }) as Promise<HRC1_PhieuDataVm>,
+
+  // Đồng bộ phân loại & mác BKMIS từ Linked Server vào HRC1_MeThep
+  syncPhanLoaiMeThep: (maMes: string[]): Promise<{ totalFromMySQL: number; totalUpdated: number }> =>
+    apiService.post("/api/hrc1/sync-phan-loai-me-thep", { maMes }) as Promise<{ totalFromMySQL: number; totalUpdated: number }>,
 
   // Xóa cứng mẻ ghost (user chủ động xóa thủ công)
   xoaMeGhost: (meId: number) =>
     apiService.delete(`/api/hrc1/lo-thoi/me/${meId}`, { headers: userHeaders() }),
+
+  // Thêm/xóa mẻ tay (Tinh luyện thêm thủ công)
+  searchMeThep: (q: string): Promise<HRC1_MeThepSearchVm[]> =>
+    apiService.get("/api/hrc1/tinh-luyen/search-me", { params: { q } }) as Promise<HRC1_MeThepSearchVm[]>,
+
+  themMeTay: (req: { maMe: string; idPhieu: string; xacNhanTrung: boolean; scopePhieu?: number | null }): Promise<HRC1_ThemMeTayResult> =>
+    apiService.post("/api/hrc1/tinh-luyen/them-me-tay", req, { headers: userHeaders() }) as Promise<HRC1_ThemMeTayResult>,
+
+  xoaMeTay: (mePhanCongId: number): Promise<void> =>
+    apiService.delete(`/api/hrc1/tinh-luyen/me-tay/${mePhanCongId}`, { headers: userHeaders() }),
+
+  // Ghi chú dùng chung cả 3 công đoạn — auto-save on blur
+  updateGhiChu: (meId: number, ghiChu: string | null) =>
+    apiService.put(`/api/hrc1/me/${meId}/ghi-chu`, { ghiChu }, { headers: userHeaders() }),
+
+  // Chốt / hủy chốt phiếu HRC1_BBGN_ThepLong theo batch (từ ThongKe P.KH)
+  chotPhieuBatch: (idPhieuList: string[]): Promise<HRC1_ChotPhieuBatchResult> =>
+    apiService.post("/api/hrc1/duc/chot-phieu-batch", { idPhieuList }, { headers: userHeaders() }) as Promise<HRC1_ChotPhieuBatchResult>,
+  huyChotPhieuBatch: (idPhieuList: string[]): Promise<HRC1_ChotPhieuBatchResult> =>
+    apiService.post("/api/hrc1/duc/huy-chot-phieu-batch", { idPhieuList }, { headers: userHeaders() }) as Promise<HRC1_ChotPhieuBatchResult>,
 };
