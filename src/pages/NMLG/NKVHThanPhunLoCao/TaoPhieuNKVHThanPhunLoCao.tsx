@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_PhunThanLoCao from "../../../utils/BM_config/LG_BB_PhunThanLoCao.json";
-import { FileExcelOutlined, FilePdfOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ReloadOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -453,53 +453,6 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
   );
 
   const [loadingAuto, setLoadingAuto] = useState(false);
-  const [exportingExcel, setExportingExcel] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
-
-  const downloadBlob = useCallback((blob: Blob, fileName: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, []);
-
-  const handleExportExcel = useCallback(async () => {
-    if (!idphieu) return;
-    try {
-      setExportingExcel(true);
-      const res = await lgPTLCApi.exportExcel(idphieu);
-      const raw = res as unknown;
-      const blob = raw instanceof Blob
-        ? raw
-        : new Blob([raw as any], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      if (blob.size === 0) throw new Error("Dữ liệu Excel rỗng hoặc không hợp lệ.");
-      downloadBlob(blob, `${config.prefix}_${soPhieu || idphieu}.xlsx`);
-    } catch (error: any) {
-      message.error(error?.message || "Xuất Excel thất bại!");
-    } finally {
-      setExportingExcel(false);
-    }
-  }, [idphieu, soPhieu, downloadBlob]);
-
-  const handleExportPdf = useCallback(async () => {
-    if (!idphieu) return;
-    try {
-      setExportingPdf(true);
-      const res = await lgPTLCApi.exportPdf(idphieu);
-      const raw = res as unknown;
-      const blob = raw instanceof Blob
-        ? raw
-        : new Blob([raw as any], { type: "application/pdf" });
-      if (blob.size === 0) throw new Error("Dữ liệu PDF rỗng hoặc không hợp lệ.");
-      downloadBlob(blob, `${config.prefix}_${soPhieu || idphieu}.pdf`);
-    } catch (error: any) {
-      message.error(error?.message || "Xuất PDF thất bại!");
-    } finally {
-      setExportingPdf(false);
-    }
-  }, [idphieu, soPhieu, downloadBlob]);
 
   const handleLoadAutoData = useCallback(async () => {
     const values = form.getFieldsValue();
@@ -654,26 +607,6 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
               Tải dữ liệu
             </Button>
           </Tooltip>
-          {idphieu && (
-            <>
-              <Button
-                icon={<FileExcelOutlined />}
-                style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
-                loading={exportingExcel}
-                onClick={() => void handleExportExcel()}
-              >
-                Xuất Excel
-              </Button>
-              <Button
-                icon={<FilePdfOutlined />}
-                style={{ backgroundColor: "#d32f2f", borderColor: "#d32f2f", color: "#fff" }}
-                loading={exportingPdf}
-                onClick={() => void handleExportPdf()}
-              >
-                Xuất PDF
-              </Button>
-            </>
-          )}
         </div>
 
         {tableSection && (

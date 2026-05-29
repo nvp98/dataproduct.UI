@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_TonSiLo from "../../../utils/BM_config/LG_BB_TonSiLo.json";
 import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tabs, Tag, Tooltip, Typography, message } from "antd";
-import { DeleteOutlined, FileExcelOutlined, FilterOutlined, PlusCircleOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { DeleteOutlined, FilterOutlined, PlusCircleOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -21,6 +21,7 @@ import {
   type LGTSLMappingDto,
 } from "../../../services/LGTSLApi";
 
+// Mỗi dòng trong bảng tồn Silo; các trường _splitGroupId/_isSplitParent dùng để nhóm dòng tách liệu
 interface TableRow {
   key?: string;
   stt?: number;
@@ -32,10 +33,10 @@ interface TableRow {
   loaiNguyenNhienLieu?: string;
   klTonCuoiKip?: number | string | null;
   ghiChu?: string;
-  _splitGroupId?: string;
-  _isSplitParent?: boolean;
-  _manualKL?: boolean;
-  _klGoc?: number | null;
+  _splitGroupId?: string;   // id nhóm tách liệu; undefined = dòng bình thường
+  _isSplitParent?: boolean; // true = hàng tổng của nhóm (chỉ hiển thị, không lưu)
+  _manualKL?: boolean;      // true = người dùng đã nhập tay KL (highlight cam)
+  _klGoc?: number | null;   // giá trị KL gốc từ SCADA (trước khi chỉnh tay)
   [key: string]: any;
 }
 
@@ -44,6 +45,7 @@ interface LoCaoItem {
   tenLoCao: string;
 }
 
+// Lấy thông tin người dùng đang đăng nhập từ localStorage
 const getUserInfo = () => {
   const stored = localStorage.getItem("userinfo");
   return stored ? JSON.parse(stored) : {};
@@ -57,6 +59,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
   const config = LG_BB_TonSiLo;
   const [form] = Form.useForm();
 
+  // ─── State chính của form/bảng ─────────────────────────────────────────────
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [loCaoOptions, setLoCaoOptions] = useState<Array<{ label: string; value: number }>>([]);
   const [loading, setLoading] = useState(false);
@@ -74,47 +77,52 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
   const ca = Form.useWatch("ca", form);
   const ngaySXWatch = Form.useWatch("NgaySX", form);
 
-  // ─── Kiểm tra Silo state ───────────────────────────────────────────────────
+  // ─── State panel "Kiểm tra Silo" ───────────────────────────────────────────
   const [kiemTraOpen, setKiemTraOpen] = useState(false);
   const [kiemTraData, setKiemTraData] = useState<LGTSLMappingDto[]>([]);
   const [kiemTraLoading, setKiemTraLoading] = useState(false);
   const [nvlOptions, setNvlOptions] = useState<LGTSLNvlDto[]>([]);
   const [siloOptions, setSiloOptions] = useState<LGTSLSiLoDto[]>([]);
+  // mapDraftBySilo: { [idSiLo]: idNVL } — lựa chọn NVL tạm thời trước khi nhấn "Lưu map"
   const [mapDraftBySilo, setMapDraftBySilo] = useState<Record<number, number | null>>({});
   const [mapNoteBySilo, setMapNoteBySilo] = useState<Record<number, string>>({});
   const [mapSavingSiloId, setMapSavingSiloId] = useState<number | null>(null);
 
-  // ─── Thêm/Sửa NVL state ───────────────────────────────────────────────────
+  // ─── State modal Thêm/Sửa NVL ──────────────────────────────────────────────
   const [addNvlOpen, setAddNvlOpen] = useState(false);
   const [addNvlLoading, setAddNvlLoading] = useState(false);
   const [addNvlForm] = Form.useForm();
   const [editingNvlId, setEditingNvlId] = useState<number | null>(null);
   const [nvlListLoading, setNvlListLoading] = useState(false);
 
-  // ─── Thêm Mapping mới state ────────────────────────────────────────────────
+  // ─── State modal Thêm Mapping mới ─────────────────────────────────────────
   const [addMappingOpen, setAddMappingOpen] = useState(false);
   const [addMappingLoading, setAddMappingLoading] = useState(false);
   const [addMappingForm] = Form.useForm();
+  const [copyingFromPrev, setCopyingFromPrev] = useState(false);
 
+  // Danh sách NVL đã lọc theo lò cao đang chọn (scope)
   const scopeNvlOptions = useMemo(
     () => (scope ? nvlOptions.filter((n) => n.idLoCao === Number(scope)) : nvlOptions),
     [nvlOptions, scope]
   );
 
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
+  // Chữ ký chỉ được chọn khi phiếu chưa hoàn thành / chưa phê duyệt / chưa chốt
   const isSignatureReadonly = [
     TrangThaiPhieuConst.HoanThanh,
     TrangThaiPhieuConst.DangPheDuyet,
     TrangThaiPhieuConst.DaChot,
   ].includes(currentTinhTrang);
 
+  // Form bị khóa khi phiếu không ở trạng thái đang lưu / đã thu hồi / hiệu chỉnh
   const isFormLocked = !(
     currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
     currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
     currentTinhTrang === TrangThaiPhieuConst.HieuChinh
   );
 
-  // ─── Helper: reset mapping drafts sau khi refresh ─────────────────────────
+  // Đồng bộ lại mapDraftBySilo và mapNoteBySilo sau mỗi lần refresh kiemTraData
   const resetMappingDrafts = useCallback((list: LGTSLMappingDto[]) => {
     const drafts: Record<number, number | null> = {};
     const notes: Record<number, string> = {};
@@ -126,6 +134,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     setMapNoteBySilo(notes);
   }, []);
 
+  // Lấy danh sách lò cao để điền vào dropdown scope
   const loadDsLoCao = useCallback(async () => {
     try {
       const res = await PhieuApi.getDsLoCao();
@@ -138,6 +147,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }
   }, []);
 
+  // Tải dữ liệu SiLo-NVL mapping view theo ngày/ca/lò cao vào bảng chính
   const loadDataFromAPI = useCallback(async () => {
     if (!scope) { message.warning("Vui lòng chọn Lò cao"); return; }
     if (!ca) { message.warning("Vui lòng chọn Ca"); return; }
@@ -183,6 +193,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
 
   // ─── Kiểm tra Silo handlers ────────────────────────────────────────────────
 
+  // Gọi API lấy danh sách mapping hiện tại và cập nhật kiemTraData; trả về list để dùng tiếp
   const refreshKiemTraData = useCallback(async (ngay: string, caNum: number, idLoCao: number) => {
     setKiemTraLoading(true);
     try {
@@ -199,6 +210,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }
   }, []);
 
+  // Mở modal Kiểm tra Silo và tải dữ liệu mapping + danh sách NVL/Silo song song
   const handleKiemTra = useCallback(async () => {
     const ngaySXValue = form.getFieldValue("NgaySX");
     if (!scope || !ca || !ngaySXValue) {
@@ -217,6 +229,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       .catch(() => setSiloOptions([]));
   }, [form, scope, ca, refreshKiemTraData, resetMappingDrafts]);
 
+  // Mở modal Thêm NVL mới với lò cao đã chọn được pre-fill
   const handleOpenAddNvl = useCallback(() => {
     if (!scope) { message.warning("Vui lòng chọn Lò cao trước khi tạo NVL"); return; }
     addNvlForm.resetFields();
@@ -225,6 +238,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     setAddNvlOpen(true);
   }, [scope, addNvlForm]);
 
+  // Mở modal Sửa NVL với dữ liệu của NVL được chọn được pre-fill
   const handleOpenEditNvl = useCallback((nvl: LGTSLNvlDto) => {
     if (!scope) { message.warning("Vui lòng chọn Lò cao trước khi sửa NVL"); return; }
     addNvlForm.resetFields();
@@ -233,6 +247,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     setAddNvlOpen(true);
   }, [scope, addNvlForm]);
 
+  // Lưu NVL mới hoặc cập nhật NVL đang sửa, sau đó refresh danh sách NVL
   const handleSaveNvl = useCallback(async () => {
     try {
       const values = await addNvlForm.validateFields();
@@ -262,6 +277,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }
   }, [addNvlForm, scope, editingNvlId]);
 
+  // Xác nhận và xóa NVL, sau đó refresh danh sách NVL
   const handleDeleteNvl = useCallback(async (nvlId: number) => {
     Modal.confirm({
       title: "Xác nhận xóa NVL",
@@ -282,6 +298,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     });
   }, [scope]);
 
+  // Tải thủ công danh sách NVL theo lò cao (nút "Tải danh sách" trong tab Danh sách NVL)
   const loadNvlList = useCallback(async () => {
     if (!scope) { message.warning("Vui lòng chọn Lò cao trước"); return; }
     try {
@@ -297,6 +314,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }
   }, [scope, scopeNvlOptions.length]);
 
+  // Mở modal Thêm Mapping mới; tải danh sách Silo và pre-fill ngày/ca/lò cao
   const handleOpenAddMapping = useCallback(async () => {
     const ngaySXValue = form.getFieldValue("NgaySX");
     if (!scope || !ca || !ngaySXValue) {
@@ -315,11 +333,37 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     setAddMappingOpen(true);
   }, [form, scope, ca, addMappingForm]);
 
+  // Tạo mapping mới; cảnh báo qua Modal.confirm nếu silo đã được map trong ca này
   const handleAddMapping = useCallback(async () => {
     const ngaySXValue = form.getFieldValue("NgaySX");
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     try {
       const values = await addMappingForm.validateFields();
+
+      // Cảnh báo nếu silo đã được map
+      const existingMapping = kiemTraData.find((r) => r.idSiLo === values.idSiLo);
+      if (existingMapping) {
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Modal.confirm({
+            title: "Silo đã được cấu hình",
+            content: (
+              <span>
+                Silo <b>{existingMapping.tenSiLo ?? "này"}</b> đã được map với NVL{" "}
+                <b style={{ color: "#fa8c16" }}>{existingMapping.tenNVL ?? "(chưa có NVL)"}</b>.
+                <br />
+                Bạn có muốn thêm mapping mới không?
+              </span>
+            ),
+            okText: "Tiếp tục thêm",
+            cancelText: "Hủy",
+            okButtonProps: { danger: true },
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+          });
+        });
+        if (!confirmed) return;
+      }
+
       setAddMappingLoading(true);
       await lgTSLMappingApi.create({
         ngay,
@@ -339,8 +383,107 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     } finally {
       setAddMappingLoading(false);
     }
-  }, [addMappingForm, form, scope, ca, refreshKiemTraData, resetMappingDrafts]);
+  }, [addMappingForm, form, scope, ca, kiemTraData, refreshKiemTraData, resetMappingDrafts]);
 
+  // ─── Sao chép mapping từ ca trước ────────────────────────────────────────
+
+  // Lấy mapping của ca liền kề trước (Ca2→Ca1 cùng ngày; Ca1→Ca2 ngày trước).
+  // - Silo chưa có trong ca hiện tại: tạo mới mapping.
+  // - Silo đã có: pre-fill draft NVL để người dùng xem lại và nhấn "Lưu map" nếu muốn cập nhật.
+  const handleCopyFromPrevShift = useCallback(async () => {
+    const ngaySXValue = form.getFieldValue("NgaySX");
+    if (!scope || !ca || !ngaySXValue) {
+      message.warning("Vui lòng chọn Lò cao, Ca và Ngày sản xuất trước");
+      return;
+    }
+    const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
+    const caNum = Number(ca);
+
+    // Tính ca và ngày liền kề trước: Ca2 → Ca1 cùng ngày; Ca1 → Ca2 ngày trước
+    const prevCa = caNum === 2 ? 1 : 2;
+    const prevNgay = caNum === 2 ? ngay : dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD");
+    const prevLabel = `Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`;
+
+    try {
+      setCopyingFromPrev(true);
+      const prevRes = await lgTSLMappingApi.getList({ ngay: prevNgay, ca: prevCa, idLoCao: Number(scope) });
+      const prevList: LGTSLMappingDto[] = Array.isArray(prevRes) ? prevRes : [];
+
+      if (prevList.length === 0) {
+        message.warning(`Không tìm thấy dữ liệu mapping từ ${prevLabel}`);
+        return;
+      }
+
+      const currentSiloIds = new Set(kiemTraData.map((r) => r.idSiLo));
+
+      // Silo chưa có trong ca hiện tại → tạo mới (chỉ silo đã được gán NVL ở ca trước)
+      const newSilos = prevList.filter((r) => !currentSiloIds.has(r.idSiLo));
+      const toCreate = newSilos.filter((r) => r.idNVL);
+      const noNvlCount = newSilos.length - toCreate.length;
+
+      let createdCount = 0;
+      let failedCount = 0;
+      for (const prev of toCreate) {
+        try {
+          await lgTSLMappingApi.create({
+            ngay,
+            ca: caNum,
+            idLoCao: Number(scope),
+            idSiLo: prev.idSiLo,
+            idNVL: prev.idNVL,
+            ghiChu: prev.ghiChu ?? null,
+          });
+          createdCount++;
+        } catch {
+          failedCount++;
+        }
+      }
+
+      // Silo đã có trong ca hiện tại → ghi nhớ pre-fill để giữ sau khi refresh
+      const draftUpdates: Record<number, number | null> = {};
+      prevList.forEach((r) => {
+        if (currentSiloIds.has(r.idSiLo) && r.idNVL) {
+          draftUpdates[r.idSiLo] = r.idNVL;
+        }
+      });
+
+      // Refresh danh sách mapping; ưu tiên pre-fill từ ca trước cho silo đã có mapping hiện tại
+      const refreshed = await refreshKiemTraData(ngay, caNum, Number(scope));
+      const newDrafts: Record<number, number | null> = {};
+      const newNotes: Record<number, string> = {};
+      refreshed.forEach((item) => {
+        newDrafts[item.idSiLo] = draftUpdates[item.idSiLo] ?? item.idNVL ?? null;
+        newNotes[item.idSiLo] = "";
+      });
+      setMapDraftBySilo(newDrafts);
+      setMapNoteBySilo(newNotes);
+
+      const preFillCount = Object.keys(draftUpdates).length;
+
+      if (failedCount > 0 && createdCount === 0 && preFillCount === 0) {
+        // Tất cả lệnh tạo đều thất bại — báo lỗi rõ ràng thay vì thông báo nhầm
+        message.error(`Không thể tạo mapping từ ${prevLabel}: ${failedCount} silo bị lỗi. Kiểm tra kết nối hoặc dữ liệu.`);
+      } else if (createdCount > 0 || preFillCount > 0) {
+        const parts: string[] = [];
+        if (createdCount > 0) parts.push(`tạo mới ${createdCount} silo`);
+        if (preFillCount > 0) parts.push(`cập nhật nháp ${preFillCount} silo`);
+        if (failedCount > 0) parts.push(`${failedCount} silo bị lỗi khi tạo`);
+        if (noNvlCount > 0) parts.push(`${noNvlCount} silo ca trước chưa có NVL`);
+        message.success(`Đã sao chép từ ${prevLabel}: ${parts.join(", ")}. Kiểm tra và nhấn "Lưu map" cho từng dòng nếu cần.`);
+      } else if (noNvlCount > 0 && toCreate.length === 0 && preFillCount === 0) {
+        // Ca trước có silo nhưng tất cả đều chưa được gán NVL
+        message.warning(`Ca trước (${prevLabel}) có ${noNvlCount} silo nhưng chưa được gán NVL nào. Hãy cấu hình mapping cho ca trước trước.`);
+      } else {
+        message.info(`Tất cả Silo của ca hiện tại đã có mapping hoặc ca trước không có NVL.`);
+      }
+    } catch {
+      message.error("Lỗi khi sao chép mapping từ ca trước");
+    } finally {
+      setCopyingFromPrev(false);
+    }
+  }, [form, scope, ca, kiemTraData, refreshKiemTraData]);
+
+  // Lưu NVL đã chọn trong draft vào mapping của silo (PUT), sau đó refresh bảng
   const handleMapSiloNVL = useCallback(async (row: LGTSLMappingDto) => {
     const idNVL = mapDraftBySilo[row.idSiLo];
     if (!idNVL) { message.warning("Vui lòng chọn NVL trước khi lưu mapping"); return; }
@@ -372,6 +515,10 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
 
   // ─── Init & form logic ────────────────────────────────────────────────────
 
+  // Tải dữ liệu phiếu khi mount (hoặc khi idphieu thay đổi).
+  // - useChiTietApi=true: lấy chi tiết từ LG_TSL_ChiTiet (DB, có ManualKL/KLGoc).
+  // - useChiTietApi=false: parse JSON từ trường table1 trong phiếu (dùng khi tạo/sửa).
+  // Chữ ký (pheDuyet) ưu tiên lấy từ jsonData nếu có, fallback về bảng BM_PheDuyet.
   const initData = useCallback(async () => {
     try {
       setLoading(true);
@@ -428,6 +575,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
           };
           form.setFieldsValue(formValues);
 
+          // Tự động điền chữ ký người tạo (capDuyet=0) khi phiếu đang ở trạng thái DangLuu
           if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
             const overrides: Record<string, any> = {};
             config.signatures.filter((sig: any) => sig.capDuyet === 0).forEach((sig: any) => {
@@ -497,6 +645,8 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
 
   useEffect(() => { initData(); }, [initData]);
   useEffect(() => { loadDsLoCao(); }, [loadDsLoCao]);
+
+  // Inject options lò cao động vào config headerFields (thay thế options tĩnh từ JSON)
   const headerFields = useMemo(() => {
     return config.headerFields.map((field: any) => {
       if (field.key !== "scope") return field;
@@ -504,6 +654,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     });
   }, [config.headerFields, loCaoOptions]);
 
+  // Thu thập toàn bộ dữ liệu form + bảng để truyền vào API lưu/nộp phiếu
   const getFormData = useCallback(async () => {
     const userInfo = getUserInfo();
     const formData = await form.validateFields();
@@ -543,11 +694,13 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     };
   }, [form, config, tableData]);
 
+  // Validate form trước khi phieuActionService thực hiện đổi trạng thái
   const handleStatusChange = useCallback(async () => {
     try { await form.validateFields(); }
     catch (error: any) { message.error(error?.message || "Vui lòng kiểm tra dữ liệu trước khi đổi trạng thái"); }
   }, [form]);
 
+  // Sau khi action thành công: navigate đến phiếu mới (clone) hoặc reload dữ liệu hiện tại
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
       if (context?.newPhieuId) {
@@ -559,52 +712,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     [navigate, initData]
   );
 
-  const handleExportPdf = useCallback(async () => {
-    if (!idphieu) { message.warning("Vui lòng lưu phiếu trước khi xuất PDF!"); return; }
-    try {
-      setLoading(true);
-      const userInfo = getUserInfo();
-      const isPKH = userInfo.iD_PhongBan === 70 && userInfo.tenNgan === "P.KH";
-      const response = await lgTSLChiTietApi.exportPdf(idphieu, isPKH);
-      const blob = new Blob([response as any], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `TonSiLoLoCao_${soPhieu || idphieu}_${new Date().toISOString().slice(0, 10)}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      message.success("Xuất PDF thành công!");
-    } catch (error: any) {
-      message.error(error?.message || "Xuất file PDF thất bại!");
-    } finally {
-      setLoading(false);
-    }
-  }, [idphieu, soPhieu]);
-
-  const [exportingExcel, setExportingExcel] = useState(false);
-  const handleExportExcel = useCallback(async () => {
-    if (!idphieu) return;
-    try {
-      setExportingExcel(true);
-      const res = await lgTSLChiTietApi.exportExcel(idphieu);
-      const raw = res as unknown;
-      const blob = raw instanceof Blob ? raw : new Blob([raw as any], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      if (blob.size === 0) throw new Error("Dữ liệu Excel rỗng.");
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `TonSiLoLoCao_${soPhieu || idphieu}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error: any) {
-      message.error(error?.message || "Xuất Excel thất bại!");
-    } finally {
-      setExportingExcel(false);
-    }
-  }, [idphieu, soPhieu]);
-
+  // Render các nút hành động phiếu (Lưu, Nộp, Phê duyệt, Thu hồi, v.v.) theo trạng thái
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
     const buttons = phieuActionService.getActionButtons({
@@ -620,15 +728,14 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       onStatusChange: handleStatusChange,
       onSuccess: handleActionSuccess,
       onError: (error) => { console.error("Action error:", error); },
-      onExportPdf: handleExportPdf,
     });
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, handleExportPdf]);
+  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess]);
 
   // ─── Split Silo handlers ───────────────────────────────────────────────────
 
-  // rowSpan[i]: số dòng span cho cột STT/Silo tại vị trí i; 0 = ẩn cell
+  // rowSpan[i]: số dòng span cho cột STT/Silo tại vị trí i; 0 = ẩn cell (dòng con của nhóm)
   const rowSpans = useMemo(() =>
     tableData.map((row, idx) => {
       if (!row._splitGroupId) return 1;
@@ -640,6 +747,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     [tableData]
   );
 
+  // Chuyển dòng bình thường thành nhóm tách liệu: 1 hàng parent (tổng) + 2 hàng con
   const handleSplitRow = useCallback((rowKey: string) => {
     const idx = tableData.findIndex((r) => r.key === rowKey);
     if (idx === -1) return;
@@ -656,6 +764,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     setTableData(next.map((r, i) => ({ ...r, stt: i + 1 })));
   }, [tableData]);
 
+  // Gộp lại nhóm tách liệu: xóa tất cả hàng con, giữ lại hàng parent và làm nó thành dòng bình thường
   const handleMergeGroup = useCallback((gid: string) => {
     const parent = tableData.find((r) => r._splitGroupId === gid && r._isSplitParent)!;
     const merged: TableRow = { ...parent, _splitGroupId: undefined, _isSplitParent: undefined };
@@ -671,6 +780,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     setTableData(next.map((r, i) => ({ ...r, stt: i + 1 })));
   }, [tableData]);
 
+  // Thêm một hàng con mới vào cuối nhóm tách liệu
   const handleAddChildToGroup = useCallback((gid: string) => {
     const parent = tableData.find((r) => r._splitGroupId === gid && r._isSplitParent)!;
     const lastIdx = tableData.reduce((last, r, i) => (r._splitGroupId === gid ? i : last), -1);
@@ -685,6 +795,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     setTableData(next.map((r, i) => ({ ...r, stt: i + 1 })));
   }, [tableData]);
 
+  // Xóa một hàng con khỏi nhóm tách liệu (nhóm phải còn ít nhất 1 hàng con)
   const handleDeleteSplitChild = useCallback((rowKey: string) => {
     const idx = tableData.findIndex((r) => r.key === rowKey);
     if (idx === -1 || tableData[idx]._isSplitParent) return;
@@ -697,6 +808,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     setTableData((prev) => prev.filter((_, i) => i !== idx).map((r, i) => ({ ...r, stt: i + 1 })));
   }, [tableData]);
 
+  // Xóa một dòng bình thường (không phải dòng tách liệu); không cho xóa nếu chỉ còn 1 dòng
   const handleDeleteNormalRow = useCallback((rowKey: string) => {
     setTableData((prev) => {
       if (prev.length <= 1) return prev;
@@ -704,6 +816,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     });
   }, []);
 
+  // Cập nhật một ô trong tableData; đánh dấu _manualKL=true nếu người dùng chỉnh sửa KL
   const handleSiloCellChange = useCallback((rowKey: string, field: string, value: any) => {
     setTableData((prev) => prev.map((r) => {
       if (r.key !== rowKey) return r;
@@ -712,6 +825,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }));
   }, []);
 
+  // Cập nhật NVL được chọn cho hàng con tách liệu; đồng thời đồng bộ tên hiển thị
   const handleNvlSelectChange = useCallback((rowKey: string, nvlId: number | null) => {
     setTableData((prev) => {
       const nvl = nvlId ? scopeNvlOptions.find((n) => n.id === nvlId) : null;
@@ -758,16 +872,6 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
             Kiểm tra Silo
           </Button>
           {actionButtons}
-          {idphieu && (
-            <Button
-              icon={<FileExcelOutlined />}
-              style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
-              loading={exportingExcel}
-              onClick={() => void handleExportExcel()}
-            >
-              Xuất Excel
-            </Button>
-          )}
         </div>
 
         {/* ── Modal: Kiểm tra Silo ─────────────────────────────────────────── */}
@@ -817,9 +921,18 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                 label: "Map NVL vào Silo",
                 children: (
                   <>
-                    <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+                    <div style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                       <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAddNvl}>Thêm NVL mới</Button>
                       <Button icon={<PlusOutlined />} onClick={handleOpenAddMapping}>Thêm Mapping mới</Button>
+                      <Tooltip title={`Tự động lấy mapping từ ${Number(ca) === 2 ? "Ca 1 cùng ngày" : "Ca 2 ngày trước"} để điền vào ca hiện tại. Silo chưa có sẽ được tạo mới, silo đã có sẽ được điền vào ô "NVL map mới" để bạn xem lại.`}>
+                        <Button
+                          icon={<PlusCircleOutlined />}
+                          loading={copyingFromPrev}
+                          onClick={handleCopyFromPrevShift}
+                        >
+                          Sao chép từ ca trước
+                        </Button>
+                      </Tooltip>
                       <span style={{ color: "#666", alignSelf: "center" }}>
                         NVL thuộc lò cao đang chọn: {scopeNvlOptions.length} mục
                       </span>
@@ -831,9 +944,28 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                       dataSource={kiemTraData}
                       rowKey="id"
                       pagination={false}
+                      rowClassName={(row: LGTSLMappingDto) => {
+                        const dupCount = kiemTraData.filter((r) => r.idSiLo === row.idSiLo).length;
+                        return dupCount > 1 ? "row-duplicate-silo" : "";
+                      }}
                       columns={[
                         { title: "STT", key: "stt", width: 50, align: "center", render: (_v: unknown, _r: unknown, i: number) => i + 1 },
-                        { title: "Silo", dataIndex: "tenSiLo", key: "tenSiLo", width: 160, render: (v: string | null) => v ?? "—" },
+                        {
+                          title: "Silo", dataIndex: "tenSiLo", key: "tenSiLo", width: 180,
+                          render: (v: string | null, row: LGTSLMappingDto) => {
+                            const dupCount = kiemTraData.filter((r) => r.idSiLo === row.idSiLo).length;
+                            return (
+                              <span>
+                                {v ?? "—"}
+                                {dupCount > 1 && (
+                                  <Tooltip title={`Silo này được map ${dupCount} lần trong ca. Kiểm tra lại!`}>
+                                    <Tag color="warning" style={{ marginLeft: 6 }}>⚠ ×{dupCount}</Tag>
+                                  </Tooltip>
+                                )}
+                              </span>
+                            );
+                          },
+                        },
                         {
                           title: "NVL hiện tại", dataIndex: "tenNVL", key: "tenNVL", width: 200,
                           render: (v: string | null) => v ?? <span style={{ color: "#bbb" }}>Chưa cấu hình</span>,
@@ -851,7 +983,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                               onChange={(value) => setMapDraftBySilo((prev) => ({ ...prev, [row.idSiLo]: value ?? null }))}
                             >
                               {scopeNvlOptions.map((n) => (
-                                <Select.Option key={n.id} value={n.id}>[{n.id}] {n.tenHienThi ?? n.tenNVL}</Select.Option>
+                                <Select.Option key={n.id} value={n.id}> {n.tenHienThi ?? n.tenNVL}</Select.Option>
                               ))}
                             </Select>
                           ),
@@ -975,16 +1107,22 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
               </Select>
             </Form.Item>
             <Form.Item name="idSiLo" label="Silo" rules={[{ required: true, message: "Chọn Silo" }]}>
-              <Select placeholder="Chọn Silo" showSearch optionFilterProp="children">
-                {siloOptions.map((s) => (
-                  <Select.Option key={s.id} value={s.id}>{s.tenSiLo}</Select.Option>
-                ))}
-              </Select>
+              <Select placeholder="Chọn Silo" showSearch optionFilterProp="label"
+                options={siloOptions.map((s) => {
+                  const mapped = kiemTraData.find((r) => r.idSiLo === s.id);
+                  return {
+                    value: s.id,
+                    label: mapped
+                      ? `${s.tenSiLo} ⚠ Đã map: ${mapped.tenNVL ?? "chưa có NVL"}`
+                      : (s.tenSiLo ?? ""),
+                  };
+                })}
+              />
             </Form.Item>
             <Form.Item name="idNVL" label="NVL" rules={[{ required: true, message: "Chọn NVL" }]}>
               <Select placeholder="Chọn NVL" showSearch optionFilterProp="children">
                 {scopeNvlOptions.map((n) => (
-                  <Select.Option key={n.id} value={n.id}>[{n.id}] {n.tenHienThi ?? n.tenNVL}</Select.Option>
+                  <Select.Option key={n.id} value={n.id}> {n.tenHienThi ?? n.tenNVL}</Select.Option>
                 ))}
               </Select>
             </Form.Item>
