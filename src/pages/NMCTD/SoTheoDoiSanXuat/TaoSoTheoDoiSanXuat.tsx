@@ -16,6 +16,11 @@ import { PhieuApi } from "../../../services/PhieuApi";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
+import {
+  canChotBm,
+  getBmQuyenUiFlags,
+  hasPermissionForBm,
+} from "../../../utils/helpers/checkAdminRole";
 
 interface TableRow {
   key?: string;
@@ -53,16 +58,22 @@ const TaoSoTheoDoiSanXuat = () => {
     TrangThaiPhieuConst.DangPheDuyet,
     TrangThaiPhieuConst.DaChot,
   ].includes(currentTinhTrang);
-  const isFormLocked = !(
-    currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
-    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
-    currentTinhTrang === TrangThaiPhieuConst.HieuChinh
-  );
 
   const getUserInfo = useCallback(() => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
   }, []);
+
+  // check user này có quyền chốt phiếu không -> xử lý sửa dữ liệu
+  const canChotPhieu = canChotBm(currentUserInfo, config.code);
+
+  const isFormLocked = !(
+    currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
+    currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
+    currentTinhTrang === TrangThaiPhieuConst.HieuChinh ||
+    // Allow editing if user has chốt permission and form is in HoanThanh state
+    (canChotPhieu && currentTinhTrang !== TrangThaiPhieuConst.DaChot)
+  );
 
   const table1DefaultData = useMemo(() => {
     const table1Layout = config.layout.find(
@@ -281,6 +292,27 @@ const TaoSoTheoDoiSanXuat = () => {
     },
     [navigate, initData],
   );
+
+  // Handler for saving data when user has chốt permission
+  const handleSaveData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const formData = await getFormData();
+      // chỉ update bảng dữ liệu k cần update các trường khác vì khi chốt sẽ gọi API riêng để update tinhTrang
+      // bỏ luồng phê duyệt luôn nên không cần gửi pheDuyet nữa
+      delete formData.pheDuyet;
+      console.log("Saving data with chốt permission, formData:", formData);
+
+      // Use new putTableDataOnly API for updating table data only (no form status constraints)
+      await PhieuApi.putTableDataOnly(idphieu || "", formData);
+      message.success("Lưu dữ liệu thành công!");
+    } catch (error: any) {
+      console.error("Save error:", error);
+      message.error(error?.message || "Lưu dữ liệu thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  }, [idphieu, getFormData]);
 
   const handleExportPdf = async () => {
     if (!idphieu) {
@@ -631,6 +663,19 @@ const TaoSoTheoDoiSanXuat = () => {
               </Upload>
             </>
           )}
+          {/* Save button for users with chốt permission when form is in HoanThanh state */}
+          {canChotPhieu &&
+            currentTinhTrang !== TrangThaiPhieuConst.DaChot &&
+            idphieu && (
+              <Button
+                type="primary"
+                onClick={handleSaveData}
+                loading={loading}
+                style={{ backgroundColor: "#1890ff" }}
+              >
+                Lưu dữ liệu điều chỉnh
+              </Button>
+            )}
           {/* {idphieu &&
             (currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
               currentTinhTrang === TrangThaiPhieuConst.DaChot) && (

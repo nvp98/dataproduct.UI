@@ -226,7 +226,7 @@ const checkPermission = {
     currentUserPhongBanId?: number | null,
     currentUserTenNgan?: string | null,
   ): boolean => {
-    return currentUserPhongBanId === 70 && currentUserTenNgan === "P.KH";
+    return currentUserPhongBanId === 70 || currentUserTenNgan === "P.KH";
   },
 
   /**

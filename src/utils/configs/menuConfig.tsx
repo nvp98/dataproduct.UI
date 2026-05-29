@@ -248,9 +248,9 @@ export const menuConfig = [
             key: "sub2-4-5",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
-              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+              <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
                 <NavLink to="/phieuxulykph">
-                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                  BM.01C/QT.11 Phiếu xử lý sản phẩm không phù hợp
                 </NavLink>
               </Tooltip>
             ),
@@ -504,9 +504,9 @@ export const menuConfig = [
             key: "3-4-4",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
-              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+              <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
                 <NavLink to="/viecdentoi/phieuxulykph">
-                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                  BM.01C/QT.11 Phiếu xử lý sản phẩm không phù hợp
                 </NavLink>
               </Tooltip>
             ),
@@ -686,78 +686,78 @@ export const menuConfig = [
           },
         ],
       },
-      // {
-      //   key: "sub3-4",
-      //   label: "NM.CTD",
-      //   children: [
-      //     {
-      //       key: "3-4-1",
-      //       maBM: BM_CONFIG.CTD.CTD_STD_Sanxuat,
-      //       label: (
-      //         <Tooltip title="BM.09/QT.05.13 (Sổ theo dõi sản xuất hàng ngày)">
-      //           <NavLink to="/xemphieu/sotheodoisanxuat">
-      //             BM.09/QT.05.13 Sổ theo dõi sản xuất hàng ngày
-      //           </NavLink>
-      //         </Tooltip>
-      //       ),
-      //     },
-      //     {
-      //       key: "3-4-2",
-      //       maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
-      //       label: (
-      //         <Tooltip title="BM.05/QT.05.13 (Biên bản giao nhận phôi)">
-      //           <NavLink to="/xemphieu/bienbangiaoNhanphoi">
-      //             BM.05/QT.05.13 (Biên bản giao nhận phôi)
-      //           </NavLink>
-      //         </Tooltip>
-      //       ),
-      //     },
-      //     {
-      //       key: "3-4-3",
-      //       maBM: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
-      //       label: (
-      //         <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
-      //           <NavLink to="/xemphieu/bienbanphoinapnguoi">
-      //             BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)
-      //           </NavLink>
-      //         </Tooltip>
-      //       ),
-      //     },
-      //     {
-      //       key: "3-4-4",
-      //       maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
-      //       label: (
-      //         <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
-      //           <NavLink to="/xemphieu/phieuxulykph">
-      //             BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
-      //           </NavLink>
-      //         </Tooltip>
-      //       ),
-      //     },
-      //     {
-      //       key: "sub3-4-5",
-      //       maBM: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
-      //       label: (
-      //         <Tooltip title="BM.08/QT.05.13 (Biên bản xác nhận sản lượng)">
-      //           <NavLink to="/xemphieu/sanluongkcs">
-      //             BM.08/QT.05.13 Biên bản xác nhận sản lượng
-      //           </NavLink>
-      //         </Tooltip>
-      //       ),
-      //     },
-      //     {
-      //       key: "sub3-4-6",
-      //       maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
-      //       label: (
-      //         <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
-      //           <NavLink to="/xemphieu/bienbanphoinong">
-      //             BM.06/QT.05.10 Biên bản giao nhận phôi nóng (Nhận phôi)
-      //           </NavLink>
-      //         </Tooltip>
-      //       ),
-      //     },
-      //   ],
-      // },
+      {
+        key: "sub3-ctd",
+        label: "NM.CTD",
+        children: [
+          {
+            key: "3-4-1",
+            maBM: BM_CONFIG.CTD.CTD_STD_Sanxuat,
+            label: (
+              <Tooltip title="BM.09/QT.05.13 (Sổ theo dõi sản xuất hàng ngày)">
+                <NavLink to="/xemphieu/sotheodoisanxuat">
+                  BM.09/QT.05.13 Sổ theo dõi sản xuất hàng ngày
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "3-4-2",
+            maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
+            label: (
+              <Tooltip title="BM.05/QT.05.13 (Biên bản giao nhận phôi)">
+                <NavLink to="/xemphieu/bienbangiaoNhanphoi">
+                  BM.05/QT.05.13 (Biên bản giao nhận phôi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "3-4-3",
+            maBM: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
+            label: (
+              <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
+                <NavLink to="/xemphieu/bienbanphoinapnguoi">
+                  BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "3-4-4",
+            maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
+            label: (
+              <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+                <NavLink to="/xemphieu/phieuxulykph">
+                  BM.01C/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub3-4-5",
+            maBM: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
+            label: (
+              <Tooltip title="BM.08/QT.05.13 (Biên bản xác nhận sản lượng)">
+                <NavLink to="/xemphieu/sanluongkcs">
+                  BM.08/QT.05.13 Biên bản xác nhận sản lượng
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub3-4-6",
+            maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
+            label: (
+              <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
+                <NavLink to="/xemphieu/bienbanphoinong">
+                  BM.06/QT.05.10 Biên bản giao nhận phôi nóng (Nhận phôi)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
       {
         key: "sub4-1",
         label: "NM.HRC1",
@@ -911,9 +911,9 @@ export const menuConfig = [
             key: "5-1-4",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
-              <Tooltip title="BM.01/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
+              <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
                 <NavLink to="/viecdentoi/phieuxulykph">
-                  BM.01/QT.11 Phiếu xử lý sản phẩm không phù hợp
+                  BM.01C/QT.11 Phiếu xử lý sản phẩm không phù hợp
                 </NavLink>
               </Tooltip>
             ),

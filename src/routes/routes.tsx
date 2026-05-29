@@ -198,6 +198,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/bienbanphoinong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanPhoiNong type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieuphoinong",
         element: (
           <RequireAuth>
@@ -686,6 +696,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/bienbanphoinapnguoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanPhoiNapNguoi type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieubienbanphoinapnguoi",
         element: (
           <RequireAuth>
@@ -731,6 +751,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <BienBanGiaoNhanPhoi type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/bienbangiaoNhanphoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanGiaoNhanPhoi type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -786,6 +816,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/sotheodoisanxuat",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <SoTheoDoiSanXuat type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "taophieusotheodoisanxuat",
         element: (
           <RequireAuth>
@@ -831,6 +871,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <PhieuXuLyKPH type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/phieuxulykph",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <PhieuXuLyKPH type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -882,6 +932,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <BienBanSanLuongKCS type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/sanluongkcs",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BienBanSanLuongKCS type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
