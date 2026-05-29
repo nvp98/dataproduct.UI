@@ -77,6 +77,9 @@ import TaoPhieuTonSiLo from "../pages/NMLG/TonSiloLoCao/TaoPhieuTonSiLo";
 import ChiTietTonSiLo from "../pages/NMLG/TonSiloLoCao/ChiTietTonSiLo";
 import QuanLySiLoNVL from "../pages/NMLG/QuanLySiLoNVL/QuanLySiLoNVL";
 import QuanLyTonSiLoNVL from "../pages/NMLG/QuanLyTonSiLoNVL/QuanLyTonSiLoNVL";
+import NKVHThanPhunLoCao from "../pages/NMLG/NKVHThanPhunLoCao/NKVHThanPhunLoCao";
+import TaoPhieuNKVHThanPhunLoCao from "../pages/NMLG/NKVHThanPhunLoCao/TaoPhieuNKVHThanPhunLoCao";
+import ChiTietNKVHThanPhunLoCao from "../pages/NMLG/NKVHThanPhunLoCao/ChiTietNKVHThanPhunLoCao";
 import GiaoNhanThepLong from "../pages/NM.HRC2/GiaoNhanThepLong/GiaoNhanThepLong";
 import TaoPhieuGN from "../pages/NM.HRC2/GiaoNhanThepLong/TaoPhieuGN";
 import ChiTietGN from "../pages/NM.HRC2/GiaoNhanThepLong/ChiTietGN";
@@ -1002,11 +1005,6 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <NapLieuLoCao />
-        path: "thongkephieuhrc2",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <ThongKePhieuHRC2 />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1017,11 +1015,6 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <NapLieuLoCao type="viecdentoi" />
-        path: "thongkehrc1",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <ThongKeHRC1 />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1032,11 +1025,6 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoPhieuNapLieuLoCao />
-        path: "thongkephieuhrc1",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <ThongKePhieuHRC1 />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1047,11 +1035,6 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoPhieuNapLieuLoCao />
-        path: "giaonhantheplong",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <GiaoNhanThepLong />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1062,11 +1045,6 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <ChiTietNapLieuLoCao />
-        path: "viecdentoi/giaonhantheplong",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <GiaoNhanThepLong type="viecdentoi" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1077,11 +1055,6 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TonSiloLoCao />
-        path: "xemphieu/giaonhantheplong",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <GiaoNhanThepLong type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1092,11 +1065,6 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TonSiloLoCao type="viecdentoi" />
-        path: "taophieugiaonhantheplong",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <TaoPhieuGN />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1107,11 +1075,6 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoPhieuTonSiLo />
-        path: "chitietgiaonhantheplong",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <ChiTietGN />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1122,6 +1085,180 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoPhieuTonSiLo />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitiettonsilolocao/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTonSiLo />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "nkvhthanphunlocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <NKVHThanPhunLoCao />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/nkvhthanphunlocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <NKVHThanPhunLoCao type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieunkvhthanphunlocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuNKVHThanPhunLoCao />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieunkvhthanphunlocao/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuNKVHThanPhunLoCao />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietnkvhthanphunlocao/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietNKVHThanPhunLoCao />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "silolocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyTonSiLoNVL />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "quanlysilonvl",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLySiLoNVL />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "quanlytonsilonvl",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyTonSiLoNVL />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thongkephieuhrc2",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThongKePhieuHRC2 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thongkehrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThongKeHRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thongkephieuhrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThongKePhieuHRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "giaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanThepLong />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/giaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanThepLong type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/giaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanThepLong type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieugiaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuGN />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietgiaonhantheplong",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietGN />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
       // ========== GIAO NHẬN THÉP LỎNG - HRC1 ==========
       {
         path: "giaonhantheplong_hrc1",
@@ -1134,11 +1271,6 @@ export const routes = [
         ),
       },
       {
-        path: "chitiettonsilolocao/:id",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <ChiTietTonSiLo />
         path: "viecdentoi/giaonhantheplong_hrc1",
         element: (
           <RequireAuth>
@@ -1149,11 +1281,6 @@ export const routes = [
         ),
       },
       {
-        path: "silolocao",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <QuanLyTonSiLoNVL />
         path: "xemphieu/giaonhantheplong_hrc1",
         element: (
           <RequireAuth>
@@ -1164,11 +1291,6 @@ export const routes = [
         ),
       },
       {
-        path: "quanlysilonvl",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <QuanLySiLoNVL />
         path: "taophieugiaonhantheplong_hrc1",
         element: (
           <RequireAuth>
@@ -1179,11 +1301,6 @@ export const routes = [
         ),
       },
       {
-        path: "quanlytonsilonvl",
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={["admin", "user"]}>
-              <QuanLyTonSiLoNVL />
         path: "chitietgiaonhantheplong_hrc1",
         element: (
           <RequireAuth>

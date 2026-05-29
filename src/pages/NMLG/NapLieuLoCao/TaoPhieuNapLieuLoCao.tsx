@@ -680,6 +680,9 @@ const TaoPhieuNapLieuLoCao = () => {
     try {
       setLoading(true);
       const response = await lgnlChiTietApi.exportPdf(idphieu);
+      const userInfo = getUserInfo();
+      const isPKH = userInfo.tenNgan === "P.KH" || userInfo.iD_PhongBan === 70;
+      const response = await lgnlChiTietApi.exportPdf(idphieu, isPKH);
       const blob = new Blob([response as any], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -696,6 +699,50 @@ const TaoPhieuNapLieuLoCao = () => {
       setLoading(false);
     }
   };
+
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const handleExportExcel = async () => {
+    if (!idphieu) return;
+    try {
+      setExportingExcel(true);
+      const res = await lgnlChiTietApi.exportExcel(idphieu);
+      const raw = res as unknown;
+      const blob = raw instanceof Blob ? raw : new Blob([raw as any], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      if (blob.size === 0) throw new Error("Dữ liệu Excel rỗng.");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `NapLieuLoCao_${soPhieu || idphieu}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      message.error(error?.message || "Xuất Excel thất bại!");
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const actionButtons = useMemo(() => {
+    const userInfo = getUserInfo();
+    const buttons = phieuActionService.getActionButtons({
+      phieuId: idphieu || "",
+      tinhTrang: phieuInfo.tinhTrang ?? 0,
+      isClone: phieuInfo.isClone ?? false,
+      currentUserId: userInfo.iD_TaiKhoan ?? null,
+      currentUserPhongBanId: userInfo.iD_PhongBan ?? null,
+      currentUserTenNgan: userInfo.tenNgan ?? null,
+      nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
+      phieuPhongBanId: phieuInfo.idphongBan ?? null,
+      pheDuyet: phieuInfo.pheDuyet ?? [],
+      onStatusChange: handleStatusChange,
+      onSuccess: handleActionSuccess,
+      onExportPdf: handleExportPdf,
+      onError: (error) => { console.error("Action error:", error); },
+    });
+
+    if (buttons.length === 0) return null;
+    return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
+  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, handleExportPdf]);
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -758,13 +805,23 @@ const TaoPhieuNapLieuLoCao = () => {
           </Button>
           {actionButtons}
           {idphieu && (
+            <Button
+              icon={<FileExcelOutlined />}
+              style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
+              loading={exportingExcel}
+              onClick={() => void handleExportExcel()}
+            >
+              Xuất Excel
+            </Button>
+          )}
+          {/* {idphieu && (
             currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
             currentTinhTrang === TrangThaiPhieuConst.DaChot
           ) && (
             <Button icon={<FilePdfOutlined />} onClick={handleExportPdf} loading={loading}>
               Xuất PDF
             </Button>
-          )}
+          )} */}
         </div>
 
         <Modal

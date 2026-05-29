@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_TonSiLo from "../../../utils/BM_config/LG_BB_TonSiLo.json";
 import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tabs, Tag, Tooltip, Typography, message } from "antd";
-import { DeleteOutlined, FilePdfOutlined, FilterOutlined, PlusCircleOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { DeleteOutlined, FileExcelOutlined, FilterOutlined, PlusCircleOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -559,6 +559,52 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     [navigate, initData]
   );
 
+  const handleExportPdf = useCallback(async () => {
+    if (!idphieu) { message.warning("Vui lòng lưu phiếu trước khi xuất PDF!"); return; }
+    try {
+      setLoading(true);
+      const userInfo = getUserInfo();
+      const isPKH = userInfo.iD_PhongBan === 70 && userInfo.tenNgan === "P.KH";
+      const response = await lgTSLChiTietApi.exportPdf(idphieu, isPKH);
+      const blob = new Blob([response as any], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `TonSiLoLoCao_${soPhieu || idphieu}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success("Xuất PDF thành công!");
+    } catch (error: any) {
+      message.error(error?.message || "Xuất file PDF thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  }, [idphieu, soPhieu]);
+
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const handleExportExcel = useCallback(async () => {
+    if (!idphieu) return;
+    try {
+      setExportingExcel(true);
+      const res = await lgTSLChiTietApi.exportExcel(idphieu);
+      const raw = res as unknown;
+      const blob = raw instanceof Blob ? raw : new Blob([raw as any], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      if (blob.size === 0) throw new Error("Dữ liệu Excel rỗng.");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TonSiLoLoCao_${soPhieu || idphieu}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      message.error(error?.message || "Xuất Excel thất bại!");
+    } finally {
+      setExportingExcel(false);
+    }
+  }, [idphieu, soPhieu]);
+
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
     const buttons = phieuActionService.getActionButtons({
@@ -574,10 +620,11 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       onStatusChange: handleStatusChange,
       onSuccess: handleActionSuccess,
       onError: (error) => { console.error("Action error:", error); },
+      onExportPdf: handleExportPdf,
     });
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess]);
+  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, handleExportPdf]);
 
   // ─── Split Silo handlers ───────────────────────────────────────────────────
 
@@ -678,28 +725,6 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
 
   // ─── End Split Silo handlers ───────────────────────────────────────────────
 
-  const handleExportPdf = async () => {
-    if (!idphieu) { message.warning("Vui lòng lưu phiếu trước khi xuất PDF!"); return; }
-    try {
-      setLoading(true);
-      const response = await lgTSLChiTietApi.exportPdf(idphieu);
-      const blob = new Blob([response as any], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `TonSiLoLoCao_${soPhieu || idphieu}_${new Date().toISOString().slice(0, 10)}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      message.success("Xuất PDF thành công!");
-    } catch (error: any) {
-      message.error(error?.message || "Xuất file PDF thất bại!");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -734,11 +759,13 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
           </Button>
           {actionButtons}
           {idphieu && (
-            currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
-            currentTinhTrang === TrangThaiPhieuConst.DaChot
-          ) && (
-            <Button icon={<FilePdfOutlined />} onClick={handleExportPdf} loading={loading}>
-              Xuất PDF
+            <Button
+              icon={<FileExcelOutlined />}
+              style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
+              loading={exportingExcel}
+              onClick={() => void handleExportExcel()}
+            >
+              Xuất Excel
             </Button>
           )}
         </div>

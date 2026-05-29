@@ -193,6 +193,15 @@ export const lgTSLChiTietApi = {
   getByPhieu: (idPhieu: string) =>
     apiService.get<LGTSLChiTietDto[]>(`/api/LGTSL/chitiet/${idPhieu}`),
 
-  exportPdf: (idPhieu: string) =>
-    apiService.get<Blob>(`/api/LGTSL/export-pdf/${idPhieu}`, { responseType: "blob" }),
+  exportPdf: (idPhieu: string, useKeHoachName = false) =>
+    apiService.get<Blob>(`/api/LGTSL/export-pdf/${idPhieu}`, {
+      responseType: "blob",
+      params: useKeHoachName ? { useKeHoachName: true } : undefined,
+    }),
+
+  exportExcel: (idPhieu: string) =>
+    apiService.get(`/api/LGTSL/export-excel/${idPhieu}`, {
+      responseType: "blob",
+      headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    }),
 };

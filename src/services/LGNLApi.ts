@@ -286,6 +286,15 @@ export const lgnlChiTietApi = {
   getByPhieu: (idPhieu: string): Promise<LGNLChiTietDto[]> =>
     apiService.get(`/api/LGNL/chitiet/${idPhieu}`),
 
-  exportPdf: (idPhieu: string) =>
-    apiService.get<Blob>(`/api/LGNL/export-pdf/${idPhieu}`, { responseType: "blob" }),
+  exportPdf: (idPhieu: string, useKeHoachName = false) =>
+    apiService.get<Blob>(`/api/LGNL/export-pdf/${idPhieu}`, {
+      responseType: "blob",
+      params: useKeHoachName ? { useKeHoachName: true } : undefined,
+    }),
+
+  exportExcel: (idPhieu: string) =>
+    apiService.get(`/api/LGNL/export-excel/${idPhieu}`, {
+      responseType: "blob",
+      headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    }),
 };
