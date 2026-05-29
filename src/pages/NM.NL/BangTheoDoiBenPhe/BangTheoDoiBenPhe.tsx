@@ -252,8 +252,9 @@ const BangTheoDoiBenPhe = ({ type }: { type?: string }) => {
 
   const handleExportExcel = async () => {
     try {
-      const fromDate = currentFilter?.ngaySXFrom;
-      const toDate = currentFilter?.ngaySXTo;
+      console.log("Current filter for export:", currentFilter);
+      const fromDate = currentFilter?.fromDate;
+      const toDate = currentFilter?.toDate;
       const maBm = config?.code;
 
       const res = await PhieuApi.exportDynamicExcelTH({
