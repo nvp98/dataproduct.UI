@@ -85,6 +85,10 @@ const TaoPhieuNapLieuLoCao = () => {
   const [addMappingLoading, setAddMappingLoading] = useState(false);
   const [addMappingForm] = Form.useForm();
   const [siloMasterOptions, setSiloMasterOptions] = useState<LGNLSiLoMasterDto[]>([]);
+  const mappedSiloIds = useMemo(
+    () => new Set(siloSnapshotData.filter((item) => item.idNVL != null).map((item) => item.idSiLo)),
+    [siloSnapshotData]
+  );
 
   const scopeNvlOptions = useMemo(
     () => (scope ? nvlOptions.filter((n) => n.idLoCao === Number(scope)) : nvlOptions),
@@ -295,8 +299,12 @@ const TaoPhieuNapLieuLoCao = () => {
       message.warning("Vui lòng chọn Lò cao, Ca và Ngày sản xuất trước");
       return;
     }
+    const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     try {
-      const res = await lgnlSiLoMasterApi.getList({ idLoCao: Number(scope) });
+      const [res] = await Promise.all([
+        lgnlSiLoMasterApi.getList({ idLoCao: Number(scope) }),
+        refreshSnapshotData(ngay, Number(ca), Number(scope)),
+      ]);
       setSiloMasterOptions(Array.isArray(res) ? res : []);
     } catch {
       setSiloMasterOptions([]);
@@ -315,6 +323,12 @@ const TaoPhieuNapLieuLoCao = () => {
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     try {
       const values = await addMappingForm.validateFields();
+      const snapshot = await refreshSnapshotData(ngay, Number(ca), Number(scope));
+      const siloDaMap = snapshot.find((item) => item.idSiLo === values.idSiLo && item.idNVL != null);
+      if (siloDaMap) {
+        message.warning("Silo này đã map nguyên vật liệu rồi, không thể map tiếp. Nếu cần đổi NVL hãy dùng chức năng Đổi NVL.");
+        return;
+      }
       setAddMappingLoading(true);
       await lgnlMappingApi.create({
         ngay,
@@ -347,6 +361,10 @@ const TaoPhieuNapLieuLoCao = () => {
     const idNVL = mapDraftBySilo[row.idSiLo];
     if (!idNVL) {
       message.warning("Vui lòng chọn NVL trước khi lưu mapping");
+      return;
+    }
+    if (row.idNVL != null) {
+      message.warning("Silo này đã map nguyên vật liệu rồi, không thể map tiếp. Nếu cần đổi NVL hãy dùng chức năng Đổi NVL.");
       return;
     }
     const ngaySXValue = form.getFieldValue("NgaySX");
@@ -998,7 +1016,9 @@ const TaoPhieuNapLieuLoCao = () => {
             <Form.Item name="idSiLo" label="Silo" rules={[{ required: true, message: "Chọn Silo" }]}>
               <Select placeholder="Chọn Silo" showSearch optionFilterProp="children">
                 {siloMasterOptions.map((s) => (
-                  <Select.Option key={s.id} value={s.id}>{s.tenSiLo}</Select.Option>
+                  <Select.Option key={s.id} value={s.id} disabled={mappedSiloIds.has(s.id)}>
+                    {s.tenSiLo}{mappedSiloIds.has(s.id) ? " (đã map NVL)" : ""}
+                  </Select.Option>
                 ))}
               </Select>
             </Form.Item>

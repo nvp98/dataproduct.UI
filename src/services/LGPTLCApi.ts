@@ -129,9 +129,9 @@ export const lgPTLCApi = {
   updateSummary: (idPhieu: string, dto: UpdateLGPTLCSummaryDto) =>
     apiService.put(`/api/LGPTLC/chitiet/${idPhieu}/summary`, dto),
 
-  getAutoData: (idLoCao: number, ngaySanXuat: string) =>
+  getAutoData: (idLoCao: number, ngaySanXuat: string, idPhieu?: string) =>
     apiService.get(`/api/LGPTLC/get-phunthan-auto-data`, {
-      params: { idLoCao, ngaySanXuat },
+      params: { idLoCao, ngaySanXuat, ...(idPhieu ? { idPhieu } : {}) },
     }),
 
   exportExcel: (idPhieu: string) =>

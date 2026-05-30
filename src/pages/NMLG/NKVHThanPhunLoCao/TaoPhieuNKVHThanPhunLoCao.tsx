@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_PhunThanLoCao from "../../../utils/BM_config/LG_BB_PhunThanLoCao.json";
-import { ReloadOutlined } from "@ant-design/icons";
+import { FilterOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -8,7 +8,6 @@ import {
   Input,
   InputNumber,
   message,
-  Tooltip,
   Typography,
 } from "antd";
 import { Table } from "antd";
@@ -39,6 +38,51 @@ const formatThoiGian = (thoiGianStr: string): string => {
   const d = new Date(thoiGianStr);
   const hour = d.getHours();
   return `${String(hour).padStart(2, "0")}h`;
+};
+
+// Các cặp Auto+Manual cần tính tổng cho dòng Tổng ca
+const NUMERIC_FIELD_PAIRS: Array<[string, string]> = [
+  ["nhietDoSiloBotThan1_Auto", "nhietDoSiloBotThan1_Manual"],
+  ["nhietDoSiloBotThan2_Auto", "nhietDoSiloBotThan2_Manual"],
+  ["nhietDoBonPhunThoi1_Auto", "nhietDoBonPhunThoi1_Manual"],
+  ["nhietDoBonPhunThoi2_Auto", "nhietDoBonPhunThoi2_Manual"],
+  ["nhietDoBonPhunThoi3_Auto", "nhietDoBonPhunThoi3_Manual"],
+  ["dongDienMayNghien_Auto", "dongDienMayNghien_Manual"],
+  ["dongDienQuatGioNguoc_Auto", "dongDienQuatGioNguoc_Manual"],
+  ["nhietDoDauVaoMayNghien_Auto", "nhietDoDauVaoMayNghien_Manual"],
+  ["nhietDoDauRaMayNghien_Auto", "nhietDoDauRaMayNghien_Manual"],
+  ["nhietDoKhoangLo_Auto", "nhietDoKhoangLo_Manual"],
+  ["mucLieuSiloBotThan1_Auto", "mucLieuSiloBotThan1_Manual"],
+  ["mucLieuSiloBotThan2_Auto", "mucLieuSiloBotThan2_Manual"],
+  ["mucLieuSiloThanTho_Auto", "mucLieuSiloThanTho_Manual"],
+  ["trongLuongBonPhunThoi1_Auto", "trongLuongBonPhunThoi1_Manual"],
+  ["trongLuongBonPhunThoi2_Auto", "trongLuongBonPhunThoi2_Manual"],
+  ["trongLuongBonPhunThoi3_Auto", "trongLuongBonPhunThoi3_Manual"],
+  ["apLucKhiThan_Auto", "apLucKhiThan_Manual"],
+  ["apLucBonKhiN2_Auto", "apLucBonKhiN2_Manual"],
+  ["nhietDoTramDauBoiTron_Auto", "nhietDoTramDauBoiTron_Manual"],
+  ["nhietDoStatoDongCoMayNghien_Auto", "nhietDoStatoDongCoMayNghien_Manual"],
+  ["nhietDoTrucDongCoMayNghien_Auto", "nhietDoTrucDongCoMayNghien_Manual"],
+  ["apLucTrucNghien_Auto", "apLucTrucNghien_Manual"],
+  ["yeuCauTuLoCao_Auto", "yeuCauTuLoCao_Manual"],
+  ["luongThanPhunThucTe_Auto", "luongThanPhunThucTe_Manual"],
+  ["luyKeLuongPhunThanTrongCa_Auto", "luyKeLuongPhunThanTrongCa_Manual"],
+  ["soLuongSungPhun_Auto", "soLuongSungPhun_Manual"],
+  ["apLucGioLanhLoCao_Auto", "apLucGioLanhLoCao_Manual"],
+];
+
+const computeRowSum = (rows: RowData[]): Record<string, number | null> => {
+  const result: Record<string, number | null> = {};
+  for (const [autoKey, manualKey] of NUMERIC_FIELD_PAIRS) {
+    let total = 0;
+    let hasValue = false;
+    for (const row of rows) {
+      const val = row[manualKey] ?? row[autoKey];
+      if (typeof val === "number" && !isNaN(val)) { total += val; hasValue = true; }
+    }
+    result[manualKey] = hasValue ? total : null;
+  }
+  return result;
 };
 
 const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: boolean }) => {
@@ -116,7 +160,15 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
             align: (autoCol.align ?? "center") as "center" | "left" | "right",
             fixed: autoCol.fixed as "left" | "right" | undefined,
             onHeaderCell: () => ({ style: { fontSize: 11 } }),
+            onCell: (record: RowData) => ({
+              style: record[manualCol.dataIndex] != null && !record._isSummary
+                ? { background: "#fff7e6" }
+                : undefined,
+            }),
             render: (manualVal: any, row: RowData) => {
+              if (row._isSummary) return manualVal != null
+                ? <b style={{ color: "#222" }}>{Number(manualVal).toFixed(precision)}</b>
+                : null;
               const autoVal = row[autoCol.dataIndex];
               const isOverridden = manualVal != null;
               const displayVal = isOverridden ? manualVal : autoVal;
@@ -134,6 +186,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                     width: "100%",
                     minWidth: 70,
                     color: isOverridden ? undefined : "#1677ff",
+                    background: "transparent",
                   }}
                   onChange={(v) => handleCellChange(row.key, manualCol.dataIndex, v ?? null)}
                 />
@@ -161,6 +214,9 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
             ? () => ({ style: { background: "#e6f4ff", fontSize: 11 } })
             : () => ({ style: { fontSize: 11 } }),
           render: (val: any, row: RowData) => {
+            if (row._isSummary) return col.editable === false
+              ? <b style={{ fontWeight: 700 }}>{val ?? ""}</b>
+              : null;
             if (col.editable === false) {
               return (
                 <span style={{ color: "#1677ff", fontWeight: 500, whiteSpace: "nowrap" }}>
@@ -203,6 +259,21 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
       })),
     []
   );
+
+  // tableData thuần (không có dòng tổng) → dùng cho lưu / edit
+  // displayTableData thêm 2 dòng tổng Ca ngày (sau 19h) và Ca đêm (cuối)
+  const displayTableData = useMemo<RowData[]>(() => {
+    if (!tableData.length) return tableData;
+    const toHour = (tg: string) => parseInt((tg || "").replace("h", ""));
+    const ca1Rows = tableData.filter((r) => { const h = toHour(r.thoiGian as string); return h >= 8 && h <= 19; });
+    const ca2Rows = tableData.filter((r) => { const h = toHour(r.thoiGian as string); return !isNaN(h) && (h >= 20 || h <= 7); });
+    const ca1Summary: RowData = { key: "summary-ca1", thoiGian: "Tổng", _isSummary: true, ...computeRowSum(ca1Rows) };
+    const ca2Summary: RowData = { key: "summary-ca2", thoiGian: "Tổng", _isSummary: true, ...computeRowSum(ca2Rows) };
+    const result = [...tableData, ca2Summary];
+    const idx19 = result.findIndex((r) => r.thoiGian === "19h");
+    if (idx19 >= 0) result.splice(idx19 + 1, 0, ca1Summary);
+    return result;
+  }, [tableData]);
 
   const initData = useCallback(async () => {
     try {
@@ -265,67 +336,75 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
           try {
             const chiTietRows = (await lgPTLCApi.getChiTiet(idphieu)) as unknown as any[];
             if (chiTietRows && chiTietRows.length > 0) {
+              // Index chi tiết by formatted hour để merge vào defaultTableData
+              const byHour: Record<string, any> = {};
+              chiTietRows.forEach((row: any) => { byHour[formatThoiGian(row.thoiGian)] = row; });
+
+              // Dùng defaultTableData làm base (đủ 24 giờ theo thứ tự), overlay chi tiết lên trên
               setTableData(
-                chiTietRows.map((row: any, idx: number) => ({
-                  key: `row-${idx}`,
-                  chiTietId: row.id,
-                  thoiGian: formatThoiGian(row.thoiGian),
-                  nhietDoSiloBotThan1_Auto: row.nhietDoSiloBotThan1_Auto,
-                  nhietDoSiloBotThan1_Manual: row.nhietDoSiloBotThan1_Manual,
-                  nhietDoSiloBotThan2_Auto: row.nhietDoSiloBotThan2_Auto,
-                  nhietDoSiloBotThan2_Manual: row.nhietDoSiloBotThan2_Manual,
-                  nhietDoBonPhunThoi1_Auto: row.nhietDoBonPhunThoi1_Auto,
-                  nhietDoBonPhunThoi1_Manual: row.nhietDoBonPhunThoi1_Manual,
-                  nhietDoBonPhunThoi2_Auto: row.nhietDoBonPhunThoi2_Auto,
-                  nhietDoBonPhunThoi2_Manual: row.nhietDoBonPhunThoi2_Manual,
-                  nhietDoBonPhunThoi3_Auto: row.nhietDoBonPhunThoi3_Auto,
-                  nhietDoBonPhunThoi3_Manual: row.nhietDoBonPhunThoi3_Manual,
-                  dongDienMayNghien_Auto: row.dongDienMayNghien_Auto,
-                  dongDienMayNghien_Manual: row.dongDienMayNghien_Manual,
-                  dongDienQuatGioNguoc_Auto: row.dongDienQuatGioNguoc_Auto,
-                  dongDienQuatGioNguoc_Manual: row.dongDienQuatGioNguoc_Manual,
-                  nhietDoDauVaoMayNghien_Auto: row.nhietDoDauVaoMayNghien_Auto,
-                  nhietDoDauVaoMayNghien_Manual: row.nhietDoDauVaoMayNghien_Manual,
-                  nhietDoDauRaMayNghien_Auto: row.nhietDoDauRaMayNghien_Auto,
-                  nhietDoDauRaMayNghien_Manual: row.nhietDoDauRaMayNghien_Manual,
-                  nhietDoKhoangLo_Auto: row.nhietDoKhoangLo_Auto,
-                  nhietDoKhoangLo_Manual: row.nhietDoKhoangLo_Manual,
-                  mucLieuSiloBotThan1_Auto: row.mucLieuSiloBotThan1_Auto,
-                  mucLieuSiloBotThan1_Manual: row.mucLieuSiloBotThan1_Manual,
-                  mucLieuSiloBotThan2_Auto: row.mucLieuSiloBotThan2_Auto,
-                  mucLieuSiloBotThan2_Manual: row.mucLieuSiloBotThan2_Manual,
-                  mucLieuSiloThanTho_Auto: row.mucLieuSiloThanTho_Auto,
-                  mucLieuSiloThanTho_Manual: row.mucLieuSiloThanTho_Manual,
-                  trongLuongBonPhunThoi1_Auto: row.trongLuongBonPhunThoi1_Auto,
-                  trongLuongBonPhunThoi1_Manual: row.trongLuongBonPhunThoi1_Manual,
-                  trongLuongBonPhunThoi2_Auto: row.trongLuongBonPhunThoi2_Auto,
-                  trongLuongBonPhunThoi2_Manual: row.trongLuongBonPhunThoi2_Manual,
-                  trongLuongBonPhunThoi3_Auto: row.trongLuongBonPhunThoi3_Auto,
-                  trongLuongBonPhunThoi3_Manual: row.trongLuongBonPhunThoi3_Manual,
-                  apLucKhiThan_Auto: row.apLucKhiThan_Auto,
-                  apLucKhiThan_Manual: row.apLucKhiThan_Manual,
-                  apLucBonKhiN2_Auto: row.apLucBonKhiN2_Auto,
-                  apLucBonKhiN2_Manual: row.apLucBonKhiN2_Manual,
-                  nhietDoTramDauBoiTron_Auto: row.nhietDoTramDauBoiTron_Auto,
-                  nhietDoTramDauBoiTron_Manual: row.nhietDoTramDauBoiTron_Manual,
-                  nhietDoStatoDongCoMayNghien_Auto: row.nhietDoStatoDongCoMayNghien_Auto,
-                  nhietDoStatoDongCoMayNghien_Manual: row.nhietDoStatoDongCoMayNghien_Manual,
-                  nhietDoTrucDongCoMayNghien_Auto: row.nhietDoTrucDongCoMayNghien_Auto,
-                  nhietDoTrucDongCoMayNghien_Manual: row.nhietDoTrucDongCoMayNghien_Manual,
-                  apLucTrucNghien_Auto: row.apLucTrucNghien_Auto,
-                  apLucTrucNghien_Manual: row.apLucTrucNghien_Manual,
-                  yeuCauTuLoCao_Auto: row.yeuCauTuLoCao_Auto,
-                  yeuCauTuLoCao_Manual: row.yeuCauTuLoCao_Manual,
-                  luongThanPhunThucTe_Auto: row.luongThanPhunThucTe_Auto,
-                  luongThanPhunThucTe_Manual: row.luongThanPhunThucTe_Manual,
-                  luyKeLuongPhunThanTrongCa_Auto: row.luyKeLuongPhunThanTrongCa_Auto,
-                  luyKeLuongPhunThanTrongCa_Manual: row.luyKeLuongPhunThanTrongCa_Manual,
-                  soLuongSungPhun_Auto: row.soLuongSungPhun_Auto,
-                  soLuongSungPhun_Manual: row.soLuongSungPhun_Manual,
-                  apLucGioLanhLoCao_Auto: row.apLucGioLanhLoCao_Auto,
-                  apLucGioLanhLoCao_Manual: row.apLucGioLanhLoCao_Manual,
-                  ghiChu: row.ghiChu,
-                }))
+                defaultTableData.map((defRow) => {
+                  const ct = byHour[defRow.thoiGian as string];
+                  if (!ct) return defRow;
+                  return {
+                    ...defRow,
+                    chiTietId: ct.id,
+                    nhietDoSiloBotThan1_Auto: ct.nhietDoSiloBotThan1_Auto,
+                    nhietDoSiloBotThan1_Manual: ct.nhietDoSiloBotThan1_Manual,
+                    nhietDoSiloBotThan2_Auto: ct.nhietDoSiloBotThan2_Auto,
+                    nhietDoSiloBotThan2_Manual: ct.nhietDoSiloBotThan2_Manual,
+                    nhietDoBonPhunThoi1_Auto: ct.nhietDoBonPhunThoi1_Auto,
+                    nhietDoBonPhunThoi1_Manual: ct.nhietDoBonPhunThoi1_Manual,
+                    nhietDoBonPhunThoi2_Auto: ct.nhietDoBonPhunThoi2_Auto,
+                    nhietDoBonPhunThoi2_Manual: ct.nhietDoBonPhunThoi2_Manual,
+                    nhietDoBonPhunThoi3_Auto: ct.nhietDoBonPhunThoi3_Auto,
+                    nhietDoBonPhunThoi3_Manual: ct.nhietDoBonPhunThoi3_Manual,
+                    dongDienMayNghien_Auto: ct.dongDienMayNghien_Auto,
+                    dongDienMayNghien_Manual: ct.dongDienMayNghien_Manual,
+                    dongDienQuatGioNguoc_Auto: ct.dongDienQuatGioNguoc_Auto,
+                    dongDienQuatGioNguoc_Manual: ct.dongDienQuatGioNguoc_Manual,
+                    nhietDoDauVaoMayNghien_Auto: ct.nhietDoDauVaoMayNghien_Auto,
+                    nhietDoDauVaoMayNghien_Manual: ct.nhietDoDauVaoMayNghien_Manual,
+                    nhietDoDauRaMayNghien_Auto: ct.nhietDoDauRaMayNghien_Auto,
+                    nhietDoDauRaMayNghien_Manual: ct.nhietDoDauRaMayNghien_Manual,
+                    nhietDoKhoangLo_Auto: ct.nhietDoKhoangLo_Auto,
+                    nhietDoKhoangLo_Manual: ct.nhietDoKhoangLo_Manual,
+                    mucLieuSiloBotThan1_Auto: ct.mucLieuSiloBotThan1_Auto,
+                    mucLieuSiloBotThan1_Manual: ct.mucLieuSiloBotThan1_Manual,
+                    mucLieuSiloBotThan2_Auto: ct.mucLieuSiloBotThan2_Auto,
+                    mucLieuSiloBotThan2_Manual: ct.mucLieuSiloBotThan2_Manual,
+                    mucLieuSiloThanTho_Auto: ct.mucLieuSiloThanTho_Auto,
+                    mucLieuSiloThanTho_Manual: ct.mucLieuSiloThanTho_Manual,
+                    trongLuongBonPhunThoi1_Auto: ct.trongLuongBonPhunThoi1_Auto,
+                    trongLuongBonPhunThoi1_Manual: ct.trongLuongBonPhunThoi1_Manual,
+                    trongLuongBonPhunThoi2_Auto: ct.trongLuongBonPhunThoi2_Auto,
+                    trongLuongBonPhunThoi2_Manual: ct.trongLuongBonPhunThoi2_Manual,
+                    trongLuongBonPhunThoi3_Auto: ct.trongLuongBonPhunThoi3_Auto,
+                    trongLuongBonPhunThoi3_Manual: ct.trongLuongBonPhunThoi3_Manual,
+                    apLucKhiThan_Auto: ct.apLucKhiThan_Auto,
+                    apLucKhiThan_Manual: ct.apLucKhiThan_Manual,
+                    apLucBonKhiN2_Auto: ct.apLucBonKhiN2_Auto,
+                    apLucBonKhiN2_Manual: ct.apLucBonKhiN2_Manual,
+                    nhietDoTramDauBoiTron_Auto: ct.nhietDoTramDauBoiTron_Auto,
+                    nhietDoTramDauBoiTron_Manual: ct.nhietDoTramDauBoiTron_Manual,
+                    nhietDoStatoDongCoMayNghien_Auto: ct.nhietDoStatoDongCoMayNghien_Auto,
+                    nhietDoStatoDongCoMayNghien_Manual: ct.nhietDoStatoDongCoMayNghien_Manual,
+                    nhietDoTrucDongCoMayNghien_Auto: ct.nhietDoTrucDongCoMayNghien_Auto,
+                    nhietDoTrucDongCoMayNghien_Manual: ct.nhietDoTrucDongCoMayNghien_Manual,
+                    apLucTrucNghien_Auto: ct.apLucTrucNghien_Auto,
+                    apLucTrucNghien_Manual: ct.apLucTrucNghien_Manual,
+                    yeuCauTuLoCao_Auto: ct.yeuCauTuLoCao_Auto,
+                    yeuCauTuLoCao_Manual: ct.yeuCauTuLoCao_Manual,
+                    luongThanPhunThucTe_Auto: ct.luongThanPhunThucTe_Auto,
+                    luongThanPhunThucTe_Manual: ct.luongThanPhunThucTe_Manual,
+                    luyKeLuongPhunThanTrongCa_Auto: ct.luyKeLuongPhunThanTrongCa_Auto,
+                    luyKeLuongPhunThanTrongCa_Manual: ct.luyKeLuongPhunThanTrongCa_Manual,
+                    soLuongSungPhun_Auto: ct.soLuongSungPhun_Auto,
+                    soLuongSungPhun_Manual: ct.soLuongSungPhun_Manual,
+                    apLucGioLanhLoCao_Auto: ct.apLucGioLanhLoCao_Auto,
+                    apLucGioLanhLoCao_Manual: ct.apLucGioLanhLoCao_Manual,
+                    ghiChu: ct.ghiChu,
+                  };
+                })
               );
             } else {
               setTableData(defaultTableData);
@@ -399,6 +478,8 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
     return {
       ...formData,
       ...formattedDates,
+      scope: formData.loCao ?? null,
+      NgaySX: formattedDates.ngaySanXuat ?? null,
       maBm: config.code,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
@@ -467,7 +548,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
     try {
       setLoadingAuto(true);
       const dateStr = dayjs(ngaySanXuat).format("YYYY-MM-DD");
-      const autoData = (await lgPTLCApi.getAutoData(idLoCao, dateStr)) as unknown as any[];
+      const autoData = (await lgPTLCApi.getAutoData(idLoCao, dateStr, idphieu)) as unknown as any[];
 
       if (!autoData || autoData.length === 0) {
         message.warning("Không có dữ liệu tự động cho ngày và lò cao đã chọn!");
@@ -596,34 +677,34 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
           ))}
         </div>
 
-        <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Button
+            type="primary"
+            icon={<FilterOutlined />}
+            onClick={handleLoadAutoData}
+            disabled={isFormLocked}
+            loading={loadingAuto}
+          >
+            Tải dữ liệu
+          </Button>
           {actionButtons}
-          <Tooltip title="Tải dữ liệu tự động từ SCADA theo Lò cao và Ngày sản xuất đã chọn">
-            <Button
-              icon={<ReloadOutlined />}
-              loading={loadingAuto}
-              onClick={handleLoadAutoData}
-            >
-              Tải dữ liệu
-            </Button>
-          </Tooltip>
         </div>
 
         {tableSection && (
           <div style={{ marginTop: 12 }}>
-            <div style={{ marginBottom: 6, fontSize: 12, color: "#888" }}>
-              <span style={{ color: "#1677ff", fontWeight: 500 }}>■</span> Giá trị tự động (SCADA) — chỉnh sửa để ghi đè thủ công
-            </div>
+            <style>{`.nkvh-table .nkvh-summary > td { background: #fffbe6 !important; }`}</style>
             <Table
+              className="nkvh-table"
               bordered
               size="small"
               pagination={false}
               loading={loading}
-              dataSource={tableData}
+              dataSource={displayTableData}
               rowKey="key"
               scroll={{ x: "max-content", y: 600 }}
               sticky
               columns={tableColumns}
+              rowClassName={(record: RowData) => record._isSummary ? "nkvh-summary" : ""}
             />
           </div>
         )}
