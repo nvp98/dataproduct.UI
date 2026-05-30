@@ -457,7 +457,7 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
           <Space>
             <Button onClick={handleExportExcelPKH}>Xuất Excel PKH</Button>
             <Button onClick={handleExportExcel}>Xuất Excel</Button>
-            {type !== "viecdentoi" && canCreatePhieu && (
+            {/* {type !== "viecdentoi" && canCreatePhieu && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -465,7 +465,7 @@ const BienBanPhoiNhapKho = ({ type }: { type?: string }) => {
               >
                 Tạo phiếu mới
               </Button>
-            )}
+            )} */}
           </Space>
         }
       >

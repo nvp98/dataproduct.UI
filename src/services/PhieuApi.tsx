@@ -81,4 +81,6 @@ export const PhieuApi = {
     apiService.get("/api/Kip/by-date-ca", {
       params: { ngayLamViec, ca },
     }),
+
+  resetPhieu: (id: string) => apiService.put(`/api/Phieus/${id}/reset`, {}),
 };

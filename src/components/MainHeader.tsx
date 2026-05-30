@@ -42,7 +42,10 @@ const MainHeader = ({ collapsed, setCollapsed }: any) => {
     }
 
     if (key === "profile") {
-      navigate("/profile");
+      window.open(
+        "https://report.hoaphatdungquat.vn/DangNhap/ThongTinTaiKhoan",
+        "_blank",
+      );
     }
   };
   const userString = localStorage.getItem("user");

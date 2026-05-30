@@ -25,6 +25,7 @@ import CustomFormTable from "../../../components/CustomFormTable";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
+import { PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
 import { bkcankphapi } from "../../../services/BKKCSCanApi";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
@@ -457,6 +458,23 @@ const TaoPhieuXuLyKPH = () => {
     // phieuInfoRef không cần deps – dùng ref
   );
 
+  const handleReset = useCallback(async () => {
+    if (!idphieu) return;
+    try {
+      setLoading(true);
+      await PhieuApi.resetPhieu(idphieu);
+      message.success("Đã reset phiếu về trạng thái ban đầu!");
+      await initData();
+    } catch (error: any) {
+      console.error("Reset error:", error);
+      message.error(
+        `Lỗi: ${error?.response?.data?.message || error?.message || "Không thể reset phiếu"}`,
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [idphieu, initData]);
+
   const handleRefresh = useCallback(async () => {
     try {
       setLoading(true);
@@ -589,8 +607,14 @@ const TaoPhieuXuLyKPH = () => {
       },
     });
     if (buttons.length === 0) return null;
+
+    // Ẩn nút "Đề nghị hiệu chỉnh" cho form này
+    const filteredButtons = buttons.filter(
+      (btn) => btn.key !== PhieuActionButtonKeys.RequestEdit,
+    );
+
     return phieuActionService.renderActionButtons(
-      buttons,
+      filteredButtons,
       idphieu || "",
       getFormData,
     );
@@ -711,6 +735,19 @@ const TaoPhieuXuLyKPH = () => {
                 Làm mới
               </Button>
             )}
+            {currentTinhTrang != 2 &&
+              currentTinhTrang != 5 &&
+              currentTinhTrang != 0 &&
+              idphieu &&
+              currentUserInfo.iD_TaiKhoan == phieuInfo.nguoiTaoId && (
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleReset}
+                  loading={loading}
+                >
+                  Reset phiếu
+                </Button>
+              )}
             {actionButtons}
             <Button
               icon={<UndoOutlined />}
