@@ -301,13 +301,17 @@ const TaoPhieuNapLieuLoCao = () => {
     }
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     try {
-      const [res] = await Promise.all([
+      const [res, nvlRes] = await Promise.all([
         lgnlSiLoMasterApi.getList({ idLoCao: Number(scope) }),
+        lgnlNvlApi.getList({ idLoCao: Number(scope) }),
         refreshSnapshotData(ngay, Number(ca), Number(scope)),
       ]);
       setSiloMasterOptions(Array.isArray(res) ? res : []);
+      setNvlOptions( Array.isArray(nvlRes) ? nvlRes : []
+  );
     } catch {
       setSiloMasterOptions([]);
+       setNvlOptions([]);
     }
     addMappingForm.resetFields();
     addMappingForm.setFieldsValue({
