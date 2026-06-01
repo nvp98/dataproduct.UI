@@ -720,6 +720,22 @@ const TaoPhieuPhoiNapNguoi = () => {
                 }}
               />
             )}
+
+            {layout.sectionType === "text" && (
+              <Form.Item
+                label={layout.title || "Ghi chú"}
+                name={layout.key}
+                style={{ marginTop: 20 }}
+              >
+                <Input.TextArea
+                  rows={4}
+                  placeholder={layout.placeholder || "Nhập ghi chú nếu có..."}
+                  disabled={isFormLocked}
+                  maxLength={500}
+                  showCount
+                />
+              </Form.Item>
+            )}
           </div>
         ))}
 

@@ -15,6 +15,7 @@ import {
   SaveOutlined,
   UndoOutlined,
   ReloadOutlined,
+  RedoOutlined,
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
@@ -24,6 +25,7 @@ import CustomFormItem from "../../../components/CustomFormItem";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
+import { PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
 import { bkcankphapi } from "../../../services/BKKCSCanApi";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
@@ -558,9 +560,15 @@ const TaoPhieuBienBanSanLuongKCS = () => {
         console.error("Action error:", error);
       },
     });
-    if (buttons.length === 0) return null;
+
+    // Bỏ nút "Đề nghị hiệu chỉnh"
+    const filteredButtons = buttons.filter(
+      (btn) => btn.key !== PhieuActionButtonKeys.RequestEdit,
+    );
+
+    if (filteredButtons.length === 0) return null;
     return phieuActionService.renderActionButtons(
-      buttons,
+      filteredButtons,
       idphieu || "",
       getFormData,
     );
@@ -572,6 +580,24 @@ const TaoPhieuBienBanSanLuongKCS = () => {
     handleStatusChange,
     handleActionSuccess,
   ]);
+
+  const handleReset = useCallback(async () => {
+    if (!idphieu) {
+      message.warning("Vui lòng lưu phiếu trước khi reset!");
+      return;
+    }
+    try {
+      setLoading(true);
+      await PhieuApi.resetPhieu(idphieu);
+      message.success("Reset phiếu thành công!");
+      await initData();
+    } catch (error: any) {
+      console.error("Reset phiếu failed:", error);
+      message.error(error?.message || "Reset phiếu thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  }, [idphieu, initData]);
 
   // Group table data by tenPhanLoai (stored in ghiChu)
   const groupedAndFlattenedData = useMemo(() => {
@@ -771,6 +797,18 @@ const TaoPhieuBienBanSanLuongKCS = () => {
                 Làm mới
               </Button>
             )}
+            {idphieu &&
+              (currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
+                currentTinhTrang === TrangThaiPhieuConst.DaChot) && (
+                <Button
+                  type="default"
+                  icon={<RedoOutlined />}
+                  onClick={handleReset}
+                  loading={loading}
+                >
+                  Reset Phiếu
+                </Button>
+              )}
             {actionButtons}
             <Button
               icon={<UndoOutlined />}

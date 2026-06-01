@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC1_BB_Sanluongphoi from "../../../utils/BM_config/HRC1_BB_Sanluongphoi.json";
 import { Button, Card, Form, Input, Typography, message, Table } from "antd";
-import { FilterOutlined, FilePdfOutlined } from "@ant-design/icons";
+import {
+  FilterOutlined,
+  FilePdfOutlined,
+  RedoOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -10,6 +14,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import CustomFormTable from "../../../components/CustomFormTable";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
+import { PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { sanLuongPhoiApi } from "../../../services/BMDucCTDApi";
 
@@ -357,6 +362,24 @@ const TaoPhieuSanLuongPhoi = () => {
     }
   };
 
+  const handleReset = useCallback(async () => {
+    if (!idphieu) {
+      message.warning("Vui lòng lưu phiếu trước khi reset!");
+      return;
+    }
+    try {
+      setLoading(true);
+      await PhieuApi.resetPhieu(idphieu);
+      message.success("Reset phiếu thành công!");
+      await initData();
+    } catch (error: any) {
+      console.error("Reset phiếu failed:", error);
+      message.error(error?.message || "Reset phiếu thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  }, [idphieu, initData]);
+
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
     const buttons = phieuActionService.getActionButtons({
@@ -377,7 +400,12 @@ const TaoPhieuSanLuongPhoi = () => {
     });
 
     // Màn này dùng API export PDF riêng, không dùng nút exportPdf từ action service.
-    const filteredButtons = buttons.filter((btn) => btn.key !== "exportPdf");
+    // Cũng bỏ nút "Đề nghị hiệu chỉnh"
+    const filteredButtons = buttons.filter(
+      (btn) =>
+        btn.key !== PhieuActionButtonKeys.RequestEdit &&
+        btn.key !== PhieuActionButtonKeys.ExportPdf,
+    );
 
     if (filteredButtons.length === 0) return null;
     return phieuActionService.renderActionButtons(
@@ -461,6 +489,18 @@ const TaoPhieuSanLuongPhoi = () => {
                 loading={loading}
               >
                 Xuất PDF
+              </Button>
+            )}
+          {idphieu &&
+            (currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
+              currentTinhTrang === TrangThaiPhieuConst.DaChot) && (
+              <Button
+                type="default"
+                icon={<RedoOutlined />}
+                onClick={handleReset}
+                loading={loading}
+              >
+                Reset Phiếu
               </Button>
             )}
           {actionButtons}

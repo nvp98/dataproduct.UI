@@ -53,6 +53,13 @@
         { "title": "Tổng khối lượng", "dataIndex": "tongKL", "type": "number" },
         { "title": "Ghi chú", "dataIndex": "ghiChu" }
       ]
+    },
+    {
+      "sectionType": "text",
+      "title": "Ghi chú",
+      "key": "notes",
+      "dataIndex": "notes",
+      "placeholder": "Nhập ghi chú nếu có..."
     }
   ],
   "footerNotes": [
