@@ -679,7 +679,7 @@ const TaoPhieuBienBanSanLuongKCS = () => {
         chieuDai: "",
         soBo: groupSoBo,
         klCan: parseFloat(groupKlCan.toFixed(3)),
-        soThanh: groupSoThanh,
+        soThanh: parseFloat(groupSoThanh.toFixed(3)),
         ghiChu: "",
       });
     });
@@ -694,7 +694,7 @@ const TaoPhieuBienBanSanLuongKCS = () => {
       chieuDai: "",
       soBo: totalSoBo,
       klCan: parseFloat(totalKlCan.toFixed(3)),
-      soThanh: totalSoThanh,
+      soThanh: parseFloat(totalSoThanh.toFixed(3)),
       ghiChu: "",
     });
 
@@ -721,7 +721,7 @@ const TaoPhieuBienBanSanLuongKCS = () => {
           ? "right"
           : "left",
       render:
-        col.dataIndex === "klCan"
+        col.dataIndex === "klCan" || col.dataIndex === "soThanh"
           ? (value: any) => {
               if (value === "" || value === undefined || value === null)
                 return "";

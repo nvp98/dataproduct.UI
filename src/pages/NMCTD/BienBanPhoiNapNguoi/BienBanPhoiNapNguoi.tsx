@@ -109,23 +109,35 @@ const BienBanPhoiNapNguoi = ({ type }: { type?: string }) => {
       title: "Kíp",
       dataIndex: "kip",
       key: "kip",
-      width: 150,
+      width: 70,
       ellipsis: true,
     },
     {
       title: "Ngày sản xuất",
       dataIndex: "ngaySX",
       key: "ngaySX",
-      width: 190,
+      width: 120,
       render: (value: string) =>
         value ? dayjs(value).format("DD/MM/YYYY") : "-",
     },
     {
+      title: "Xưởng",
+      dataIndex: "scope",
+      key: "scope",
+      width: 190,
+      render: (value: string) => (value ? "Đúc " + value : "-"),
+    },
+    {
       title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
+      dataIndex: "nguoiTao",
+      key: "nguoiTao",
       width: 270,
       ellipsis: true,
+      render: (value: string, record: TableRecord) => {
+        // Lấy từ cấp duyệt 0 của pheduyet nếu có
+        const firstApprover = record.pheDuyet?.[0]?.hoVaTen;
+        return firstApprover || value || "-";
+      },
     },
     {
       title: "Trạng thái",
