@@ -17,6 +17,7 @@ import { phieuActionService } from "../../../services/PhieuActionService";
 import { PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { sanLuongPhoiApi } from "../../../services/BMDucCTDApi";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 
 interface TableRow {
   key?: string;
@@ -492,8 +493,9 @@ const TaoPhieuSanLuongPhoi = () => {
               </Button>
             )}
           {idphieu &&
-            (currentTinhTrang === TrangThaiPhieuConst.HoanThanh ||
-              currentTinhTrang === TrangThaiPhieuConst.DaChot) && (
+            currentTinhTrang !== TrangThaiPhieuConst.HoanThanh &&
+            currentTinhTrang !== TrangThaiPhieuConst.DaChot &&
+            getThongTinUser().iD_TaiKhoan === phieuInfo.nguoiTaoId && (
               <Button
                 type="default"
                 icon={<RedoOutlined />}
