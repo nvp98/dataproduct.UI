@@ -21,6 +21,7 @@ export interface HRC1_MeThepVm {
   klLan2?: number | null;         // TL nhập
   klLan3?: number | null;         // LT nhập
   klThepLong?: number | null;     // Auto-tính (len_thang: KLLF-klLan2; tinh_luyen: klLan1-klLan2)
+  klThepLongPhanBo?: number | null;
   dichChuyen?: string | null;
   tlDichSo?: number | null;
   idMayDucDich?: number | null;
@@ -167,6 +168,7 @@ export interface HRC1_ThongKeRow {
   klLan2?: number | null;
   klLan3?: number | null;
   klThepLong?: number | null;
+  klThepLongPhanBo?: number | null;
   ghiChuLo?: string | null;
   isThuNghiem?: boolean | null;
   tenMayDuc?: string | null;
@@ -194,6 +196,7 @@ export interface HRC1_ThongKeResult {
   items: HRC1_ThongKeRow[];
   totalRecords: number;
   totalKlThepLong: number | null;
+  totalKlThepLongPhanBo?: number | null;
   page: number;
   pageSize: number;
 }
@@ -222,6 +225,7 @@ export interface HRC1_LoThoiUpdateRequest {
   thoiGian?: string | null;      // chỉ dùng khi len_thang
   klLan2?: number | null;        // chỉ dùng khi len_thang
   klThepLong?: number | null;    // chỉ dùng khi len_thang
+  klThepLongPhanBo?: number | null;
   dichChuyen?: string | null;
   tlDichSo?: number | null;
   idMayDucDich?: number | null;

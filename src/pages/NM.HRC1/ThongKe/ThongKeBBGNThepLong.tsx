@@ -23,7 +23,8 @@ const ThongKeBBGNThepLongHRC1 = () => {
   const [exporting, setExporting]   = useState(false);
   const [data, setData]             = useState<HRC1_ThongKeRow[]>([]);
   const [totalRecords, setTotal]    = useState(0);
-  const [totalKl, setTotalKl]       = useState<number | null>(null);
+  const [totalKl, setTotalKl]           = useState<number | null>(null);
+  const [totalKlPhanBo, setTotalKlPhanBo] = useState<number | null>(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [filters, setFilters]       = useState<HRC1_ThongKeQuery>({ page: 1, pageSize: 20 });
   const [mayDucOpts, setMayDucOpts] = useState<{ label: string; value: number }[]>([]);
@@ -46,6 +47,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
       setData(res.items);
       setTotal(res.totalRecords);
       setTotalKl(res.totalKlThepLong);
+      setTotalKlPhanBo(res.totalKlThepLongPhanBo ?? null);
       setPagination({ current: res.page, pageSize: res.pageSize });
       setFilters(q);
       // Tổng hợp — fire and forget, không block main table
@@ -161,6 +163,11 @@ const ThongKeBBGNThepLongHRC1 = () => {
       render: (v: number) => (
         <span style={v < 0 ? { color: "red", fontWeight: 600 } : undefined}>{fmt(v)}</span>
       ),
+    },
+    {
+      title: "KL phân bổ", dataIndex: "klThepLongPhanBo", key: "klThepLongPhanBo", width: 80,
+      align: "right",
+      render: (v: number) => fmt(v),
     },
     { title: "TL / Lên thẳng", dataIndex: "tinhLuyenLenThang", key: "tinhLuyenLenThang", width: 90, align: "center" },
     { title: "Phân loại", dataIndex: "phanLoai", key: "phanLoai", width: 100, align: "center" },
@@ -377,7 +384,10 @@ const ThongKeBBGNThepLongHRC1 = () => {
                   {fmt(totalKl)}
                 </span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell index={14} colSpan={8} />
+              <Table.Summary.Cell index={14} align="right">
+                {fmt(totalKlPhanBo)}
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={15} colSpan={8} />
             </Table.Summary.Row>
           </Table.Summary>
         )}

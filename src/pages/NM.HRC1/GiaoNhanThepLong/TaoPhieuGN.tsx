@@ -427,6 +427,18 @@ export const LoThoiPanel = ({
       },
     },
     {
+      title: "KL phân bổ", key: "klThepLongPhanBo", width: 80,
+      render: (_, me) => {
+        const locked = lk(me);
+        return (
+          <InputNumber size="small" style={{ width: 73 }}
+            value={locked ? (me.klThepLongPhanBo ?? undefined) : (get(me, "klThepLongPhanBo") as number ?? undefined)}
+            disabled={locked}
+            onChange={locked ? undefined : (v) => set(me.id, "klThepLongPhanBo", v)} />
+        );
+      },
+    },
+    {
       title: "Ghi chú", key: "ghiChuLo", width: 90,
       render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={isLocked(me)} />,
     },
