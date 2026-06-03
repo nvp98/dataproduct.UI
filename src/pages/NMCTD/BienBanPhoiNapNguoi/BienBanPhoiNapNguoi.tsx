@@ -125,7 +125,7 @@ const BienBanPhoiNapNguoi = ({ type }: { type?: string }) => {
       dataIndex: "scope",
       key: "scope",
       width: 190,
-      render: (value: string) => (value ? "Đúc " + value : "-"),
+      render: (value: string) => (value ? "Cán " + value : "-"),
     },
     {
       title: "Người tạo",

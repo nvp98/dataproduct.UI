@@ -6,7 +6,7 @@ import PhieuFilterCard, {
   type FilterFieldConfig,
 } from "../../../components/PhieuFilterCard";
 import { useMemo, useState } from "react";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
@@ -20,6 +20,7 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
   const userObj = userStr ? JSON.parse(userStr) : {};
   const thongtinuser = getThongTinUser();
   const [currentFilter, setCurrentFilter] = useState<any>({});
+  const [draftFilter, setDraftFilter] = useState<Record<string, unknown>>({});
 
   const handleFilterWithCapture = (filters: any) => {
     setCurrentFilter(filters);
@@ -224,8 +225,27 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
 
   const handleExportExcel = async () => {
     try {
-      const fromDate = currentFilter?.ngaySXFrom;
-      const toDate = currentFilter?.ngaySXTo;
+      console.log(
+        "Draft filter trước khi xuất Excel:",
+        draftFilter,
+        currentFilter,
+      );
+      const selectedNgaySX = draftFilter?.ngaySX as
+        | [Dayjs | null, Dayjs | null]
+        | null
+        | undefined;
+
+      const fromDate =
+        currentFilter?.ngaySXFrom ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[0]
+          ? selectedNgaySX[0].format("YYYY-MM-DD")
+          : undefined);
+
+      const toDate =
+        currentFilter?.ngaySXTo ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[1]
+          ? selectedNgaySX[1].format("YYYY-MM-DD")
+          : undefined);
       const maBm = config?.code;
 
       const res = await PhieuApi.exportDynamicExcelTH({
@@ -256,8 +276,12 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}
+        onFilterFieldChange={(key, value) => {
+          setDraftFilter((prev) => ({ ...prev, [key]: value }));
+        }}
         onClearFilter={() => {
           setCurrentFilter({});
+          setDraftFilter({});
           handleClearFilter();
         }}
         filterFields={filterFieldsConfig}

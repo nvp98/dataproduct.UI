@@ -5,7 +5,7 @@ import PhieuFilterCard, {
   type FilterFieldConfig,
 } from "../../../components/PhieuFilterCard";
 import { useMemo, useState } from "react";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
@@ -19,6 +19,7 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
   const userObj = userStr ? JSON.parse(userStr) : {};
   const thongtinuser = getThongTinUser();
   const [currentFilter, setCurrentFilter] = useState<any>({});
+  const [draftFilter, setDraftFilter] = useState<Record<string, unknown>>({});
 
   const handleFilterWithCapture = (filters: any) => {
     setCurrentFilter(filters);
@@ -225,8 +226,22 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
 
   const handleExportExcel = async () => {
     try {
-      const fromDate = currentFilter?.NgaySXFrom;
-      const toDate = currentFilter?.NgaySXTo;
+      const selectedNgaySX = draftFilter?.ngaySX as
+        | [Dayjs | null, Dayjs | null]
+        | null
+        | undefined;
+
+      const fromDate =
+        currentFilter?.tuNgayFrom ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[0]
+          ? selectedNgaySX[0].format("YYYY-MM-DD")
+          : undefined);
+
+      const toDate =
+        currentFilter?.tuNgayTo ||
+        (Array.isArray(selectedNgaySX) && selectedNgaySX[1]
+          ? selectedNgaySX[1].format("YYYY-MM-DD")
+          : undefined);
       const maBm = config?.code;
 
       const res = await PhieuApi.exportDynamicExcelTH({
@@ -260,8 +275,12 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}
+        onFilterFieldChange={(key, value) => {
+          setDraftFilter((prev) => ({ ...prev, [key]: value }));
+        }}
         onClearFilter={() => {
           setCurrentFilter({});
+          setDraftFilter({});
           handleClearFilter();
         }}
         filterFields={filterFieldsConfig}
