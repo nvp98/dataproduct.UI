@@ -31,6 +31,7 @@ import {
   type PhoiNhapKhoListItem,
 } from "../../../services/BMDucCTDApi";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
+import { PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
 
 interface TableRow {
   key?: string;
@@ -963,10 +964,16 @@ const TaoPhieuPhoiNhapKho = ({ type }: { type?: string }) => {
       },
     });
 
-    if (buttons.length === 0) return null;
+    // chỉ giữ 2 nút ExportExcel và ExportPdf
+    const filteredButtons = buttons.filter(
+      (btn) =>
+        btn.key === PhieuActionButtonKeys.ExportExcel ||
+        btn.key === PhieuActionButtonKeys.ExportPdf,
+    );
 
+    if (filteredButtons.length === 0) return null;
     return phieuActionService.renderActionButtons(
-      buttons,
+      filteredButtons,
       idphieu || "",
       getFormData,
     );
