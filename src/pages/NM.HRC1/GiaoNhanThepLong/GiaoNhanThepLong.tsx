@@ -30,7 +30,7 @@ const CONG_DOAN_OPTIONS = [
 const MABM_PREFIX: Record<string, string> = {
   [BM_CONFIG.HRC1.HRC1_LoThoi]:         "LT",
   [BM_CONFIG.HRC1.HRC1_TinhLuyen]:      "TL",
-  [BM_CONFIG.HRC1.HRC1_BBGN_ThepLong]:  "MD",
+  [BM_CONFIG.HRC1.HRC1_BBGN_ThepLong]:  "BBGN_TL_HRC1",
 };
 
 const _mayDucScopes = bmQuyenConfig.danhSachBieuMau

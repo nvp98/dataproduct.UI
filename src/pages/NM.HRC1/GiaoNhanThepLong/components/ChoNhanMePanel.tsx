@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useState } from "react";
 import {
-  Button, Card, Checkbox, DatePicker, Input, InputNumber,
+  Button, Card, Checkbox, DatePicker, Input,
   Pagination, Select, Space, Table, Tag, Tooltip, Typography, message,
 } from "antd";
 import type { TableColumnsType } from "antd";
@@ -13,7 +13,8 @@ const CA_OPTIONS = [
   { label: "Ca đêm (2)",  value: 2 },
 ];
 
-const PAGE_SIZE = 15;
+const LO_OPTIONS = Array.from({ length: 5 }, (_, i) => ({ label: `Lò ${i + 1}`, value: i + 1 }));
+const PAGE_SIZE = 30;
 
 interface ChoNhanMePanelProps {
   caPhieuId: string;
@@ -35,6 +36,7 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger, sc
   const [filterMaMe,    setFilterMaMe]    = useState("");
   const [filterThungSo, setFilterThungSo] = useState("");
   const [filterLoSo,    setFilterLoSo]    = useState<number | null>(null);
+  const [showNgayCols, setShowNgayCols] = useState(false);
   const [choNhanItems, setChoNhanItems] = useState<HRC1_ChoNhanMeVm[]>([]);
   const [choNhanTotal, setChoNhanTotal] = useState(0);
   const [choNhanPage, setChoNhanPage] = useState(1);
@@ -144,38 +146,43 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger, sc
         );
       },
     },
+    ...(showNgayCols ? [
+      {
+        title: "Ngày thổi", dataIndex: "ngayTao", width: 85,
+        render: (v: string | null | undefined) => v ? dayjs(v).format("DD/MM/YYYY") : "",
+      } as const,
+      {
+        title: "Ngày TL", dataIndex: "ngayNhanTL", width: 85,
+        render: (v: string | null | undefined) => v ? dayjs(v).format("DD/MM/YYYY") : "",
+      } as const,
+    ] : []),
+    { title: "Mã mẻ",    dataIndex: "maMe",    width: 85 },
+    { title: "Thùng",    dataIndex: "thungSo", width: 38 },
     {
-      title: "Ngày thổi", dataIndex: "ngayTao", width: 60,
-      render: (v: string | null | undefined) => v ? dayjs(v).format("DD/MM/YYYY") : "",
-    },
-    {
-      title: "Ngày TL", dataIndex: "ngayNhanTL", width: 60,
-      render: (v: string | null | undefined) => v ? dayjs(v).format("DD/MM/YYYY") : "",
-    },
-    { title: "Mã mẻ",    dataIndex: "maMe",    width: 60 },
-    { title: "Thùng số", dataIndex: "thungSo", width: 40  },
-    {
-      title: "Đích / TL nhận", key: "dich", width: 60,
+      title: "Đích", key: "dich", width: 70,
       render: (_, row) => {
         if (row.dichChuyen === "len_thang")
-          return <Tag color="orange">Lên thẳng</Tag>;
-        if (row.soTinhLuyenNhan)
-          return <Tag color="purple">TL {row.soTinhLuyenNhan}</Tag>;
+          return <Tag color="default">{row.tenMayDuc}</Tag>;
         if (row.tlDichSo)
-          return <Tag color="default">→ TL {row.tlDichSo}</Tag>;
+          return <Tag color="default">TL {row.tlDichSo}</Tag>;
         return "-";
       },
     },
-    { title: "Lò",       dataIndex: "loSo",    width: 40  },
+    // { title: "Lò", dataIndex: "loSo", width: 32 },
     {
-      title: "Trạng thái", key: "tt", width: 60,
+      title: "TT",
+      key: "tt",
+      width: 60,
       render: (_, row) =>
-        row.trangThaiTL
-          ? <Tag color="green">Đã nhận</Tag>
-          : <Tag color="default">Chờ nhận</Tag>,
+        row.dichChuyen === "len_thang" ? (
+          <Tag color="orange">Lên thẳng</Tag>
+        ) : row.trangThaiTL ? (
+          <Tag color="green">Đã nhận</Tag>
+        ) : (
+          <Tag color="default">Chờ nhận</Tag>
+        ),
     },
-    
-    { title: "Người nhận", dataIndex: "tenNguoiNhan", width: 130, render: (v) => v ?? "-" },
+    { title: "Người nhận", dataIndex: "tenNguoiNhan", width: 90, render: (v) => v ?? "-" },
   ];
 
   return (
@@ -187,6 +194,7 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger, sc
         </Typography.Text>
       }
       style={{ borderColor: choNhanTotal > 0 ? "#faad14" : undefined }}
+      styles={{ body: { padding: "4px 6px" } }}
       extra={
         !readOnly && (
           <Button
@@ -233,15 +241,18 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger, sc
           onChange={(e) => setFilterThungSo(e.target.value)}
           onPressEnter={handleSearch}
         />
-        <InputNumber
+        <Select
           size="small" style={{ width: 70 }}
-          placeholder="Lò"
-          min={1} max={10}
+          placeholder="Lò" allowClear
           value={filterLoSo ?? undefined}
+          options={LO_OPTIONS}
           onChange={(v) => setFilterLoSo(v ?? null)}
         />
         <Button size="small" type="primary" loading={choNhanLoading} onClick={handleSearch}>
           Tìm
+        </Button>
+        <Button size="small" onClick={() => setShowNgayCols((v) => !v)}>
+          {showNgayCols ? "Ẩn ngày" : "Hiện ngày"}
         </Button>
       </Space>
 
@@ -251,7 +262,7 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger, sc
         rowKey="meId"
         size="small"
         pagination={false}
-        scroll={{ x: 860 }}
+        scroll={{ x: showNgayCols ? 700 : 400, y: "calc(100vh - 310px)" }}
         loading={choNhanLoading}
         locale={{ emptyText: "Chưa có mẻ chờ nhận" }}
       />

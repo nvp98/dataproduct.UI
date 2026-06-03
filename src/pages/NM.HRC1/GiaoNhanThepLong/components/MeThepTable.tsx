@@ -8,6 +8,7 @@ interface MeThepTableProps {
   dataSource: HRC1_MeThepVm[];
   rowKey?: string | ((r: HRC1_MeThepVm) => string);
   scrollX?: number;
+  scrollY?: number | string;
   onRow?: (r: HRC1_MeThepVm) => HTMLAttributes<HTMLElement>;
 }
 
@@ -16,6 +17,7 @@ const MeThepTable = ({
   dataSource,
   rowKey = "id",
   scrollX = 1200,
+  scrollY,
   onRow,
 }: MeThepTableProps) => (
   <Table
@@ -23,7 +25,7 @@ const MeThepTable = ({
     dataSource={dataSource}
     rowKey={rowKey}
     size="small"
-    scroll={{ x: scrollX }}
+    scroll={{ x: scrollX, y: scrollY }}
     pagination={false}
     onRow={onRow}
   />

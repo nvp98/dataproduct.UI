@@ -2,11 +2,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AutoComplete, Button, Card, Checkbox, Col, Divider, InputNumber, Modal,
-  Popconfirm, Row, Select, Space, Spin, Tag, TimePicker, Tooltip, Typography, Input, message, Empty,
+  Popconfirm, Row, Select, Space, Spin, Tag, Tooltip, Typography, Input, message, Empty,
 } from "antd";
-import { DeleteOutlined, SyncOutlined } from "@ant-design/icons";
+import { DeleteOutlined, FileExcelOutlined, FilePdfOutlined, SyncOutlined } from "@ant-design/icons";
+import { PhieuApi } from "../../../services/PhieuApi";
 import type { TableColumnsType } from "antd";
-import dayjs, { type Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
 import {
   HRC1Api,
@@ -86,6 +87,65 @@ const GhiChuInput = ({ meId, value, locked }: { meId: number; value?: string | n
   );
 };
 
+// AutoComplete chọn mẻ đích để chuyển (Tinh luyện panel)
+const ChuyenMeCell = ({
+  serverMaMe,
+  ownMaMe,
+  locked,
+  onSet,
+}: {
+  serverMaMe: string | null;   // maMe của mẻ đích (null = chưa chuyển)
+  ownMaMe: string | null;      // maMe của chính dòng này (hiển thị mặc định khi chưa chuyển)
+  locked: boolean;
+  onSet: (meId: number | null) => void;
+}) => {
+  const displayDefault = serverMaMe ?? ownMaMe ?? "";
+  const [inputVal, setInputVal] = useState(displayDefault);
+  const [opts, setOpts] = useState<{ value: string; label: string }[]>([]);
+  const prevRef = useRef(displayDefault);
+
+  useEffect(() => {
+    const next = serverMaMe ?? ownMaMe ?? "";
+    if (prevRef.current !== next) {
+      prevRef.current = next;
+      setInputVal(next);
+      setOpts([]);
+    }
+  }, [serverMaMe, ownMaMe]);
+
+  if (locked) return <>{displayDefault || "—"}</>;
+
+  return (
+    <AutoComplete
+      size="small"
+      style={{ width: 130 }}
+      value={inputVal}
+      options={opts}
+      allowClear
+      placeholder="Tìm mẻ..."
+      onSearch={async (q) => {
+        setInputVal(q);
+        if (!q.trim()) { setOpts([]); return; }
+        try {
+          const res = await HRC1Api.searchMeThep(q.trim());
+          setOpts(res.map((r) => ({ value: String(r.meId), label: r.maMe })));
+        } catch { /* ignore */ }
+      }}
+      onSelect={(val, opt) => {
+        onSet(Number(val));
+        setInputVal(opt.label as string);
+      }}
+      onChange={(val) => {
+        if (val === undefined || val === null || val === "") {
+          setInputVal(ownMaMe ?? "");
+          setOpts([]);
+          onSet(null);
+        }
+      }}
+    />
+  );
+};
+
 const getDichDisplay = (me: HRC1_MeThepVm): string => {
   if (me.dichChuyen === "tinh_luyen") return me.tlDichSo ? `TL ${me.tlDichSo}` : "Tinh luyện";
   if (me.dichChuyen === "len_thang")  return me.tenMayDucDich ?? (me.idMayDucDich ? `Máy ${me.idMayDucDich}` : "Lên thẳng");
@@ -160,10 +220,9 @@ export const LoThoiPanel = ({
     if (!val) return;
     if (val.startsWith("TL:")) {
       setEdits((p) => {
-        // Loại bỏ idMayDucDich khỏi edit để backend giữ nguyên giá trị tinh luyện đã chọn.
-        // Nếu trước đó là len_thang trong cùng session editing thì cũng không gửi lên — backend xử lý.
+        // Khi chuyển sang tinh_luyen: xóa idMayDucDich, reset thoiGian và klLan2 (chỉ dùng cho len_thang)
         const { idMayDucDich: _removed, ...rest } = p[meId] ?? {};
-        return { ...p, [meId]: { ...rest, dichChuyen: "tinh_luyen", tlDichSo: Number(val.slice(3)) } };
+        return { ...p, [meId]: { ...rest, dichChuyen: "tinh_luyen", tlDichSo: Number(val.slice(3)), thoiGian: null, klLan2: null } };
       });
     } else {
       setEdits((p) => ({ ...p, [meId]: { ...p[meId], dichChuyen: "len_thang", tlDichSo: null, idMayDucDich: Number(val.slice(3)) } }));
@@ -302,15 +361,17 @@ export const LoThoiPanel = ({
       title: "Thời gian", key: "thoiGian", width: 75,
       render: (_, me) => {
         const effectiveDich = (edits[me.id] && "dichChuyen" in edits[me.id]) ? edits[me.id].dichChuyen : me.dichChuyen;
-        const disabled = lk(me) || effectiveDich !== "len_thang";
-        const raw = (disabled ? me.thoiGian : get(me, "thoiGian")) as string | null;
-        const timeVal = raw ? dayjs(raw, "HH:mm") : null;
+        const rowLocked = lk(me);
+        const disabled = rowLocked || effectiveDich !== "len_thang";
+        // Khi row bị lock thật sự → hiện giá trị DB; khi chỉ disabled do dichChuyen → hiện giá trị edit (có thể null sau reset)
+        const raw = (rowLocked ? me.thoiGian : get(me, "thoiGian")) as string | null;
         return (
-          <TimePicker
-            size="small" format="HH:mm" style={{ width: 70 }}
-            value={timeVal?.isValid() ? timeVal : null}
+          <input
+            type="time"
+            style={{ width: 70, fontSize: 13, padding: "0 4px", borderRadius: 4, border: "1px solid #d9d9d9", height: 24, background: disabled ? "#f5f5f5" : undefined, color: disabled ? "rgba(0,0,0,0.25)" : undefined, cursor: disabled ? "not-allowed" : undefined }}
+            value={raw ?? ""}
             disabled={disabled}
-            onChange={disabled ? undefined : (t) => set(me.id, "thoiGian", t ? t.format("HH:mm") : null)}
+            onChange={disabled ? undefined : (e) => set(me.id, "thoiGian", e.target.value || null)}
           />
         );
       },
@@ -332,10 +393,11 @@ export const LoThoiPanel = ({
       title: "KL bì - Lần 2 (tấn)", key: "klLan2", width: 75,
       render: (_, me) => {
         const effectiveDich = (edits[me.id] && "dichChuyen" in edits[me.id]) ? edits[me.id].dichChuyen : me.dichChuyen;
-        const disabled = lk(me) || effectiveDich !== "len_thang";
+        const rowLocked = lk(me);
+        const disabled = rowLocked || effectiveDich !== "len_thang";
         return (
           <InputNumber size="small" style={{ width: 65 }}
-            value={disabled ? me.klLan2 : (get(me, "klLan2") as number)}
+            value={rowLocked ? me.klLan2 : (get(me, "klLan2") as number | null | undefined)}
             disabled={disabled}
             onChange={disabled ? undefined : (v) => set(me.id, "klLan2", v)} />
         );
@@ -365,7 +427,7 @@ export const LoThoiPanel = ({
       },
     },
     {
-      title: "Ghi chú", key: "ghiChuLo", width: 95,
+      title: "Ghi chú", key: "ghiChuLo", width: 90,
       render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={isLocked(me)} />,
     },
     {
@@ -401,7 +463,7 @@ export const LoThoiPanel = ({
     },
     { title: "Máy đúc",   dataIndex: "tenMayDucDich", width: 90, render: (v) => <Input size="small" style={{ width: 84 }} value={v ?? ""} disabled /> },
     { title: "Phân loại", dataIndex: "phanLoai",      width: 80, render: (v) => <Input size="small" style={{ width: 74 }} value={v ?? ""} disabled /> },
-    { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 90, render: (v) => <Input size="small" style={{ width: 84 }} value={v ?? ""} disabled /> },
+    { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 110, render: (v) => <Input size="small" style={{ width: 110 }} value={v ?? ""} disabled /> },
     {
       title: "TL nhận", key: "soTinhLuyenNhan", width: 70,
       render: (_, me) => me.soTinhLuyenNhan ? (
@@ -443,6 +505,7 @@ export const LoThoiPanel = ({
       columns={columns}
       dataSource={phieuData.danhSachMe}
       scrollX={1325}
+      scrollY="calc(100vh - 190px)"
       onRow={(me) => ({
         style: me.isGhost ? { background: "#fff7e6", opacity: 0.85 } : undefined,
       })}
@@ -498,26 +561,52 @@ export const TinhLuyenPanel = ({
     if (dirty.length === 0) return;
     setSaving(true);
     try {
-      await Promise.all(dirty.map(([pcIdStr, patch]) => {
+      type SaveItem = { pcId: number; maMe: string; req: HRC1_TinhLuyenUpdateRequest };
+
+      const items: SaveItem[] = dirty.map(([pcIdStr, patch]) => {
         const pcId = Number(pcIdStr);
         const me = phieuData.danhSachMe.find((m) => m.mePhanCongId === pcId);
         const l1 = ("klLan1" in patch ? patch.klLan1 : me?.klLan1) ?? null;
         const l2 = ("klLan2" in patch ? patch.klLan2 : me?.klLan2) ?? null;
         const computed = calcKlThepLong(me?.dichChuyen, me?.kllfSauThep, l1, l2);
-        const req: HRC1_TinhLuyenUpdateRequest = {
-          thoiGian:     (("thoiGian"     in patch ? patch.thoiGian     : me?.thoiGian)     as string)  ?? null,
-          klLan1:       l1,
-          klLan2:       l2,
-          klThepLong:   computed,
-          idMayDucDich: (("idMayDucDich" in patch ? patch.idMayDucDich : me?.idMayDucDich) as number) ?? null,
+        return {
+          pcId,
+          maMe: me?.maMe ?? `#${pcId}`,
+          req: {
+            thoiGian:     (("thoiGian"     in patch ? patch.thoiGian     : me?.thoiGian)     as string)  ?? null,
+            klLan1:       l1,
+            klLan2:       l2,
+            klThepLong:   computed,
+            idMayDucDich: (("idMayDucDich" in patch ? patch.idMayDucDich : me?.idMayDucDich) as number) ?? null,
+            chuyenVeMeId: (("chuyenVeMeId" in patch ? patch.chuyenVeMeId : me?.chuyenVeMeId) as number | null | undefined) ?? null,
+          },
         };
-        return HRC1Api.updateTinhLuyen(pcId, req);
-      }));
-      message.success(`Đã lưu ${dirty.length} dòng`);
-      setEdits({});
-      await onReload();
-    } catch (e: any) {
-      message.error(e?.message ?? "Lỗi lưu dữ liệu");
+      });
+
+      const results = await Promise.allSettled(
+        items.map((item) => HRC1Api.updateTinhLuyen(item.pcId, item.req))
+      );
+
+      const succeededPcIds: number[] = [];
+      results.forEach((r, i) => {
+        if (r.status === "fulfilled") {
+          succeededPcIds.push(items[i].pcId);
+        } else {
+          const raw = r.reason;
+          const errMsg = typeof raw === "string" ? raw : (raw?.message ?? "Lỗi lưu dữ liệu");
+          message.error(`Mẻ ${items[i].maMe}: ${errMsg}`, 6);
+        }
+      });
+
+      if (succeededPcIds.length > 0) {
+        setEdits((prev) => {
+          const next = { ...prev };
+          succeededPcIds.forEach((id) => delete next[id]);
+          return next;
+        });
+        message.success(`Đã lưu ${succeededPcIds.length}/${items.length} dòng`);
+        await onReload();
+      }
     } finally {
       setSaving(false);
     }
@@ -575,7 +664,7 @@ export const TinhLuyenPanel = ({
       }
       if (result.trungVoi.length > 0) {
         Modal.confirm({
-          title: `Mẻ "${maMe}" đã được nhận ở nơi khác`,
+          title: `Mẻ "${maMe}" đã được nhận`,
           content: (
             <div>
               <p>Mẻ này đã được nhận tại:</p>
@@ -696,17 +785,17 @@ export const TinhLuyenPanel = ({
     { title: "Mẻ thổi",   dataIndex: "maMe",    width: 90, fixed: "left", render: (v) => v ?? "" },
     { title: "Thùng số",  dataIndex: "thungSo", width: 40, render: (v) => <Input size="small" style={{ width: 34 }} value={v ?? ""} disabled /> },
     {
-      title: "Thời gian", key: "thoiGian", width: 75,
+      title: "Thời gian", key: "thoiGian", width: 98,
       render: (_, me) => {
         const locked = isLocked(me);
         const raw = (locked ? me.thoiGian : get(me, "thoiGian")) as string | null;
-        const timeVal = raw ? dayjs(raw, "HH:mm") : null;
         return (
-          <TimePicker
-            size="small" format="HH:mm" style={{ width: 70 }}
-            value={timeVal?.isValid() ? timeVal : null}
+          <input
+            type="time"
+            style={{ width: 95, fontSize: 13, padding: "0 4px", borderRadius: 4, border: "1px solid #d9d9d9", height: 24, background: locked ? "#f5f5f5" : undefined, color: locked ? "rgba(0,0,0,0.25)" : undefined, cursor: locked ? "not-allowed" : undefined }}
+            value={raw ?? ""}
             disabled={locked}
-            onChange={locked ? undefined : (t) => set(me.mePhanCongId!, "thoiGian", t ? t.format("HH:mm") : null)}
+            onChange={locked ? undefined : (e) => set(me.mePhanCongId!, "thoiGian", e.target.value || null)}
           />
         );
       },
@@ -747,17 +836,16 @@ export const TinhLuyenPanel = ({
       },
     },
     {
-      title: "Ghi chú", key: "ghiChuLo", width: 80,
+      title: "Ghi chú", key: "ghiChuLo", width: 90,
       render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={readOnly || !!me.isChot} />,
     },
-    { title: "Tinh luyện/Lên thẳng", key: "dichDisp", width: 75, render: (_, me) => <Input size="small" style={{ width: 69 }} value={getDichDisplay(me)} disabled /> },
     { title: "Thử nghiệm", dataIndex: "isThuNghiem", width: 44, render: (v) => <Checkbox checked={!!v} disabled /> },
     {
-      title: "Máy đúc", key: "idMayDucDich", width: 110,
+      title: "Máy đúc", key: "idMayDucDich", width: 125,
       render: (_, me) => {
         const disabled = isLocked(me) || isLenThang(me);
         return (
-          <Select size="small" style={{ width: 106 }} showSearch optionFilterProp="label"
+          <Select size="small" style={{ width: 120 }} showSearch optionFilterProp="label"
             value={disabled ? (me.idMayDucDich ?? undefined) : ((get(me, "idMayDucDich") as number) ?? undefined)}
             options={mayDucOpts}
             allowClear={!disabled}
@@ -766,8 +854,33 @@ export const TinhLuyenPanel = ({
         );
       },
     },
+    {
+      title: "Chuyển mẻ", key: "chuyenVeMeId", width: 150,
+      onCell: (me) => {
+        const editedVal = me.mePhanCongId != null ? edits[me.mePhanCongId]?.chuyenVeMeId : undefined;
+        const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
+        return effectiveId != null ? { style: { background: "#fffbe6" } } : {};
+      },
+      render: (_, me) => (
+        <ChuyenMeCell
+          serverMaMe={me.chuyenVeMaMe ?? null}
+          ownMaMe={me.maMe ?? null}
+          locked={isLocked(me)}
+          onSet={(meId) => set(me.mePhanCongId!, "chuyenVeMeId", meId)}
+        />
+      ),
+    },
+    {
+      title: "Máy đúc chuyển", key: "tenMayDucChuyen", width: 110,
+      onCell: (me) => {
+        const editedVal = me.mePhanCongId != null ? edits[me.mePhanCongId]?.chuyenVeMeId : undefined;
+        const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
+        return effectiveId != null ? { style: { background: "#fffbe6" } } : {};
+      },
+      render: (_, me) => me.tenMayDucChuyen ?? "—",
+    },
     { title: "Phân loại", dataIndex: "phanLoai",     width: 70, render: (v) => <Input size="small" style={{ width: 64 }} value={v ?? ""} disabled /> },
-    { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 80, render: (v) => <Input size="small" style={{ width: 74 }} value={v ?? ""} disabled /> },
+    { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 115, render: (v) => <Input size="small" style={{ width: 110}} value={v ?? ""} disabled /> },
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 150, render: (v) => v ?? "" },
     {
       title: "Tình trạng", key: "tinhTrang", width: 150, fixed: "right",
@@ -804,7 +917,7 @@ export const TinhLuyenPanel = ({
   return (
     <Row gutter={16} align="top" style={{ flexWrap: "nowrap" }}>
       {/* Trái: Mẻ chờ nhận */}
-      <Col flex="400px" style={{ minWidth: 0 }}>
+      <Col flex="500px" style={{ minWidth: 0 }}>
         <ChoNhanMePanel
           caPhieuId={phieuData.idPhieu}
           readOnly={readOnly}
@@ -822,7 +935,9 @@ export const TinhLuyenPanel = ({
           columns={mainCols}
           dataSource={phieuData.danhSachMe}
           rowKey={(r) => `${r.id}-${r.mePhanCongId}`}
-          scrollX={1466}
+          scrollX={1391}
+          scrollY="calc(100vh - 235px)"
+          onRow={(me) => ({ style: me.isManualTL ? { background: "#fff1f0" } : undefined })}
         />
 
         {!readOnly && (
@@ -1065,7 +1180,7 @@ export const DucPanel = ({
     { title: "Thử nghiệm",  dataIndex: "isThuNghiem", width: 50, render: (v) => v ? "✓" : "" },
     { title: "Máy đúc",  dataIndex: "tenMayDucDich", width: 90, render: (v) => v ?? "" },
     { title: "Phân loại",dataIndex: "phanLoai",      width: 80,  render: (v) => v ?? "" },
-    { title: "Mác BKMIS",dataIndex: "macThepBKMIS",  width: 90, render: (v) => v ?? "" },
+    { title: "Mác BKMIS",dataIndex: "macThepBKMIS",  width: 110, render: (v) => v ?? "" },
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 110, render: (v) => v ?? "-" },
     {
       title: "Tình trạng", key: "tinhTrang", width: 100, fixed: "right",
@@ -1074,7 +1189,13 @@ export const DucPanel = ({
   ];
 
   return (
-    <MeThepTable columns={columns} dataSource={phieuData.danhSachMe} scrollX={1370} />
+    <MeThepTable
+      columns={columns}
+      dataSource={phieuData.danhSachMe}
+      scrollX={1370}
+      scrollY="calc(100vh - 190px)"
+      onRow={(me) => ({ style: me.isManualTL ? { background: "#fff1f0" } : undefined })}
+    />
   );
 };
 
@@ -1091,10 +1212,12 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
   const idphieuFromState = (location.state as { idphieu?: string } | null)?.idphieu;
 
   const [phieuData,  setPhieuData]  = useState<HRC1_PhieuDataVm | null>(null);
-  const [loading,    setLoading]    = useState(false);
-  const [syncing,    setSyncing]    = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [cardExtra,  setCardExtra]  = useState<ReactNode>(null);
+  const [loading,         setLoading]         = useState(false);
+  const [syncing,         setSyncing]         = useState(false);
+  const [selectedId,      setSelectedId]      = useState<string | null>(null);
+  const [cardExtra,       setCardExtra]       = useState<ReactNode>(null);
+  const [exportingExcel,  setExportingExcel]  = useState(false);
+  const [exportingPdf,    setExportingPdf]    = useState(false);
 
   // Scope state cho lò thổi và tinh luyện
   const [loSo,  setLoSo]  = useState<number | null>(null);
@@ -1207,6 +1330,61 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
     }
   }, [phieuData, handleReload]);
 
+  // ── Export helpers ───────────────────────────────────────────────────────────
+  const downloadBlob = (raw: unknown, filename: string) => {
+    const blob = raw instanceof Blob ? raw : new Blob([raw as BlobPart]);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const buildExportFilename = (ext: "xlsx" | "pdf") => {
+    if (!phieuData) return `HRC1_export.${ext}`;
+    const label = getGroupLabel(phieuData.maBm ?? "").replace(/\s/g, "_");
+    const ngay = phieuData.ngaySX ? phieuData.ngaySX.toString().replace(/-/g, "") : "";
+    const ca = phieuData.ca === 1 ? "CaNgay" : phieuData.ca === 2 ? "CaDem" : "";
+    return `HRC1_${label}_${ngay}_${ca}.${ext}`;
+  };
+
+  const handleExportExcel = async () => {
+    if (!phieuData) return;
+    setExportingExcel(true);
+    try {
+      const raw = await PhieuApi.exportDetailExcel(phieuData.idPhieu);
+      downloadBlob(raw, buildExportFilename("xlsx"));
+      message.success("Đã tải file Excel");
+    } catch (e: unknown) {
+      const err = e instanceof Blob
+        ? await e.text()
+        : typeof e === "string" ? e : (e as { message?: string })?.message ?? "Lỗi xuất Excel";
+      message.error(err, 6);
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!phieuData) return;
+    setExportingPdf(true);
+    try {
+      const raw = await PhieuApi.exportDynamicPDF(phieuData.idPhieu, {});
+      downloadBlob(raw, buildExportFilename("pdf"));
+      message.success("Đã tải file PDF");
+    } catch (e: unknown) {
+      const err = e instanceof Blob
+        ? await e.text()
+        : typeof e === "string" ? e : (e as { message?: string })?.message ?? "Lỗi xuất PDF";
+      message.error(err, 6);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   // ── Mount: ưu tiên idphieu từ navigation state ────────────────────────────────
   useEffect(() => {
     const resolvedId = idphieuFromState ?? sessionStorage.getItem(SESSION_KEY) ?? null;
@@ -1228,7 +1406,7 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
   }, [phieuData]);
 
   return (
-    <div style={{ padding: "16px 24px" }}>
+    <div style={{ padding: 0 }}>
       <Spin spinning={loading}>
         {phieuData ? (
           <Card
@@ -1255,8 +1433,30 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
                 >
                   Làm mới
                 </Button>
+                <Button
+                  size="small"
+                  icon={<FileExcelOutlined />}
+                  loading={exportingExcel}
+                  disabled={!phieuData}
+                  onClick={handleExportExcel}
+                  style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
+                >
+                  Excel
+                </Button>
+                <Button
+                  size="small"
+                  icon={<FilePdfOutlined />}
+                  loading={exportingPdf}
+                  disabled={!phieuData}
+                  onClick={handleExportPdf}
+                  danger
+                >
+                  PDF
+                </Button>
               </Space>
             }
+            size="small"
+            styles={{ body: { padding: "6px 8px" } }}
           >
             {phieuData.congDoan === "lo_thoi" && (
               <LoThoiPanel

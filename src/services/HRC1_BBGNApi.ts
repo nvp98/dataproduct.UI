@@ -47,7 +47,10 @@ export interface HRC1_MeThepVm {
   capNhatLuc?: string | null;
   xacNhanBoi?: number | null;
   xacNhanLuc?: string | null;
-  tenCapNhatBoi?: string | null;
+  // Chuyển mẻ (Tinh luyện)
+  chuyenVeMeId?: number | null;
+  chuyenVeMaMe?: string | null;
+  tenMayDucChuyen?: string | null;
 }
 
 export interface HRC1_ChoNhanMeVm {
@@ -64,6 +67,7 @@ export interface HRC1_ChoNhanMeVm {
   tenNguoiNhan?: string | null;
   ngayTao?: string | null;
   ngayNhanTL?: string | null;
+  tenMayDuc?: string | null;
 }
 
 export interface HRC1_MeChoNhanQuery {
@@ -125,6 +129,90 @@ export interface HRC1_ChotPhieuBatchResult {
   thatBai: HRC1_ChotPhieuBatchThatBai[];
 }
 
+// ── Thống kê types ──────────────────────────────────────────────────────────
+
+export interface HRC1_ExportQuery {
+  tuNgay?: string | null;
+  denNgay?: string | null;
+  ca?: number | null;
+  kip?: string | null;
+  maMe?: string | null;
+  loSo?: number | null;
+  tlSo?: number | null;
+  idMayDuc?: number | null;
+  trangThaiLo?: number | null;
+  trangThaiTL?: number | null;
+  trangThaiDuc?: number | null;
+  thungSo?: string | null;
+  phanLoai?: string | null;
+  isChot?: boolean | null;
+  isManualTL?: boolean | null;
+  chuaCoNhomPhanLoai?: boolean | null;
+  idNhomPhanLoai?: number | null;
+}
+
+export interface HRC1_ThongKeQuery extends HRC1_ExportQuery {
+  isTrungMeThoi?: boolean | null;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface HRC1_ThongKeRow {
+  meId: number;
+  maMe?: string | null;
+  thungSo?: string | null;
+  thoiGian?: string | null;
+  kllfSauThep?: number | null;
+  klLan1?: number | null;
+  klLan2?: number | null;
+  klLan3?: number | null;
+  klThepLong?: number | null;
+  ghiChuLo?: string | null;
+  isThuNghiem?: boolean | null;
+  tenMayDuc?: string | null;
+  macThep?: string | null;
+  phanLoai?: string | null;
+  macThepBKMIS?: string | null;
+  tinhLuyenLenThang?: string | null;
+  isTrungMeThoi?: boolean | null;
+  trangThaiLo?: number | null;
+  trangThaiTL?: number | null;
+  trangThaiDuc?: number | null;
+  isChot?: boolean | null;
+  ngayTao?: string | null;
+  ngayNhanTL?: string | null;
+  ca?: number | null;
+  kip?: string | null;
+  tenNhomPhanLoai?: string | null;
+  tenCapNhatBoiLo?: string | null;
+  tenCapNhatBoiTL?: string | null;
+  tenCapNhatBoiDuc?: string | null;
+  isManualTL?: boolean | null;
+}
+
+export interface HRC1_ThongKeResult {
+  items: HRC1_ThongKeRow[];
+  totalRecords: number;
+  totalKlThepLong: number | null;
+  page: number;
+  pageSize: number;
+}
+
+export interface HRC1_TongHopItem {
+  label: string;
+  soMe: number;
+}
+
+export interface HRC1_TongHopResult {
+  phanLoai: HRC1_TongHopItem[];
+  ca: HRC1_TongHopItem[];
+  kip: HRC1_TongHopItem[];
+  tinhLuyenLenThang: HRC1_TongHopItem[];
+  ducVuong: HRC1_TongHopItem[];
+  ducTam: HRC1_TongHopItem[];
+  nhomPhanLoaiMacThep: HRC1_TongHopItem[];
+}
+
 // ── Request types ───────────────────────────────────────────────────────────
 
 export interface HRC1_LoThoiUpdateRequest {
@@ -153,6 +241,7 @@ export interface HRC1_TinhLuyenUpdateRequest {
   macThepBKMIS?: string | null;
   idMacThep?: number | null;
   ghiChuTL?: string | null;
+  chuyenVeMeId?: number | null; // FK→HRC1_MeThep; null = không chuyển
 }
 
 // ── API ──────────────────────────────────────────────────────────────────────
@@ -229,4 +318,34 @@ export const HRC1Api = {
     apiService.post("/api/hrc1/duc/chot-phieu-batch", { idPhieuList }, { headers: userHeaders() }) as Promise<HRC1_ChotPhieuBatchResult>,
   huyChotPhieuBatch: (idPhieuList: string[]): Promise<HRC1_ChotPhieuBatchResult> =>
     apiService.post("/api/hrc1/duc/huy-chot-phieu-batch", { idPhieuList }, { headers: userHeaders() }) as Promise<HRC1_ChotPhieuBatchResult>,
+
+  // Thống kê — dữ liệu từ HRC1_MeThep (thay thế BBGN_ThepLong cũ)
+  searchThongKe: (q: HRC1_ThongKeQuery): Promise<HRC1_ThongKeResult> =>
+    apiService.get("/api/hrc1/thong-ke", { params: q }) as Promise<HRC1_ThongKeResult>,
+
+  tongHopThongKe: (q: HRC1_ThongKeQuery): Promise<HRC1_TongHopResult> =>
+    apiService.get("/api/hrc1/thong-ke/tong-hop", { params: q }) as Promise<HRC1_TongHopResult>,
+
+  exportThongKe: async (q: HRC1_ExportQuery): Promise<void> => {
+    const baseUrl = import.meta.env.VITE_API_URL as string;
+    const token = localStorage.getItem("token");
+    const params = new URLSearchParams();
+    Object.entries(q).forEach(([k, v]) => { if (v != null) params.append(k, String(v)); });
+    const res = await fetch(`${baseUrl}api/hrc1/export/excel?${params.toString()}`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(t || "Xuất Excel thất bại."); }
+    const blob = await res.blob();
+    let fileName = `HRC1_BBGN_ThepLong.xlsx`;
+    const cd = res.headers.get("Content-Disposition");
+    if (cd) {
+      const m = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(cd);
+      if (m?.[1]) fileName = decodeURIComponent(m[1].replace(/['"]/g, ""));
+    }
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };

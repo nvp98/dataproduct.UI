@@ -96,8 +96,8 @@ const MainLayout = () => {
 
           <Content
             style={{
-              margin: "24px 16px",
-              padding: 24,
+              margin: "4px 8px",
+              padding: "4px 8px",
               flex: 1,
               overflowY: "auto",
               background: colorBgContainer,
