@@ -182,9 +182,10 @@ export interface HRC1_ThongKeRow {
   trangThaiDuc?: number | null;
   isChot?: boolean | null;
   ngayTao?: string | null;
-  ngayNhanTL?: string | null;
   ca?: number | null;
   kip?: string | null;
+  ngayNhanTL?: string | null;
+  caTinhLuyen?: number | null;
   tenNhomPhanLoai?: string | null;
   tenCapNhatBoiLo?: string | null;
   tenCapNhatBoiTL?: string | null;

@@ -120,18 +120,22 @@ const ThongKeBBGNThepLongHRC1 = () => {
 
   const columns = useMemo((): TableColumnsType<HRC1_ThongKeRow> => [
     {
-      title: "Ngày tạo", dataIndex: "ngayTao", key: "ngayTao", width: 110, fixed: "left",align: "center",
+      title: "Ngày tạo", dataIndex: "ngayTao", key: "ngayTao", width: 110, fixed: "left", align: "center",
       render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-",
     },
+    {
+      title: "Ca", dataIndex: "ca", key: "ca", width: 70, fixed: "left", align: "center",
+      render: (v: number) => v === 1 ? "Ngày" : v === 2 ? "Đêm" : "-",
+    },
+    { title: "Kíp", dataIndex: "kip", key: "kip", width: 60, align: "center" },
     {
       title: "Ngày TL", dataIndex: "ngayNhanTL", key: "ngayNhanTL", width: 110, fixed: "left", align: "center",
       render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-",
     },
     {
-      title: "Ca", dataIndex: "ca", key: "ca", width: 70, fixed: "left" , align: "center",
+      title: "Ca TL", dataIndex: "caTinhLuyen", key: "caTinhLuyen", width: 70, fixed: "left", align: "center",
       render: (v: number) => v === 1 ? "Ngày" : v === 2 ? "Đêm" : "-",
     },
-    { title: "Kíp", dataIndex: "kip", key: "kip", width: 60, align: "center" },
     { title: "Máy đúc", dataIndex: "tenMayDuc", key: "tenMayDuc", width: 110, fixed: "left" },
     {
       title: "Mẻ thổi", dataIndex: "maMe", key: "maMe", width: 110, fixed: "left", align: "center",
@@ -161,7 +165,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
       title: "KL thép lỏng", dataIndex: "klThepLong", key: "klThepLong", width: 80,
       align: "right",
       render: (v: number) => (
-        <span style={v < 0 ? { color: "red", fontWeight: 600 } : undefined}>{fmt(v)}</span>
+        <span style={{ fontWeight: 600, ...(v < 0 ? { color: "red" } : {}) }}>{fmt(v)}</span>
       ),
     },
     {
@@ -378,9 +382,9 @@ const ThongKeBBGNThepLongHRC1 = () => {
               <Table.Summary.Cell index={0} colSpan={5} align="right">
                 Tổng dòng: {totalRecords}
               </Table.Summary.Cell>
-              <Table.Summary.Cell index={5} colSpan={7} />
+              <Table.Summary.Cell index={5} colSpan={8} />
               <Table.Summary.Cell index={13} align="right">
-                <span style={Number(totalKl) < 0 ? { color: "red" } : undefined}>
+                <span style={{ fontWeight: 600, ...(Number(totalKl) < 0 ? { color: "red" } : {}) }}>
                   {fmt(totalKl)}
                 </span>
               </Table.Summary.Cell>

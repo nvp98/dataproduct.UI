@@ -423,7 +423,7 @@ export const LoThoiPanel = ({
         const l1   = me.klLan1;
         const l2   = (edits[me.id] && "klLan2"       in edits[me.id]) ? edits[me.id].klLan2       as number : me.klLan2;
         const computed = calcKlThepLong(dich, kllf, l1, l2);
-        return <InputNumber size="small" style={{ width: 73 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
+        return <InputNumber size="small" style={{ width: 73, fontWeight: 600 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
     {
@@ -844,7 +844,7 @@ export const TinhLuyenPanel = ({
         const l1 = (edits[me.mePhanCongId!] && "klLan1" in edits[me.mePhanCongId!]) ? edits[me.mePhanCongId!].klLan1 as number : me.klLan1;
         const l2 = (edits[me.mePhanCongId!] && "klLan2" in edits[me.mePhanCongId!]) ? edits[me.mePhanCongId!].klLan2 as number : me.klLan2;
         const computed = calcKlThepLong(me.dichChuyen, me.kllfSauThep, l1, l2);
-        return <InputNumber size="small" style={{ width: 73 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
+        return <InputNumber size="small" style={{ width: 73, fontWeight: 600 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
     {
@@ -1183,7 +1183,7 @@ export const DucPanel = ({
     { title: "KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)", dataIndex: "klLan1",       width: 75,  render: (v) => v ?? "" },
     { title: "KL bì - Lần 2 (tấn)", dataIndex: "klLan2",       width: 75,  render: (v) => v ?? "" },
     { title: "KL bì - Lần 3 (tấn)", dataIndex: "klLan3",       width: 75,  render: (v) => v ?? "" },
-    { title: "KL thép lỏng", dataIndex: "klThepLong", width: 80, render: (v) => v ?? "" },
+    { title: "KL thép lỏng", dataIndex: "klThepLong", width: 80, render: (v) => <span style={{ fontWeight: 600 }}>{v ?? ""}</span> },
     {
       title: "Ghi chú", key: "ghiChuLo", width: 90,
       render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={readOnly || !!me.isChot} />,
