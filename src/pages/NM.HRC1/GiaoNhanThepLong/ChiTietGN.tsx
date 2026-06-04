@@ -76,7 +76,19 @@ const ChiTietGN = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleReload = useCallback(async () => { await loadData(); }, [loadData]);
+  const handleReload = useCallback(async () => {
+    const maMes = (data?.danhSachMe ?? [])
+      .filter((m) => m.isChot !== true && m.isGhost !== true && m.maMe)
+      .map((m) => m.maMe!);
+    if (maMes.length > 0) {
+      try {
+        await HRC1Api.syncPhanLoaiMeThep(maMes);
+      } catch {
+        // không block reload nếu sync lỗi
+      }
+    }
+    await loadData();
+  }, [loadData, data]);
 
   const effectiveCanChot = isPKHAdmin || hasQuyenChot;
   const canDoAnything = effectiveCanChot || hasQuyenXacNhan;

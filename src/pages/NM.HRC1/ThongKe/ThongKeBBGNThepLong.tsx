@@ -1,4 +1,5 @@
 import { Button, Card, Checkbox, DatePicker, Form, Input, Select, Space, Table, Tag, message } from "antd";
+import { SyncOutlined } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import type { TableColumnsType } from "antd";
@@ -11,6 +12,7 @@ import {
 } from "../../../services/HRC1_BBGNApi";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
 import { MacThepServiceApi } from "../../../services/MacThepServiceApi";
+import Tooltip from "antd/es/tooltip";
 
 const { RangePicker } = DatePicker;
 
@@ -21,6 +23,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
   const [form] = Form.useForm();
   const [loading, setLoading]       = useState(false);
   const [exporting, setExporting]   = useState(false);
+  const [syncing, setSyncing]       = useState(false);
   const [data, setData]             = useState<HRC1_ThongKeRow[]>([]);
   const [totalRecords, setTotal]    = useState(0);
   const [totalKl, setTotalKl]           = useState<number | null>(null);
@@ -101,6 +104,26 @@ const ThongKeBBGNThepLongHRC1 = () => {
     form.resetFields();
     void fetchData({ page: 1, pageSize: pagination.pageSize });
   }, [fetchData, form, pagination.pageSize]);
+
+  const handleSync = useCallback(async () => {
+    const maMes = data
+      .filter((r) => r.isChot !== true && r.maMe)
+      .map((r) => r.maMe!);
+    if (maMes.length === 0) {
+      void message.info("Không có mẻ chưa chốt trong danh sách hiện tại.");
+      return;
+    }
+    setSyncing(true);
+    try {
+      const res = await HRC1Api.syncPhanLoaiMeThep(maMes);
+      void message.success(`Đồng bộ: ${res.totalUpdated}/${maMes.length} mẻ được cập nhật.`);
+      void fetchData(filters);
+    } catch {
+      void message.error("Đồng bộ phân loại thất bại.");
+    } finally {
+      setSyncing(false);
+    }
+  }, [data, filters, fetchData]);
 
   const handleExport = useCallback(async () => {
     if (!filters.tuNgay || !filters.denNgay) {
@@ -352,6 +375,14 @@ const ThongKeBBGNThepLongHRC1 = () => {
               >
                 Xuất Excel
               </Button>
+              <Tooltip title="Đồng bộ phân loại">
+                <Button
+                  icon={<SyncOutlined />}
+                  loading={syncing}
+                  onClick={() => void handleSync()}
+                >
+                </Button>
+              </Tooltip>
             </Space>
           </Form.Item>
         </Space>
