@@ -15,6 +15,7 @@ import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
 import type { NhaMayEnum } from "../../../models/SiloModel";
+import { HRC1Api, type HRC1_ChotPhieuBatchThatBai } from "../../../services/HRC1_BBGNApi";
 
 const MABM_DETAIL_ROUTE: Record<string, string> = {
   HRC1_BB_Lothoi: "/taotieuhaolothoi",
@@ -161,6 +162,26 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
     [onPageChange]
   );
 
+  const showBatchFailures = (successCount: number, failures: HRC1_ChotPhieuBatchThatBai[], action: "chốt" | "hủy chốt") => {
+    if (failures.length === 0) {
+      message.success(`${action === "chốt" ? "Chốt" : "Hủy chốt"} ${successCount} phiếu thành công`);
+      return;
+    }
+    Modal.warning({
+      title: `${action === "chốt" ? "Chốt" : "Hủy chốt"} ${successCount} phiếu thành công — ${failures.length} phiếu thất bại`,
+      width: 600,
+      content: (
+        <div style={{ maxHeight: 320, overflowY: "auto" }}>
+          {failures.map((f) => (
+            <div key={f.idPhieu} style={{ marginBottom: 6 }}>
+              <b>{f.soPhieu}</b>: {f.lyDo.join("; ")}
+            </div>
+          ))}
+        </div>
+      ),
+    });
+  };
+
   const handleChotPhieu = useCallback(() => {
     if (selectedKeys.size === 0) return;
     Modal.confirm({
@@ -172,10 +193,27 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       onOk: async () => {
         try {
           setChotLoading(true);
-          await PhieuApi.chotNhieuPhieu([...selectedKeys], TrangThaiPhieuConst.DaChot);
-          message.success(`Chốt ${selectedKeys.size} phiếu thành công`);
+          const dataMap = new Map((data as TableRecord[]).map((r) => [r.idphieu, r]));
+          const selectedArr = [...selectedKeys];
+          const bbgnIds = selectedArr.filter((id) => dataMap.get(id)?.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong);
+          const otherIds = selectedArr.filter((id) => dataMap.get(id)?.maBm !== BM_CONFIG.HRC1.HRC1_BBGN_ThepLong);
+
+          const failures: HRC1_ChotPhieuBatchThatBai[] = [];
+          let successCount = 0;
+
+          if (bbgnIds.length > 0) {
+            const result = await HRC1Api.chotPhieuBatch(bbgnIds);
+            successCount += result.thanhCong.length;
+            failures.push(...result.thatBai);
+          }
+          if (otherIds.length > 0) {
+            await PhieuApi.chotNhieuPhieu(otherIds, TrangThaiPhieuConst.DaChot);
+            successCount += otherIds.length;
+          }
+
           setSelectedKeys(new Set());
           refetch();
+          showBatchFailures(successCount, failures, "chốt");
         } catch {
           message.error("Chốt phiếu thất bại. Vui lòng thử lại.");
         } finally {
@@ -183,7 +221,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
         }
       },
     });
-  }, [selectedKeys, refetch]);
+  }, [selectedKeys, data, refetch]);
 
   const handleHuyChotPhieu = useCallback(() => {
     if (selectedKeys.size === 0) return;
@@ -196,10 +234,27 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       onOk: async () => {
         try {
           setChotLoading(true);
-          await PhieuApi.chotNhieuPhieu([...selectedKeys], TrangThaiPhieuConst.HoanThanh);
-          message.success(`Hủy chốt ${selectedKeys.size} phiếu thành công`);
+          const dataMap = new Map((data as TableRecord[]).map((r) => [r.idphieu, r]));
+          const selectedArr = [...selectedKeys];
+          const bbgnIds = selectedArr.filter((id) => dataMap.get(id)?.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong);
+          const otherIds = selectedArr.filter((id) => dataMap.get(id)?.maBm !== BM_CONFIG.HRC1.HRC1_BBGN_ThepLong);
+
+          const failures: HRC1_ChotPhieuBatchThatBai[] = [];
+          let successCount = 0;
+
+          if (bbgnIds.length > 0) {
+            const result = await HRC1Api.huyChotPhieuBatch(bbgnIds);
+            successCount += result.thanhCong.length;
+            failures.push(...result.thatBai);
+          }
+          if (otherIds.length > 0) {
+            await PhieuApi.chotNhieuPhieu(otherIds, TrangThaiPhieuConst.HoanThanh);
+            successCount += otherIds.length;
+          }
+
           setSelectedKeys(new Set());
           refetch();
+          showBatchFailures(successCount, failures, "hủy chốt");
         } catch {
           message.error("Hủy chốt phiếu thất bại. Vui lòng thử lại.");
         } finally {
@@ -207,7 +262,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
         }
       },
     });
-  }, [selectedKeys, refetch]);
+  }, [selectedKeys, data, refetch]);
 
   const columns = [
     {
@@ -223,10 +278,12 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       width: 50,
       fixed: "left" as const,
       render: (_: unknown, record: TableRecord) => (
-        <Checkbox
-          checked={selectedKeys.has(record.idphieu)}
-          onChange={() => toggleSelect(record.idphieu)}
-        />
+        <span onClick={(e) => e.stopPropagation()}>
+          <Checkbox
+            checked={selectedKeys.has(record.idphieu)}
+            onChange={() => toggleSelect(record.idphieu)}
+          />
+        </span>
       ),
     },
     {
@@ -237,7 +294,8 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       render: (text: string, record: TableRecord) => (
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             const route = MABM_DETAIL_ROUTE[record.maBm as string];
             if (!route) return;
             if (type === "viecdentoi") {
@@ -421,6 +479,10 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
           dataSource={data as TableRecord[]}
           loading={loading}
           rowKey="idphieu"
+          onRow={(record) => ({
+            onClick: () => toggleSelect(record.idphieu),
+            style: { cursor: "pointer" },
+          })}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

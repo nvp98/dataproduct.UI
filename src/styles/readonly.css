@@ -44,3 +44,14 @@
   color: rgba(0, 0, 0, 0.65) !important;
 }
 
+/* Disabled inputs bên trong table cell: hiện màu xám nhạt để phân biệt với ô có thể nhập */
+.ant-table-cell .ant-input[disabled],
+.ant-table-cell .ant-input-affix-wrapper-disabled,
+.ant-table-cell .ant-select-disabled .ant-select-selector,
+.ant-table-cell .ant-picker-disabled,
+.ant-table-cell .ant-input-number-disabled,
+.ant-table-cell .ant-input-number-disabled .ant-input-number-input {
+  background-color: #f0f0f0 !important;
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+

@@ -8,6 +8,9 @@ export interface KhuVucQuyenItem {
 export interface KhuVucPhuItem {
   khuVucPhu: string;
   tenKhuVuc: string;
+  /** Nếu set: khi lưu phân quyền sẽ tạo record riêng với maBm=targetMaBm, maKhuVuc=targetScope */
+  targetMaBm?: string;
+  targetScope?: string;
 }
 
 export interface BieuMauQuyenItem {
@@ -122,19 +125,23 @@ export const bmQuyenConfig = {
       tenBm: "HRC1 - Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC1",
       scope: [
-        {maKhuVuc: "1", tenKhuVuc: "TSC 1",},
+        {maKhuVuc: "1", tenKhuVuc: "TSC 1"},
         {maKhuVuc: "2", tenKhuVuc: "TSC 2"},
         {maKhuVuc: "3", tenKhuVuc: "Đúc vuông 1"},
         {maKhuVuc: "4", tenKhuVuc: "Đúc vuông 2"},
         {maKhuVuc: "5", tenKhuVuc: "Đúc vuông 3"},
       ],
       khuVucPhus: [
-        {khuVucPhu: "1", tenKhuVuc: "Lò thổi 1"},
-        {khuVucPhu: "2", tenKhuVuc: "Lò thổi 2"},
-        {khuVucPhu: "3", tenKhuVuc: "Lò thổi 3"},
-        {khuVucPhu: "4", tenKhuVuc: "Lò thổi 4"},
-        {khuVucPhu: "5", tenKhuVuc: "Lò thổi 5"},
-        {khuVucPhu: "TL", tenKhuVuc: "Tinh luyện"}
+        {khuVucPhu: "1",   tenKhuVuc: "Lò thổi 1",    targetMaBm: "HRC1_LoThoi",    targetScope: "1"},
+        {khuVucPhu: "2",   tenKhuVuc: "Lò thổi 2",    targetMaBm: "HRC1_LoThoi",    targetScope: "2"},
+        {khuVucPhu: "3",   tenKhuVuc: "Lò thổi 3",    targetMaBm: "HRC1_LoThoi",    targetScope: "3"},
+        {khuVucPhu: "4",   tenKhuVuc: "Lò thổi 4",    targetMaBm: "HRC1_LoThoi",    targetScope: "4"},
+        {khuVucPhu: "5",   tenKhuVuc: "Lò thổi 5",    targetMaBm: "HRC1_LoThoi",    targetScope: "5"},
+        {khuVucPhu: "TL1", tenKhuVuc: "Tinh luyện 1", targetMaBm: "HRC1_TinhLuyen", targetScope: "1"},
+        {khuVucPhu: "TL2", tenKhuVuc: "Tinh luyện 2", targetMaBm: "HRC1_TinhLuyen", targetScope: "2"},
+        {khuVucPhu: "TL3", tenKhuVuc: "Tinh luyện 3", targetMaBm: "HRC1_TinhLuyen", targetScope: "3"},
+        {khuVucPhu: "TL4", tenKhuVuc: "Tinh luyện 4", targetMaBm: "HRC1_TinhLuyen", targetScope: "4"},
+        {khuVucPhu: "TL5", tenKhuVuc: "Tinh luyện 5", targetMaBm: "HRC1_TinhLuyen", targetScope: "5"},
       ]
     },
     {
