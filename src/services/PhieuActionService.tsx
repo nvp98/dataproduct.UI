@@ -972,6 +972,8 @@ export const phieuActionService = {
         type: "default",
         onClick: async (phieuIdParam) => {
           try {
+            // Gọi API Phiếu để lấy maBM trước, sau đó gọi API export với maBM để xuất đúng template (nếu có)
+            const phieuData = await PhieuApi.getDetail(phieuIdParam);
             const response = await PhieuApi.exportDynamicPDF(phieuIdParam, {});
             const blob = new Blob([response as any], {
               type: "application/pdf",
@@ -979,7 +981,9 @@ export const phieuActionService = {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `Phieu_${phieuIdParam}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            link.download =
+              `${(phieuData as any).soPhieu}_${new Date().toISOString().slice(0, 10)}.pdf` ||
+              `Phieu_${phieuIdParam}_${new Date().toISOString().slice(0, 10)}.pdf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -1005,13 +1009,17 @@ export const phieuActionService = {
           try {
             const response =
               await PhieuApi.exportDynamicExcelPhieu(phieuIdParam);
+            // Gọi API Phiếu để lấy maBM trước, sau đó gọi API export với maBM để xuất đúng template (nếu có)
+            const phieuData = await PhieuApi.getDetail(phieuIdParam);
             const blob = new Blob([response as any], {
               type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             });
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `Phieu_${phieuIdParam}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            link.download =
+              `${(phieuData as any).soPhieu}_${new Date().toISOString().slice(0, 10)}.xlsx` ||
+              `Phieu_${phieuIdParam}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
