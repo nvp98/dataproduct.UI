@@ -4,7 +4,7 @@ import {
   AutoComplete, Button, Card, Checkbox, Col, Divider, InputNumber, Modal,
   Popconfirm, Row, Select, Space, Spin, Tag, Tooltip, Typography, Input, message, Empty,
 } from "antd";
-import { DeleteOutlined, FileExcelOutlined, FilePdfOutlined, SyncOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined, FilePdfOutlined, SyncOutlined } from "@ant-design/icons";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { TableColumnsType } from "antd";
 import dayjs from "dayjs";
@@ -158,10 +158,10 @@ const checkDucReady = (me: HRC1_MeThepVm): string[] => {
   if (!me.thungSo)                                         missing.push("Thùng số");
   if (!me.thoiGian)                                        missing.push("Thời gian");
   if (me.kllfSauThep == null)                              missing.push("KL thùng LF sau khi ra thép");
-  if (me.dichChuyen === "tinh_luyen" && me.klLan1 == null) missing.push("KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)");
+  if (me.dichChuyen !== "len_thang" && me.klLan1 == null)  missing.push("KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)");
   if (me.klLan2 == null)                                   missing.push("KL bì - Lần 2 (tấn)");
   if (me.klThepLong == null)                               missing.push("KL thép lỏng");
-  if (me.dichChuyen === "tinh_luyen" && !me.tlDichSo)      missing.push("Đích TL");
+  if (me.dichChuyen !== "len_thang" && !me.isManualTL && !me.tlDichSo) missing.push("Đích TL");
   if (!me.idMayDucDich)                                    missing.push("Máy đúc");
   return missing;
 };
@@ -418,11 +418,7 @@ export const LoThoiPanel = ({
     {
       title: "KL thép lỏng", key: "klThepLong", width: 80,
       render: (_, me) => {
-        const dich = (edits[me.id] && "dichChuyen"   in edits[me.id]) ? edits[me.id].dichChuyen   : me.dichChuyen;
-        const kllf = (edits[me.id] && "kllfSauThep"  in edits[me.id]) ? edits[me.id].kllfSauThep  as number : me.kllfSauThep;
-        const l1   = me.klLan1;
-        const l2   = (edits[me.id] && "klLan2"       in edits[me.id]) ? edits[me.id].klLan2       as number : me.klLan2;
-        const computed = calcKlThepLong(dich, kllf, l1, l2);
+        const computed = calcKlThepLong(me.dichChuyen, me.kllfSauThep, me.klLan1, me.klLan2);
         return <InputNumber size="small" style={{ width: 73, fontWeight: 600 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
@@ -508,6 +504,14 @@ export const LoThoiPanel = ({
   const isLocked = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiLo ?? 0) >= 1 || !!me.isGhost;
   const columns = buildColumns(isLocked);
 
+  // Merge edits vào từng row để rc-table nhận biết thay đổi và re-render cell klThepLong
+  const displayData = useMemo(
+    () => phieuData.danhSachMe.map((me) =>
+      edits[me.id] ? ({ ...me, ...edits[me.id] } as HRC1_MeThepVm) : me
+    ),
+    [phieuData.danhSachMe, edits]
+  );
+
   if (!readOnly && !loSo) return (
     <Empty description="Chọn lò thổi để xem và nhập dữ liệu" style={{ padding: "40px 0" }} />
   );
@@ -515,7 +519,7 @@ export const LoThoiPanel = ({
   return (
     <MeThepTable
       columns={columns}
-      dataSource={phieuData.danhSachMe}
+      dataSource={displayData}
       scrollX={1325}
       scrollY="calc(100vh - 190px)"
       onRow={(me) => ({
@@ -549,6 +553,7 @@ export const TinhLuyenPanel = ({
   const [selectedHuyNhan, setSelectedHuyNhan] = useState<number[]>([]);
   const [huyNhanBusy, setHuyNhanBusy] = useState(false);
   const [choNhanRefreshKey, setChoNhanRefreshKey] = useState(0);
+  const [showChuyenMeCols, setShowChuyenMeCols] = useState(false);
 
   // Thêm mẻ tay
   const [showThemMeTay, setShowThemMeTay] = useState(false);
@@ -562,11 +567,11 @@ export const TinhLuyenPanel = ({
   const mayDucOpts = phieuData.danhSachMayDuc.map((m) => ({ label: m.tenMayDuc, value: m.id }));
 
   const get = (me: HRC1_MeThepVm, f: keyof HRC1_TinhLuyenUpdateRequest) => {
-    const e = edits[me.mePhanCongId!];
+    const e = edits[me.id];
     return e && f in e ? (e as any)[f] : (me as any)[f];
   };
-  const set = (pcId: number, f: keyof HRC1_TinhLuyenUpdateRequest, v: unknown) =>
-    setEdits((p) => ({ ...p, [pcId]: { ...p[pcId], [f]: v } }));
+  const set = (meId: number, f: keyof HRC1_TinhLuyenUpdateRequest, v: unknown) =>
+    setEdits((p) => ({ ...p, [meId]: { ...p[meId], [f]: v } }));
 
   const handleSaveAll = async () => {
     const dirty = Object.entries(edits);
@@ -575,22 +580,29 @@ export const TinhLuyenPanel = ({
     try {
       type SaveItem = { pcId: number; maMe: string; req: HRC1_TinhLuyenUpdateRequest };
 
-      const items: SaveItem[] = dirty.map(([pcIdStr, patch]) => {
-        const pcId = Number(pcIdStr);
-        const me = phieuData.danhSachMe.find((m) => m.mePhanCongId === pcId);
+      const items: SaveItem[] = dirty.map(([meIdStr, patch]) => {
+        const meId = Number(meIdStr);
+        const me = phieuData.danhSachMe.find((m) => m.id === meId);
+        const pcId = me?.mePhanCongId ?? -1;
         const l1 = ("klLan1" in patch ? patch.klLan1 : me?.klLan1) ?? null;
         const l2 = ("klLan2" in patch ? patch.klLan2 : me?.klLan2) ?? null;
-        const computed = calcKlThepLong(me?.dichChuyen, me?.kllfSauThep, l1, l2);
+        const computed = calcKlThepLong(me?.dichChuyen ?? "tinh_luyen", me?.kllfSauThep, l1, l2);
         return {
           pcId,
-          maMe: me?.maMe ?? `#${pcId}`,
+          maMe: me?.maMe ?? `#${meId}`,
           req: {
             thoiGian:     (("thoiGian"     in patch ? patch.thoiGian     : me?.thoiGian)     as string)  ?? null,
             klLan1:       l1,
             klLan2:       l2,
             klThepLong:   computed,
             idMayDucDich: (("idMayDucDich" in patch ? patch.idMayDucDich : me?.idMayDucDich) as number) ?? null,
-            chuyenVeMeId: (("chuyenVeMeId" in patch ? patch.chuyenVeMeId : me?.chuyenVeMeId) as number | null | undefined) ?? null,
+            chuyenVeMeId: (("chuyenVeMeId" in patch ? patch.chuyenVeMeId : (me?.chuyenVeMeId ?? me?.id)) as number | null | undefined) ?? me?.id ?? null,
+            // Chỉ gửi khi isManualTL — các field thường do LoThoi nhập
+            ...(me?.isManualTL ? {
+              thungSo:     (("thungSo"     in patch ? patch.thungSo     : me?.thungSo)     as string | null) ?? null,
+              kllfSauThep: (("kllfSauThep" in patch ? patch.kllfSauThep : me?.kllfSauThep) as number | null) ?? null,
+              klLan3:      (("klLan3"      in patch ? patch.klLan3      : me?.klLan3)      as number | null) ?? null,
+            } : {}),
           },
         };
       });
@@ -599,10 +611,11 @@ export const TinhLuyenPanel = ({
         items.map((item) => HRC1Api.updateTinhLuyen(item.pcId, item.req))
       );
 
-      const succeededPcIds: number[] = [];
+      const succeededMeIds: number[] = [];
       results.forEach((r, i) => {
         if (r.status === "fulfilled") {
-          succeededPcIds.push(items[i].pcId);
+          const me = phieuData.danhSachMe.find((m) => m.mePhanCongId === items[i].pcId);
+          if (me) succeededMeIds.push(me.id);
         } else {
           const raw = r.reason;
           const errMsg = typeof raw === "string" ? raw : (raw?.message ?? "Lỗi lưu dữ liệu");
@@ -610,13 +623,13 @@ export const TinhLuyenPanel = ({
         }
       });
 
-      if (succeededPcIds.length > 0) {
+      if (succeededMeIds.length > 0) {
         setEdits((prev) => {
           const next = { ...prev };
-          succeededPcIds.forEach((id) => delete next[id]);
+          succeededMeIds.forEach((id) => delete next[id]);
           return next;
         });
-        message.success(`Đã lưu ${succeededPcIds.length}/${items.length} dòng`);
+        message.success(`Đã lưu ${succeededMeIds.length}/${items.length} dòng`);
         await onReload();
       }
     } finally {
@@ -795,7 +808,18 @@ export const TinhLuyenPanel = ({
     },
     { title: "STT",        key: "stt",     width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
     { title: "Mẻ thổi",   dataIndex: "maMe",    width: 90, fixed: "left", render: (v) => v ?? "" },
-    { title: "Thùng số",  dataIndex: "thungSo", width: 40, render: (v) => <Input size="small" style={{ width: 34 }} value={v ?? ""} disabled /> },
+    {
+      title: "Thùng số", key: "thungSo", width: 40,
+      render: (_, me) => {
+        const editable = !!me.isManualTL && !isLocked(me);
+        return (
+          <Input size="small" style={{ width: 34 }}
+            value={editable ? ((get(me, "thungSo") as string) ?? "") : (me.thungSo ?? "")}
+            disabled={!editable}
+            onChange={editable ? (e) => set(me.id, "thungSo", e.target.value || null) : undefined} />
+        );
+      },
+    },
     {
       title: "Thời gian", key: "thoiGian", width: 98,
       render: (_, me) => {
@@ -807,12 +831,23 @@ export const TinhLuyenPanel = ({
             style={{ width: 95, fontSize: 13, padding: "0 4px", borderRadius: 4, border: "1px solid #d9d9d9", height: 24, background: locked ? "#f5f5f5" : undefined, color: locked ? "rgba(0,0,0,0.25)" : undefined, cursor: locked ? "not-allowed" : undefined }}
             value={raw ?? ""}
             disabled={locked}
-            onChange={locked ? undefined : (e) => set(me.mePhanCongId!, "thoiGian", e.target.value || null)}
+            onChange={locked ? undefined : (e) => set(me.id, "thoiGian", e.target.value || null)}
           />
         );
       },
     },
-    { title: "KL thùng LF sau khi ra thép",   dataIndex: "kllfSauThep", width: 70, render: (v) => <InputNumber size="small" style={{ width: 64 }} value={v ?? undefined} disabled /> },
+    {
+      title: "KL thùng LF sau khi ra thép", key: "kllfSauThep", width: 70,
+      render: (_, me) => {
+        const editable = !!me.isManualTL && !isLocked(me);
+        return (
+          <InputNumber size="small" style={{ width: 64 }}
+            value={editable ? (get(me, "kllfSauThep") as number) : (me.kllfSauThep ?? undefined)}
+            disabled={!editable}
+            onChange={editable ? (v) => set(me.id, "kllfSauThep", v) : undefined} />
+        );
+      },
+    },
     {
       title: "KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)", key: "klLan1", width: 75,
       render: (_, me) => {
@@ -821,7 +856,7 @@ export const TinhLuyenPanel = ({
           <InputNumber size="small" style={{ width: 68 }}
             value={disabled ? me.klLan1 : (get(me, "klLan1") as number)}
             disabled={disabled}
-            onChange={disabled ? undefined : (v) => set(me.mePhanCongId!, "klLan1", v)} />
+            onChange={disabled ? undefined : (v) => set(me.id, "klLan1", v)} />
         );
       },
     },
@@ -833,17 +868,27 @@ export const TinhLuyenPanel = ({
           <InputNumber size="small" style={{ width: 68 }}
             value={locked ? me.klLan2 : (get(me, "klLan2") as number)}
             disabled={locked}
-            onChange={locked ? undefined : (v) => set(me.mePhanCongId!, "klLan2", v)} />
+            onChange={locked ? undefined : (v) => set(me.id, "klLan2", v)} />
         );
       },
     },
-    { title: "KL bì - Lần 3 (tấn)",  dataIndex: "klLan3", width: 70, render: (v) => <InputNumber size="small" style={{ width: 64 }} value={v ?? undefined} disabled /> },
+    {
+      title: "KL bì - Lần 3 (tấn)", key: "klLan3", width: 70,
+      render: (_, me) => {
+        const editable = !!me.isManualTL && !isLocked(me);
+        return (
+          <InputNumber size="small" style={{ width: 64 }}
+            value={editable ? (get(me, "klLan3") as number) : (me.klLan3 ?? undefined)}
+            disabled={!editable}
+            onChange={editable ? (v) => set(me.id, "klLan3", v) : undefined} />
+        );
+      },
+    },
     {
       title: "KL thép lỏng", key: "klThepLong", width: 80,
       render: (_, me) => {
-        const l1 = (edits[me.mePhanCongId!] && "klLan1" in edits[me.mePhanCongId!]) ? edits[me.mePhanCongId!].klLan1 as number : me.klLan1;
-        const l2 = (edits[me.mePhanCongId!] && "klLan2" in edits[me.mePhanCongId!]) ? edits[me.mePhanCongId!].klLan2 as number : me.klLan2;
-        const computed = calcKlThepLong(me.dichChuyen, me.kllfSauThep, l1, l2);
+        // dichChuyen null ở TinhLuyen → mặc định dùng công thức tinh_luyen: klLan1 - klLan2
+        const computed = calcKlThepLong(me.dichChuyen ?? "tinh_luyen", me.kllfSauThep, me.klLan1, me.klLan2);
         return <InputNumber size="small" style={{ width: 73, fontWeight: 600 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
@@ -862,35 +907,46 @@ export const TinhLuyenPanel = ({
             options={mayDucOpts}
             allowClear={!disabled}
             disabled={disabled}
-            onChange={disabled ? undefined : (v) => set(me.mePhanCongId!, "idMayDucDich", v ?? null)} />
+            onChange={disabled ? undefined : (v) => set(me.id, "idMayDucDich", v ?? null)} />
         );
       },
     },
-    {
-      title: "Chuyển mẻ", key: "chuyenVeMeId", width: 150,
-      onCell: (me) => {
-        const editedVal = me.mePhanCongId != null ? edits[me.mePhanCongId]?.chuyenVeMeId : undefined;
-        const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
-        return effectiveId != null ? { style: { background: "#fffbe6" } } : {};
+    ...(showChuyenMeCols ? [
+      {
+        title: "Chuyển mẻ", key: "chuyenVeMeId", width: 150,
+        onCell: (me: HRC1_MeThepVm) => {
+          const editedVal = edits[me.id]?.chuyenVeMeId;
+          const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
+          return effectiveId != null && effectiveId !== me.id ? { style: { background: "#fffbe6" } } : {};
+        },
+        render: (_: unknown, me: HRC1_MeThepVm) => (
+          <ChuyenMeCell
+            serverMaMe={me.chuyenVeMaMe ?? null}
+            ownMaMe={me.maMe ?? null}
+            locked={isLocked(me)}
+            onSet={(meId) => set(me.id, "chuyenVeMeId", meId)}
+          />
+        ),
       },
-      render: (_, me) => (
-        <ChuyenMeCell
-          serverMaMe={me.chuyenVeMaMe ?? null}
-          ownMaMe={me.maMe ?? null}
-          locked={isLocked(me)}
-          onSet={(meId) => set(me.mePhanCongId!, "chuyenVeMeId", meId)}
-        />
-      ),
-    },
-    {
-      title: "Máy đúc chuyển", key: "tenMayDucChuyen", width: 110,
-      onCell: (me) => {
-        const editedVal = me.mePhanCongId != null ? edits[me.mePhanCongId]?.chuyenVeMeId : undefined;
-        const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
-        return effectiveId != null ? { style: { background: "#fffbe6" } } : {};
+      {
+        title: "Máy đúc chuyển", key: "tenMayDucChuyen", width: 110,
+        onCell: (me: HRC1_MeThepVm) => {
+          const editedVal = edits[me.id]?.chuyenVeMeId;
+          const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
+          return effectiveId != null && effectiveId !== me.id ? { style: { background: "#fffbe6" } } : {};
+        },
+        render: (_: unknown, me: HRC1_MeThepVm) => {
+          const editedChuyen = edits[me.id]?.chuyenVeMeId;
+          const effectiveChuyenId = editedChuyen !== undefined ? editedChuyen : me.chuyenVeMeId;
+          const isSelf = effectiveChuyenId == null || effectiveChuyenId === me.id;
+          if (isSelf) {
+            const mayId = get(me, "idMayDucDich") as number | null | undefined;
+            return mayDucOpts.find((o) => o.value === mayId)?.label ?? "—";
+          }
+          return me.tenMayDucChuyen ?? "—";
+        },
       },
-      render: (_, me) => me.tenMayDucChuyen ?? "—",
-    },
+    ] as TableColumnsType<HRC1_MeThepVm> : []),
     { title: "Phân loại", dataIndex: "phanLoai",     width: 70, render: (v) => <Input size="small" style={{ width: 64 }} value={v ?? ""} disabled /> },
     { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 115, render: (v) => <Input size="small" style={{ width: 110}} value={v ?? ""} disabled /> },
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 150, render: (v) => v ?? "" },
@@ -922,6 +978,14 @@ export const TinhLuyenPanel = ({
     },
   ];
 
+  // Merge edits vào từng row để rc-table nhận biết thay đổi và re-render cell klThepLong
+  const tlDisplayData = useMemo(
+    () => phieuData.danhSachMe.map((me) =>
+      edits[me.id] ? ({ ...me, ...edits[me.id] } as HRC1_MeThepVm) : me
+    ),
+    [phieuData.danhSachMe, edits]
+  );
+
   if (!readOnly && !tlSo) return (
     <Empty description="Chọn tinh luyện để xem và nhận mẻ" style={{ padding: "40px 0" }} />
   );
@@ -943,11 +1007,20 @@ export const TinhLuyenPanel = ({
 
       {/* Phải: Bảng TL chính + Thêm dòng */}
       <Col flex="auto" style={{ minWidth: 0, overflow: "hidden" }}>
+        <div style={{ marginBottom: 6, textAlign: "right" }}>
+          <Button
+            size="small"
+            icon={showChuyenMeCols ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            onClick={() => setShowChuyenMeCols((v) => !v)}
+          >
+            {showChuyenMeCols ? "Ẩn cột chuyển mẻ" : "Hiện cột chuyển mẻ"}
+          </Button>
+        </div>
         <MeThepTable
           columns={mainCols}
-          dataSource={phieuData.danhSachMe}
+          dataSource={tlDisplayData}
           rowKey={(r) => `${r.id}-${r.mePhanCongId}`}
-          scrollX={1391}
+          scrollX={showChuyenMeCols ? 1391 : 1131}
           scrollY="calc(100vh - 235px)"
           onRow={(me) => ({ style: me.isManualTL ? { background: "#fff1f0" } : undefined })}
         />
@@ -1072,8 +1145,8 @@ export const DucPanel = ({
               message.success("Đã bỏ xác nhận");
             }}
             >
-              <Button type="primary" disabled={selected.length === 0}>
-                Xác nhận ({selected.length})
+              <Button danger type="primary" disabled={selected.length === 0}>
+                Hủy xác nhận ({selected.length})
               </Button>
             </Popconfirm>
             
@@ -1100,7 +1173,7 @@ export const DucPanel = ({
               </Button>
             </Popconfirm> */}
             <Popconfirm
-              title={`Bỏ chốt ${selected.length} mẻ?`}
+              title={`Chốt ${selected.length} mẻ?`}
               disabled={selected.length === 0}
               onConfirm={() => {
                 return batchRef.current(() =>
@@ -1114,7 +1187,7 @@ export const DucPanel = ({
                 );
               }}
             >
-              <Button disabled={selected.length === 0}>
+              <Button type="primary" disabled={selected.length === 0}>
                 Chốt ({selected.length})
               </Button>
             </Popconfirm>
@@ -1133,7 +1206,7 @@ export const DucPanel = ({
                 );
               }}
             >
-              <Button disabled={selected.length === 0}>
+              <Button danger disabled={selected.length === 0}>
                 Bỏ chốt ({selected.length})
               </Button>
             </Popconfirm>

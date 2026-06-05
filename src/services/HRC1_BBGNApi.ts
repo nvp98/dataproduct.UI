@@ -239,8 +239,12 @@ export interface HRC1_TinhLuyenUpdateRequest {
   thoiGian?: string | null;
   klLan1?: number | null;
   klLan2?: number | null;
+  klLan3?: number | null;
   klThepLong?: number | null;   // FE tự tính, gửi kèm để persist
   idMayDucDich?: number | null;
+  // Chỉ gửi khi isManualTL (mẻ thêm tay bởi TinhLuyen, không có LoThoi nhập)
+  thungSo?: string | null;
+  kllfSauThep?: number | null;
   phanLoai?: string | null;
   macThep?: string | null;
   macThepBKMIS?: string | null;
