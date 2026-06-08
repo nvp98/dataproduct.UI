@@ -116,8 +116,12 @@ export const lgTSLMappingApi = {
   create: (dto: CreateLGTSLMappingDto) =>
     apiService.post<LGTSLMappingDto>("/api/LGTSL/tonsilo-mapping", dto),
 
-  update: (id: number, dto: UpdateLGTSLMappingDto) =>
-    apiService.put<LGTSLMappingDto>(`/api/LGTSL/tonsilo-mapping/${id}`, dto),
+  update: (id: number, dto: UpdateLGTSLMappingDto, force = false) =>
+    apiService.put<LGTSLMappingDto>(
+      `/api/LGTSL/tonsilo-mapping/${id}`,
+      dto,
+      force ? { params: { force: true } } : undefined,
+    ),
 
   delete: (id: number) =>
     apiService.delete(`/api/LGTSL/tonsilo-mapping/${id}`),
@@ -189,6 +193,10 @@ export interface UpsertLGTSLChiTietDto {
 export const lgTSLChiTietApi = {
   upsert: (dto: UpsertLGTSLChiTietDto) =>
     apiService.post("/api/LGTSL/chitiet/upsert", dto),
+
+  /** POST /api/LGTSL/sync-chitiet/{idPhieu} — backend tự đọc ngày/ca/lò cao từ phiếu, merge ManualKL, lưu DB */
+  syncChiTiet: (idPhieu: string) =>
+    apiService.post<LGTSLSiLoMappingViewDto[]>(`/api/LGTSL/sync-chitiet/${idPhieu}`, null),
 
   getByPhieu: (idPhieu: string) =>
     apiService.get<LGTSLChiTietDto[]>(`/api/LGTSL/chitiet/${idPhieu}`),

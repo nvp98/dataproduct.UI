@@ -113,20 +113,20 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
         </Tag>
       ),
     },
-    {
-      title: "Thao tác",
-      key: "action",
-      width: 90,
-      render: (_: unknown, record: TableRecord) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EyeOutlined twoToneColor="#1890ff" />}
-            onClick={() => navigate(`/chitietbienbannaplieulocao/${record.idphieu}`)}
-          />
-        </Space>
-      ),
-    },
+    // {
+    //   title: "Thao tác",
+    //   key: "action",
+    //   width: 90,
+    //   render: (_: unknown, record: TableRecord) => (
+    //     <Space>
+    //       <Button
+    //         type="text"
+    //         icon={<EyeOutlined twoToneColor="#1890ff" />}
+    //         onClick={() => navigate(`/chitietbienbannaplieulocao/${record.idphieu}`)}
+    //       />
+    //     </Space>
+    //   ),
+    // },
   ];
 
   const filterFieldsConfig: FilterFieldConfig[] = [

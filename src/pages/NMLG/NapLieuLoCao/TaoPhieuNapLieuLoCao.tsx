@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_NapLieuLoCao from "../../../utils/BM_config/LG_BB_NapLieuLoCao.json";
 import { Alert, Button, Card, DatePicker, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography, message } from "antd";
-import { FilterOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from "@ant-design/icons";
+import { CopyOutlined, FilterOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -81,6 +81,8 @@ const TaoPhieuNapLieuLoCao = () => {
   const [createNvlForm] = Form.useForm();
   const [doiNVLForm] = Form.useForm();
 
+  const [copyMappingLoading, setCopyMappingLoading] = useState(false);
+
   const [addMappingOpen, setAddMappingOpen] = useState(false);
   const [addMappingLoading, setAddMappingLoading] = useState(false);
   const [addMappingForm] = Form.useForm();
@@ -130,62 +132,110 @@ const TaoPhieuNapLieuLoCao = () => {
   );
 
   const loadDataFromAPI = useCallback(async () => {
-    if (!ca) { message.warning("Vui lòng chọn Kíp"); return; }
-    if (!scope) { message.warning("Vui lòng chọn Lò cao"); return; }
-    const ngaySXValue = form.getFieldValue("NgaySX");
-    if (!ngaySXValue) { message.warning("Vui lòng chọn Ngày sản xuất"); return; }
-
     try {
       setLoading(true);
-      const ngaySXFormatted = ngaySXValue?.format
-        ? ngaySXValue.format("YYYY-MM-DD")
-        : ngaySXValue;
 
-      const response = await napLieuLoCaoApi.getSiloMapped({
-        idLoCao: Number(scope),
-        ngay: ngaySXFormatted,
-        idCa: Number(ca),
-      });
+      if (idphieu) {
+        // ── Phiếu đã tồn tại ─────────────────────────────────────────────────
+        // Backend tự đọc IDPhieu, NgaySX, Ca, Scope từ BmPhieu → gọi SCADA →
+        // merge với chi tiết đã lưu → insert DB → trả pivot (columns).
+        const response = await napLieuLoCaoApi.syncChiTiet(idphieu);
 
-      // Backend đã trả về đủ nhóm NVL (kể cả nhóm chưa có NVL → placeholder "—")
-      // Frontend chỉ cần nhận và set, CustomTableLG sẽ ghép title từ JSON fallback
-      const apiColumns = (response.columns as TableColumnDef[]) ?? [];
-      setMaterialColumnsOverride(apiColumns.length > 0 ? apiColumns : null);
-
-      // Load nhomNVL options cho form tạo mới NVL (fire-and-forget)
-      lgnlNhomNvlApi.getList({ idLoCao: Number(scope) })
-        .then((res) => setNhomNvlOptions(Array.isArray(res) ? res : []))
-        .catch(() => {});
-
-      const ngayHL = response.ngayHieuLuc ?? null;
-      const idCaHL = response.idCaHieuLuc ?? null;
-      if (ngayHL && idCaHL && (ngayHL !== ngaySXFormatted || idCaHL !== Number(ca))) {
-        setConfigHieuLuc({ ngayHieuLuc: ngayHL, idCaHieuLuc: idCaHL });
-      } else {
+        const apiColumns = (response.columns as TableColumnDef[]) ?? [];
+        setMaterialColumnsOverride(apiColumns.length > 0 ? apiColumns : null);
         setConfigHieuLuc(null);
-      }
 
-      const rows = (response.rows ?? []).map((row: any, index: number) => {
-        const { time, ...rest } = row;
-        const thoiGianNapLieu = time
-          ? new Date(time).toLocaleTimeString("vi-VN", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })
-          : "";
-        return {
-          key: row?.id ?? `row-${index}`,
-          thoiGianNapLieu,
-          ...rest,
-        };
-      });
-      setTableData(rows);
+        // Đọc lại từ DB để lấy đúng ManualGiaTri + GiaTri_Goc sau khi sync
+        const chiTietList = await lgnlChiTietApi.getByPhieu(idphieu);
+        const rowMap = new Map<number, Record<string, any>>();
+        for (const item of chiTietList) {
+          const t = item.thuTu ?? 0;
+          if (!rowMap.has(t)) {
+            rowMap.set(t, {
+              key: `row-${t}`,
+              thoiGianNapLieu: item.thoiGianNapLieu ?? "",
+              soMe: item.soMe,
+              meGio: item.meGio,
+              cheDoNapLieu: item.cheDo,
+              thuocThamLieu1: item.thuocThamLieu1,
+              thuocThamLieu2: item.thuocThamLieu2,
+              ghiChu: item.ghiChu,
+            });
+          }
+          if (item.manualGiaTri) {
+            rowMap.get(t)![`_manual_${item.idNVL}`] = true;
+            if (item.giaTri_Goc != null)
+              rowMap.get(t)![`_goc_${item.idNVL}`] = item.giaTri_Goc;
+          }
+          rowMap.get(t)![String(item.idNVL)] = item.giaTri;
+        }
+        const rows = Array.from(rowMap.values());
+        setTableData(rows);
 
-      if (rows.length > 0) {
-        message.success(`Cập nhật dữ liệu thành công! Có ${rows.length} bản ghi`);
+        const restoredDoAm: Record<string, number> = {};
+        for (const item of chiTietList) {
+          const k = String(item.idNVL);
+          if (item.doAm != null && !(k in restoredDoAm))
+            restoredDoAm[k] = item.doAm;
+        }
+        setDoAmMap(restoredDoAm);
+
+        if (rows.length > 0) {
+          message.success(`Cập nhật dữ liệu thành công! Có ${rows.length} bản ghi`);
+        } else {
+          message.info("Không có dữ liệu");
+        }
       } else {
-        message.info("Không có dữ liệu");
+        // ── Phiếu mới (chưa lưu) ─────────────────────────────────────────────
+        // Cần form fields để biết ngày/ca/lò cao → hiển thị, lưu DB khi bấm Lưu
+        if (!ca) { message.warning("Vui lòng chọn Kíp"); return; }
+        if (!scope) { message.warning("Vui lòng chọn Lò cao"); return; }
+        const ngaySXValue = form.getFieldValue("NgaySX");
+        if (!ngaySXValue) { message.warning("Vui lòng chọn Ngày sản xuất"); return; }
+
+        const ngaySXFormatted = ngaySXValue?.format
+          ? ngaySXValue.format("YYYY-MM-DD")
+          : ngaySXValue;
+
+        const response = await napLieuLoCaoApi.getSiloMapped({
+          idLoCao: Number(scope),
+          ngay: ngaySXFormatted,
+          idCa: Number(ca),
+        });
+
+        const apiColumns = (response.columns as TableColumnDef[]) ?? [];
+        setMaterialColumnsOverride(apiColumns.length > 0 ? apiColumns : null);
+
+        lgnlNhomNvlApi.getList({ idLoCao: Number(scope) })
+          .then((res) => setNhomNvlOptions(Array.isArray(res) ? res : []))
+          .catch(() => {});
+
+        const ngayHL = response.ngayHieuLuc ?? null;
+        const idCaHL = response.idCaHieuLuc ?? null;
+        if (ngayHL && idCaHL && (ngayHL !== ngaySXFormatted || idCaHL !== Number(ca))) {
+          setConfigHieuLuc({ ngayHieuLuc: ngayHL, idCaHieuLuc: idCaHL });
+        } else {
+          setConfigHieuLuc(null);
+        }
+
+        const rows = (response.rows ?? []).map((row: any, index: number) => {
+          const { time, ...rest } = row;
+          const thoiGianNapLieu = time
+            ? new Date(time).toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })
+            : "";
+          return { key: row?.id ?? `row-${index}`, thoiGianNapLieu, ...rest };
+        });
+        setTableData(rows);
+
+        if (rows.length > 0) {
+          message.success(`Cập nhật dữ liệu thành công! Có ${rows.length} bản ghi`);
+        } else {
+          message.info("Không có dữ liệu");
+        }
       }
     } catch {
       message.error("Không thể tải dữ liệu");
@@ -193,7 +243,7 @@ const TaoPhieuNapLieuLoCao = () => {
     } finally {
       setLoading(false);
     }
-  }, [ca, scope, form]);
+  }, [idphieu, ca, scope, form]);
 
   const handleFilter = useCallback(() => {
     loadDataFromAPI();
@@ -222,8 +272,51 @@ const TaoPhieuNapLieuLoCao = () => {
       return;
     }
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
+    const caNum = Number(ca);
     setSiloSnapshotOpen(true);
-    const snapshot = await refreshSnapshotData(ngay, Number(ca), Number(scope));
+
+    // Dùng getList (không có fallback) để kiểm tra ngày/ca hiện tại có mapping thực không.
+    // Backend GetSiloSnapshotAsync đã bỏ fallback nên phải tự động sao chép nếu chưa có data.
+    try {
+      const actualRaw = await lgnlMappingApi.getList({ ngay, idCa: caNum, idLoCao: Number(scope) });
+      const actualMappings: LGNLMappingDto[] = Array.isArray(actualRaw) ? actualRaw : [];
+
+      if (actualMappings.length === 0) {
+        // Chưa có mapping cho ngày/ca này → sao chép từ ca trước, không dùng fallback backend
+        const prevCa = caNum === 1 ? 2 : 1;
+        const prevNgay = caNum === 1 ? dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD") : ngay;
+        const prevSnapshotRaw = await lgnlMappingApi.getSnapshotSilo({
+          ngay: prevNgay,
+          idCa: prevCa,
+          idLoCao: Number(scope),
+        });
+        const prevSnapshot: LGNLSiloSnapshotDto[] = Array.isArray(prevSnapshotRaw) ? prevSnapshotRaw : [];
+        const mappedPrev = prevSnapshot.filter((item: LGNLSiloSnapshotDto) => item.idNVL != null);
+        if (mappedPrev.length > 0) {
+          for (const item of mappedPrev) {
+            try {
+              await lgnlMappingApi.create({
+                ngay,
+                idCa: caNum,
+                idLoCao: Number(scope),
+                idSiLo: item.idSiLo,
+                idNVL: item.idNVL!,
+                ghiChu: null,
+              });
+            } catch {
+              // bỏ qua lỗi từng silo, tiếp tục
+            }
+          }
+          message.success(
+            `Đã tự động sao chép ${mappedPrev.length} mapping từ Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`
+          );
+        }
+      }
+    } catch {
+      message.error("Không thể kiểm tra/sao chép mapping ca trước");
+    }
+
+    const snapshot = await refreshSnapshotData(ngay, caNum, Number(scope));
     const initDrafts: Record<number, number | null> = {};
     const initNotes: Record<number, string> = {};
     snapshot.forEach((item) => {
@@ -292,6 +385,86 @@ const TaoPhieuNapLieuLoCao = () => {
       message.error("Lỗi khi tạo NVL mới");
     }
   }, [createNvlForm, scope]);
+
+  const handleCopyFromPreviousShift = useCallback(async () => {
+    const ngaySXValue = form.getFieldValue("NgaySX");
+    if (!scope || !ca || !ngaySXValue) {
+      message.warning("Vui lòng chọn Lò cao, Ca và Ngày sản xuất trước");
+      return;
+    }
+    const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
+    const caNum = Number(ca);
+    const prevCa = caNum === 1 ? 2 : 1;
+    const prevNgay = caNum === 1 ? dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD") : ngay;
+
+    Modal.confirm({
+      title: "Sao chép mapping ca trước",
+      content: `Sao chép toàn bộ mapping từ Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")} (cùng Lò cao) sang Ca ${caNum}? Các Silo đã map ở ca hiện tại sẽ bị bỏ qua.`,
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          setCopyMappingLoading(true);
+          const prevSnapshotRaw = await lgnlMappingApi.getSnapshotSilo({
+            ngay: prevNgay,
+            idCa: prevCa,
+            idLoCao: Number(scope),
+          });
+          const prevSnapshot: LGNLSiloSnapshotDto[] = Array.isArray(prevSnapshotRaw) ? prevSnapshotRaw : [];
+          const mappedPrev = prevSnapshot.filter((item: LGNLSiloSnapshotDto) => item.idNVL != null);
+          if (mappedPrev.length === 0) {
+            message.info(`Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")} chưa có mapping nào để sao chép`);
+            return;
+          }
+          // Lấy snapshot ca hiện tại để biết Silo nào đã map rồi
+          const currentSnapshotRaw = await lgnlMappingApi.getSnapshotSilo({
+            ngay,
+            idCa: caNum,
+            idLoCao: Number(scope),
+          });
+          const currentSnapshot: LGNLSiloSnapshotDto[] = Array.isArray(currentSnapshotRaw) ? currentSnapshotRaw : [];
+          const alreadyMappedIds = new Set(
+            currentSnapshot.filter((item: LGNLSiloSnapshotDto) => item.idNVL != null).map((item: LGNLSiloSnapshotDto) => item.idSiLo)
+          );
+          const toCreate = mappedPrev.filter((item: LGNLSiloSnapshotDto) => !alreadyMappedIds.has(item.idSiLo));
+          if (toCreate.length === 0) {
+            message.info("Tất cả Silo đã được map ở ca hiện tại, không cần sao chép");
+            return;
+          }
+          let successCount = 0;
+          for (const item of toCreate) {
+            try {
+              await lgnlMappingApi.create({
+                ngay,
+                idCa: caNum,
+                idLoCao: Number(scope),
+                idSiLo: item.idSiLo,
+                idNVL: item.idNVL!,
+                ghiChu: null,
+              });
+              successCount++;
+            } catch {
+              // bỏ qua lỗi từng item, tiếp tục
+            }
+          }
+          message.success(`Đã sao chép ${successCount}/${toCreate.length} mapping từ Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`);
+          const refreshed = await refreshSnapshotData(ngay, caNum, Number(scope));
+          const nextDrafts: Record<number, number | null> = {};
+          const nextNotes: Record<number, string> = {};
+          refreshed.forEach((item) => {
+            nextDrafts[item.idSiLo] = item.idNVL ?? null;
+            nextNotes[item.idSiLo] = "";
+          });
+          setMapDraftBySilo(nextDrafts);
+          setMapNoteBySilo(nextNotes);
+        } catch {
+          message.error("Lỗi khi sao chép mapping ca trước");
+        } finally {
+          setCopyMappingLoading(false);
+        }
+      },
+    });
+  }, [form, scope, ca, refreshSnapshotData]);
 
   const handleOpenAddMapping = useCallback(async () => {
     const ngaySXValue = form.getFieldValue("NgaySX");
@@ -868,6 +1041,13 @@ const TaoPhieuNapLieuLoCao = () => {
                         </Button>
                         <Button icon={<PlusOutlined />} onClick={handleOpenAddMapping}>
                           Thêm Mapping mới
+                        </Button>
+                        <Button
+                          icon={<CopyOutlined />}
+                          onClick={handleCopyFromPreviousShift}
+                          loading={copyMappingLoading}
+                        >
+                          Sao chép Ca trước
                         </Button>
                         <span style={{ color: "#666" }}>
                           Chỉ hiển thị NVL thuộc lò cao đang chọn: {scopeNvlOptions.length} mục

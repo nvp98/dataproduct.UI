@@ -19,6 +19,7 @@ import {
   type LGTSLNvlDto,
   type LGTSLSiLoDto,
   type LGTSLMappingDto,
+  type LGTSLChiTietDto,
 } from "../../../services/LGTSLApi";
 
 // Mỗi dòng trong bảng tồn Silo; các trường _splitGroupId/_isSplitParent dùng để nhóm dòng tách liệu
@@ -147,49 +148,77 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }
   }, []);
 
-  // Tải dữ liệu SiLo-NVL mapping view theo ngày/ca/lò cao vào bảng chính
+  // Tải dữ liệu SiLo-NVL vào bảng chính.
+  // - Phiếu đã có: backend sync SCADA → merge ManualKL → lưu DB → FE đọc lại từ DB để giữ _manualKL.
+  // - Phiếu mới: tải từ mapping view (SCADA) theo ngày/ca/lò cao từ form.
   const loadDataFromAPI = useCallback(async () => {
-    if (!scope) { message.warning("Vui lòng chọn Lò cao"); return; }
-    if (!ca) { message.warning("Vui lòng chọn Ca"); return; }
-    const ngaySXValue = form.getFieldValue("NgaySX");
-    if (!ngaySXValue) { message.warning("Vui lòng chọn Ngày sản xuất"); return; }
     try {
       setLoading(true);
-      const ngayFormatted = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : ngaySXValue;
-      const response = await lgTSLSiLoMappingViewApi.getList({
-        idLoCao: Number(scope),
-        ca: Number(ca),
-        ngay: ngayFormatted,
-      });
-      const list = Array.isArray(response) ? response : (response as any)?.data ?? [];
-      if (list.length > 0) {
-        const sorted = [...list].sort((a: any, b: any) => (a.thuTu ?? 0) - (b.thuTu ?? 0));
-        const rows = sorted.map((item: any, index: number) => ({
-          key: String(item.idMapping ?? item.idSiLo ?? `row-${index}`),
-          stt: index + 1,
+
+      if (idphieu) {
+        // Backend tự đọc NgaySX/Ca/Scope từ BmPhieu, lấy SCADA mới, merge ManualKL, lưu DB
+        await lgTSLChiTietApi.syncChiTiet(idphieu);
+        const chiTietList = await lgTSLChiTietApi.getByPhieu(idphieu) as unknown as LGTSLChiTietDto[];
+        const rows = chiTietList.map((item, index) => ({
+          key: `ct-${item.id ?? index}`,
+          stt: item.thuTu ?? index + 1,
           idSiLo: item.idSiLo ?? null,
           idMapping: item.idMapping ?? null,
           idNVL: item.idNVL ?? null,
           thuTu: item.thuTu ?? index + 1,
           silo: item.tenSiLo ?? "",
           loaiNguyenNhienLieu: item.tenNVL ?? "",
-          klTonCuoiKip: item.ton ?? null,
-          _klGoc: item.ton ?? null,
+          klTonCuoiKip: item.klTonCuoiKip ?? null,
+          _manualKL: item.manualKL ?? false,
+          _klGoc: item.klGoc ?? null,
           ghiChu: item.ghiChu ?? "",
         }));
         setTableData(rows);
-        message.success(`Tải dữ liệu thành công! Có ${rows.length} bản ghi`);
+        if (rows.length > 0) {
+          message.success(`Tải dữ liệu thành công! Có ${rows.length} bản ghi`);
+        } else {
+          message.info("Không có dữ liệu");
+        }
       } else {
-        setTableData([]);
-        message.info("Không có dữ liệu");
+        if (!scope) { message.warning("Vui lòng chọn Lò cao"); return; }
+        if (!ca) { message.warning("Vui lòng chọn Ca"); return; }
+        const ngaySXValue = form.getFieldValue("NgaySX");
+        if (!ngaySXValue) { message.warning("Vui lòng chọn Ngày sản xuất"); return; }
+        const ngayFormatted = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : ngaySXValue;
+        const response = await lgTSLSiLoMappingViewApi.getList({
+          idLoCao: Number(scope),
+          ca: Number(ca),
+          ngay: ngayFormatted,
+        });
+        const list = Array.isArray(response) ? response : (response as any)?.data ?? [];
+        if (list.length > 0) {
+          const sorted = [...list].sort((a: any, b: any) => (a.thuTu ?? 0) - (b.thuTu ?? 0));
+          const rows = sorted.map((item: any, index: number) => ({
+            key: String(item.idMapping ?? item.idSiLo ?? `row-${index}`),
+            stt: index + 1,
+            idSiLo: item.idSiLo ?? null,
+            idMapping: item.idMapping ?? null,
+            idNVL: item.idNVL ?? null,
+            thuTu: item.thuTu ?? index + 1,
+            silo: item.tenSiLo ?? "",
+            loaiNguyenNhienLieu: item.tenNVL ?? "",
+            klTonCuoiKip: item.ton ?? null,
+            _klGoc: item.ton ?? null,
+            ghiChu: item.ghiChu ?? "",
+          }));
+          setTableData(rows);
+          message.success(`Tải dữ liệu thành công! Có ${rows.length} bản ghi`);
+        } else {
+          setTableData([]);
+          message.info("Không có dữ liệu");
+        }
       }
     } catch {
       message.error("Không thể tải dữ liệu");
-      setTableData([]);
     } finally {
       setLoading(false);
     }
-  }, [scope, ca, form]);
+  }, [scope, ca, form, idphieu]);
 
   // ─── Kiểm tra Silo handlers ────────────────────────────────────────────────
 
@@ -484,6 +513,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
   }, [form, scope, ca, kiemTraData, refreshKiemTraData]);
 
   // Lưu NVL đã chọn trong draft vào mapping của silo (PUT), sau đó refresh bảng
+  // Lưu NVL đã chọn trong draft vào mapping của silo (PUT), sau đó refresh bảng.
   const handleMapSiloNVL = useCallback(async (row: LGTSLMappingDto) => {
     const idNVL = mapDraftBySilo[row.idSiLo];
     if (!idNVL) { message.warning("Vui lòng chọn NVL trước khi lưu mapping"); return; }
@@ -502,7 +532,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
         idSiLo: row.idSiLo,
         idNVL,
         ghiChu: (mapNoteBySilo[row.idSiLo] ?? "").trim() || null,
-      });
+      }, true);
       message.success(`Đã cập nhật mapping cho ${row.tenSiLo ?? "Silo"}`);
       const refreshed = await refreshKiemTraData(ngay, Number(ca), Number(scope));
       resetMappingDrafts(refreshed);

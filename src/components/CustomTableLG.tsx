@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { InputNumber, Table } from "antd";
-import CustomFormTable from "./CustomFormTable";
+import CustomFormNLTable from "./CustomFormNLTable";
 
 // ─── Config types (khớp với cấu trúc JSON) ───────────────────────────────────
 
@@ -269,7 +269,7 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
     };
 
     return (
-      <CustomFormTable
+      <CustomFormNLTable
         columns={mergedColumns as any}
         initialData={initialData}
         onDataChange={onDataChange}
