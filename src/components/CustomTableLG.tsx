@@ -59,6 +59,110 @@ function flattenColumns(cols: TableColumnDef[]): TableColumnDef[] {
   );
 }
 
+function normalizeColumnText(value?: string) {
+  return (value ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cloneColumn(col: TableColumnDef): TableColumnDef {
+  return {
+    ...col,
+    children: Array.isArray(col.children)
+      ? col.children.map((child) => cloneColumn(child))
+      : col.children,
+  };
+}
+
+function columnMatchScore(baseCol: TableColumnDef, candidateCol: TableColumnDef): number {
+  const baseDataIndex = normalizeColumnText(baseCol.dataIndex);
+  const candidateDataIndex = normalizeColumnText(candidateCol.dataIndex);
+  if (baseDataIndex && candidateDataIndex && baseDataIndex === candidateDataIndex) {
+    return 100;
+  }
+
+  const baseTitle = normalizeColumnText(baseCol.title);
+  const candidateTitle = normalizeColumnText(candidateCol.title);
+  if (baseTitle && candidateTitle) {
+    if (baseTitle === candidateTitle) return 90;
+    if (baseTitle.includes(candidateTitle) || candidateTitle.includes(baseTitle)) return 80;
+  }
+
+  if (baseCol.children?.length && candidateCol.children?.length) {
+    const baseLeafDataIndexes = new Set(
+      flattenColumns(baseCol.children)
+        .map((child) => normalizeColumnText(child.dataIndex))
+        .filter(Boolean)
+    );
+    const candidateLeafDataIndexes = flattenColumns(candidateCol.children)
+      .map((child) => normalizeColumnText(child.dataIndex))
+      .filter(Boolean);
+
+    if (candidateLeafDataIndexes.some((dataIndex) => baseLeafDataIndexes.has(dataIndex))) {
+      return 70;
+    }
+  }
+
+  return 0;
+}
+
+function mergeColumnNodes(baseCol: TableColumnDef, overrideCol?: TableColumnDef): TableColumnDef {
+  if (!overrideCol) {
+    return cloneColumn(baseCol);
+  }
+
+  const mergedChildren =
+    baseCol.children?.length || overrideCol.children?.length
+      ? mergeColumnTrees(baseCol.children ?? [], overrideCol.children ?? [])
+      : undefined;
+
+  return {
+    ...cloneColumn(overrideCol),
+    ...cloneColumn(baseCol),
+    title: baseCol.title || overrideCol.title,
+    dataIndex: baseCol.dataIndex ?? overrideCol.dataIndex,
+    children: mergedChildren && mergedChildren.length > 0 ? mergedChildren : undefined,
+  };
+}
+
+function mergeColumnTrees(baseCols: TableColumnDef[], overrideCols: TableColumnDef[]): TableColumnDef[] {
+  if (baseCols.length === 0) {
+    return overrideCols.map((col) => cloneColumn(col));
+  }
+
+  const usedOverrideIndexes = new Set<number>();
+
+  const merged = baseCols.map((baseCol) => {
+    let bestMatchIndex = -1;
+    let bestScore = 0;
+
+    overrideCols.forEach((candidateCol, index) => {
+      if (usedOverrideIndexes.has(index)) return;
+      const score = columnMatchScore(baseCol, candidateCol);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatchIndex = index;
+      }
+    });
+
+    if (bestMatchIndex === -1) {
+      return cloneColumn(baseCol);
+    }
+
+    usedOverrideIndexes.add(bestMatchIndex);
+    return mergeColumnNodes(baseCol, overrideCols[bestMatchIndex]);
+  });
+
+  overrideCols.forEach((overrideCol, index) => {
+    if (!usedOverrideIndexes.has(index)) {
+      merged.push(cloneColumn(overrideCol));
+    }
+  });
+
+  return merged;
+}
+
 function applyDefaults(
   cols: TableColumnDef[],
   defaults: Partial<TableColumnDef>
@@ -100,23 +204,14 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
     } = tableConfig;
 
     // Kết hợp API columns với JSON fallback để hiển thị đẹp hơn:
-    // - Nếu chưa có dữ liệu API → dùng fallback hoàn toàn (6 nhóm mẫu)
-    // - Nếu có API columns → dùng API (nhomNVL + NVL thực từ DB) nhưng áp dụng
-    //   title từ fallback cho header nhóm tầng 1 khi khớp (VD: thêm đơn vị "(Kg)")
+    // - Nếu chưa có dữ liệu API → dùng fallback hoàn toàn (UI JSON hiện tại)
+    // - Nếu có API columns → lấy fallback làm khung, rồi ghép nhóm/cột con từ API vào
+    //   để giữ đúng bố cục UI hiện tại mà vẫn phản ánh dữ liệu thực từ DB
     const rawMaterialCols = useMemo(() => {
       if (materialColumnsOverride == null || materialColumnsOverride.length === 0)
         return fallbackColumns;
 
-      return materialColumnsOverride.map((apiCol) => {
-        if (!Array.isArray(apiCol.children)) return apiCol;
-        const fb = fallbackColumns.find(
-          (fc) =>
-            Array.isArray(fc.children) &&
-            (fc.title.toLowerCase().includes(apiCol.title.toLowerCase()) ||
-              apiCol.title.toLowerCase().includes(fc.title.toLowerCase()))
-        );
-        return fb ? { ...apiCol, title: fb.title } : apiCol;
-      });
+      return mergeColumnTrees(fallbackColumns, materialColumnsOverride);
     }, [materialColumnsOverride, fallbackColumns]);
 
     const materialCols = useMemo(

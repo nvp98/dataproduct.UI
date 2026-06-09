@@ -10,7 +10,6 @@ import CustomTableLG, {
   type TableColumnDef,
   type TableSectionConfig,
 } from "../../../components/CustomTableLG";
-import { napLieuLoCaoApi } from "../../../services/NapLieuLoCaoApi";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
@@ -21,6 +20,7 @@ import {
   lgnlNhomNvlApi,
   lgnlNvlApi,
   lgnlSiLoMasterApi,
+  napLieuLoCaoApi,
   type CreateLGNLMappingDto,
   type LGNLMappingDto,
   type LGNLNhomNvlDto,
@@ -206,7 +206,7 @@ const TaoPhieuNapLieuLoCao = () => {
         const apiColumns = (response.columns as TableColumnDef[]) ?? [];
         setMaterialColumnsOverride(apiColumns.length > 0 ? apiColumns : null);
 
-        lgnlNhomNvlApi.getList({ idLoCao: Number(scope) })
+        lgnlNhomNvlApi.getList()
           .then((res) => setNhomNvlOptions(Array.isArray(res) ? res : []))
           .catch(() => {});
 
@@ -329,7 +329,7 @@ const TaoPhieuNapLieuLoCao = () => {
     lgnlNvlApi.getList({ idLoCao: Number(scope) })
       .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
       .catch(() => setNvlOptions([]));
-    lgnlNhomNvlApi.getList({ idLoCao: Number(scope) })
+    lgnlNhomNvlApi.getList()
       .then((res) => setNhomNvlOptions(Array.isArray(res) ? res : []))
       .catch(() => setNhomNvlOptions([]));
   }, [form, scope, ca, refreshSnapshotData]);
@@ -342,7 +342,7 @@ const TaoPhieuNapLieuLoCao = () => {
     try {
       const [nvlRes, nhomRes] = await Promise.all([
         lgnlNvlApi.getList({ idLoCao: Number(scope) }),
-        lgnlNhomNvlApi.getList({ idLoCao: Number(scope) }),
+        lgnlNhomNvlApi.getList(),
       ]);
       setNvlOptions(Array.isArray(nvlRes) ? nvlRes : []);
       setNhomNvlOptions(Array.isArray(nhomRes) ? nhomRes : []);
@@ -374,7 +374,7 @@ const TaoPhieuNapLieuLoCao = () => {
       });
       const [nvlRes, nhomRes] = await Promise.all([
         lgnlNvlApi.getList({ idLoCao: Number(scope) }),
-        lgnlNhomNvlApi.getList({ idLoCao: Number(scope) }),
+        lgnlNhomNvlApi.getList(),
       ]);
       setNvlOptions(Array.isArray(nvlRes) ? nvlRes : []);
       setNhomNvlOptions(Array.isArray(nhomRes) ? nhomRes : []);

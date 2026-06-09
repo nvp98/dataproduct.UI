@@ -7,7 +7,7 @@ import {
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SwapOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   lgnlSiLoMasterApi, lgnlMappingApi, lgnlNvlApi, lgnlTsMappingApi, lgnlNhomNvlApi,
   type LGNLSiLoMasterDto, type LGNLMappingDto, type LGNLNvlDto,
@@ -32,12 +32,11 @@ const CA_OPTIONS = [
 // ─────────────────────────────────────────────────────────────────────────────
 interface SiLoMasterTabProps {
   loCaoOptions: { label: string; value: number }[];
-  filterLoCao: number | null;
   tsOptions: LGNLTsMappingDto[];
   onDataChange: () => void;
 }
 
-const SiLoMasterTab = ({ loCaoOptions, filterLoCao, tsOptions, onDataChange }: SiLoMasterTabProps) => {
+const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabProps) => {
   const [data, setData] = useState<LGNLSiLoMasterDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -45,17 +44,21 @@ const SiLoMasterTab = ({ loCaoOptions, filterLoCao, tsOptions, onDataChange }: S
   const [editingRow, setEditingRow] = useState<LGNLSiLoMasterDto | null>(null);
   const [form] = Form.useForm();
 
+  const [filterLoCao, setFilterLoCao] = useState<number | null>(null);
+  const [filterSearch, setFilterSearch] = useState<string>("");
+  const filterRef = useRef({ loCao: null as number | null, search: "" });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const params: any = {};
-      if (filterLoCao) params.idLoCao = filterLoCao;
+      if (filterRef.current.loCao) params.idLoCao = filterRef.current.loCao;
+      if (filterRef.current.search.trim()) params.search = filterRef.current.search.trim();
       const res = await lgnlSiLoMasterApi.getList(params);
       setData(Array.isArray(res) ? res : []);
     } catch { message.error("Lỗi khi tải danh sách Silo"); }
     finally { setLoading(false); }
-  }, [filterLoCao]);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -113,10 +116,26 @@ const SiLoMasterTab = ({ loCaoOptions, filterLoCao, tsOptions, onDataChange }: S
 
   return (
     <>
-      <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm Silo</Button>
-      </div>
+      <Row gutter={8} style={{ marginBottom: 12 }} align="middle">
+        <Col>
+          <Select
+            style={{ width: 180 }}
+            placeholder="Lọc theo lò cao"
+            allowClear
+            value={filterLoCao}
+            onChange={(v) => { const val = v ?? null; setFilterLoCao(val); filterRef.current.loCao = val; }}
+          >
+            {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+          </Select>
+        </Col>
+        <Col flex="auto" />
+        <Col>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm Silo</Button>
+          </Space>
+        </Col>
+      </Row>
       <Table columns={columns} dataSource={data} rowKey="id" loading={loading}
         size="small" bordered pagination={{ pageSize: 20, showTotal: (t) => `Tổng: ${t}` }} />
 
@@ -160,19 +179,22 @@ const SiLoMasterTab = ({ loCaoOptions, filterLoCao, tsOptions, onDataChange }: S
 // Tab 2: Mapping Silo ↔ NVL (LG_NL_Mapping)
 // ─────────────────────────────────────────────────────────────────────────────
 interface MappingTabProps {
-  ngay: string | null;
-  idCa: number | null;
-  idLoCao: number | null;
   loCaoOptions: { label: string; value: number }[];
   siloOptions: LGNLSiLoMasterDto[];
   nvlOptions: LGNLNvlDto[];
 }
 
-const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) => {
+const MappingTab = ({ loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) => {
   const [data, setData] = useState<LGNLMappingDto[]>([]);
   const [loading, setLoading] = useState(false);
   // 'active' = cấu hình đang hiệu lực (NgayHetHL=null), 'history' = lịch sử theo ngày/ca
   const [viewMode, setViewMode] = useState<"active" | "history">("active");
+
+  const [filterNgay, setFilterNgay] = useState<string | null>(null);
+  const [filterCa, setFilterCa] = useState<number | null>(null);
+  const [filterLoCao, setFilterLoCao] = useState<number | null>(null);
+  const [filterSearch, setFilterSearch] = useState<string>("");
+  const filterRef = useRef({ ngay: null as string | null, ca: null as number | null, loCao: null as number | null, search: "" });
 
   // Modal thêm / sửa mapping
   const [modalOpen, setModalOpen] = useState(false);
@@ -207,27 +229,26 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
     setLoading(true);
     try {
       const params: any = {};
-      if (idLoCao) params.idLoCao = idLoCao;
+      if (filterRef.current.loCao) params.idLoCao = filterRef.current.loCao;
+      if (filterRef.current.search.trim()) params.search = filterRef.current.search.trim();
       if (viewMode === "history") {
-        // Lịch sử: lọc đúng ngày/ca được chọn
-        if (ngay) params.ngay = ngay;
-        if (idCa) params.idCa = idCa;
+        if (filterRef.current.ngay) params.ngay = filterRef.current.ngay;
+        if (filterRef.current.ca) params.idCa = filterRef.current.ca;
       }
       const res = await lgnlMappingApi.getList(params);
       const all: LGNLMappingDto[] = Array.isArray(res) ? res : [];
-      // Chế độ "Cấu hình hiệu lực": chỉ giữ lại rows chưa đóng (NgayHetHL=null)
       setData(viewMode === "active" ? all.filter((r) => !r.ngayHetHL) : all);
     } catch { message.error("Lỗi khi tải danh sách Mapping"); }
     finally { setLoading(false); }
-  }, [ngay, idCa, idLoCao, viewMode]);
+  }, [viewMode]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const openCreate = () => {
     form.resetFields();
-    if (ngay) form.setFieldValue("ngay", dayjs(ngay));
-    if (idCa) form.setFieldValue("idCa", idCa);
-    if (idLoCao) form.setFieldValue("idLoCao", idLoCao);
+    if (filterNgay) form.setFieldValue("ngay", dayjs(filterNgay));
+    if (filterCa) form.setFieldValue("idCa", filterCa);
+    if (filterLoCao) form.setFieldValue("idLoCao", filterLoCao);
     setEditingRow(null);
     setModalOpen(true);
   };
@@ -349,27 +370,59 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
 
   return (
     <>
-      <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        {/* Toggle chế độ xem */}
-        <Space>
-          <Button
-            type={viewMode === "active" ? "primary" : "default"}
-            onClick={() => setViewMode("active")}
+      <Row gutter={8} style={{ marginBottom: 12 }} align="middle" wrap>
+        <Col>
+          <DatePicker
+            style={{ width: 140 }}
+            placeholder="Lọc theo ngày"
+            format="YYYY-MM-DD"
+            value={filterNgay ? dayjs(filterNgay) : null}
+            allowClear
+            onChange={(d) => { const v = d ? d.format("YYYY-MM-DD") : null; setFilterNgay(v); filterRef.current.ngay = v; }}
+          />
+        </Col>
+        <Col>
+          <Select
+            style={{ width: 155 }}
+            placeholder="Lọc theo ca"
+            allowClear
+            value={filterCa}
+            onChange={(v) => { const val = v ?? null; setFilterCa(val); filterRef.current.ca = val; }}
           >
-            Cấu hình hiệu lực
-          </Button>
-          <Button
-            type={viewMode === "history" ? "primary" : "default"}
-            onClick={() => setViewMode("history")}
+            {CA_OPTIONS.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+          </Select>
+        </Col>
+        <Col>
+          <Select
+            style={{ width: 180 }}
+            placeholder="Lọc theo lò cao"
+            allowClear
+            value={filterLoCao}
+            onChange={(v) => { const val = v ?? null; setFilterLoCao(val); filterRef.current.loCao = val; }}
           >
-            Lịch sử theo ngày/ca
-          </Button>
-        </Space>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm Mapping</Button>
-        </Space>
-      </div>
+            {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+          </Select>
+        </Col>
+        <Col flex="auto" />
+        <Col>
+          <Space>
+            <Button
+              type={viewMode === "active" ? "primary" : "default"}
+              onClick={() => setViewMode("active")}
+            >
+              Cấu hình hiệu lực
+            </Button>
+            <Button
+              type={viewMode === "history" ? "primary" : "default"}
+              onClick={() => setViewMode("history")}
+            >
+              Lịch sử theo ngày/ca
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm Mapping</Button>
+          </Space>
+        </Col>
+      </Row>
 
       {viewMode === "active" && (
         <Alert
@@ -377,18 +430,18 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
           showIcon
           style={{ marginBottom: 10 }}
           message={
-            idLoCao
-              ? `Đang hiển thị tất cả cấu hình còn hiệu lực của Lò cao ${idLoCao}. Đây là config sẽ được dùng cho các ngày/ca chưa có cấu hình riêng.`
+            filterLoCao
+              ? `Đang hiển thị tất cả cấu hình còn hiệu lực của Lò cao ${filterLoCao}. Đây là config sẽ được dùng cho các ngày/ca chưa có cấu hình riêng.`
               : "Chọn Lò cao để xem cấu hình đang hiệu lực. Các ngày/ca không có cấu hình riêng sẽ tự động dùng config gần nhất còn hiệu lực."
           }
         />
       )}
-      {viewMode === "history" && data.length === 0 && ngay && idCa && idLoCao && (
+      {viewMode === "history" && data.length === 0 && filterNgay && filterCa && filterLoCao && (
         <Alert
           type="warning"
           showIcon
           style={{ marginBottom: 10 }}
-          message={`Không có cấu hình riêng cho Ca ${idCa} ngày ${ngay}. Hệ thống sẽ tự dùng cấu hình gần nhất còn hiệu lực — chuyển sang tab "Cấu hình hiệu lực" để xem.`}
+          message={`Không có cấu hình riêng cho Ca ${filterCa} ngày ${filterNgay}. Hệ thống sẽ tự dùng cấu hình gần nhất còn hiệu lực — chuyển sang tab "Cấu hình hiệu lực" để xem.`}
         />
       )}
 
@@ -519,12 +572,10 @@ const MappingTab = ({ ngay, idCa, idLoCao, loCaoOptions, siloOptions, nvlOptions
 // Tab 3: Nhóm NVL (LG_NL_NhomNVL)
 // ─────────────────────────────────────────────────────────────────────────────
 interface NhomNvlTabProps {
-  loCaoOptions: { label: string; value: number }[];
-  filterLoCao: number | null;
   onDataChange: () => void;
 }
 
-const NhomNvlTab = ({ loCaoOptions, filterLoCao, onDataChange }: NhomNvlTabProps) => {
+const NhomNvlTab = ({ onDataChange }: NhomNvlTabProps) => {
   const [data, setData] = useState<LGNLNhomNvlDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -535,25 +586,22 @@ const NhomNvlTab = ({ loCaoOptions, filterLoCao, onDataChange }: NhomNvlTabProps
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = {};
-      if (filterLoCao) params.idLoCao = filterLoCao;
-      const res = await lgnlNhomNvlApi.getList(params);
+      const res = await lgnlNhomNvlApi.getList();
       setData(Array.isArray(res) ? res : []);
     } catch { message.error("Lỗi khi tải danh sách Nhóm NVL"); }
     finally { setLoading(false); }
-  }, [filterLoCao]);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const openCreate = () => {
     form.resetFields();
-    if (filterLoCao) form.setFieldValue("idLoCao", filterLoCao);
     setEditingRow(null);
     setModalOpen(true);
   };
 
   const openEdit = (row: LGNLNhomNvlDto) => {
-    form.setFieldsValue({ idLoCao: row.idLoCao, tenNhom: row.tenNhom, thuTu: row.thuTu, ghiChu: row.ghiChu });
+    form.setFieldsValue({ tenNhom: row.tenNhom, thuTu: row.thuTu, ghiChu: row.ghiChu });
     setEditingRow(row);
     setModalOpen(true);
   };
@@ -567,7 +615,6 @@ const NhomNvlTab = ({ loCaoOptions, filterLoCao, onDataChange }: NhomNvlTabProps
     try {
       const values = await form.validateFields();
       const dto: CreateLGNLNhomNvlDto = {
-        idLoCao: values.idLoCao,
         tenNhom: values.tenNhom,
         thuTu: values.thuTu ?? null,
         ghiChu: values.ghiChu ?? null,
@@ -582,11 +629,9 @@ const NhomNvlTab = ({ loCaoOptions, filterLoCao, onDataChange }: NhomNvlTabProps
 
   const columns: ColumnsType<LGNLNhomNvlDto> = [
     { title: "STT", key: "stt", width: 55, align: "center", render: (_v, _r, i) => i + 1 },
-    { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
     { title: "Tên nhóm NVL", dataIndex: "tenNhom", key: "tenNhom" },
     { title: "Thứ tự", dataIndex: "thuTu", key: "thuTu", width: 90, align: "center", render: (v) => v ?? "—" },
     { title: "Ghi chú", dataIndex: "ghiChu", key: "ghiChu", render: (v) => v ?? "—" },
-    { title: "Ngày tạo", dataIndex: "ngayTao", key: "ngayTao", width: 120, render: (v) => v ? v.slice(0, 10) : "—" },
     {
       title: "Thao tác", key: "action", width: 100, align: "center",
       render: (_v, row) => (
@@ -602,10 +647,15 @@ const NhomNvlTab = ({ loCaoOptions, filterLoCao, onDataChange }: NhomNvlTabProps
 
   return (
     <>
-      <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm nhóm NVL</Button>
-      </div>
+      <Row gutter={8} style={{ marginBottom: 12 }} align="middle">
+        <Col flex="auto" />
+        <Col>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm nhóm NVL</Button>
+          </Space>
+        </Col>
+      </Row>
       <Table columns={columns} dataSource={data} rowKey="id" loading={loading}
         size="small" bordered pagination={{ pageSize: 20, showTotal: (t) => `Tổng: ${t}` }} />
 
@@ -615,10 +665,8 @@ const NhomNvlTab = ({ loCaoOptions, filterLoCao, onDataChange }: NhomNvlTabProps
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={12}>
             <Col span={16}>
-              <Form.Item name="idLoCao" label="Lò cao" rules={[{ required: true, message: "Chọn lò cao" }]}>
-                <Select placeholder="Chọn lò cao">
-                  {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-                </Select>
+              <Form.Item name="tenNhom" label="Tên nhóm NVL" rules={[{ required: true, message: "Nhập tên nhóm" }]}>
+                <Input maxLength={200} placeholder="Vd: Quặng thiêu kết" />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -627,9 +675,6 @@ const NhomNvlTab = ({ loCaoOptions, filterLoCao, onDataChange }: NhomNvlTabProps
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="tenNhom" label="Tên nhóm NVL" rules={[{ required: true, message: "Nhập tên nhóm" }]}>
-            <Input maxLength={200} placeholder="Vd: Quặng thiêu kết" />
-          </Form.Item>
           <Form.Item name="ghiChu" label="Ghi chú">
             <Input.TextArea rows={2} maxLength={500} />
           </Form.Item>
@@ -643,15 +688,12 @@ const NhomNvlTab = ({ loCaoOptions, filterLoCao, onDataChange }: NhomNvlTabProps
 // Tab 4: NVL (LG_NL_NVL)
 // ─────────────────────────────────────────────────────────────────────────────
 interface NvlTabProps {
-  ngay: string | null;
-  idCa: number | null;
-  idLoCao: number | null;
   loCaoOptions: { label: string; value: number }[];
   nhomOptions: LGNLNhomNvlDto[];
   onDataChange: () => void;
 }
 
-const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
+const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
   const [data, setData] = useState<LGNLNvlDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -660,24 +702,27 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
   const [form] = Form.useForm();
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
+  const [filterLoCao, setFilterLoCao] = useState<number | null>(null);
+  const [filterSearch, setFilterSearch] = useState<string>("");
+  const filterRef = useRef({ loCao: null as number | null, search: "" });
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const params: any = {};
-      if (ngay) params.ngay = ngay;
-      if (idCa) params.idCa = idCa;
-      if (idLoCao) params.idLoCao = idLoCao;
+      if (filterRef.current.loCao) params.idLoCao = filterRef.current.loCao;
+      if (filterRef.current.search.trim()) params.search = filterRef.current.search.trim();
       const res = await lgnlNvlApi.getList(params);
       setData(Array.isArray(res) ? res : []);
     } catch { message.error("Lỗi khi tải danh sách NVL"); }
     finally { setLoading(false); }
-  }, [ngay, idCa, idLoCao]);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const openCreate = () => {
     form.resetFields();
-    if (idLoCao) form.setFieldValue("idLoCao", idLoCao);
+    if (filterLoCao) form.setFieldValue("idLoCao", filterLoCao);
     setEditingRow(null); setModalOpen(true);
   };
 
@@ -779,10 +824,36 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
 
   return (
     <>
-      <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm NVL</Button>
-      </div>
+      <Row gutter={8} style={{ marginBottom: 12 }} align="middle" wrap>
+        <Col>
+          <Select
+            style={{ width: 180 }}
+            placeholder="Lọc theo lò cao"
+            allowClear
+            value={filterLoCao}
+            onChange={(v) => { const val = v ?? null; setFilterLoCao(val); filterRef.current.loCao = val; }}
+          >
+            {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+          </Select>
+        </Col>
+        <Col>
+          <Input
+            style={{ width: 220 }}
+            placeholder="Tìm tên NVL..."
+            allowClear
+            value={filterSearch}
+            onChange={(e) => { setFilterSearch(e.target.value); filterRef.current.search = e.target.value; }}
+            onPressEnter={fetchData}
+          />
+        </Col>
+        <Col flex="auto" />
+        <Col>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm NVL</Button>
+          </Space>
+        </Col>
+      </Row>
       <Table columns={columns} dataSource={data} rowKey="id" loading={loading}
         size="small" bordered scroll={{ x: 1000 }}
         pagination={{ pageSize: 20, showTotal: (t) => `Tổng: ${t}` }} />
@@ -850,35 +921,28 @@ const NvlTab = ({ ngay, idCa, idLoCao, loCaoOptions, nhomOptions, onDataChange }
 // ─────────────────────────────────────────────────────────────────────────────
 const QuanLySiLoNVL = () => {
   const [loCaoOptions, setLoCaoOptions] = useState<{ label: string; value: number }[]>([]);
-  const [filterNgay, setFilterNgay] = useState<string | null>(dayjs().format("YYYY-MM-DD"));
-  const [filterCa, setFilterCa] = useState<number | null>(null);
-  const [filterLoCao, setFilterLoCao] = useState<number | null>(null);
   const [siloOptions, setSiloOptions] = useState<LGNLSiLoMasterDto[]>([]);
   const [nvlOptions, setNvlOptions] = useState<LGNLNvlDto[]>([]);
   const [nhomOptions, setNhomOptions] = useState<LGNLNhomNvlDto[]>([]);
   const [tsOptions, setTsOptions] = useState<LGNLTsMappingDto[]>([]);
 
   const loadSiloOptions = useCallback(() => {
-    lgnlSiLoMasterApi.getList(filterLoCao ? { idLoCao: filterLoCao } : undefined)
+    lgnlSiLoMasterApi.getList()
       .then((res) => setSiloOptions(Array.isArray(res) ? res : []))
       .catch(() => setSiloOptions([]));
-  }, [filterLoCao]);
+  }, []);
 
   const loadNvlOptions = useCallback(() => {
-    const params: any = {};
-    if (filterLoCao) params.idLoCao = filterLoCao;
-    lgnlNvlApi.getList(params)
+    lgnlNvlApi.getList()
       .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
       .catch(() => setNvlOptions([]));
-  }, [filterLoCao]);
+  }, []);
 
   const loadNhomOptions = useCallback(() => {
-    const params: any = {};
-    if (filterLoCao) params.idLoCao = filterLoCao;
-    lgnlNhomNvlApi.getList(params)
+    lgnlNhomNvlApi.getList()
       .then((res) => setNhomOptions(Array.isArray(res) ? res : []))
       .catch(() => setNhomOptions([]));
-  }, [filterLoCao]);
+  }, []);
 
   useEffect(() => {
     PhieuApi.getDsLoCao()
@@ -904,26 +968,6 @@ const QuanLySiLoNVL = () => {
         Quản lý Silo &amp; Nguyên nhiên vật liệu (LG)
       </Title>
 
-      <Row gutter={12} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={8} md={6}>
-          <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" placeholder="Lọc theo ngày"
-            value={filterNgay ? dayjs(filterNgay) : null}
-            onChange={(d) => setFilterNgay(d ? d.format("YYYY-MM-DD") : null)} allowClear />
-        </Col>
-        <Col xs={24} sm={7} md={5}>
-          <Select style={{ width: "100%" }} placeholder="Lọc theo ca" allowClear
-            value={filterCa} onChange={(v) => setFilterCa(v ?? null)}>
-            {CA_OPTIONS.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-          </Select>
-        </Col>
-        <Col xs={24} sm={7} md={5}>
-          <Select style={{ width: "100%" }} placeholder="Lọc theo lò cao" allowClear
-            value={filterLoCao} onChange={(v) => setFilterLoCao(v ?? null)}>
-            {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-          </Select>
-        </Col>
-      </Row>
-
       <Tabs
         defaultActiveKey="silo-master"
         items={[
@@ -933,7 +977,6 @@ const QuanLySiLoNVL = () => {
             children: (
               <SiLoMasterTab
                 loCaoOptions={loCaoOptions}
-                filterLoCao={filterLoCao}
                 tsOptions={tsOptions}
                 onDataChange={loadSiloOptions}
               />
@@ -944,9 +987,6 @@ const QuanLySiLoNVL = () => {
             label: "Mapping Silo ↔ NVL",
             children: (
               <MappingTab
-                ngay={filterNgay}
-                idCa={filterCa}
-                idLoCao={filterLoCao}
                 loCaoOptions={loCaoOptions}
                 siloOptions={siloOptions}
                 nvlOptions={nvlOptions}
@@ -958,8 +998,6 @@ const QuanLySiLoNVL = () => {
             label: "Nhóm NVL",
             children: (
               <NhomNvlTab
-                loCaoOptions={loCaoOptions}
-                filterLoCao={filterLoCao}
                 onDataChange={loadNhomOptions}
               />
             ),
@@ -969,9 +1007,6 @@ const QuanLySiLoNVL = () => {
             label: "Nguyên nhiên vật liệu",
             children: (
               <NvlTab
-                ngay={filterNgay}
-                idCa={filterCa}
-                idLoCao={filterLoCao}
                 loCaoOptions={loCaoOptions}
                 nhomOptions={nhomOptions}
                 onDataChange={loadNvlOptions}

@@ -52,7 +52,7 @@
 
       "dataSource": {
         "type": "api",
-        "endpoint": "/api/LGNL/dulieu-silo",
+        "endpoint": "/api/LGNL/get-dulieu-silo",
         "paramsMap": {
           "idLoCao": "scope",
           "ngay": "NgaySX",

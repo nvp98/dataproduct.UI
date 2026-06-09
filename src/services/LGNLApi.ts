@@ -1,7 +1,5 @@
 import apiService from "./ApiService";
 
-// ─── TS Mapping lookup (LG1_NL_TS_Mapping) ───────────────────────────────────
-
 export interface LGNLTsMappingDto {
   id: number;
   tagKey: string | null;   // ví dụ: "XUAT.TS1"
@@ -10,7 +8,7 @@ export interface LGNLTsMappingDto {
 
 export const lgnlTsMappingApi = {
   getList: () =>
-    apiService.get<LGNLTsMappingDto[]>("/api/LGNL/ts-mapping"),
+    apiService.get<LGNLTsMappingDto[]>("/api/LGNL/get-ts-mapping"),
 };
 
 // ─── SiLo Master (LG_NL_SiLo) ────────────────────────────────────────────────
@@ -35,19 +33,19 @@ export interface UpdateLGNLSiLoMasterDto extends CreateLGNLSiLoMasterDto {}
 
 export const lgnlSiLoMasterApi = {
   getList: (params?: { idLoCao?: number }) =>
-    apiService.get<LGNLSiLoMasterDto[]>("/api/LGNL/silo-master", { params }),
+    apiService.get<LGNLSiLoMasterDto[]>("/api/LGNL/get-silo-master", { params }),
 
   getById: (id: number) =>
-    apiService.get<LGNLSiLoMasterDto>(`/api/LGNL/silo-master/${id}`),
+    apiService.get<LGNLSiLoMasterDto>(`/api/LGNL/get-silo-master/${id}`),
 
   create: (dto: CreateLGNLSiLoMasterDto) =>
-    apiService.post<LGNLSiLoMasterDto>("/api/LGNL/silo-master", dto),
+    apiService.post<LGNLSiLoMasterDto>("/api/LGNL/create-silo-master", dto),
 
   update: (id: number, dto: UpdateLGNLSiLoMasterDto) =>
-    apiService.put<LGNLSiLoMasterDto>(`/api/LGNL/silo-master/${id}`, dto),
+    apiService.put<LGNLSiLoMasterDto>(`/api/LGNL/update-silo-master/${id}`, dto),
 
   delete: (id: number) =>
-    apiService.delete(`/api/LGNL/silo-master/${id}`),
+    apiService.delete(`/api/LGNL/delete-silo-master/${id}`),
 };
 
 // ─── Mapping (LG_NL_Mapping) ─────────────────────────────────────────────────
@@ -106,41 +104,38 @@ export interface LGNLSiloSnapshotDto {
 }
 
 export const lgnlMappingApi = {
-  getList: (params?: { ngay?: string; idCa?: number; idLoCao?: number }) =>
-    apiService.get<LGNLMappingDto[]>("/api/LGNL/mapping", { params }),
+  getList: (params?: { ngay?: string; idCa?: number; idLoCao?: number}) =>
+    apiService.get<LGNLMappingDto[]>("/api/LGNL/get-mapping", { params }),
 
   getById: (id: number) =>
-    apiService.get<LGNLMappingDto>(`/api/LGNL/mapping/${id}`),
+    apiService.get<LGNLMappingDto>(`/api/LGNL/get-mapping/${id}`),
 
   create: (dto: CreateLGNLMappingDto) =>
-    apiService.post<LGNLMappingDto>("/api/LGNL/mapping", dto),
+    apiService.post<LGNLMappingDto>("/api/LGNL/create-mapping", dto),
 
   update: (id: number, dto: UpdateLGNLMappingDto) =>
-    apiService.put<LGNLMappingDto>(`/api/LGNL/mapping/${id}`, dto),
+    apiService.put<LGNLMappingDto>(`/api/LGNL/update-mapping/${id}`, dto),
 
   delete: (id: number) =>
-    apiService.delete(`/api/LGNL/mapping/${id}`),
+    apiService.delete(`/api/LGNL/delete-mapping/${id}`),
 
   doiNVL: (dto: LGNLChangeSiLoNVLDto) =>
-    apiService.post<{ message: string; id: number }>("/api/LGNL/mapping/doi-nvl", dto),
+    apiService.post<{ message: string; id: number }>("/api/LGNL/doi-nvl", dto),
 
   getSnapshotSilo: (params: { ngay: string; idCa: number; idLoCao: number }) =>
-    apiService.get<LGNLSiloSnapshotDto[]>("/api/LGNL/snapshot-silo", { params }),
+    apiService.get<LGNLSiloSnapshotDto[]>("/api/LGNL/get-snapshot-silo", { params }),
 };
 
 // ─── Nhóm NVL (LG_NL_NhomNVL) ────────────────────────────────────────────────
 
 export interface LGNLNhomNvlDto {
   id: number;
-  idLoCao: number | null;
   tenNhom: string | null;
   thuTu: number | null;
   ghiChu: string | null;
-  ngayTao: string | null;
 }
 
 export interface CreateLGNLNhomNvlDto {
-  idLoCao: number;
   tenNhom: string;
   thuTu?: number | null;
   ghiChu?: string | null;
@@ -149,20 +144,20 @@ export interface CreateLGNLNhomNvlDto {
 export interface UpdateLGNLNhomNvlDto extends CreateLGNLNhomNvlDto {}
 
 export const lgnlNhomNvlApi = {
-  getList: (params?: { idLoCao?: number }) =>
-    apiService.get<LGNLNhomNvlDto[]>("/api/LGNL/nhom-nvl", { params }),
+  getList: () =>
+    apiService.get<LGNLNhomNvlDto[]>("/api/LGNL/get-nhom-nvl"),
 
   getById: (id: number) =>
-    apiService.get<LGNLNhomNvlDto>(`/api/LGNL/nhom-nvl/${id}`),
+    apiService.get<LGNLNhomNvlDto>(`/api/LGNL/get-nhom-nvl/${id}`),
 
   create: (dto: CreateLGNLNhomNvlDto) =>
-    apiService.post<LGNLNhomNvlDto>("/api/LGNL/nhom-nvl", dto),
+    apiService.post<LGNLNhomNvlDto>("/api/LGNL/create-nhom-nvl", dto),
 
   update: (id: number, dto: UpdateLGNLNhomNvlDto) =>
-    apiService.put<LGNLNhomNvlDto>(`/api/LGNL/nhom-nvl/${id}`, dto),
+    apiService.put<LGNLNhomNvlDto>(`/api/LGNL/update-nhom-nvl/${id}`, dto),
 
   delete: (id: number) =>
-    apiService.delete(`/api/LGNL/nhom-nvl/${id}`),
+    apiService.delete(`/api/LGNL/delete-nhom-nvl/${id}`),
 };
 
 // ─── NVL (LG_NL_NVL) ─────────────────────────────────────────────────────────
@@ -196,23 +191,23 @@ export interface CreateLGNLNvlDto {
 export interface UpdateLGNLNvlDto extends CreateLGNLNvlDto {}
 
 export const lgnlNvlApi = {
-  getList: (params?: { idLoCao?: number }) =>
-    apiService.get<LGNLNvlDto[]>("/api/LGNL/nvl", { params }),
+  getList: (params?: { idLoCao?: number}) =>
+    apiService.get<LGNLNvlDto[]>("/api/LGNL/get-nvl", { params }),
 
   getById: (id: number) =>
-    apiService.get<LGNLNvlDto>(`/api/LGNL/nvl/${id}`),
+    apiService.get<LGNLNvlDto>(`/api/LGNL/get-nvl/${id}`),
 
   create: (dto: CreateLGNLNvlDto) =>
-    apiService.post<LGNLNvlDto>("/api/LGNL/nvl", dto),
+    apiService.post<LGNLNvlDto>("/api/LGNL/create-nvl", dto),
 
   update: (id: number, dto: UpdateLGNLNvlDto) =>
-    apiService.put<LGNLNvlDto>(`/api/LGNL/nvl/${id}`, dto),
+    apiService.put<LGNLNvlDto>(`/api/LGNL/update-nvl/${id}`, dto),
 
   delete: (id: number) =>
-    apiService.delete(`/api/LGNL/nvl/${id}`),
+    apiService.delete(`/api/LGNL/delete-nvl/${id}`),
 
   updateXacNhan: (data: { id: number; xacNhan: boolean }) =>
-  apiService.put("/api/LGNL/nvl/xac-nhan", data)
+    apiService.put("/api/LGNL/update-nvl-xac-nhan", data),
 };
 
 // ─── Dữ liệu Silo pivot (LG1_DuLieuNL JOIN LG_NL_Mapping) ───────────────────
@@ -243,19 +238,17 @@ export interface LGNLDuLieuScadaDto {
 }
 
 export const lgnlDuLieuScadaApi = {
-  /** GET /api/LGNL/data-by-filter — lấy dữ liệu theo LoCao, Ngày */
   getByFilter: (params: {
     idLoCao?: number | null;
     ngayBatDau?: string | null;
     ngayKetThuc?: string | null;
   }): Promise<LGNLDuLieuScadaDto[]> =>
-    apiService.get("/api/LGNL/data-by-filter", { params: { ...params } }),
+    apiService.get("/api/LGNL/get-datanaplieu-filter", { params: { ...params } }),
 };
 
 export const lgnlDuLieuSiLoApi = {
-  /** GET /api/LGNL/dulieu-silo — pivot dữ liệu nạp liệu theo ngày/ca/lò cao */
   getPivot: (params: { ngay: string; idCa: number; idLoCao: number }): Promise<LGNLDuLieuSiLoResult> =>
-    apiService.get("/api/LGNL/dulieu-silo", { params }),
+    apiService.get("/api/LGNL/get-dulieu-silo", { params }),
 };
 
 // ─── Chi tiết nạp liệu theo phiếu (LG_NL_ChiTiet) ───────────────────────────
@@ -284,17 +277,27 @@ export interface LGNLChiTietDto {
 
 export const lgnlChiTietApi = {
   getByPhieu: (idPhieu: string): Promise<LGNLChiTietDto[]> =>
-    apiService.get(`/api/LGNL/chitiet/${idPhieu}`),
+    apiService.get(`/api/LGNL/get-chitiet/${idPhieu}`),
 
   exportPdf: (idPhieu: string, useKeHoachName = false) =>
-    apiService.get<Blob>(`/api/LGNL/export-pdf/${idPhieu}`, {
+    apiService.get<Blob>(`/api/LGNL/get-export-pdf/${idPhieu}`, {
       responseType: "blob",
       params: useKeHoachName ? { useKeHoachName: true } : undefined,
     }),
 
   exportExcel: (idPhieu: string) =>
-    apiService.get(`/api/LGNL/export-excel/${idPhieu}`, {
+    apiService.get(`/api/LGNL/get-export-excel/${idPhieu}`, {
       responseType: "blob",
       headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
     }),
 };
+
+export const napLieuLoCaoApi = {
+  /** GET /api/LGNL/dulieu-silo — pivot dữ liệu nạp liệu theo ngày/ca/lò cao (LO 1-4, TagKey/SCADA) */
+  getSiloMapped: (params: { ngay: string; idCa: number; idLoCao: number }): Promise<LGNLDuLieuSiLoResult> =>
+    apiService.get("/api/LGNL/get-dulieu-silo", { params }),
+
+  syncChiTiet: (idPhieu: string): Promise<LGNLDuLieuSiLoResult> =>
+    apiService.post(`/api/LGNL/sync-chitiet/${idPhieu}`, null),
+};
+

@@ -137,7 +137,7 @@ export interface LGTSLSiLoMappingViewDto {
   tenSiLo: string | null;
   thuTu: number | null;
   tenNVL: string | null;
-  tenNVL_TK: string | null;
+  tenNVLTk: string | null;
   ngay: string;
   ca: number;
   ghiChu: string | null;
