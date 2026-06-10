@@ -1,18 +1,19 @@
-import { Button, Card, Table, Tag, DatePicker, message, Col } from "antd";
+import { Button, Card, Table, Tag, message, Col } from "antd";
 // import PdfMakeExample from "../../components/PdfMakeExample";
 import CTD_BB_Phoinong from "../../../utils/BM_config/CTD_BB_Phoinong.json";
-import { EyeOutlined, DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined } from "@ant-design/icons";
 import { useMemo, useState } from "react";
 import dayjs, { type Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { CtdPhoiNongApi } from "../../../services/CtdPhoiNongApi";
-// import { PhieuApi } from "../../../services/PhieuApi";
 import PhieuFilterCard, {
   type FilterFieldConfig,
 } from "../../../components/PhieuFilterCard";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
+import useRowSelection from "../../../hooks/useRowSelection";
+import useCheckPhieu from "../../../hooks/useCheckPhieu";
 // Dữ liệu mẫu
 
 const BienBanPhoiNong = ({ type }: { type?: string }) => {
@@ -35,6 +36,7 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
+    refetch,
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
@@ -103,7 +105,36 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     [key: string]: unknown;
   };
 
+  const uniqueData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+    const sorted = [...data].sort((a: any, b: any) => {
+      const tb = dayjs(b.ngaySX).valueOf();
+      const ta = dayjs(a.ngaySX).valueOf();
+      return tb - ta;
+    });
+    const map = new Map<string, any>();
+    if (type !== "viecdentoi") {
+      sorted.forEach((item: any) => {
+        const key = `${item.ngaySX}_${item.ca}`;
+        if (!map.has(key)) map.set(key, item);
+      });
+      return Array.from(map.values());
+    } else {
+      return sorted;
+    }
+  }, [data]);
+
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } =
+    useRowSelection(uniqueData);
+
+  const { checkLoading, handleCheckPhieu } = useCheckPhieu(
+    selectedRowKeys,
+    () => setSelectedRowKeys([]),
+    refetch,
+  );
+
   const columns = [
+    checkboxColumn,
     {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
@@ -332,34 +363,9 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
     // },
   ];
 
-  const uniqueData = useMemo(() => {
-    if (!Array.isArray(data)) return [];
-
-    // sort trước: mới → cũ
-    const sorted = [...data].sort((a: any, b: any) => {
-      const tb = dayjs(b.ngaySX).valueOf();
-      const ta = dayjs(a.ngaySX).valueOf();
-      return tb - ta;
-    });
-
-    // lọc trùng NgaySX + ca
-    const map = new Map<string, any>();
-    if (type !== "viecdentoi") {
-      sorted.forEach((item: any) => {
-        const key = `${item.ngaySX}_${item.ca}`;
-        if (!map.has(key)) {
-          map.set(key, item); // giữ bản ghi đầu tiên (mới nhất)
-        }
-      });
-
-      return Array.from(map.values());
-    } else {
-      return sorted;
-    }
-  }, [data]);
-
   return (
     <div>
+      <style>{`.row-checked td { background-color: #e6fae6 !important; }`}</style>
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilter}
@@ -384,19 +390,20 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
           }
         }}
         extraFilters={
-          <>
-            <Col>
-              <Button
-                type="default"
-                icon={<DownloadOutlined />}
-                onClick={handleExportExcelPKH}
-                loading={exportLoading}
-              >
-                Xuất Excel Tổng Hợp
-              </Button>
-            </Col>
-          </>
+          <Col>
+            <Button
+              type="default"
+              icon={<DownloadOutlined />}
+              onClick={handleExportExcelPKH}
+              loading={exportLoading}
+            >
+              Xuất Excel Tổng Hợp
+            </Button>
+          </Col>
         }
+        selectedRowCount={selectedRowKeys.length}
+        checkLoading={checkLoading}
+        onCheckPhieu={handleCheckPhieu}
       />
       <Card>
         <Table<TableRecord>
@@ -421,6 +428,9 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
               `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: onPageChange,
           }}
+          rowClassName={(record: any) =>
+            record.isCheck === 1 ? "row-checked" : ""
+          }
           scroll={{ x: "max-content" }}
           summary={() => (
             <Table.Summary.Row>

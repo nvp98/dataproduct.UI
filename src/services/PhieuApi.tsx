@@ -67,6 +67,8 @@ export const PhieuApi = {
 
   chotNhieuPhieu: (idPhieus: string[], status: number) =>
     apiService.post("/api/Phieus/chot-nhieu-phieu", { idPhieus, status }),
+  checkNhieuPhieu: (idPhieus: string[], isCheck: number) =>
+    apiService.post("/api/Phieus/check-nhieu-phieu", { idPhieus, isCheck }),
   checkChotPhieuTieuHao: (ngaySX: string, ca: number) =>
     apiService.get(`/api/Phieus/hrc2-std-nxt/status?ngaySX=${ngaySX}&ca=${ca}`),
 

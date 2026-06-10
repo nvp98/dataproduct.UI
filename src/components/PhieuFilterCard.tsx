@@ -1,7 +1,8 @@
 import { Button, Card, Col, DatePicker, Input, Row, Select } from "antd";
-import { SearchOutlined, PlusOutlined } from "@ant-design/icons";
-import { useState, useEffect } from "react";
+import { SearchOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { useState, useEffect, useMemo } from "react";
 import type { Dayjs } from "dayjs";
+import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
 
 export interface PhieuFilterValues {
   soPhieu?: string;
@@ -45,6 +46,10 @@ export interface PhieuFilterCardProps {
   mergeFilters?: PhieuFilterValues; // Các filter bổ sung sẽ được merge vào filter object
   filterFields?: FilterFieldConfig[]; // Config cho các filter fields động
   onFilterFieldChange?: (key: string, value: FilterStateValue) => void; // Callback khi field thay đổi
+  // Check phiếu hàng loạt — tự động hiển thị khi user thuộc P.KH
+  selectedRowCount?: number;
+  checkLoading?: boolean;
+  onCheckPhieu?: (isCheck: number) => void;
 }
 
 type FilterStateValue =
@@ -78,7 +83,14 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   mergeFilters,
   filterFields = [],
   onFilterFieldChange,
+  selectedRowCount = 0,
+  checkLoading = false,
+  onCheckPhieu,
 }) => {
+  const isPKH = useMemo(() => {
+    const user = getThongTinUser();
+    return user.tenNgan === "P.KH" || user.iD_PhongBan === 70;
+  }, []);
   // State cho các filter fields động
   const [filterStates, setFilterStates] = useState<Record<string, FilterStateValue>>(() => {
     const states: Record<string, FilterStateValue> = {};
@@ -400,6 +412,32 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
               {createButtonText}
             </Button>
           </Col>
+        )}
+        {isPKH && (
+          <>
+            <Col>
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                loading={checkLoading}
+                disabled={selectedRowCount === 0}
+                onClick={() => onCheckPhieu?.(1)}
+              >
+                Check phiếu ({selectedRowCount})
+              </Button>
+            </Col>
+            <Col>
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                loading={checkLoading}
+                disabled={selectedRowCount === 0}
+                onClick={() => onCheckPhieu?.(0)}
+              >
+                Bỏ check ({selectedRowCount})
+              </Button>
+            </Col>
+          </>
         )}
       </Row>
     </Card>

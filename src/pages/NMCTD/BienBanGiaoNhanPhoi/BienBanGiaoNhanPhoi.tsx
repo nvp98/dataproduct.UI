@@ -11,6 +11,8 @@ import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 import { PhieuApi } from "../../../services/PhieuApi";
+import useRowSelection from "../../../hooks/useRowSelection";
+import useCheckPhieu from "../../../hooks/useCheckPhieu";
 
 const BienBanGiaoNhanPhoi = ({ type }: { type?: string }) => {
   const config = CTD_BB_GiaoNhanPhoi;
@@ -41,11 +43,15 @@ const BienBanGiaoNhanPhoi = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
+    refetch,
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
     isViecdentoi: type === "viecdentoi",
   });
+
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } = useRowSelection(data as any[]);
+  const { checkLoading, handleCheckPhieu } = useCheckPhieu(selectedRowKeys, () => setSelectedRowKeys([]), refetch);
 
   const statusConfig: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -63,6 +69,7 @@ const BienBanGiaoNhanPhoi = ({ type }: { type?: string }) => {
   };
 
   const columns: Array<any> = [
+    checkboxColumn,
     {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
@@ -243,6 +250,7 @@ const BienBanGiaoNhanPhoi = ({ type }: { type?: string }) => {
 
   return (
     <div>
+      <style>{`.row-checked td { background-color: #d9f7be !important; }`}</style>
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}
@@ -256,6 +264,9 @@ const BienBanGiaoNhanPhoi = ({ type }: { type?: string }) => {
         }}
         filterFields={filterFields}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        selectedRowCount={selectedRowKeys.length}
+        checkLoading={checkLoading}
+        onCheckPhieu={handleCheckPhieu}
       />
       <Card
         extra={
@@ -276,6 +287,7 @@ const BienBanGiaoNhanPhoi = ({ type }: { type?: string }) => {
           columns={columns}
           dataSource={data as TableRecord[]}
           loading={loading}
+          rowClassName={(record: any) => record.isCheck === 1 ? "row-checked" : ""}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

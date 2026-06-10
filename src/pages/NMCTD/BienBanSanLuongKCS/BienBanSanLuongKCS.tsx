@@ -12,6 +12,8 @@ import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 import { PhieuApi } from "../../../services/PhieuApi";
+import useRowSelection from "../../../hooks/useRowSelection";
+import useCheckPhieu from "../../../hooks/useCheckPhieu";
 
 const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
   const config = CTD_BB_SanLuong_KCS as any;
@@ -41,11 +43,15 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
+    refetch,
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
     isViecdentoi: type === "viecdentoi",
   });
+
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } = useRowSelection(data as any[]);
+  const { checkLoading, handleCheckPhieu } = useCheckPhieu(selectedRowKeys, () => setSelectedRowKeys([]), refetch);
 
   const statusConfig: Record<number, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -70,6 +76,7 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
   };
 
   const columns = [
+    checkboxColumn,
     {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
@@ -273,6 +280,7 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
 
   return (
     <div>
+      <style>{`.row-checked td { background-color: #d9f7be !important; }`}</style>
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}
@@ -286,6 +294,9 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
         }}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        selectedRowCount={selectedRowKeys.length}
+        checkLoading={checkLoading}
+        onCheckPhieu={handleCheckPhieu}
       />
       <Card
         extra={
@@ -314,6 +325,7 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
           rowKey="idphieu"
           size="small"
           scroll={{ x: 1200 }}
+          rowClassName={(record: any) => record.isCheck === 1 ? "row-checked" : ""}
         />
       </Card>
     </div>

@@ -19,6 +19,7 @@ export interface SearchPhieuRequest {
   tinhTrang?: number | null;
   nguoiDuyetId?: number | null;
   nguoiTaoId?: number | null;
+  isCheck?: number | null;
   [key: string]: string | number | null | undefined | string[];
 }
 export interface SearchPhieuByUserRequest {
@@ -51,4 +52,5 @@ export interface SearchPhieuResponseModel {
   tinhTrang: number;
   nguoiTao: number;
   tenScope?: string | null;
+  isCheck?: number | null;
 }

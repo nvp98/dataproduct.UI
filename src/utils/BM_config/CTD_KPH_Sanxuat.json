@@ -53,7 +53,7 @@
       "title": "PHIẾU XỬ LÝ",
       "key": "table1",
       "columns": [
-        { "title": "STT", "dataIndex": "stt", "width": 50, "type": "number" },
+        { "title": "STT", "dataIndex": "stt", "width": 70, "type": "number" },
         {
           "title": "Sản phẩm trước xử lý",
           "children": [
@@ -67,8 +67,8 @@
             { "title": "Phân loại", "dataIndex": "inLoai", "width": 80 }
           ]
         },
-        { "title": "Nguyên nhân", "dataIndex": "reason", "width": 120 },
-        { "title": "Biện pháp xử lý", "dataIndex": "measures", "width": 120 },
+        { "title": "Nguyên nhân", "dataIndex": "reason", "width": 80 },
+        { "title": "Biện pháp xử lý", "dataIndex": "measures", "width": 90 },
         {
           "title": "Sản phẩm sau xử lý",
           "children": [

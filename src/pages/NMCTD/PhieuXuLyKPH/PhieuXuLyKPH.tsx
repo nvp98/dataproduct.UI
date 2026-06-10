@@ -11,6 +11,8 @@ import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 import { PhieuApi } from "../../../services/PhieuApi";
+import useRowSelection from "../../../hooks/useRowSelection";
+import useCheckPhieu from "../../../hooks/useCheckPhieu";
 
 const PhieuXuLyKPH = ({ type }: { type?: string }) => {
   const config = CTD_KPH_Sanxuat as any;
@@ -40,11 +42,15 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
+    refetch,
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
     isViecdentoi: type === "viecdentoi",
   });
+
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } = useRowSelection(data as any[]);
+  const { checkLoading, handleCheckPhieu } = useCheckPhieu(selectedRowKeys, () => setSelectedRowKeys([]), refetch);
 
   const statusConfig: Record<number, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -69,6 +75,7 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
   };
 
   const columns = [
+    checkboxColumn,
     {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
@@ -272,6 +279,7 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
 
   return (
     <div>
+      <style>{`.row-checked td { background-color: #d9f7be !important; }`}</style>
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}
@@ -285,6 +293,9 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
         }}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        selectedRowCount={selectedRowKeys.length}
+        checkLoading={checkLoading}
+        onCheckPhieu={handleCheckPhieu}
       />
       <Card
         extra={
@@ -310,6 +321,7 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
           }
           rowKey="idphieu"
           size="small"
+          rowClassName={(record: any) => record.isCheck === 1 ? "row-checked" : ""}
         />
       </Card>
     </div>
