@@ -45,15 +45,17 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
   const [form] = Form.useForm();
 
   const [filterLoCao, setFilterLoCao] = useState<number | null>(null);
-  const [filterSearch, setFilterSearch] = useState<string>("");
-  const filterRef = useRef({ loCao: null as number | null, search: "" });
+  const [filterNgaySX, setFilterNgaySX] = useState<string | null>(null);
+  const [filterCaSX, setFilterCaSX] = useState<number | null>(null);
+  const filterRef = useRef({ loCao: null as number | null, ngaySX: null as string | null, ca: null as number | null });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const params: any = {};
       if (filterRef.current.loCao) params.idLoCao = filterRef.current.loCao;
-      if (filterRef.current.search.trim()) params.search = filterRef.current.search.trim();
+      if (filterRef.current.ngaySX) params.ngaySX = filterRef.current.ngaySX;
+      if (filterRef.current.ca) params.idCaSX = filterRef.current.ca;
       const res = await lgnlSiLoMasterApi.getList(params);
       setData(Array.isArray(res) ? res : []);
     } catch { message.error("Lỗi khi tải danh sách Silo"); }
@@ -70,7 +72,11 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
   };
 
   const openEdit = (row: LGNLSiLoMasterDto) => {
-    form.setFieldsValue({ idLoCao: row.idLoCao, tenSiLo: row.tenSiLo, thuTu: row.thuTu, tagKey: row.tagKey });
+    form.setFieldsValue({
+      idLoCao: row.idLoCao, tenSiLo: row.tenSiLo, thuTu: row.thuTu, tagKey: row.tagKey,
+      ngaySanXuat: row.ngaySanXuat ? dayjs(row.ngaySanXuat) : null,
+      idCaSanXuat: row.idCaSanXuat ?? null,
+    });
     setEditingRow(row);
     setModalOpen(true);
   };
@@ -86,12 +92,17 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
       const dto: CreateLGNLSiLoMasterDto = {
         idLoCao: values.idLoCao, tenSiLo: values.tenSiLo,
         thuTu: values.thuTu ?? null, tagKey: values.tagKey ?? null,
+        ngaySanXuat: values.ngaySanXuat ? (values.ngaySanXuat as any).format("YYYY-MM-DD") : null,
+        idCaSanXuat: values.idCaSanXuat ?? null,
       };
       setModalLoading(true);
       if (editingRow) { await lgnlSiLoMasterApi.update(editingRow.id, dto); message.success("Cập nhật thành công"); }
       else { await lgnlSiLoMasterApi.create(dto); message.success("Thêm mới thành công"); }
       setModalOpen(false); fetchData(); onDataChange();
-    } catch (err: any) { if (err?.errorFields) return; message.error("Lỗi khi lưu"); }
+    } catch (err: any) {
+      if (err?.errorFields) return;
+      message.error((err as any)?.response?.data?.message ?? "Lỗi khi lưu");
+    }
     finally { setModalLoading(false); }
   };
 
@@ -99,6 +110,14 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
     { title: "STT", key: "stt", width: 55, align: "center", render: (_v, _r, i) => i + 1 },
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
     { title: "Tên Silo", dataIndex: "tenSiLo", key: "tenSiLo" },
+    {
+      title: "Ngày SX", dataIndex: "ngaySanXuat", key: "ngaySanXuat", width: 110, align: "center",
+      render: (v) => v ? dayjs(v).format("DD/MM/YYYY") : "—",
+    },
+    {
+      title: "Ca SX", dataIndex: "idCaSanXuat", key: "idCaSanXuat", width: 70, align: "center",
+      render: (v) => v ?? "—",
+    },
     { title: "TagKey", dataIndex: "tagKey", key: "tagKey", width: 130, render: (v) => v ?? "—" },
     { title: "Thứ tự", dataIndex: "thuTu", key: "thuTu", width: 80, align: "center" },
     {
@@ -119,13 +138,37 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
       <Row gutter={8} style={{ marginBottom: 12 }} align="middle">
         <Col>
           <Select
-            style={{ width: 180 }}
+            style={{ width: 160 }}
             placeholder="Lọc theo lò cao"
             allowClear
             value={filterLoCao}
             onChange={(v) => { const val = v ?? null; setFilterLoCao(val); filterRef.current.loCao = val; }}
           >
             {loCaoOptions.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+          </Select>
+        </Col>
+        <Col>
+          <DatePicker
+            style={{ width: 150 }}
+            placeholder="Ngày sản xuất"
+            format="DD/MM/YYYY"
+            allowClear
+            value={filterNgaySX ? dayjs(filterNgaySX) : null}
+            onChange={(d) => {
+              const val = d ? d.format("YYYY-MM-DD") : null;
+              setFilterNgaySX(val); filterRef.current.ngaySX = val;
+            }}
+          />
+        </Col>
+        <Col>
+          <Select
+            style={{ width: 130 }}
+            placeholder="Ca SX"
+            allowClear
+            value={filterCaSX}
+            onChange={(v) => { const val = v ?? null; setFilterCaSX(val); filterRef.current.ca = val; }}
+          >
+            {CA_OPTIONS.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
           </Select>
         </Col>
         <Col flex="auto" />
@@ -169,6 +212,20 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
               ))}
             </Select>
           </Form.Item>
+          <Row gutter={12}>
+            <Col span={14}>
+              <Form.Item name="ngaySanXuat" label="Ngày sản xuất">
+                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" allowClear />
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item name="idCaSanXuat" label="Ca sản xuất">
+                <Select placeholder="Chọn ca" allowClear>
+                  {CA_OPTIONS.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </>
@@ -193,7 +250,6 @@ const MappingTab = ({ loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) 
   const [filterNgay, setFilterNgay] = useState<string | null>(null);
   const [filterCa, setFilterCa] = useState<number | null>(null);
   const [filterLoCao, setFilterLoCao] = useState<number | null>(null);
-  const [filterSearch, setFilterSearch] = useState<string>("");
   const filterRef = useRef({ ngay: null as string | null, ca: null as number | null, loCao: null as number | null, search: "" });
 
   // Modal thêm / sửa mapping
@@ -215,7 +271,34 @@ const MappingTab = ({ loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) 
   const filteredSiloOpts = siloOptions.filter(
     (s) => !selectedLoCao || s.idLoCao === selectedLoCao
   );
+  const buildParams = () => ({
+    ngay: filterNgay ?? undefined,
+    idCa: filterCa ?? undefined,
+    idLoCao: filterLoCao ?? undefined,
+  });
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const params = buildParams();
+
+      console.log("params", params);
+
+      const res = await lgnlMappingApi.getList(params);
+
+      const all = Array.isArray(res) ? res : [];
+
+      setData(
+        viewMode === "active"
+          ? all.filter(x => !x.ngayHetHL)
+          : all
+      );
+    }
+    finally {
+      setLoading(false);
+    }
+  }, [filterNgay, filterCa, filterLoCao, viewMode]);
   useEffect(() => {
     if (!selectedLoCao || !modalOpen) return;
     setModalNvlLoading(true);
@@ -225,22 +308,22 @@ const MappingTab = ({ loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) 
       .finally(() => setModalNvlLoading(false));
   }, [selectedLoCao, modalOpen]);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (filterRef.current.loCao) params.idLoCao = filterRef.current.loCao;
-      if (filterRef.current.search.trim()) params.search = filterRef.current.search.trim();
-      if (viewMode === "history") {
-        if (filterRef.current.ngay) params.ngay = filterRef.current.ngay;
-        if (filterRef.current.ca) params.idCa = filterRef.current.ca;
-      }
-      const res = await lgnlMappingApi.getList(params);
-      const all: LGNLMappingDto[] = Array.isArray(res) ? res : [];
-      setData(viewMode === "active" ? all.filter((r) => !r.ngayHetHL) : all);
-    } catch { message.error("Lỗi khi tải danh sách Mapping"); }
-    finally { setLoading(false); }
-  }, [viewMode]);
+  // const fetchData = useCallback(async () => {
+  //   setLoading(true);
+  //   try {
+  //     const params: any = {};
+  //     if (filterRef.current.loCao) params.idLoCao = filterRef.current.loCao;
+  //     if (filterRef.current.search.trim()) params.search = filterRef.current.search.trim();
+  //     if (viewMode === "history") {
+  //       if (filterRef.current.ngay) params.ngay = filterRef.current.ngay;
+  //       if (filterRef.current.ca) params.idCa = filterRef.current.ca;
+  //     }
+  //     const res = await lgnlMappingApi.getList(params);
+  //     const all: LGNLMappingDto[] = Array.isArray(res) ? res : [];
+  //     setData(viewMode === "active" ? all.filter((r) => !r.ngayHetHL) : all);
+  //   } catch { message.error("Lỗi khi tải danh sách Mapping"); }
+  //   finally { setLoading(false); }
+  // }, [viewMode]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -318,7 +401,7 @@ const MappingTab = ({ loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) 
 
   const columns: ColumnsType<LGNLMappingDto> = [
     { title: "STT", key: "stt", width: 50, align: "center", render: (_v, _r, i) => i + 1 },
-    { title: "Ngày", dataIndex: "ngay", key: "ngay", width: 105 , render: (value) => dayjs(value).format("YYYY-MM-DD")},
+    { title: "Ngày", dataIndex: "ngay", key: "ngay", width: 105, render: (value) => dayjs(value).format("YYYY-MM-DD") },
     { title: "Ca", dataIndex: "idCa", key: "idCa", width: 80, render: (v) => v === 1 ? "Ca 1" : v === 2 ? "Ca 2" : "—" },
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 75, align: "center" },
     { title: "Tên Silo", dataIndex: "tenSiLo", key: "tenSiLo", render: (v) => v ?? "—" },
@@ -424,24 +507,12 @@ const MappingTab = ({ loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) 
         </Col>
       </Row>
 
-      {viewMode === "active" && (
+      {viewMode === "active" && filterLoCao && (
         <Alert
           type="info"
           showIcon
           style={{ marginBottom: 10 }}
-          message={
-            filterLoCao
-              ? `Đang hiển thị tất cả cấu hình còn hiệu lực của Lò cao ${filterLoCao}. Đây là config sẽ được dùng cho các ngày/ca chưa có cấu hình riêng.`
-              : "Chọn Lò cao để xem cấu hình đang hiệu lực. Các ngày/ca không có cấu hình riêng sẽ tự động dùng config gần nhất còn hiệu lực."
-          }
-        />
-      )}
-      {viewMode === "history" && data.length === 0 && filterNgay && filterCa && filterLoCao && (
-        <Alert
-          type="warning"
-          showIcon
-          style={{ marginBottom: 10 }}
-          message={`Không có cấu hình riêng cho Ca ${filterCa} ngày ${filterNgay}. Hệ thống sẽ tự dùng cấu hình gần nhất còn hiệu lực — chuyển sang tab "Cấu hình hiệu lực" để xem.`}
+          message={`Đang hiển thị tất cả cấu hình còn hiệu lực của Lò cao ${filterLoCao}.`}
         />
       )}
 
@@ -703,15 +774,17 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
   const [filterLoCao, setFilterLoCao] = useState<number | null>(null);
-  const [filterSearch, setFilterSearch] = useState<string>("");
-  const filterRef = useRef({ loCao: null as number | null, search: "" });
+  const [filterNgaySX, setFilterNgaySX] = useState<string | null>(null);
+  const [filterCaSX, setFilterCaSX] = useState<number | null>(null);
+  const filterRef = useRef({ loCao: null as number | null, ngaySX: null as string | null, ca: null as number | null });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const params: any = {};
       if (filterRef.current.loCao) params.idLoCao = filterRef.current.loCao;
-      if (filterRef.current.search.trim()) params.search = filterRef.current.search.trim();
+      if (filterRef.current.ngaySX) params.ngaySX = filterRef.current.ngaySX;
+      if (filterRef.current.ca) params.idCaSX = filterRef.current.ca;
       const res = await lgnlNvlApi.getList(params);
       setData(Array.isArray(res) ? res : []);
     } catch { message.error("Lỗi khi tải danh sách NVL"); }
@@ -735,6 +808,8 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
       idNhomNVL: row.idNhomNVL, thuTuNhom: row.thuTuNhom,
       tenNVL_TK: row.tenNVL_TK,
       xacNhan: row.xacNhan,
+      ngaySanXuat: row.ngaySanXuat ? dayjs(row.ngaySanXuat) : null,
+      idCaSanXuat: row.idCaSanXuat ?? null,
     });
     setEditingRow(row); setModalOpen(true);
   };
@@ -777,6 +852,8 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
         thuTuNhom: values.thuTuNhom ?? null,
         tenNVL_TK: values.tenNVL_TK ?? null,
         xacNhan: values.xacNhan ?? null,
+        ngaySanXuat: values.ngaySanXuat ? (values.ngaySanXuat as any).format("YYYY-MM-DD") : null,
+        idCaSanXuat: values.idCaSanXuat ?? null,
       };
       setModalLoading(true);
       if (editingRow) { await lgnlNvlApi.update(editingRow.id, dto); message.success("Cập nhật thành công"); }
@@ -790,6 +867,14 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
     { title: "STT", key: "stt", width: 55, align: "center", render: (_v, _r, i) => i + 1 },
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
     { title: "Tên NVL NM", dataIndex: "tenNVL_NM", key: "tenNVL_NM" },
+    {
+      title: "Ngày SX", dataIndex: "ngaySanXuat", key: "ngaySanXuat", width: 110, align: "center",
+      render: (v) => v ? dayjs(v).format("DD/MM/YYYY") : "—",
+    },
+    {
+      title: "Ca SX", dataIndex: "idCaSanXuat", key: "idCaSanXuat", width: 70, align: "center",
+      render: (v) => v ?? "—",
+    },
     { title: "Tên NVL (P.KH)", dataIndex: "tenNVL_TK", key: "tenNVL_TK", ellipsis: true },
     {
       title: "Xác nhận",
@@ -799,10 +884,10 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
       align: "center",
       render: (value, row) => (
         <Switch
-        checked={!!value}
-        loading={loadingId === row.id}
-        onChange={(checked) => handleToggleXacNhan(row.id, checked)}
-      />
+          checked={!!value}
+          loading={loadingId === row.id}
+          onChange={(checked) => handleToggleXacNhan(row.id, checked)}
+        />
       ),
     },
     { title: "Nhóm hiển thị", dataIndex: "nhomHienThi", key: "nhomHienThi", render: (v) => v ?? "—" },
@@ -827,7 +912,7 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
       <Row gutter={8} style={{ marginBottom: 12 }} align="middle" wrap>
         <Col>
           <Select
-            style={{ width: 180 }}
+            style={{ width: 160 }}
             placeholder="Lọc theo lò cao"
             allowClear
             value={filterLoCao}
@@ -837,14 +922,28 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
           </Select>
         </Col>
         <Col>
-          <Input
-            style={{ width: 220 }}
-            placeholder="Tìm tên NVL..."
+          <DatePicker
+            style={{ width: 150 }}
+            placeholder="Ngày sản xuất"
+            format="DD/MM/YYYY"
             allowClear
-            value={filterSearch}
-            onChange={(e) => { setFilterSearch(e.target.value); filterRef.current.search = e.target.value; }}
-            onPressEnter={fetchData}
+            value={filterNgaySX ? dayjs(filterNgaySX) : null}
+            onChange={(d) => {
+              const val = d ? d.format("YYYY-MM-DD") : null;
+              setFilterNgaySX(val); filterRef.current.ngaySX = val;
+            }}
           />
+        </Col>
+        <Col>
+          <Select
+            style={{ width: 130 }}
+            placeholder="Ca SX"
+            allowClear
+            value={filterCaSX}
+            onChange={(v) => { const val = v ?? null; setFilterCaSX(val); filterRef.current.ca = val; }}
+          >
+            {CA_OPTIONS.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+          </Select>
         </Col>
         <Col flex="auto" />
         <Col>
@@ -869,13 +968,13 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
                 <Input maxLength={200} />
               </Form.Item>
             </Col>
-             <Col span={12}>
+            <Col span={12}>
               <Form.Item name="tenNVL_TK" label="Tên NVL P.KH">
                 <Input maxLength={200} />
               </Form.Item>
             </Col>
           </Row>
-          
+
           <Row gutter={12}>
             <Col span={14}>
               <Form.Item name="idNhomNVL" label="Nhóm cột cha trên BM"
@@ -904,6 +1003,20 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
             <Col span={10}>
               <Form.Item name="xacNhan" label="Xác nhận">
                 <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={14}>
+              <Form.Item name="ngaySanXuat" label="Ngày sản xuất">
+                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" allowClear />
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item name="idCaSanXuat" label="Ca sản xuất">
+                <Select placeholder="Chọn ca" allowClear>
+                  {CA_OPTIONS.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+                </Select>
               </Form.Item>
             </Col>
           </Row>

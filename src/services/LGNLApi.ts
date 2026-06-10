@@ -20,6 +20,8 @@ export interface LGNLSiLoMasterDto {
   thuTu: number | null;
   ngayTao: string | null;
   tagKey: string | null;
+  ngaySanXuat: string | null;
+  idCaSanXuat: number | null;
 }
 
 export interface CreateLGNLSiLoMasterDto {
@@ -27,12 +29,14 @@ export interface CreateLGNLSiLoMasterDto {
   tenSiLo: string;
   thuTu?: number | null;
   tagKey?: string | null;
+  ngaySanXuat?: string | null;
+  idCaSanXuat?: number | null;
 }
 
 export interface UpdateLGNLSiLoMasterDto extends CreateLGNLSiLoMasterDto {}
 
 export const lgnlSiLoMasterApi = {
-  getList: (params?: { idLoCao?: number }) =>
+  getList: (params?: { idLoCao?: number; ngaySX?: string; idCaSX?: number }) =>
     apiService.get<LGNLSiLoMasterDto[]>("/api/LGNL/get-silo-master", { params }),
 
   getById: (id: number) =>
@@ -174,6 +178,8 @@ export interface LGNLNvlDto {
   thuTuNhom: number | null;
   tenNVL_TK: string | null;
   xacNhan: boolean | null;
+  ngaySanXuat: string | null;
+  idCaSanXuat: number | null;
 }
 
 export interface CreateLGNLNvlDto {
@@ -183,15 +189,16 @@ export interface CreateLGNLNvlDto {
   thuTu?: number | null;
   ghiChu?: string | null;
   thuTuNhom?: number | null;
-  tenNVL_TK?: string | null;  
-  xacNhan?: boolean | null; // true = đã xác nhận, false/null = chưa xác nhận
-
+  tenNVL_TK?: string | null;
+  xacNhan?: boolean | null;
+  ngaySanXuat?: string | null;
+  idCaSanXuat?: number | null;
 }
 
 export interface UpdateLGNLNvlDto extends CreateLGNLNvlDto {}
 
 export const lgnlNvlApi = {
-  getList: (params?: { idLoCao?: number}) =>
+  getList: (params?: { idLoCao?: number; ngaySX?: string; idCaSX?: number }) =>
     apiService.get<LGNLNvlDto[]>("/api/LGNL/get-nvl", { params }),
 
   getById: (id: number) =>
@@ -221,9 +228,6 @@ export interface LGNLColumnDto {
 export interface LGNLDuLieuSiLoResult {
   columns: LGNLColumnDto[];
   rows: Record<string, unknown>[];
-  // Config hiệu lực đang được áp dụng (khác ngày/ca yêu cầu = đang dùng config cũ)
-  ngayHieuLuc?: string | null;
-  idCaHieuLuc?: number | null;
 }
 
 // ─── Dữ liệu SCADA theo TagKey, NVL, LoCao, Ngày ──────────────────────────

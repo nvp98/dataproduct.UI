@@ -46,11 +46,6 @@ const TaoPhieuNapLieuLoCao = () => {
   const [materialColumnsOverride, setMaterialColumnsOverride] = useState<TableColumnDef[] | null>(null);
   const [doAmMap, setDoAmMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
-  // Config hiệu lực: khác null khi đang dùng cấu hình từ ngày/ca khác (fallback)
-  const [configHieuLuc, setConfigHieuLuc] = useState<{
-    ngayHieuLuc: string;
-    idCaHieuLuc: number;
-  } | null>(null);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -143,7 +138,6 @@ const TaoPhieuNapLieuLoCao = () => {
 
         const apiColumns = (response.columns as TableColumnDef[]) ?? [];
         setMaterialColumnsOverride(apiColumns.length > 0 ? apiColumns : null);
-        setConfigHieuLuc(null);
 
         // Đọc lại từ DB để lấy đúng ManualGiaTri + GiaTri_Goc sau khi sync
         const chiTietList = await lgnlChiTietApi.getByPhieu(idphieu);
@@ -209,14 +203,6 @@ const TaoPhieuNapLieuLoCao = () => {
         lgnlNhomNvlApi.getList()
           .then((res) => setNhomNvlOptions(Array.isArray(res) ? res : []))
           .catch(() => {});
-
-        const ngayHL = response.ngayHieuLuc ?? null;
-        const idCaHL = response.idCaHieuLuc ?? null;
-        if (ngayHL && idCaHL && (ngayHL !== ngaySXFormatted || idCaHL !== Number(ca))) {
-          setConfigHieuLuc({ ngayHieuLuc: ngayHL, idCaHieuLuc: idCaHL });
-        } else {
-          setConfigHieuLuc(null);
-        }
 
         const rows = (response.rows ?? []).map((row: any, index: number) => {
           const { time, ...rest } = row;
@@ -325,8 +311,8 @@ const TaoPhieuNapLieuLoCao = () => {
     });
     setMapDraftBySilo(initDrafts);
     setMapNoteBySilo(initNotes);
-    // Load NVL options chỉ theo lò cao đang chọn để map đúng dữ liệu
-    lgnlNvlApi.getList({ idLoCao: Number(scope) })
+    // Load NVL options theo lò cao + ngày/ca để lấy đúng version tại thời điểm phiếu
+    lgnlNvlApi.getList({ idLoCao: Number(scope), ngaySX: ngay, idCaSX: caNum })
       .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
       .catch(() => setNvlOptions([]));
     lgnlNhomNvlApi.getList()
@@ -475,8 +461,8 @@ const TaoPhieuNapLieuLoCao = () => {
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     try {
       const [res, nvlRes] = await Promise.all([
-        lgnlSiLoMasterApi.getList({ idLoCao: Number(scope) }),
-        lgnlNvlApi.getList({ idLoCao: Number(scope) }),
+        lgnlSiLoMasterApi.getList({ idLoCao: Number(scope), ngaySX: ngay, idCaSX: Number(ca) }),
+        lgnlNvlApi.getList({ idLoCao: Number(scope), ngaySX: ngay, idCaSX: Number(ca) }),
         refreshSnapshotData(ngay, Number(ca), Number(scope)),
       ]);
       setSiloMasterOptions(Array.isArray(res) ? res : []);
@@ -540,10 +526,10 @@ const TaoPhieuNapLieuLoCao = () => {
       message.warning("Vui lòng chọn NVL trước khi lưu mapping");
       return;
     }
-    if (row.idNVL != null) {
-      message.warning("Silo này đã map nguyên vật liệu rồi, không thể map tiếp. Nếu cần đổi NVL hãy dùng chức năng Đổi NVL.");
-      return;
-    }
+    // if (row.idNVL != null) {
+    //   message.warning("Silo này đã map nguyên vật liệu rồi, không thể map tiếp. Nếu cần đổi NVL hãy dùng chức năng Đổi NVL.");
+    //   return;
+    // }
     const ngaySXValue = form.getFieldValue("NgaySX");
     if (!scope || !ca || !ngaySXValue) {
       message.warning("Vui lòng chọn Lò cao, Ca và Ngày sản xuất");
@@ -692,8 +678,24 @@ const TaoPhieuNapLieuLoCao = () => {
             }
           }
 
-          // Khôi phục cột động đã lưu để render đúng dataIndex khi xem chi tiết
-          if (Array.isArray(data.materialColumns) && data.materialColumns.length > 0) {
+          // Lấy columns từ API mapping theo ngày/ca/lò cao của phiếu (luôn fresh)
+          const ngaySXRaw: string | null = data.NgaySX ?? data.ngaySX ?? null;
+          const caRaw = data.ca ?? data.Ca ?? null;
+          if (ngaySXRaw && normalizedData.scope && caRaw) {
+            try {
+              const pivotRes = await napLieuLoCaoApi.getSiloMapped({
+                ngay: dayjs(ngaySXRaw).format("YYYY-MM-DD"),
+                idCa: Number(caRaw),
+                idLoCao: Number(normalizedData.scope),
+              });
+              const apiCols = pivotRes.columns ?? [];
+              setMaterialColumnsOverride(apiCols.length > 0 ? apiCols : null);
+            } catch {
+              // fallback: dùng columns đã lưu trong JSON nếu API lỗi
+              if (Array.isArray(data.materialColumns) && data.materialColumns.length > 0)
+                setMaterialColumnsOverride(data.materialColumns);
+            }
+          } else if (Array.isArray(data.materialColumns) && data.materialColumns.length > 0) {
             setMaterialColumnsOverride(data.materialColumns);
           }
 
@@ -1087,7 +1089,7 @@ const TaoPhieuNapLieuLoCao = () => {
                             >
                               {scopeNvlOptions.map((n) => (
                                 <Select.Option key={n.id} value={n.id}>
-                                  [{n.id}] {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}
+                                   {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}
                                 </Select.Option>
                               ))}
                             </Select>
@@ -1218,15 +1220,6 @@ const TaoPhieuNapLieuLoCao = () => {
             </Form.Item>
           </Form>
         </Modal>
-
-        {configHieuLuc && (
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 12 }}
-            message={`Đang áp dụng cấu hình từ Ca ${configHieuLuc.idCaHieuLuc} ngày ${dayjs(configHieuLuc.ngayHieuLuc).format("DD/MM/YYYY")} (chưa có cấu hình riêng cho ngày/ca đang xem)`}
-          />
-        )}
 
         {tableConfig && (
           <CustomTableLG
