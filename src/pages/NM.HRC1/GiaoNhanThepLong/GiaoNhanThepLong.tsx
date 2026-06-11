@@ -217,7 +217,7 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
 
   const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange,
           getAllowedBmOptions, getAllowedScopeOptions } =
-    usePhieuSearchListHRC({ maBmList: activeMaBmList, fixedFilters, transformFilters });
+    usePhieuSearchListHRC({ maBmList: activeMaBmList, fixedFilters, transformFilters, persistKey: true });
 
   const allowedCongDoanOptions = useMemo(
     () => getAllowedBmOptions(activeCongDoanOptions),
@@ -366,6 +366,7 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
         onClearFilter={handleClearFilter}
         filterFields={filterFields}
         onFilterFieldChange={handleFieldChange}
+        storageKey={true}
         showCreateButton={type !== "xemphieu"}
         onCreateClick={() => setModalOpen(true)}
         createButtonText="Tạo phiếu"

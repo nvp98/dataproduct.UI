@@ -143,14 +143,48 @@ const ThongKeBBGNThepLongHRC1 = () => {
 
   const columns = useMemo((): TableColumnsType<HRC1_ThongKeRow> => [
     {
+      title: "TT Nhận", key: "trangThaiTL", width: 95,align: "center",fixed: "left",
+      render: (_: unknown, r: HRC1_ThongKeRow) => {
+        if (r.trangThaiTL === 1) return <Tag color="cyan">Đã nhận</Tag>;
+        if (r.trangThaiTL === 0) return <Tag>Chưa nhận</Tag>;
+        return <Tag color="default">-</Tag>;
+      },
+    },
+    {
+      title: "TT Đúc", key: "trangThaiDuc", width: 100,align: "center",fixed: "left",
+      render: (_: unknown, r: HRC1_ThongKeRow) => {
+        if (r.trangThaiDuc === 1) return <Tag color="blue">Đã xác nhận</Tag>;
+        if (r.trangThaiDuc === 0) return <Tag>Chờ</Tag>;
+        return <Tag color="default">-</Tag>;
+      },
+    },
+    {
+      title: "Ngày đúc", key: "ngayDuc", width: 110, fixed: "left", align: "center",
+      render: (_: unknown, r: HRC1_ThongKeRow) => {
+        const v = r.ngayNhanTL ?? r.ngayTao;
+        return v ? dayjs(v).format("DD/MM/YYYY") : "-";
+      },
+    },
+    {
+      title: "Ca Đúc", key: "caDuc", width: 70, fixed: "left", align: "center",
+      render: (_: unknown, r: HRC1_ThongKeRow) => {
+        const v = r.caTinhLuyen ?? r.ca;
+        return v === 1 ? "Ngày" : v === 2 ? "Đêm" : "-";
+      },
+    },
+    {
+      title: "Kíp Đúc", key: "kipDuc", width: 60, align: "center", fixed: "left",
+      render: (_: unknown, r: HRC1_ThongKeRow) => r.kipTinhLuyen ?? r.kip ?? "-",
+    },
+    {
+      title: "Chốt", key: "isChot", width: 80, align: "center",fixed: "left",
+      render: (_: unknown, r: HRC1_ThongKeRow) =>
+        r.isChot ? <Tag color="green">Đã chốt</Tag> : <Tag color="default">-</Tag>,
+    },
+    {
       title: "Ngày tạo", dataIndex: "ngayTao", key: "ngayTao", width: 110, fixed: "left", align: "center",
       render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-",
     },
-    {
-      title: "Ca", dataIndex: "ca", key: "ca", width: 70, fixed: "left", align: "center",
-      render: (v: number) => v === 1 ? "Ngày" : v === 2 ? "Đêm" : "-",
-    },
-    { title: "Kíp", dataIndex: "kip", key: "kip", width: 60, align: "center" },
     {
       title: "Ngày TL", dataIndex: "ngayNhanTL", key: "ngayNhanTL", width: 110, fixed: "left", align: "center",
       render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-",
@@ -200,35 +234,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
     { title: "Phân loại", dataIndex: "phanLoai", key: "phanLoai", width: 100, align: "center" },
     { title: "Mác BKMIS", dataIndex: "macThepBKMIS", key: "macThepBKMIS", width: 110 },
     { title: "Nhóm phân loại mác thép", dataIndex: "tenNhomPhanLoai", key: "tenNhomPhanLoai", width: 260 },
-    {
-      title: "TT Lò", key: "trangThaiLo", width: 90, align: "center",
-      render: (_: unknown, r: HRC1_ThongKeRow) => {
-        if (r.trangThaiLo === 1) return <Tag color="blue">Đã nhập</Tag>;
-        if (r.trangThaiLo === 0) return <Tag>Chờ</Tag>;
-        return <Tag color="default">-</Tag>;
-      },
-    },
-    {
-      title: "TT Nhận", key: "trangThaiTL", width: 95,align: "center",
-      render: (_: unknown, r: HRC1_ThongKeRow) => {
-        if (r.trangThaiTL === 1) return <Tag color="cyan">Đã nhận</Tag>;
-        if (r.trangThaiTL === 0) return <Tag>Chưa nhận</Tag>;
-        return <Tag color="default">-</Tag>;
-      },
-    },
-    {
-      title: "TT Đúc", key: "trangThaiDuc", width: 100,align: "center",
-      render: (_: unknown, r: HRC1_ThongKeRow) => {
-        if (r.trangThaiDuc === 1) return <Tag color="blue">Đã xác nhận</Tag>;
-        if (r.trangThaiDuc === 0) return <Tag>Chờ</Tag>;
-        return <Tag color="default">-</Tag>;
-      },
-    },
-    {
-      title: "Chốt", key: "isChot", width: 80, align: "center",
-      render: (_: unknown, r: HRC1_ThongKeRow) =>
-        r.isChot ? <Tag color="green">Đã chốt</Tag> : <Tag color="default">-</Tag>,
-    },
+    
     {
       title: "Trùng mẻ", dataIndex: "isTrungMeThoi", key: "isTrungMeThoi", width: 70, align: "center",
       render: (v: boolean) => v ? <Tag color="red">Trùng</Tag> : null,
@@ -308,14 +314,14 @@ const ThongKeBBGNThepLongHRC1 = () => {
     <Card style={{ marginTop: 12 }}>
       <Form form={form} layout="inline" style={{ marginBottom: 16 }}>
         <Space wrap align="center">
-          <Form.Item name="ngaySX" label="Ngày">
+          <Form.Item name="ngaySX" label="Ngày Đúc">
             <RangePicker format="DD/MM/YYYY" />
           </Form.Item>
-          <Form.Item name="ca" label="Ca">
+          <Form.Item name="ca" label="Ca Đúc">
             <Select allowClear style={{ minWidth: 70 }} placeholder="Ca"
               options={[{ label: "Ngày", value: 1 }, { label: "Đêm", value: 2 }]} />
           </Form.Item>
-          <Form.Item name="kip" label="Kíp">
+          <Form.Item name="kip" label="Kíp Đúc">
             <Select allowClear style={{ minWidth: 50 }} placeholder="Kíp"
               options={["A","B","C"].map(k => ({ label: `${k}`, value: k }))} />
           </Form.Item>
@@ -410,7 +416,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
         summary={() => (
           <Table.Summary fixed>
             <Table.Summary.Row style={{ background: "#fafafa", fontWeight: 600 }}>
-              <Table.Summary.Cell index={0} colSpan={5} align="right">
+              <Table.Summary.Cell index={0} colSpan={9} align="right">
                 Tổng dòng: {totalRecords}
               </Table.Summary.Cell>
               <Table.Summary.Cell index={5} colSpan={8} />

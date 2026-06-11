@@ -186,6 +186,7 @@ export interface HRC1_ThongKeRow {
   kip?: string | null;
   ngayNhanTL?: string | null;
   caTinhLuyen?: number | null;
+  kipTinhLuyen?: string | null;
   tenNhomPhanLoai?: string | null;
   tenCapNhatBoiLo?: string | null;
   tenCapNhatBoiTL?: string | null;

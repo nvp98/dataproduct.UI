@@ -61,6 +61,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
   } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
+    persistKey: true,
   });
 
   const statusConfig = PHIEU_STATUS_CONFIG;
@@ -235,6 +236,7 @@ const TieuHaoNauLuyen_LF = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        storageKey={true}
         showCreateButton={isAdmin}
         onCreateClick={() => {
           navigate("/taophieutieuhaonauluyen_lf");

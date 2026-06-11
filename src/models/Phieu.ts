@@ -53,4 +53,5 @@ export interface SearchPhieuResponseModel {
   nguoiTao: number;
   tenScope?: string | null;
   isCheck?: number | null;
+  soLuongMe?: number | null;
 }

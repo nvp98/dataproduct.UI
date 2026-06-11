@@ -159,6 +159,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
       maBmList: MABM_LIST,
       fixedFilters,
       transformFilters,
+      persistKey: true,
     });
 
   const statusConfig = PHIEU_STATUS_CONFIG;
@@ -455,6 +456,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        storageKey={true}
         showCreateButton={false}
         onCreateClick={() => {}}
         createButtonText=""
