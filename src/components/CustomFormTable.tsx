@@ -11,24 +11,25 @@ import {
 } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 
+export interface FormColumnDef {
+  title: string;
+  dataIndex?: string;
+  isLabel?: boolean;
+  width?: number | string;
+  fixed?: "left" | "right";
+  format?: string;
+  type?: "text" | "number" | "float" | "index" | string;
+  readonly?: boolean;
+  editable?: boolean;
+  sum?: boolean;
+  align?: "left" | "center" | "right";
+  options?: Array<{ label: string; value: string | number }>;
+  /** Nested header groups — hỗ trợ đệ quy nhiều cấp */
+  children?: FormColumnDef[];
+}
+
 interface CustomFormTableProps {
-  columns: Array<{
-    title: string;
-    dataIndex?: string;
-    isLabel?: boolean; // Xác định cột này là cột label
-    width?: number | string;
-    fixed?: "left" | "right";
-    format?: string; // ví dụ: "number-group"
-    type?: "text" | "number" | "float" | any; // Kiểu dữ liệu
-    children?: Array<{
-      title: string;
-      dataIndex: string | number;
-      format?: string; // ví dụ: "number-group"
-      type?: "text" | "number" | "float" | any; // Kiểu dữ liệu
-      options?: Array<{ label: string; value: string | number }>;
-    }>;
-    options?: Array<{ label: string; value: string | number }>;
-  }>;
+  columns: FormColumnDef[];
   initialData?: any[];
   onDataChange?: (data: any[]) => void;
   className?: string;
@@ -203,19 +204,14 @@ export default function CustomFormTable({
     onDataChange?.(newRows);
   };
 
-  // Lấy tất cả field keys từ columns (bao gồm cả children)
-  const getAllFieldKeys = (cols: any[]): string[] => {
+  // Lấy tất cả field keys từ columns (đệ quy, hỗ trợ nhiều cấp children)
+  const getAllFieldKeys = (cols: FormColumnDef[]): string[] => {
     const keys: string[] = [];
     cols.forEach((col) => {
-      if (col.dataIndex) {
+      if (col.children?.length) {
+        keys.push(...getAllFieldKeys(col.children));
+      } else if (col.dataIndex) {
         keys.push(col.dataIndex);
-      }
-      if (col.children) {
-        col.children.forEach((child: any) => {
-          if (child.dataIndex) {
-            keys.push(child.dataIndex);
-          }
-        });
       }
     });
     return keys;
@@ -234,165 +230,94 @@ export default function CustomFormTable({
     onCellChange?.(rowIndex, dataIndex, value, newData[rowIndex]);
   };
 
+  // Đệ quy xây dựng cột — hỗ trợ nested children tùy ý cấp
+  const buildColumn = (col: FormColumnDef): any => {
+    // Cột nhóm (có children) → đệ quy vào children
+    if (col.children?.length) {
+      return {
+        title: col.title,
+        width: col.width,
+        fixed: col.fixed,
+        children: col.children.map((child: any) => buildColumn(child)),
+      };
+    }
+
+    // Cột label (chỉ hiển thị, không input)
+    if (col.isLabel) {
+      return {
+        title: col.title,
+        dataIndex: col.dataIndex,
+        width: col.width,
+        render: (_: any, record: any) => (
+          <div style={{ paddingLeft: 8, backgroundColor: !editable ? "#fffbe6" : undefined }}>
+            {record[col.dataIndex || ""]}
+          </div>
+        ),
+      };
+    }
+
+    // Cột index tùy chỉnh (có render riêng)
+    if ((col as any).type === "index") {
+      return {
+        title: col.title,
+        dataIndex: col.dataIndex,
+        width: col.width,
+        fixed: col.fixed,
+        render: (col as any).render,
+      };
+    }
+
+    // Cột lá (leaf) — render Input / Select
+    const dataIndex = col.dataIndex as string;
+    const isReadonly = col.readonly === true || col.editable === false || readonlyFields.includes(String(dataIndex));
+
+    return {
+      title: col.title,
+      dataIndex,
+      width: col.width,
+      fixed: col.fixed,
+      render: (_: any, record: any, idx: number) => {
+        if (isReadonly) {
+          return (
+            <Input
+              placeholder={col.title}
+              value={formatIfNeeded(col.format, record[dataIndex])}
+              readOnly
+              style={getCellStyle(dataIndex, record[dataIndex], record, true)}
+            />
+          );
+        }
+        if (col.options) {
+          return (
+            <Select
+              placeholder={col.title}
+              value={record[dataIndex] ?? undefined}
+              onChange={(value) => handleCellChange(value, idx, dataIndex)}
+              options={col.options}
+              disabled={!editable}
+              style={{ width: "100%" }}
+            />
+          );
+        }
+        return (
+          <Input
+            placeholder={col.title}
+            value={record[dataIndex] ?? ""}
+            onChange={(e) => {
+              const validated = validateAndFormatInput(e.target.value, col.type as "number" | "text" | "float" | undefined);
+              handleCellChange(validated, idx, dataIndex);
+            }}
+            disabled={!editable}
+            style={getCellStyle(dataIndex, record[dataIndex], record, false)}
+          />
+        );
+      },
+    };
+  };
+
   // Sinh cột động từ config
   const tableColumns = [
-    ...columns.map((col) => {
-      if (col.children) {
-        // Merge header: cột cha có con
-        return {
-          title: col.title,
-          width: col.width,
-          fixed: col.fixed,
-          children: col.children.map(
-            (child: {
-              title: string | undefined;
-              dataIndex: string | number;
-              width?: number | string;
-            }) => ({
-              title: child.title,
-              dataIndex: child.dataIndex,
-              width: child.width,
-              render: (_: any, record: any, idx: number) =>
-                readonlyFields.includes(String(child.dataIndex)) ? (
-                  <Input
-                    placeholder={child.title}
-                    value={formatIfNeeded(
-                      (child as any)?.format,
-                      record[child.dataIndex],
-                    )}
-                    readOnly
-                    style={getCellStyle(
-                      child.dataIndex,
-                      record[child.dataIndex],
-                      record,
-                      true,
-                    )}
-                  />
-                ) : (child as any).options ? (
-                  <Select
-                    placeholder={child.title}
-                    value={record[child.dataIndex] ?? undefined}
-                    onChange={(value) => {
-                      handleCellChange(value, idx, child.dataIndex as string);
-                    }}
-                    options={(child as any).options}
-                    disabled={!editable}
-                    style={{ width: "100%" }}
-                  />
-                ) : (
-                  <Input
-                    placeholder={child.title}
-                    value={record[child.dataIndex] ?? ""}
-                    onChange={(e) => {
-                      const validated = validateAndFormatInput(
-                        e.target.value,
-                        (child as any)?.type,
-                      );
-                      handleCellChange(
-                        validated,
-                        idx,
-                        child.dataIndex as string,
-                      );
-                    }}
-                    disabled={!editable}
-                    style={getCellStyle(
-                      child.dataIndex,
-                      record[child.dataIndex],
-                      record,
-                      false,
-                    )}
-                  />
-                ),
-            }),
-          ),
-        };
-      } else {
-        // Check if this is a label column
-        if (col.isLabel) {
-          return {
-            title: col.title,
-            dataIndex: col.dataIndex,
-            width: col.width,
-            render: (_: any, record: any) => (
-              <div
-                style={{
-                  paddingLeft: 8,
-                  backgroundColor: !editable ? "#fffbe6" : undefined,
-                }}
-              >
-                {record[col.dataIndex || ""]}
-              </div>
-            ),
-          };
-        }
-
-        // Check if column has custom render function
-        if ((col as any).type === "index") {
-          return {
-            title: col.title,
-            dataIndex: col.dataIndex,
-            width: col.width,
-            fixed: col.fixed,
-            render: (col as any).render,
-          };
-        }
-
-        // Cột bình thường
-        return {
-          title: col.title,
-          dataIndex: col.dataIndex,
-          width: col.width,
-          fixed: col.fixed,
-          render: (_: any, record: any, idx: number) =>
-            readonlyFields.includes(String(col.dataIndex)) ? (
-              <Input
-                placeholder={col.title}
-                value={formatIfNeeded(
-                  (col as any)?.format,
-                  record[col.dataIndex || ""],
-                )}
-                readOnly
-                style={getCellStyle(
-                  col.dataIndex as string,
-                  record[col.dataIndex || ""],
-                  record,
-                  true,
-                )}
-              />
-            ) : (col as any).options ? (
-              <Select
-                placeholder={col.title}
-                value={record[col.dataIndex ?? ""] ?? undefined}
-                onChange={(value) => {
-                  handleCellChange(value, idx, col.dataIndex as string);
-                }}
-                options={(col as any).options}
-                disabled={!editable}
-                style={{ width: "100%" }}
-              />
-            ) : (
-              <Input
-                placeholder={col.title}
-                value={record[col.dataIndex ?? ""] ?? ""}
-                onChange={(e) => {
-                  const validated = validateAndFormatInput(
-                    e.target.value,
-                    (col as any)?.type,
-                  );
-                  handleCellChange(validated, idx, col.dataIndex as string);
-                }}
-                disabled={!editable}
-                style={getCellStyle(
-                  col.dataIndex as string,
-                  record[col.dataIndex ?? ""],
-                  record,
-                  false,
-                )}
-              />
-            ),
-        };
-      }
-    }),
+    ...columns.map((col) => buildColumn(col)),
     ...(showStatus
       ? [
           {

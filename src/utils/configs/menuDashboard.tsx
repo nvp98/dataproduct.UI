@@ -85,6 +85,11 @@ export const MenuDataDashboard = [
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
         maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
       },
+      {
+        code: "bienbangiaonhanphoitam",
+        title: "BM.16/QT.05.10 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
+        maBm: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+      }
     ],
   },
   {
