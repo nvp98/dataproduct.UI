@@ -91,6 +91,7 @@ const GiaoNhanThepLongList = ({
   } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
+    persistKey: true,
   });
 
   const statusConfig = PHIEU_STATUS_CONFIG;
@@ -242,6 +243,7 @@ const GiaoNhanThepLongList = ({
           navigate(routeCreate);
         }}
         createButtonText="Tạo phiếu mới"
+        storageKey={true} 
       />
       <Card>
         <Table<TableRecord>

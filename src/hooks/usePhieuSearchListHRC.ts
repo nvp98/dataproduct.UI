@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { PhieuApi } from "../services/PhieuApi";
 import type { SearchPhieuByUserRequest, SearchPhieuResponseModel } from "../models/Phieu";
 import type { PhieuFilterValues } from "../components/PhieuFilterCard";
 import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
 import { BmQuyenXlApi, type BmQuyenXlModel } from "../services/BmQuyenXlApi";
 import { bmQuyenConfig } from "../utils/configs/bmQuyenConfig";
+
+// Keyed by React Router location.key — tự động clear khi user navigate forward (key mới),
+// tự động restore khi user bấm Back (key cũ). Per-tab vì module scope.
+const _requestCache = new Map<string, SearchPhieuByUserRequest>();
 
 interface PagedResponse<T> {
   data?: T[];
@@ -26,6 +31,10 @@ export interface UsePhieuSearchListOptions {
   fixedFilters?: Partial<SearchPhieuByUserRequest>;
   autoLoad?: boolean;
   transformFilters?: (filters: PhieuFilterValues) => Partial<SearchPhieuByUserRequest>;
+  /** Persist last search request to sessionStorage.
+   *  true  → auto key from window.location.pathname
+   *  string → use as explicit key */
+  persistKey?: string | true;
 }
 
 const normalizeNumber = (value: string | number | undefined): number | null => {
@@ -50,7 +59,10 @@ export const usePhieuSearchListHRC = ({
   fixedFilters = {},
   autoLoad = true,
   transformFilters = defaultTransform,
+  persistKey,
 }: UsePhieuSearchListOptions) => {
+  const location = useLocation();
+  const locationKey = location.key;
   // Kiểm tra user có phải PKH không (tenNgan = "P.KH" hoặc iD_PhongBan = 70)
   const isPKH = useMemo(() => {
     const user = getThongTinUser();
@@ -194,6 +206,7 @@ export const usePhieuSearchListHRC = ({
   );
 
   const fetchData = useCallback(async (request: SearchPhieuByUserRequest) => {
+    if (persistKey) _requestCache.set(locationKey, request);
     setLoading(true);
     try {
       const res = await PhieuApi.searchByUser(request);
@@ -241,9 +254,10 @@ export const usePhieuSearchListHRC = ({
   );
 
   const handleClearFilter = useCallback(() => {
+    if (persistKey) _requestCache.delete(locationKey);
     const request = buildRequest(1, pagination.pageSize);
     fetchData(request);
-  }, [buildRequest, fetchData, pagination.pageSize]);
+  }, [buildRequest, fetchData, locationKey, pagination.pageSize, persistKey]);
 
   const onPageChange = useCallback(
     (page: number, pageSize: number) => {
@@ -254,11 +268,13 @@ export const usePhieuSearchListHRC = ({
   );
 
   useEffect(() => {
-    if (autoLoad) {
-      const initialRequest = buildRequest(1, initialPageSize);
-      fetchData(initialRequest);
+    if (!autoLoad) return;
+    if (persistKey) {
+      const cached = _requestCache.get(locationKey);
+      if (cached) { fetchData(cached); return; }
     }
-  }, [autoLoad, buildRequest, fetchData, initialPageSize]);
+    fetchData(buildRequest(1, initialPageSize));
+  }, [autoLoad, buildRequest, fetchData, initialPageSize, locationKey, persistKey]);
 
   return {
     data,

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AutoComplete, Button, Card, Checkbox, Col, Divider, InputNumber, Modal,
-  Popconfirm, Row, Select, Space, Spin, Tag, Tooltip, Typography, Input, message, Empty,
+  Popconfirm, Row, Select, Space, Spin, Table, Tag, Tooltip, Typography, Input, message, Empty,
 } from "antd";
 import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined, FilePdfOutlined, SyncOutlined } from "@ant-design/icons";
 import { PhieuApi } from "../../../services/PhieuApi";
@@ -161,7 +161,7 @@ const checkDucReady = (me: HRC1_MeThepVm): string[] => {
   if (me.dichChuyen !== "len_thang" && me.klLan1 == null)  missing.push("KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)");
   if (me.klLan2 == null)                                   missing.push("KL bì - Lần 2 (tấn)");
   if (me.klThepLong == null)                               missing.push("KL thép lỏng");
-  if (me.dichChuyen !== "len_thang" && !me.isManualTL && !me.tlDichSo) missing.push("Đích TL");
+  // if (me.dichChuyen !== "len_thang" && !me.isManualTL && !me.tlDichSo) missing.push("Đích TL");
   if (!me.idMayDucDich)                                    missing.push("Máy đúc");
   return missing;
 };
@@ -349,9 +349,11 @@ export const LoThoiPanel = ({
       title: "Thùng số", key: "thungSo", width: 45,
       render: (_, me) => {
         const locked = lk(me);
+        const val = locked ? (me.thungSo ?? "") : (get(me, "thungSo") ?? "");
         return (
           <Input size="small" style={{ width: 40 }}
-            value={locked ? (me.thungSo ?? "") : (get(me, "thungSo") ?? "")}
+            status={!locked && !val ? "error" : undefined}
+            value={val}
             disabled={locked}
             onChange={locked ? undefined : (e) => set(me.id, "thungSo", e.target.value || null)} />
         );
@@ -365,10 +367,11 @@ export const LoThoiPanel = ({
         const disabled = rowLocked || effectiveDich !== "len_thang";
         // Khi row bị lock thật sự → hiện giá trị DB; khi chỉ disabled do dichChuyen → hiện giá trị edit (có thể null sau reset)
         const raw = (rowLocked ? me.thoiGian : get(me, "thoiGian")) as string | null;
+        const hasError = !disabled && !raw;
         return (
           <input
             type="time"
-            style={{ width: 70, fontSize: 13, padding: "0 4px", borderRadius: 4, border: "1px solid #d9d9d9", height: 24, background: disabled ? "#f5f5f5" : undefined, color: disabled ? "rgba(0,0,0,0.25)" : undefined, cursor: disabled ? "not-allowed" : undefined }}
+            style={{ width: 70, fontSize: 13, padding: "0 4px", borderRadius: 4, border: hasError ? "1px solid #ff4d4f" : "1px solid #d9d9d9", height: 24, background: disabled ? "#f5f5f5" : undefined, color: disabled ? "rgba(0,0,0,0.25)" : undefined, cursor: disabled ? "not-allowed" : undefined }}
             value={raw ?? ""}
             disabled={disabled}
             onChange={disabled ? undefined : (e) => set(me.id, "thoiGian", e.target.value || null)}
@@ -380,9 +383,11 @@ export const LoThoiPanel = ({
       title: "KL thùng LF sau khi ra thép", key: "kllfSauThep", width: 75,
       render: (_, me) => {
         const locked = lk(me);
+        const val = locked ? me.kllfSauThep : get(me, "kllfSauThep");
         return (
           <InputNumber size="small" style={{ width: 65 }}
-            value={locked ? me.kllfSauThep : get(me, "kllfSauThep")}
+            status={!locked && val == null ? "error" : undefined}
+            value={val}
             disabled={locked}
             onChange={locked ? undefined : (v) => set(me.id, "kllfSauThep", v)} />
         );
@@ -395,9 +400,11 @@ export const LoThoiPanel = ({
         const effectiveDich = (edits[me.id] && "dichChuyen" in edits[me.id]) ? edits[me.id].dichChuyen : me.dichChuyen;
         const rowLocked = lk(me);
         const disabled = rowLocked || effectiveDich !== "len_thang";
+        const val = rowLocked ? me.klLan2 : (get(me, "klLan2") as number | null | undefined);
         return (
           <InputNumber size="small" style={{ width: 65 }}
-            value={rowLocked ? me.klLan2 : (get(me, "klLan2") as number | null | undefined)}
+            status={!disabled && val == null ? "error" : undefined}
+            value={val}
             disabled={disabled}
             onChange={disabled ? undefined : (v) => set(me.id, "klLan2", v)} />
         );
@@ -454,6 +461,7 @@ export const LoThoiPanel = ({
           : dichChuyenOpts;
         return (
           <Select size="small" style={{ width: 125 }} showSearch optionFilterProp="label"
+            status={!getDichEncoded(me) ? "error" : undefined}
             value={getDichEncoded(me) ?? undefined}
             options={optsForMe}
             placeholder="Chọn đích..."
@@ -812,9 +820,11 @@ export const TinhLuyenPanel = ({
       title: "Thùng số", key: "thungSo", width: 40,
       render: (_, me) => {
         const editable = !!me.isManualTL && !isLocked(me);
+        const val = editable ? ((get(me, "thungSo") as string) ?? "") : (me.thungSo ?? "");
         return (
           <Input size="small" style={{ width: 34 }}
-            value={editable ? ((get(me, "thungSo") as string) ?? "") : (me.thungSo ?? "")}
+            status={editable && !val ? "error" : undefined}
+            value={val}
             disabled={!editable}
             onChange={editable ? (e) => set(me.id, "thungSo", e.target.value || null) : undefined} />
         );
@@ -825,10 +835,11 @@ export const TinhLuyenPanel = ({
       render: (_, me) => {
         const locked = isLocked(me);
         const raw = (locked ? me.thoiGian : get(me, "thoiGian")) as string | null;
+        const hasError = !locked && !raw;
         return (
           <input
             type="time"
-            style={{ width: 95, fontSize: 13, padding: "0 4px", borderRadius: 4, border: "1px solid #d9d9d9", height: 24, background: locked ? "#f5f5f5" : undefined, color: locked ? "rgba(0,0,0,0.25)" : undefined, cursor: locked ? "not-allowed" : undefined }}
+            style={{ width: 95, fontSize: 13, padding: "0 4px", borderRadius: 4, border: hasError ? "1px solid #ff4d4f" : "1px solid #d9d9d9", height: 24, background: locked ? "#f5f5f5" : undefined, color: locked ? "rgba(0,0,0,0.25)" : undefined, cursor: locked ? "not-allowed" : undefined }}
             value={raw ?? ""}
             disabled={locked}
             onChange={locked ? undefined : (e) => set(me.id, "thoiGian", e.target.value || null)}
@@ -840,9 +851,11 @@ export const TinhLuyenPanel = ({
       title: "KL thùng LF sau khi ra thép", key: "kllfSauThep", width: 70,
       render: (_, me) => {
         const editable = !!me.isManualTL && !isLocked(me);
+        const val = editable ? (get(me, "kllfSauThep") as number) : (me.kllfSauThep ?? undefined);
         return (
           <InputNumber size="small" style={{ width: 64 }}
-            value={editable ? (get(me, "kllfSauThep") as number) : (me.kllfSauThep ?? undefined)}
+            status={editable && val == null ? "error" : undefined}
+            value={val}
             disabled={!editable}
             onChange={editable ? (v) => set(me.id, "kllfSauThep", v) : undefined} />
         );
@@ -852,9 +865,11 @@ export const TinhLuyenPanel = ({
       title: "KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)", key: "klLan1", width: 75,
       render: (_, me) => {
         const disabled = isLocked(me) || isLenThang(me);
+        const val = disabled ? me.klLan1 : (get(me, "klLan1") as number);
         return (
           <InputNumber size="small" style={{ width: 68 }}
-            value={disabled ? me.klLan1 : (get(me, "klLan1") as number)}
+            status={!disabled && val == null ? "error" : undefined}
+            value={val}
             disabled={disabled}
             onChange={disabled ? undefined : (v) => set(me.id, "klLan1", v)} />
         );
@@ -864,9 +879,11 @@ export const TinhLuyenPanel = ({
       title: "KL bì - Lần 2 (tấn)", key: "klLan2", width: 75,
       render: (_, me) => {
         const locked = isLocked(me);
+        const val = locked ? me.klLan2 : (get(me, "klLan2") as number);
         return (
           <InputNumber size="small" style={{ width: 68 }}
-            value={locked ? me.klLan2 : (get(me, "klLan2") as number)}
+            status={!locked && val == null ? "error" : undefined}
+            value={val}
             disabled={locked}
             onChange={locked ? undefined : (v) => set(me.id, "klLan2", v)} />
         );
@@ -901,9 +918,11 @@ export const TinhLuyenPanel = ({
       title: "Máy đúc", key: "idMayDucDich", width: 125,
       render: (_, me) => {
         const disabled = isLocked(me) || isLenThang(me);
+        const val = disabled ? (me.idMayDucDich ?? undefined) : ((get(me, "idMayDucDich") as number) ?? undefined);
         return (
           <Select size="small" style={{ width: 120 }} showSearch optionFilterProp="label"
-            value={disabled ? (me.idMayDucDich ?? undefined) : ((get(me, "idMayDucDich") as number) ?? undefined)}
+            status={!disabled && val == null ? "error" : undefined}
+            value={val}
             options={mayDucOpts}
             allowClear={!disabled}
             disabled={disabled}
@@ -1280,6 +1299,22 @@ export const DucPanel = ({
       scrollX={1370}
       scrollY="calc(100vh - 190px)"
       onRow={(me) => ({ style: me.isManualTL ? { background: "#fff1f0" } : undefined })}
+      summary={(pageData) => {
+        const total = Math.round(pageData.reduce((s, m) => s + (m.klThepLong ?? 0), 0) * 100) / 100;
+        return (
+          <Table.Summary fixed>
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0} colSpan={9}>
+                <strong>Tổng</strong>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={9}>
+                <strong>{total}</strong>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={10} colSpan={8} />
+            </Table.Summary.Row>
+          </Table.Summary>
+        );
+      }}
     />
   );
 };

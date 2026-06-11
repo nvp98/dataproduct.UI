@@ -127,6 +127,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       maBmList: MABM_LIST,
       fixedFilters,
       transformFilters,
+      persistKey: true,
     });
 
   const statusConfig = PHIEU_STATUS_CONFIG;
@@ -348,11 +349,17 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       },
     },
     {
-      title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
+      title: "Số mẻ",
+      key: "nguoiTaoOrSoMe",
       width: 200,
       ellipsis: true,
+      render: (_: unknown, record: TableRecord) => {
+        if (record.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong) {
+          const count = (record as TableRecord & { soLuongMe?: number | null }).soLuongMe;
+          return count != null ? <span>{count} mẻ </span>: "-";
+        }
+        return record.nguoiTaoId ?? "-";
+      },
     },
     {
       title: "Trạng thái",
@@ -450,6 +457,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
         showCreateButton={false}
         onCreateClick={() => {}}
         createButtonText=""
+        storageKey={true}
         onFilterFieldChange={(key, value) => {
           if (key === "loaiBM") setSelectedLoaiBM(Array.isArray(value) ? value.map(String) : []);
         }}

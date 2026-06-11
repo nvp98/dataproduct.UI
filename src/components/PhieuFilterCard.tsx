@@ -1,8 +1,12 @@
 import { Button, Card, Col, DatePicker, Input, Row, Select } from "antd";
 import { SearchOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { useState, useEffect, useMemo } from "react";
-import type { Dayjs } from "dayjs";
+import { useLocation } from "react-router-dom";
+import { type Dayjs } from "dayjs";
 import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
+
+// Keyed by React Router location.key — restore khi Back, fresh khi navigate mới. Per-tab.
+const _formCache = new Map<string, Record<string, FilterStateValue>>();
 
 export interface PhieuFilterValues {
   soPhieu?: string;
@@ -41,12 +45,14 @@ export interface PhieuFilterCardProps {
   showCreateButton?: boolean;
   onCreateClick?: () => void;
   createButtonText?: string;
-  extraFilters?: React.ReactNode; // Các filter tùy chỉnh thêm vào
-  initialValues?: PhieuFilterValues; // Giá trị ban đầu
-  mergeFilters?: PhieuFilterValues; // Các filter bổ sung sẽ được merge vào filter object
-  filterFields?: FilterFieldConfig[]; // Config cho các filter fields động
-  onFilterFieldChange?: (key: string, value: FilterStateValue) => void; // Callback khi field thay đổi
-  // Check phiếu hàng loạt — tự động hiển thị khi user thuộc P.KH
+  extraFilters?: React.ReactNode;
+  initialValues?: PhieuFilterValues;
+  mergeFilters?: PhieuFilterValues;
+  filterFields?: FilterFieldConfig[];
+  onFilterFieldChange?: (key: string, value: FilterStateValue) => void;
+  /** Persist form state keyed by React Router location.key.
+   *  Restore khi user bấm Back; fresh khi navigate forward đến trang này. */
+  storageKey?: boolean;
   selectedRowCount?: number;
   checkLoading?: boolean;
   onCheckPhieu?: (isCheck: number) => void;
@@ -83,6 +89,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   mergeFilters,
   filterFields = [],
   onFilterFieldChange,
+  storageKey,
   selectedRowCount = 0,
   checkLoading = false,
   onCheckPhieu,
@@ -91,8 +98,10 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
     const user = getThongTinUser();
     return user.tenNgan === "P.KH" || user.iD_PhongBan === 70;
   }, []);
-  // State cho các filter fields động
-  const [filterStates, setFilterStates] = useState<Record<string, FilterStateValue>>(() => {
+
+  const { key: locationKey } = useLocation();
+
+  const buildFreshStates = (): Record<string, FilterStateValue> => {
     const states: Record<string, FilterStateValue> = {};
     filterFields.forEach((field) => {
       if (field.type === "dateRange") {
@@ -103,10 +112,17 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
         states[field.key] = initialValues?.[field.key] || "";
       }
     });
-    // Giữ lại soPhieu và dateRange cho backward compatibility
     states.soPhieu = initialValues?.soPhieu || "";
     states.dateRange = null;
     return states;
+  };
+
+  const [filterStates, setFilterStates] = useState<Record<string, FilterStateValue>>(() => {
+    if (storageKey) {
+      const cached = _formCache.get(locationKey);
+      if (cached) return cached;
+    }
+    return buildFreshStates();
   });
 
   // When filterFields options change, drop any selected values that no longer exist in the options list.
@@ -167,14 +183,18 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   });
 }, [filterFields]);
 
-  const [soPhieu, setSoPhieu] = useState<string>(initialValues?.soPhieu || "");
-  const [dateRange, setDateRange] = useState<
-    [Dayjs | null, Dayjs | null] | null
-  >(
-    initialValues?.fromDate && initialValues?.toDate
-      ? null // Có thể parse từ string nếu cần
-      : null,
+  const [soPhieu, setSoPhieu] = useState<string>(
+    typeof filterStates.soPhieu === "string" ? filterStates.soPhieu : (initialValues?.soPhieu || "")
   );
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(
+    isDayjsRange(filterStates.dateRange) ? filterStates.dateRange : null
+  );
+
+  // Save to cache on every change — Dayjs objects lưu trực tiếp, không cần serialize
+  useEffect(() => {
+    if (!storageKey) return;
+    _formCache.set(locationKey, filterStates);
+  }, [storageKey, locationKey, filterStates]);
 
   const handleFilter = () => {
     const filterObj: PhieuFilterValues = {};
@@ -225,15 +245,14 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   };
 
   const handleClearFilter = () => {
+    if (storageKey) _formCache.delete(locationKey);
     setSoPhieu("");
     setDateRange(null);
-    // Clear các filter fields động
     const clearedStates: Record<string, FilterStateValue> = {};
     filterFields.forEach((field) => {
       const emptyVal: FilterStateValue =
         field.type === "dateRange" ? null : field.type === "multiselect" ? [] : "";
       clearedStates[field.key] = emptyVal;
-      // Notify parent about cleared fields
       if (onFilterFieldChange) {
         onFilterFieldChange(field.key, emptyVal);
       }

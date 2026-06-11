@@ -1,6 +1,6 @@
 import { Table } from "antd";
 import type { TableColumnsType } from "antd";
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import type { HRC1_MeThepVm } from "../../../../services/HRC1_BBGNApi";
 
 interface MeThepTableProps {
@@ -10,6 +10,7 @@ interface MeThepTableProps {
   scrollX?: number;
   scrollY?: number | string;
   onRow?: (r: HRC1_MeThepVm) => HTMLAttributes<HTMLElement>;
+  summary?: (pageData: readonly HRC1_MeThepVm[]) => ReactNode;
 }
 
 const MeThepTable = ({
@@ -19,6 +20,7 @@ const MeThepTable = ({
   scrollX = 1200,
   scrollY,
   onRow,
+  summary,
 }: MeThepTableProps) => (
   <Table
     columns={columns}
@@ -28,6 +30,7 @@ const MeThepTable = ({
     scroll={{ x: scrollX, y: scrollY }}
     pagination={false}
     onRow={onRow}
+    summary={summary}
   />
 );
 

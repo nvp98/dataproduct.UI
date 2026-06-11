@@ -49,6 +49,7 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
   } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
+    persistKey: true,
   });
 
   type TableRecord = SearchPhieuResponseModel & {
@@ -202,6 +203,7 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        storageKey={true}
         showCreateButton={true}
         onCreateClick={() => {
           navigate("/tao_std");
