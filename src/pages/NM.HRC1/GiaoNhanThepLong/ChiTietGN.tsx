@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button, Card, Descriptions, Empty, Select, Space, Spin, Typography, message } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
+import { FileExcelOutlined, FilePdfOutlined, ReloadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
 import { HRC1Api, type HRC1_PhieuDataVm } from "../../../services/HRC1_BBGNApi";
@@ -9,6 +9,7 @@ import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore"
 import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 import { BmQuyenXlApi, type BmQuyenXlModel } from "../../../services/BmQuyenXlApi";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
+import { PhieuApi } from "../../../services/PhieuApi";
 
 const { Title } = Typography;
 
@@ -22,6 +23,8 @@ const ChiTietGN = () => {
   const [data, setData] = useState<HRC1_PhieuDataVm | null>(null);
   const [loading, setLoading] = useState(false);
   const [ducExtraControls, setDucExtraControls] = useState<ReactNode>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [hasQuyenXacNhan, setHasQuyenXacNhan] = useState(false); // quyenChucNang=2
   const [hasQuyenChot, setHasQuyenChot] = useState(false);       // quyenChucNang=3
 
@@ -96,111 +99,192 @@ const ChiTietGN = () => {
   const congDoanLabel = data ? getGroupLabel(data.maBm ?? "") : "";
   const scopeName = data ? getScopeName(data.maBm ?? "", data.scope ?? 0) : "";
 
-  return (
+  const downloadBlob = (raw: unknown, filename: string) => {
+    const blob = raw instanceof Blob ? raw : new Blob([raw as BlobPart]);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const buildExportFilename = (ext: "xlsx" | "pdf") => {
+    if (!data) return `HRC1_export.${ext}`;
+    const label = getGroupLabel(data.maBm ?? "").replace(/\s/g, "_");
+    const ngay = data.ngaySX ? data.ngaySX.toString().replace(/-/g, "") : "";
+    const ca = data.ca === 1 ? "CaNgay" : data.ca === 2 ? "CaDem" : "";
+    return `HRC1_${label}_${ngay}_${ca}.${ext}`;
+  };
+
+  const handleExportExcel = async () => {
+    if (!data) return;
+    setExportingExcel(true);
+    try {
+      const raw = await PhieuApi.exportDetailExcel(data.idPhieu);
+      downloadBlob(raw, buildExportFilename("xlsx"));
+      message.success("Đã tải file Excel");
+    } catch (e: unknown) {
+      const err = e instanceof Blob
+        ? await e.text()
+        : typeof e === "string" ? e : (e as { message?: string })?.message ?? "Lỗi xuất Excel";
+      message.error(err, 6);
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!data) return;
+    setExportingPdf(true);
+    try {
+      const raw = await PhieuApi.exportDynamicPDF(data.idPhieu, {});
+      downloadBlob(raw, buildExportFilename("pdf"));
+      message.success("Đã tải file PDF");
+    } catch (e: unknown) {
+      const err = e instanceof Blob
+        ? await e.text()
+        : typeof e === "string" ? e : (e as { message?: string })?.message ?? "Lỗi xuất PDF";
+      message.error(err, 6);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const exportButtons = (
     <>
-      <div style={{ margin: "24px 24px 0", display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button icon={<ReloadOutlined />} onClick={() => void handleReload()} loading={loading}>
-          Làm mới
-        </Button>
-      </div>
-      <Card style={{ margin: 24 }} loading={loading}>
-        {!idphieu ? (
-          <Empty description="Không có thông tin phiếu" />
-        ) : (
-          <Spin spinning={loading}>
-            <div style={{ textAlign: "center", marginBottom: 16 }}>
-              <Title level={4} style={{ marginBottom: 4 }}>
-                HRC1 — Biên bản giao nhận thép lỏng
-              </Title>
-              {data?.soPhieu && <b>Số phiếu: {data.soPhieu}</b>}
-            </div>
-
-            <Descriptions bordered size="small" column={3} style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="Ngày SX">
-                {data?.ngaySX ? dayjs(data.ngaySX).format("DD/MM/YYYY") : "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ca">
-                {data?.ca === 1 ? "Ca ngày" : data?.ca === 2 ? "Ca đêm" : "-"}
-                {data?.kip ? ` — Kíp ${data.kip}` : ""}
-              </Descriptions.Item>
-              <Descriptions.Item label="Công đoạn / Thiết bị">
-                {data ? `${congDoanLabel} — ${scopeName}` : "-"}
-              </Descriptions.Item>
-            </Descriptions>
-
-            {data && (
-              <>
-                {data.congDoan === "lo_thoi" && (
-                  <>
-                    <div style={{ marginBottom: 12 }}>
-                      <Space>
-                        <span>Lò thổi:</span>
-                        <Select
-                          size="small"
-                          style={{ width: 140 }}
-                          placeholder="Tất cả lò thổi"
-                          value={loSo ?? undefined}
-                          options={LO_SCOPE_OPTS}
-                          onChange={(v) => setLoSo(v ?? null)}
-                          allowClear
-                        />
-                      </Space>
-                    </div>
-                    <LoThoiPanel
-                      phieuData={data}
-                      readOnly
-                      loSo={loSo}
-                      onReload={handleReload}
-                    />
-                  </>
-                )}
-                {data.congDoan === "tinh_luyen" && (
-                  <>
-                    <div style={{ marginBottom: 12 }}>
-                      <Space>
-                        <span>Tinh luyện:</span>
-                        <Select
-                          size="small"
-                          style={{ width: 150 }}
-                          placeholder="Tất cả tinh luyện"
-                          value={tlSo ?? undefined}
-                          options={TL_SCOPE_OPTS}
-                          onChange={(v) => setTlSo(v ?? null)}
-                          allowClear
-                        />
-                      </Space>
-                    </div>
-                    <TinhLuyenPanel
-                      phieuData={data}
-                      readOnly
-                      tlSo={tlSo}
-                      onReload={handleReload}
-                    />
-                  </>
-                )}
-                {data.congDoan === "duc" && (
-                  <>
-                    {canDoAnything && ducExtraControls && (
-                      <div style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {ducExtraControls}
-                      </div>
-                    )}
-                    <DucPanel
-                      phieuData={data}
-                      readOnly={!canDoAnything}
-                      onReload={handleReload}
-                      onExtraChange={canDoAnything ? setDucExtraControls : undefined}
-                      canXacNhan={hasQuyenXacNhan}
-                      canChot={effectiveCanChot}
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </Spin>
-        )}
-      </Card>
+      <Button
+        size="small"
+        icon={<ReloadOutlined />}
+        loading={loading}
+        onClick={() => void handleReload()}
+      >
+        Làm mới
+      </Button>
+      <Button
+        size="small"
+        icon={<FileExcelOutlined />}
+        loading={exportingExcel}
+        disabled={!data}
+        onClick={() => void handleExportExcel()}
+        style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
+      >
+        Excel
+      </Button>
+      <Button
+        size="small"
+        icon={<FilePdfOutlined />}
+        loading={exportingPdf}
+        disabled={!data}
+        onClick={() => void handleExportPdf()}
+        danger
+      >
+        PDF
+      </Button>
     </>
+  );
+
+  return (
+    <Card style={{ margin: 24 }} loading={loading}>
+      {!idphieu ? (
+        <Empty description="Không có thông tin phiếu" />
+      ) : (
+        <Spin spinning={loading}>
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <Title level={4} style={{ marginBottom: 4 }}>
+              HRC1 — Biên bản giao nhận thép lỏng
+            </Title>
+            {data?.soPhieu && <b>Số phiếu: {data.soPhieu}</b>}
+          </div>
+
+          <Descriptions bordered size="small" column={3} style={{ marginBottom: 16 }}>
+            <Descriptions.Item label="Ngày SX">
+              {data?.ngaySX ? dayjs(data.ngaySX).format("DD/MM/YYYY") : "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ca">
+              {data?.ca === 1 ? "Ca ngày" : data?.ca === 2 ? "Ca đêm" : "-"}
+              {data?.kip ? ` — Kíp ${data.kip}` : ""}
+            </Descriptions.Item>
+            <Descriptions.Item label="Công đoạn / Thiết bị">
+              {data ? `${congDoanLabel} — ${scopeName}` : "-"}
+            </Descriptions.Item>
+          </Descriptions>
+
+          {data && (
+            <>
+              {data.congDoan === "lo_thoi" && (
+                <>
+                  <div style={{ marginBottom: 12 }}>
+                    <Space>
+                      <span>Lò thổi:</span>
+                      <Select
+                        size="small"
+                        style={{ width: 140 }}
+                        placeholder="Tất cả lò thổi"
+                        value={loSo ?? undefined}
+                        options={LO_SCOPE_OPTS}
+                        onChange={(v) => setLoSo(v ?? null)}
+                        allowClear
+                      />
+                      {exportButtons}
+                    </Space>
+                  </div>
+                  <LoThoiPanel
+                    phieuData={data}
+                    readOnly
+                    loSo={loSo}
+                    onReload={handleReload}
+                  />
+                </>
+              )}
+              {data.congDoan === "tinh_luyen" && (
+                <>
+                  <div style={{ marginBottom: 12 }}>
+                    <Space>
+                      <span>Tinh luyện:</span>
+                      <Select
+                        size="small"
+                        style={{ width: 150 }}
+                        placeholder="Tất cả tinh luyện"
+                        value={tlSo ?? undefined}
+                        options={TL_SCOPE_OPTS}
+                        onChange={(v) => setTlSo(v ?? null)}
+                        allowClear
+                      />
+                      {exportButtons}
+                    </Space>
+                  </div>
+                  <TinhLuyenPanel
+                    phieuData={data}
+                    readOnly
+                    tlSo={tlSo}
+                    onReload={handleReload}
+                  />
+                </>
+              )}
+              {data.congDoan === "duc" && (
+                <>
+                  <div style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    {canDoAnything && ducExtraControls}
+                    {exportButtons}
+                  </div>
+                  <DucPanel
+                    phieuData={data}
+                    readOnly={!canDoAnything}
+                    onReload={handleReload}
+                    onExtraChange={canDoAnything ? setDucExtraControls : undefined}
+                    canXacNhan={hasQuyenXacNhan}
+                    canChot={effectiveCanChot}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </Spin>
+      )}
+    </Card>
   );
 };
 

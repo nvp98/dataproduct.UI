@@ -332,6 +332,16 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
       render: (v: string) => v ?? "-",
     },
     {
+      title: "Số mẻ",
+      key: "soLuongMe",
+      width: 90,
+      align: "center" as const,
+      render: (_: unknown, r: TableRecord) => {
+        if (r.maBm !== BM_CONFIG.HRC1.HRC1_BBGN_ThepLong) return null;
+        return r.soLuongMe != null ? <span>{r.soLuongMe} mẻ</span> : "-";
+      },
+    },
+    {
       title: "Trạng thái",
       dataIndex: "tinhTrang",
       key: "tinhTrang",
@@ -396,10 +406,10 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
             onClick: () => handleNavigate(record),
             style: { cursor: "pointer" },
           })}
-          scroll={{ x: 1100 }}
+          scroll={{ x: 1200 }}
           summary={() => (
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={8} align="right">
+              <Table.Summary.Cell index={0} colSpan={9} align="right">
                 <span style={{ fontWeight: 500 }}>
                   Tổng: {pagination.total} Phiếu
                 </span>

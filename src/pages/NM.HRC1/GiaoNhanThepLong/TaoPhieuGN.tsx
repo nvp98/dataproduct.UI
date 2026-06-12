@@ -27,6 +27,19 @@ import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 
 // ── Helper hiển thị ───────────────────────────────────────────────────────────
 
+// Ca 2 (20:00→08:00): thoiGian < "20:00" thuộc ngày hôm sau → cộng thêm 1 ngày vào sort key
+const buildMeSortKey = (
+  thoiGian: string | null | undefined,
+  ca: number | null | undefined,
+  ngaySX: string | null | undefined,
+): string => {
+  if (!thoiGian) return "9999-12-31 99:99";
+  const base = ngaySX ?? "2000-01-01";
+  const isNextDay = ca === 2 && thoiGian < "20:00";
+  const date = isNextDay ? dayjs(base).add(1, "day").format("YYYY-MM-DD") : base;
+  return `${date} ${thoiGian}`;
+};
+
 const _mayDucScopes = bmQuyenConfig.danhSachBieuMau
   .find((b) => b.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)?.scope ?? [];
 
@@ -514,10 +527,13 @@ export const LoThoiPanel = ({
 
   // Merge edits vào từng row để rc-table nhận biết thay đổi và re-render cell klThepLong
   const displayData = useMemo(
-    () => phieuData.danhSachMe.map((me) =>
-      edits[me.id] ? ({ ...me, ...edits[me.id] } as HRC1_MeThepVm) : me
-    ),
-    [phieuData.danhSachMe, edits]
+    () => [...phieuData.danhSachMe]
+      .sort((a, b) =>
+        buildMeSortKey(a.thoiGian, phieuData.ca, phieuData.ngaySX)
+          .localeCompare(buildMeSortKey(b.thoiGian, phieuData.ca, phieuData.ngaySX))
+      )
+      .map((me) => edits[me.id] ? ({ ...me, ...edits[me.id] } as HRC1_MeThepVm) : me),
+    [phieuData.danhSachMe, phieuData.ca, phieuData.ngaySX, edits]
   );
 
   if (!readOnly && !loSo) return (
@@ -999,10 +1015,13 @@ export const TinhLuyenPanel = ({
 
   // Merge edits vào từng row để rc-table nhận biết thay đổi và re-render cell klThepLong
   const tlDisplayData = useMemo(
-    () => phieuData.danhSachMe.map((me) =>
-      edits[me.id] ? ({ ...me, ...edits[me.id] } as HRC1_MeThepVm) : me
-    ),
-    [phieuData.danhSachMe, edits]
+    () => [...phieuData.danhSachMe]
+      .sort((a, b) =>
+        buildMeSortKey(a.thoiGian, phieuData.ca, phieuData.ngaySX)
+          .localeCompare(buildMeSortKey(b.thoiGian, phieuData.ca, phieuData.ngaySX))
+      )
+      .map((me) => edits[me.id] ? ({ ...me, ...edits[me.id] } as HRC1_MeThepVm) : me),
+    [phieuData.danhSachMe, phieuData.ca, phieuData.ngaySX, edits]
   );
 
   if (!readOnly && !tlSo) return (
@@ -1094,6 +1113,14 @@ export const DucPanel = ({
   canChot?: boolean;
 }) => {
   const [selected, setSelected] = useState<number[]>([]);
+
+  const sortedMes = useMemo(() =>
+    [...phieuData.danhSachMe].sort((a, b) =>
+      buildMeSortKey(a.thoiGian, phieuData.ca, phieuData.ngaySX)
+        .localeCompare(buildMeSortKey(b.thoiGian, phieuData.ca, phieuData.ngaySX))
+    ),
+    [phieuData.danhSachMe, phieuData.ca, phieuData.ngaySX]
+  );
 
   const batchAction = useCallback(async (fn: () => Promise<unknown>) => {
     if (selected.length === 0) { message.warning("Chưa chọn mẻ nào"); return; }
@@ -1280,7 +1307,14 @@ export const DucPanel = ({
       title: "Ghi chú", key: "ghiChuLo", width: 90,
       render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={readOnly || !!me.isChot} />,
     },
-    { title: "Tinh luyện/Lên thẳng", key: "dichDisp",         width: 90, render: (_, me) => getDichDisplay(me) },
+    {
+      title: "Tinh luyện/Lên thẳng", key: "dichDisp", width: 90,
+      render: (_, me) => {
+        if (me.dichChuyen === "len_thang") return "Lên thẳng";
+        if (me.soTinhLuyenNhan) return `TL ${me.soTinhLuyenNhan}`;
+        return "";
+      },
+    },
     { title: "Thử nghiệm",  dataIndex: "isThuNghiem", width: 50, render: (v) => v ? "✓" : "" },
     { title: "Máy đúc",  dataIndex: "tenMayDucDich", width: 90, render: (v) => v ?? "" },
     { title: "Phân loại",dataIndex: "phanLoai",      width: 80,  render: (v) => v ?? "" },
@@ -1295,7 +1329,7 @@ export const DucPanel = ({
   return (
     <MeThepTable
       columns={columns}
-      dataSource={phieuData.danhSachMe}
+      dataSource={sortedMes}
       scrollX={1370}
       scrollY="calc(100vh - 190px)"
       onRow={(me) => ({ style: me.isManualTL ? { background: "#fff1f0" } : undefined })}

@@ -192,6 +192,8 @@ export interface HRC1_ThongKeRow {
   tenCapNhatBoiTL?: string | null;
   tenCapNhatBoiDuc?: string | null;
   isManualTL?: boolean | null;
+  chuyenVeMaMe?: string | null;
+  tenMayDucChuyen?: string | null;
 }
 
 export interface HRC1_ThongKeResult {
