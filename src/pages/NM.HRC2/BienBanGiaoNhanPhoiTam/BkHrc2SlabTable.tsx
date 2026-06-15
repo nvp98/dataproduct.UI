@@ -3,6 +3,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Button,
   Card,
+  Checkbox,
   Col,
   DatePicker,
   Form,
@@ -22,11 +23,10 @@ import {
   ClearOutlined,
   ArrowUpOutlined,
   RollbackOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
   SyncOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
+  SnippetsOutlined,
 } from "@ant-design/icons";
 import type { TableRowSelection } from "antd/es/table/interface";
 import type { ColumnsType } from "antd/es/table";
@@ -86,6 +86,20 @@ const BkHrc2SlabTable = () => {
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncForm] = Form.useForm();
 
+  // Paste ID Slab
+  const [idSlabPasteOpen, setIdSlabPasteOpen] = useState(false);
+  const [idSlabPasteText, setIdSlabPasteText] = useState("");
+
+  const handleIdSlabPasteConfirm = () => {
+    const ids = idSlabPasteText
+      .split(/[\n\t,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (ids.length > 0) form.setFieldValue("idSlabs", ids);
+    setIdSlabPasteOpen(false);
+    setIdSlabPasteText("");
+  };
+
   const handleSync = async (values: any) => {
     try {
       setSyncLoading(true);
@@ -130,10 +144,12 @@ const BkHrc2SlabTable = () => {
         kip:       filters.kip || null,
         mayDuc:    filters.mayDuc ?? null,
         meThep:    filters.meThep || null,
-        idSlab:    filters.idSlab || null,
+        idSlabs:   filters.idSlabs?.length > 0 ? filters.idSlabs : null,
         macThep:   filters.macThep || null,
-        isChot:    filters.isChot ?? null,
-        trangThaiKCS: filters.trangThaiKCS ?? null,
+        isChot:         filters.isChot ?? null,
+        isTrungIDSlab:  filters.isTrungIDSlab ? true : null,
+        isDiffMacThep:  filters.isDiffMacThep ? true : null,
+        trangThaiKCS:   filters.trangThaiKCS ?? null,
         page,
         pageSize,
       });
@@ -342,7 +358,18 @@ const BkHrc2SlabTable = () => {
     { title: "Ca SX", dataIndex: "shiftName", width: 150, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
     { title: "Kíp", dataIndex: "kipSanXuat", width: 60, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
     { title: "Mẻ thép", dataIndex: "meThep", width: 100, align: "center" as const, fixed: "left" as const },
-    { title: "ID Slab", dataIndex: "idSlab", width: 130, align: "center" as const, fixed: "left" as const },
+    {
+      title: "ID Slab",
+      dataIndex: "idSlab",
+      width: 110,
+      align: "center" as const,
+      fixed: "left" as const,
+      render: (v: string, r: HrcSlabItem) => (
+        <span style={{ color: r.isDiffMacThep ? "#ff4d4f" : undefined, fontWeight: r.isDiffMacThep ? 600 : undefined }}>
+          {v ?? "-"}
+        </span>
+      ),
+    },
     { title: "Mác thép", dataIndex: "macThep", width: 160 , align: "center"},
     {
       title: "Kích thước (mm)",
@@ -435,9 +462,13 @@ const BkHrc2SlabTable = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={12} sm={6} md={2}>
+            <Col xs={12} sm={6} md={1}>
               <Form.Item name="kip" label="Kíp">
-                <Input placeholder="Kíp..." allowClear />
+                <Select allowClear placeholder="Chọn kíp">
+                  <Select.Option value="A">A</Select.Option>
+                  <Select.Option value="B">B</Select.Option>
+                  <Select.Option value="C">C</Select.Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={12} sm={6} md={2}>
@@ -453,9 +484,32 @@ const BkHrc2SlabTable = () => {
                 <Input placeholder="Tên mẻ..." allowClear />
               </Form.Item>
             </Col>
-            <Col xs={12} sm={6} md={3}>
-              <Form.Item name="idSlab" label="ID Slab">
-                <Input placeholder="ID Slab..." allowClear />
+            <Col xs={24} sm={12} md={3}>
+              <Form.Item
+                name="idSlabs"
+                label={
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    ID Slab
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<SnippetsOutlined />}
+                      style={{ padding: 0, height: "auto", lineHeight: 1 }}
+                      onClick={() => setIdSlabPasteOpen(true)}
+                    >
+                      Paste
+                    </Button>
+                  </span>
+                }
+              >
+                <Select
+                  mode="tags"
+                  allowClear
+                  placeholder="Nhập hoặc paste nhiều ID..."
+                  tokenSeparators={[",", "\t"]}
+                  open={false}
+                  maxTagCount="responsive"
+                />
               </Form.Item>
             </Col>
             <Col xs={12} sm={6} md={2}>
@@ -477,6 +531,16 @@ const BkHrc2SlabTable = () => {
                   <Select.Option value={false}>Chưa chốt</Select.Option>
                   <Select.Option value={true}>Đã chốt</Select.Option>
                 </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={12} sm={6} md={2}>
+              <Form.Item name="isTrungIDSlab" valuePropName="checked" label=" ">
+                <Checkbox>ID Slab trùng</Checkbox>
+              </Form.Item>
+            </Col>
+            <Col xs={12} sm={6} md={2}>
+              <Form.Item name="isDiffMacThep" valuePropName="checked" label=" ">
+                <Checkbox>Khác mác thép</Checkbox>
               </Form.Item>
             </Col>
           </Row>
@@ -535,7 +599,11 @@ const BkHrc2SlabTable = () => {
             showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
             onChange: (page, pageSize) => fetchData(page, pageSize, undefined, false),
           }}
-          rowClassName={(r) => r.isChot ? "row-chot" : r.trangThaiKCS === 1 ? "row-chuyen" : ""}
+          rowClassName={(r) =>
+            r.isTrungIDSlab ? "row-trung-idslab" :
+            r.isChot ? "row-chot" :
+            r.trangThaiKCS === 1 ? "row-chuyen" : ""
+          }
         />
       </Card>
 
@@ -630,6 +698,28 @@ const BkHrc2SlabTable = () => {
               opacity: getComputedPhieuStatus(r) === "chot" ? 0.5 : 1,
             },
           })}
+        />
+      </Modal>
+
+      {/* Modal paste danh sách ID Slab */}
+      <Modal
+        title="Paste danh sách ID Slab"
+        open={idSlabPasteOpen}
+        onOk={handleIdSlabPasteConfirm}
+        onCancel={() => { setIdSlabPasteOpen(false); setIdSlabPasteText(""); }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <p style={{ marginBottom: 8, color: "#666", fontSize: 12 }}>
+          Paste danh sách ID Slab từ Excel (mỗi dòng 1 ID, hoặc phân cách bằng dấu phẩy/tab).
+        </p>
+        <Input.TextArea
+          autoFocus
+          value={idSlabPasteText}
+          onChange={(e) => setIdSlabPasteText(e.target.value)}
+          placeholder="Paste dữ liệu từ Excel vào đây..."
+          rows={8}
         />
       </Modal>
 

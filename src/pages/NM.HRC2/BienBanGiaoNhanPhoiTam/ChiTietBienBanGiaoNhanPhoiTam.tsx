@@ -230,7 +230,18 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
 
   // Pivot: nhóm slabRows theo (meThep, macThep, kichThuoc); trải loaiPhoi/chatLuongTPHH thành cột
   const pivotedRows = useMemo(() => {
-    const kipNgay = slabDetails[0]?.shiftName ?? "";
+    // Build map: pivotKey → tập shiftName từ các slab chi tiết (mỗi nhóm có thể có nhiều shiftName)
+    const shiftNameMap = new Map<string, Set<string>>();
+    slabDetails.forEach((d) => {
+      if (!d.shiftName) return;
+      const kt = [d.chieuDay, d.chieuRong, d.chieuDai].every((v) => v != null)
+        ? `${d.chieuDay}x${d.chieuRong}x${d.chieuDai}`
+        : "";
+      const key = `${d.meThep ?? ""}|${d.macThep ?? ""}|${kt}`;
+      if (!shiftNameMap.has(key)) shiftNameMap.set(key, new Set());
+      shiftNameMap.get(key)!.add(d.shiftName);
+    });
+
     const map = new Map<string, Record<string, any>>();
     slabRows.forEach((r) => {
       const kt = [r.chieuDay, r.chieuRong, r.chieuDai].every((v) => v != null)
@@ -238,9 +249,10 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
         : "";
       const rowKey = `${r.meThep ?? ""}|${r.macThep ?? ""}|${kt}`;
       if (!map.has(rowKey)) {
+        const shiftNames = shiftNameMap.get(rowKey);
         map.set(rowKey, {
           key: rowKey,
-          kipNgay,
+          shiftName: shiftNames ? Array.from(shiftNames).join(", ") : "",
           meThep: r.meThep,
           macThep: r.macThep,
           kichThuoc: kt,
@@ -258,7 +270,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
       row.tongKhoiLuong += r.tongKhoiLuong ?? 0;
     });
     return Array.from(map.values()).map((r, i) => ({ ...r, stt: i + 1 }));
-  }, [slabRows, slabDetails, data]);
+  }, [slabRows, slabDetails]);
 
   // Tính tổng các cột sum
   const sumTotals = useMemo(() => {
@@ -337,6 +349,13 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
   const detailColumns = useMemo(
     () => [
       {
+        title: "Ca SX",
+        dataIndex: "shiftName",
+        width: 100,
+        align: "center" as const,
+        render: (v: string) => v ?? "-",
+      },
+      {
         title: "ID Slab",
         dataIndex: "idSlab",
         width: 130,
@@ -347,6 +366,23 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
         dataIndex: "meThep",
         width: 100,
         align: "center" as const,
+      },
+      {
+        title: "Máy đúc",
+        dataIndex: "mayDuc",
+        width: 80,
+        align: "center" as const,
+        render: (v: number) => v != null ? `Máy ${v}` : "-",
+      },
+      {
+        title: "Kích thước",
+        dataIndex: "kichThuoc",
+        width: 130,
+        align: "center" as const,
+        render: (_: unknown, r: HrcSlabItem) =>
+          [r.chieuDay, r.chieuRong, r.chieuDai].every((v) => v != null)
+            ? `${r.chieuDay}x${r.chieuRong}x${r.chieuDai}`
+            : "-",
       },
       {
         title: "Mác thép",

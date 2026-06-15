@@ -45,7 +45,7 @@
       "key": "table1",
       "columns": [
         { "title": "STT",              "dataIndex": "stt",       "width": 50,  "editable": false, "readonly": true },
-        { "title": "Kíp-ngày",         "dataIndex": "kipNgay",   "width": 100 },
+        { "title": "Kíp-ngày",         "dataIndex": "shiftName",   "width": 120 },
         { "title": "Mác thép",         "dataIndex": "macThep",   "width": 100 },
         { "title": "Mẻ",               "dataIndex": "meThep",    "width": 120 },
         { "title": "Kích thước (mm)",  "dataIndex": "kichThuoc", "width": 130 },

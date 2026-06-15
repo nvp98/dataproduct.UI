@@ -26,6 +26,10 @@ a {
   padding: 4px !important;
 } */
 
+/* HRC2 Slab — row highlight */
+.row-trung-idslab > td { background-color: #fffbe6 !important; }
+.row-trung-idslab:hover > td { background-color: #fff1b8 !important; }
+
 /* Override cho các class CSS auto-generated của Ant Design */
 /* .css-dev-only-do-not-override-xepvsj.ant-layout-content {
   padding: 16px !important;

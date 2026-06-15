@@ -7,9 +7,11 @@ export interface HrcSlabSearchRequest {
   kip?: string | null;
   mayDuc?: number | null;
   meThep?: string | null;
-  idSlab?: string | null;
+  idSlabs?: string[] | null;
   macThep?: string | null;
   isChot?: boolean | null;
+  isTrungIDSlab?: boolean | null;
+  isDiffMacThep?: boolean | null;
   trangThaiKCS?: number | null;
   trangThaiDuc?: number | null;
   trangThaiKho?: number | null;
@@ -44,6 +46,8 @@ export interface HrcSlabItem {
   soLo?: string | null;
   orderId?: string | null;
   mayDuc?: number | null;
+  isTrungIDSlab?: boolean | null;
+  isDiffMacThep?: boolean | null;
   line?: number | null;
   sapLastTime?: string | null;
   isChot: boolean;
