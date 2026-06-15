@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_BB_NapLieuLoCao from "../../../utils/BM_config/LG_BB_NapLieuLoCao.json";
-import { Button, Card, Space, Table, Tag } from "antd";
+import { Button, Card, Space, Table, Tag, Tooltip } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import PhieuFilterCard, {
   type FilterFieldConfig,
@@ -11,7 +12,7 @@ import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 
 const NapLieuLoCao = ({ type }: { type?: string }) => {
-  const config = LG_BB_NapLieuLoCao;
+  const config = LG_BB_NapLieuLoCao as any;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
@@ -35,6 +36,12 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
     4: { color: "yellow", text: "Không xác nhận" },
     5: { color: "green", text: "Chốt" },
     6: { color: "gray", text: "Đang phê duyệt" },
+  };
+
+  const approvalStatusConfig: Record<number, { color: string; text: string }> = {
+    0: { color: "default", text: "Chưa xác nhận" },
+    1: { color: "green", text: "Đã ký" },
+    2: { color: "red", text: "Từ chối" },
   };
 
   type TableRecord = SearchPhieuResponseModel & {
@@ -96,13 +103,6 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
       render: (value: string) => (value ? dayjs(value).format("DD/MM/YYYY") : "-"),
     },
     {
-      title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
-      width: 200,
-      ellipsis: true,
-    },
-    {
       title: "Trạng thái",
       dataIndex: "tinhTrang",
       key: "tinhTrang",
@@ -113,20 +113,57 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
         </Tag>
       ),
     },
-    // {
-    //   title: "Thao tác",
-    //   key: "action",
-    //   width: 90,
-    //   render: (_: unknown, record: TableRecord) => (
-    //     <Space>
-    //       <Button
-    //         type="text"
-    //         icon={<EyeOutlined twoToneColor="#1890ff" />}
-    //         onClick={() => navigate(`/chitietbienbannaplieulocao/${record.idphieu}`)}
-    //       />
-    //     </Space>
-    //   ),
-    // },
+    // Cột động phê duyệt từng cấp
+    ...config.signatures
+      .filter((sig: any) => sig.capDuyet >= 0)
+      .sort((a: any, b: any) => a.capDuyet - b.capDuyet)
+      .map((sig: any) => ({
+        title: `${sig.label} (Cấp ${sig.capDuyet})`,
+        key: `approval_${sig.capDuyet}`,
+        width: 180,
+        ellipsis: true,
+        render: (_: unknown, record: TableRecord) => {
+          const pheDuyet = record.pheDuyet || [];
+          const approvalItem = (pheDuyet as any[]).find(
+            (pd: any) => pd.capDuyet === sig.capDuyet,
+          );
+          if (!approvalItem) return <Tag color="default">Chưa gán</Tag>;
+          const status: number = approvalItem.tinhTrang ?? 0;
+          const statusText = approvalStatusConfig[status]?.text || `Trạng thái ${status}`;
+          const fullText = `${statusText}-${approvalItem.hoVaTen || "N/A"}`;
+          return (
+            <Tooltip title={fullText}>
+              <Tag color={approvalStatusConfig[status]?.color || "default"}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    maxWidth: 150,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {fullText}
+                </span>
+              </Tag>
+            </Tooltip>
+          );
+        },
+      })),
+    {
+        title: "Thao tác",
+        key: "action",
+        width: 90,
+        render: (_: unknown, record: TableRecord) => (
+          <Space>
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/chitietbienbannaplieulocao/${record.idphieu}`)}
+            />
+          </Space>
+        ),
+      },
   ];
 
   const filterFieldsConfig: FilterFieldConfig[] = [
