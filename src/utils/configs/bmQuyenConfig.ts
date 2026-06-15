@@ -149,6 +149,11 @@ export const bmQuyenConfig = {
       tenBm: "Biên bản theo dõi ben phế",
       nhom: "NM.NL",
     },
+    {
+      maBm: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
+      tenBm: "Biên bản tồn silo lò cao",
+      nhom: "NM.NMLG",
+    }
   ] as BieuMauQuyenItem[],
 
   // danhSachKhuVuc: [

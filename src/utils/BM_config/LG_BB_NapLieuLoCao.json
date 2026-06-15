@@ -1,0 +1,146 @@
+{
+  "code": "NMLG_BM_NapLieuLoCao",
+  "title": "SỔ THEO DÕI NẠP LIỆU LÒ CAO…..M3",
+  "prefix": "NMLG_BB_NLLC",
+  "headerInfo": {
+    "company": "HÒA PHÁT DUNG QUẤT",
+    "subCompany": "CÔNG TY CỔ PHẦN THÉP"
+  },
+
+  "isoInfo": {
+    "code": "BM.05/QT.05.09",
+    "effectiveDate": "01/06/2023"
+  },
+
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca ngày", "value": "1" },
+        { "label": "Ca đêm", "value": "2" }
+      ]
+    },
+    {
+      "label": "Ngày sản xuất",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    },
+    {
+      "label": "Lò Cao",
+      "type": "select",
+      "required": true,
+      "key": "scope",
+      "options": [
+        { "label": "Lò Cao 1", "value": 1 },
+        { "label": "Lò Cao 2", "value": 2 },
+        { "label": "Lò Cao 3", "value": 3 },
+        { "label": "Lò Cao 4", "value": 4 },
+        { "label": "Lò Cao 5", "value": 5 },
+        { "label": "Lò Cao 6", "value": 6 }
+      ]
+    }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "key": "table1",
+
+      "dataSource": {
+        "type": "api",
+        "endpoint": "/api/LGNL/get-dulieu-silo",
+        "paramsMap": {
+          "idLoCao": "scope",
+          "ngay": "NgaySX",
+          "idCa": "ca"
+        }
+      },
+
+      "columnDefaults": {
+        "width": 100,
+        "format": "decimal",
+        "align": "right"
+      },
+
+      "prefixColumns": [
+        { "title": "Số mẻ", "dataIndex": "soMe", "width": 80, "align": "center" },
+        { "title": "Mẻ/giờ", "dataIndex": "meGio", "width": 80, "align": "center" },
+        { "title": "Thời gian nạp liệu", "dataIndex": "thoiGianNapLieu", "width": 100, "align": "center" },
+        { "title": "Chế độ nạp liệu", "dataIndex": "cheDoNapLieu", "width": 80, "align": "center" },
+        { "title": "Thước thăm liệu 1 (m)", "dataIndex": "thuocThamLieu1", "width": 80, "align": "right" },
+        { "title": "Thước thăm liệu 2 (m)", "dataIndex": "thuocThamLieu2", "width": 80, "align": "right" }
+      ],
+
+      "suffixColumns": [
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 200, "align": "left" }
+      ],
+
+      "fallbackColumns": [
+        {
+          "title": "Quặng thiêu kết (Kg)",
+          "children": [
+            { "title": "Máy", "dataIndex": "quangThieuKet_may", "width": 110, "format": "decimal" },
+            { "title": "Bãi", "dataIndex": "quangThieuKet_bai", "width": 110, "format": "decimal" }
+          ]
+        },
+        {
+          "title": "Quặng vê viên (Kg)",
+          "children": [
+            { "title": "Máy", "dataIndex": "quangVeVien_may", "width": 110, "format": "decimal" },
+            { "title": "Bãi", "dataIndex": "quangVeVien_bai", "width": 110, "format": "decimal" }
+          ]
+        },
+        {
+          "title": "Quặng sống (Kg)",
+          "children": [
+            { "title": "1", "dataIndex": "quangSong_1", "width": 100, "format": "decimal" },
+            { "title": "2", "dataIndex": "quangSong_2", "width": 100, "format": "decimal" }
+          ]
+        },
+        {
+          "title": "Than cốc (Kg)",
+          "children": [
+            { "title": "1", "dataIndex": "thanCoc_1", "width": 100, "format": "decimal" },
+            { "title": "2", "dataIndex": "thanCoc_2", "width": 100, "format": "decimal" }
+          ]
+        },
+        { "title": "Cốc vụn (Kg)", "dataIndex": "cocVun", "width": 110, "format": "decimal" },
+        {
+          "title": "Loại khác (Kg)",
+          "children": [
+            { "title": "1", "dataIndex": "loaiKhac_1", "width": 100, "format": "decimal" },
+            { "title": "2", "dataIndex": "loaiKhac_2", "width": 100, "format": "decimal" }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "footerNotes": [],
+
+  "signatures": [
+    
+    {
+      "label": "Trưởng ca",
+      "type": "selectNguoiKy",
+      "key": "truongcalocao_NM.LG",
+      "maphongBan": "NM.LG",
+      "capDuyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Người theo dõi",
+      "type": "selectNguoiKy",
+      "key": "nguoiTheoDoi_NM.LG",
+      "maphongBan": "NM.LG",
+      "capDuyet": 0,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

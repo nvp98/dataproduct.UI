@@ -137,6 +137,28 @@ export const menuConfig = [
           },
         ],
       },
+      {
+        key: "sub1-4",
+        label: "NM.LG",
+        children: [
+          {
+            key: "sub1-4-0",
+            label: (
+              <Tooltip title="Quản lý biểu mẫu tồn silo">
+                <NavLink to="/silolocao">Quản lý biểu mẫu tồn silo</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub1-4-2",
+            label: (
+              <Tooltip title="Quản lý biểu mẫu nạp liệu lò cao">
+                <NavLink to="/quanlysilonvl">Quản lý biểu mẫu nạp liệu</NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      }
     ],
   },
   {
@@ -431,6 +453,45 @@ export const menuConfig = [
           },
         ],
       },
+      {
+        key: "sub2-8",
+        label: "NM.LG",
+        children: [
+          {
+            key: "sub2-8-1",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
+            label: (
+              <Tooltip title="BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
+                <NavLink to="/naplieulocao">
+                  BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-8-2",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
+            label: (
+              <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)">
+                <NavLink to="/tonsilolocao">
+                  BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-8-3",
+            maBM: BM_CONFIG.NMLG.NMLG_NK_VHPTLC,
+            label: (
+              <Tooltip title="BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)">
+                <NavLink to="/nkvhthanphunlocao">
+                  BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ]
+      }
     ],
   },
   {
@@ -616,6 +677,45 @@ export const menuConfig = [
               <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
                 <NavLink to="/viecdentoi/giaonhantheplong">
                   BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
+      {
+        key: "sub3-8",
+        label: "NM.LG",
+        children: [
+          {
+            key: "sub3-8-1",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
+            label: (
+              <Tooltip title="BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
+                <NavLink to="/viecdentoi/naplieulocao">
+                  BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub3-8-2",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
+            label: (
+              <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)">
+                <NavLink to="/viecdentoi/tonsilolocao">
+                  BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub3-8-3",
+            maBM: BM_CONFIG.NMLG.NMLG_NK_VHPTLC,
+            label: (
+              <Tooltip title="BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)">
+                <NavLink to="/viecdentoi/nkvhthanphunlocao">
+                  BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)
                 </NavLink>
               </Tooltip>
             ),
@@ -847,6 +947,45 @@ export const menuConfig = [
           },
         ],
       },
+      {
+        key:'sub4-7',
+        label:'NM.LG',
+         children: [
+          {
+            key: "sub4-7-1",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
+            label: (
+              <Tooltip title="BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
+                <NavLink to="/viecdentoi/naplieulocao">
+                  BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-7-2",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
+            label: (
+              <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)">
+                <NavLink to="/viecdentoi/tonsilolocao">
+                  BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-7-3",
+            maBM: BM_CONFIG.NMLG.NMLG_NK_VHPTLC,
+            label: (
+              <Tooltip title="BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)">
+                <NavLink to="/viecdentoi/nkvhthanphunlocao">
+                  BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ]
+      }
     ],
   },
   {
