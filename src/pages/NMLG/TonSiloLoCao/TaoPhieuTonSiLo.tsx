@@ -726,9 +726,23 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
 
   // Validate form trước khi phieuActionService thực hiện đổi trạng thái
   const handleStatusChange = useCallback(async () => {
-    try { await form.validateFields(); }
+    try {
+      await form.validateFields();
+      // Validate tổng KL tách phải bằng KL gốc
+      const splitGroupIds = [...new Set(tableData.filter((r) => r._splitGroupId).map((r) => r._splitGroupId!))];
+      for (const gid of splitGroupIds) {
+        const parent = tableData.find((r) => r._splitGroupId === gid && r._isSplitParent);
+        const children = tableData.filter((r) => r._splitGroupId === gid && !r._isSplitParent);
+        const childSum = children.reduce((s, r) => s + (Number(r.klTonCuoiKip) || 0), 0);
+        const parentKL = Number(parent?.klTonCuoiKip) || 0;
+        if (Math.abs(childSum - parentKL) > 0.001) {
+          message.error(`Silo "${parent?.silo}": Tổng KL tách (${childSum.toFixed(3)}) phải bằng KL ban đầu (${parentKL.toFixed(3)})`);
+          return;
+        }
+      }
+    }
     catch (error: any) { message.error(error?.message || "Vui lòng kiểm tra dữ liệu trước khi đổi trạng thái"); }
-  }, [form]);
+  }, [form, tableData]);
 
   // Sau khi action thành công: navigate đến phiếu mới (clone) hoặc reload dữ liệu hiện tại
   const handleActionSuccess = useCallback(
@@ -792,7 +806,13 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     const next = [...tableData];
     next.splice(idx, 1, parent, { ...childBase, key: `${gid}_0` }, { ...childBase, key: `${gid}_1` });
     setTableData(next.map((r, i) => ({ ...r, stt: i + 1 })));
-  }, [tableData]);
+    // Tự động tải danh sách NVL nếu chưa có (để dropdown tách liệu có thể chọn)
+    if (scope && nvlOptions.filter((n) => n.idLoCao === Number(scope)).length === 0) {
+      lgTSLNvlApi.getList({ idLoCao: Number(scope) })
+        .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
+        .catch(() => {});
+    }
+  }, [tableData, scope, nvlOptions]);
 
   // Gộp lại nhóm tách liệu: xóa tất cả hàng con, giữ lại hàng parent và làm nó thành dòng bình thường
   const handleMergeGroup = useCallback((gid: string) => {
@@ -1278,12 +1298,14 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                     const childSum = tableData
                       .filter((r) => r._splitGroupId === row._splitGroupId && !r._isSplitParent)
                       .reduce((s, r) => s + (Number(r.klTonCuoiKip) || 0), 0);
-                    const isOver = childSum > (numVal ?? 0) + 0.001;
+                    const parentKL = numVal ?? 0;
+                    const isNotEqual = Math.abs(childSum - parentKL) > 0.001;
                     return (
                       <div>
                         <InputNumber style={{ width: "100%", backgroundColor: "#fffbe6" }} value={numVal} readOnly disabled precision={3} />
-                        <div style={{ fontSize: 11, color: isOver ? "#ff4d4f" : "#52c41a", marginTop: 2 }}>
-                          Đã phân: {childSum.toLocaleString("en-US")} / {(numVal ?? 0).toLocaleString("en-US")}
+                        <div style={{ fontSize: 11, color: isNotEqual ? "#ff4d4f" : "#52c41a", marginTop: 2 }}>
+                          Đã phân: {childSum.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} / {parentKL.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                          {isNotEqual ? (childSum < parentKL ? " (thiếu)" : " (vượt)") : " ✓ Khớp"}
                         </div>
                       </div>
                     );

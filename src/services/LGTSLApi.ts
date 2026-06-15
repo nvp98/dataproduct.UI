@@ -19,19 +19,19 @@ export interface UpdateLGTSLSiLoDto extends CreateLGTSLSiLoDto {}
 
 export const lgTSLSiLoApi = {
   getList: (params?: { idLoCao?: number }) =>
-    apiService.get<LGTSLSiLoDto[]>("/api/LGTSL/tonsilo-silo", { params }),
+    apiService.get<LGTSLSiLoDto[]>("/api/LGTSL/get-tonsilo-silo", { params }),
 
   getById: (id: number) =>
-    apiService.get<LGTSLSiLoDto>(`/api/LGTSL/tonsilo-silo/${id}`),
+    apiService.get<LGTSLSiLoDto>(`/api/LGTSL/get-tonsilo-silo/${id}`),
 
   create: (dto: CreateLGTSLSiLoDto) =>
-    apiService.post<LGTSLSiLoDto>("/api/LGTSL/tonsilo-silo", dto),
+    apiService.post<LGTSLSiLoDto>("/api/LGTSL/post-tonsilo-silo", dto),
 
   update: (id: number, dto: UpdateLGTSLSiLoDto) =>
-    apiService.put<LGTSLSiLoDto>(`/api/LGTSL/tonsilo-silo/${id}`, dto),
+    apiService.put<LGTSLSiLoDto>(`/api/LGTSL/put-tonsilo-silo/${id}`, dto),
 
   delete: (id: number) =>
-    apiService.delete(`/api/LGTSL/tonsilo-silo/${id}`),
+    apiService.delete(`/api/LGTSL/delete-tonsilo-silo/${id}`),
 };
 
 // ─── NVL (LG_TSL_NVL) ────────────────────────────────────────────────────────
@@ -61,22 +61,22 @@ export interface UpdateLGTSLNvlDto extends CreateLGTSLNvlDto {}
 
 export const lgTSLNvlApi = {
   getList: (params?: { idLoCao?: number }) =>
-    apiService.get<LGTSLNvlDto[]>("/api/LGTSL/tonsilo-nvl", { params }),
+    apiService.get<LGTSLNvlDto[]>("/api/LGTSL/get-tonsilo-nvl", { params }),
 
   getById: (id: number) =>
-    apiService.get<LGTSLNvlDto>(`/api/LGTSL/tonsilo-nvl/${id}`),
+    apiService.get<LGTSLNvlDto>(`/api/LGTSL/get-tonsilo-nvl/${id}`),
 
   create: (dto: CreateLGTSLNvlDto) =>
-    apiService.post<LGTSLNvlDto>("/api/LGTSL/tonsilo-nvl", dto),
+    apiService.post<LGTSLNvlDto>("/api/LGTSL/post-tonsilo-nvl", dto),
 
   update: (id: number, dto: UpdateLGTSLNvlDto) =>
-    apiService.put<LGTSLNvlDto>(`/api/LGTSL/tonsilo-nvl/${id}`, dto),
+    apiService.put<LGTSLNvlDto>(`/api/LGTSL/put-tonsilo-nvl/${id}`, dto),
 
   delete: (id: number) =>
-    apiService.delete(`/api/LGTSL/tonsilo-nvl/${id}`),
+    apiService.delete(`/api/LGTSL/delete-tonsilo-nvl/${id}`),
 
   updateXacNhan: (data: { id: number; xacNhan: boolean }) =>
-    apiService.put("/api/LGTSL/tonsilo-nvl/xac-nhan", data),
+    apiService.put("/api/LGTSL/put-tonsilo-nvl/xac-nhan", data),
 };
 
 // ─── Mapping (LG_TSL_SiLo_Mapping) ───────────────────────────────────────────
@@ -108,23 +108,23 @@ export interface UpdateLGTSLMappingDto extends CreateLGTSLMappingDto {}
 
 export const lgTSLMappingApi = {
   getList: (params?: { ngay?: string; ca?: number; idLoCao?: number }) =>
-    apiService.get<LGTSLMappingDto[]>("/api/LGTSL/tonsilo-mapping", { params }),
+    apiService.get<LGTSLMappingDto[]>("/api/LGTSL/get-tonsilo-mapping", { params }),
 
   getById: (id: number) =>
-    apiService.get<LGTSLMappingDto>(`/api/LGTSL/tonsilo-mapping/${id}`),
+    apiService.get<LGTSLMappingDto>(`/api/LGTSL/get-tonsilo-mapping/${id}`),
 
   create: (dto: CreateLGTSLMappingDto) =>
-    apiService.post<LGTSLMappingDto>("/api/LGTSL/tonsilo-mapping", dto),
+    apiService.post<LGTSLMappingDto>("/api/LGTSL/post-tonsilo-mapping", dto),
 
   update: (id: number, dto: UpdateLGTSLMappingDto, force = false) =>
     apiService.put<LGTSLMappingDto>(
-      `/api/LGTSL/tonsilo-mapping/${id}`,
+      `/api/LGTSL/put-tonsilo-mapping/${id}`,
       dto,
       force ? { params: { force: true } } : undefined,
     ),
 
   delete: (id: number) =>
-    apiService.delete(`/api/LGTSL/tonsilo-mapping/${id}`),
+    apiService.delete(`/api/LGTSL/delete-tonsilo-mapping/${id}`),
 };
 
 // ─── View: SiLo + NVL theo Ngày/Ca/LoCao ─────────────────────────────────────
@@ -145,7 +145,7 @@ export interface LGTSLSiLoMappingViewDto {
 
 export const lgTSLSiLoMappingViewApi = {
   getList: (params?: { idLoCao?: number; ngay?: string; ca?: number }) =>
-    apiService.get<LGTSLSiLoMappingViewDto[]>("/api/LGTSL/tonsilo-silo-mapping", { params }),
+    apiService.get<LGTSLSiLoMappingViewDto[]>("/api/LGTSL/get-tonsilo-silo-mapping", { params }),
 };
 
 // ─── Chi tiết Tồn Silo theo Phiếu (LG_TSL_ChiTiet) ──────────────────────────
@@ -192,23 +192,23 @@ export interface UpsertLGTSLChiTietDto {
 
 export const lgTSLChiTietApi = {
   upsert: (dto: UpsertLGTSLChiTietDto) =>
-    apiService.post("/api/LGTSL/chitiet/upsert", dto),
+    apiService.post("/api/LGTSL/post-chitiet/upsert", dto),
 
-  /** POST /api/LGTSL/sync-chitiet/{idPhieu} — backend tự đọc ngày/ca/lò cao từ phiếu, merge ManualKL, lưu DB */
+  /** POST /api/LGTSL/post-sync-chitiet/{idPhieu} — backend tự đọc ngày/ca/lò cao từ phiếu, merge ManualKL, lưu DB */
   syncChiTiet: (idPhieu: string) =>
-    apiService.post<LGTSLSiLoMappingViewDto[]>(`/api/LGTSL/sync-chitiet/${idPhieu}`, null),
+    apiService.post<LGTSLSiLoMappingViewDto[]>(`/api/LGTSL/post-sync-chitiet/${idPhieu}`, null),
 
   getByPhieu: (idPhieu: string) =>
-    apiService.get<LGTSLChiTietDto[]>(`/api/LGTSL/chitiet/${idPhieu}`),
+    apiService.get<LGTSLChiTietDto[]>(`/api/LGTSL/get-chitiet/${idPhieu}`),
 
   exportPdf: (idPhieu: string, useKeHoachName = false) =>
-    apiService.get<Blob>(`/api/LGTSL/export-pdf/${idPhieu}`, {
+    apiService.get<Blob>(`/api/LGTSL/get-export-pdf/${idPhieu}`, {
       responseType: "blob",
       params: useKeHoachName ? { useKeHoachName: true } : undefined,
     }),
 
   exportExcel: (idPhieu: string) =>
-    apiService.get(`/api/LGTSL/export-excel/${idPhieu}`, {
+    apiService.get(`/api/LGTSL/get-export-excel/${idPhieu}`, {
       responseType: "blob",
       headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
     }),

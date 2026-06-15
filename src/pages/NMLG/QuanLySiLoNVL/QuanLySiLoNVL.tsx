@@ -212,20 +212,6 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
               ))}
             </Select>
           </Form.Item>
-          <Row gutter={12}>
-            <Col span={14}>
-              <Form.Item name="ngaySanXuat" label="Ngày sản xuất">
-                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" allowClear />
-              </Form.Item>
-            </Col>
-            <Col span={10}>
-              <Form.Item name="idCaSanXuat" label="Ca sản xuất">
-                <Select placeholder="Chọn ca" allowClear>
-                  {CA_OPTIONS.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
         </Form>
       </Modal>
     </>
@@ -867,14 +853,6 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
     { title: "STT", key: "stt", width: 55, align: "center", render: (_v, _r, i) => i + 1 },
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
     { title: "Tên NVL NM", dataIndex: "tenNVL_NM", key: "tenNVL_NM" },
-    {
-      title: "Ngày SX", dataIndex: "ngaySanXuat", key: "ngaySanXuat", width: 110, align: "center",
-      render: (v) => v ? dayjs(v).format("DD/MM/YYYY") : "—",
-    },
-    {
-      title: "Ca SX", dataIndex: "idCaSanXuat", key: "idCaSanXuat", width: 70, align: "center",
-      render: (v) => v ?? "—",
-    },
     { title: "Tên NVL (P.KH)", dataIndex: "tenNVL_TK", key: "tenNVL_TK", ellipsis: true },
     {
       title: "Xác nhận",
@@ -1003,20 +981,6 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
             <Col span={10}>
               <Form.Item name="xacNhan" label="Xác nhận">
                 <Switch />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={12}>
-            <Col span={14}>
-              <Form.Item name="ngaySanXuat" label="Ngày sản xuất">
-                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" allowClear />
-              </Form.Item>
-            </Col>
-            <Col span={10}>
-              <Form.Item name="idCaSanXuat" label="Ca sản xuất">
-                <Select placeholder="Chọn ca" allowClear>
-                  {CA_OPTIONS.map((o) => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-                </Select>
               </Form.Item>
             </Col>
           </Row>
