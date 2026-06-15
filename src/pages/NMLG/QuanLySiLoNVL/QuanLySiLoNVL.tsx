@@ -12,7 +12,7 @@ import {
   lgnlSiLoMasterApi, lgnlMappingApi, lgnlNvlApi, lgnlTsMappingApi, lgnlNhomNvlApi,
   type LGNLSiLoMasterDto, type LGNLMappingDto, type LGNLNvlDto,
   type LGNLTsMappingDto, type LGNLNhomNvlDto,
-  type CreateLGNLSiLoMasterDto, type CreateLGNLMappingDto, type CreateLGNLNvlDto,
+  type CreateLGNLSiLoMasterDto, type UpdateLGNLSiLoMasterDto, type CreateLGNLMappingDto, type CreateLGNLNvlDto,
   type CreateLGNLNhomNvlDto, type LGNLChangeSiLoNVLDto,
 } from "../../../services/LGNLApi";
 import { PhieuApi } from "../../../services/PhieuApi";
@@ -76,6 +76,7 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
       idLoCao: row.idLoCao, tenSiLo: row.tenSiLo, thuTu: row.thuTu, tagKey: row.tagKey,
       ngaySanXuat: row.ngaySanXuat ? dayjs(row.ngaySanXuat) : null,
       idCaSanXuat: row.idCaSanXuat ?? null,
+      isDelete: row.isDelete ?? false,
     });
     setEditingRow(row);
     setModalOpen(true);
@@ -89,15 +90,18 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const dto: CreateLGNLSiLoMasterDto = {
+      const baseDto: CreateLGNLSiLoMasterDto = {
         idLoCao: values.idLoCao, tenSiLo: values.tenSiLo,
         thuTu: values.thuTu ?? null, tagKey: values.tagKey ?? null,
         ngaySanXuat: values.ngaySanXuat ? (values.ngaySanXuat as any).format("YYYY-MM-DD") : null,
         idCaSanXuat: values.idCaSanXuat ?? null,
       };
       setModalLoading(true);
-      if (editingRow) { await lgnlSiLoMasterApi.update(editingRow.id, dto); message.success("Cập nhật thành công"); }
-      else { await lgnlSiLoMasterApi.create(dto); message.success("Thêm mới thành công"); }
+      if (editingRow) {
+        const updateDto: UpdateLGNLSiLoMasterDto = { ...baseDto, isDelete: values.isDelete ?? false };
+        await lgnlSiLoMasterApi.update(editingRow.id, updateDto);
+        message.success("Cập nhật thành công");
+      } else { await lgnlSiLoMasterApi.create(baseDto); message.success("Thêm mới thành công"); }
       setModalOpen(false); fetchData(); onDataChange();
     } catch (err: any) {
       if (err?.errorFields) return;
@@ -212,6 +216,11 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
               ))}
             </Select>
           </Form.Item>
+          {editingRow && (
+            <Form.Item name="isDelete" label="Trạng thái" valuePropName="checked">
+              <Switch checkedChildren="Đã xóa" unCheckedChildren="Hoạt động" />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </>

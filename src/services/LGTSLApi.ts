@@ -7,15 +7,19 @@ export interface LGTSLSiLoDto {
   idLoCao: number | null;
   tenSiLo: string | null;
   thuTu: number | null;
+  isDelete?: boolean | null;
 }
 
 export interface CreateLGTSLSiLoDto {
   idLoCao: number;
   tenSiLo: string;
   thuTu?: number | null;
+  thuTuCoDinh?: number | null;
 }
 
-export interface UpdateLGTSLSiLoDto extends CreateLGTSLSiLoDto {}
+export interface UpdateLGTSLSiLoDto extends CreateLGTSLSiLoDto {
+  isDelete?: boolean | null;
+}
 
 export const lgTSLSiLoApi = {
   getList: (params?: { idLoCao?: number }) =>

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   lgTSLSiLoApi, lgTSLNvlApi, lgTSLMappingApi,
   type LGTSLSiLoDto, type LGTSLNvlDto, type LGTSLMappingDto,
-  type CreateLGTSLSiLoDto, type CreateLGTSLNvlDto, type CreateLGTSLMappingDto,
+  type CreateLGTSLSiLoDto, type UpdateLGTSLSiLoDto, type CreateLGTSLNvlDto, type CreateLGTSLMappingDto,
 } from "../../../services/LGTSLApi";
 import { PhieuApi } from "../../../services/PhieuApi";
 
@@ -72,6 +72,7 @@ const SiLoTab = ({ loCaoOptions, filterLoCao, nvlOptions, onDataChange }: SiLoTa
       idLoCao: row.idLoCao,
       tenSiLo: row.tenSiLo,
       thuTu: row.thuTu,
+      isDelete: row.isDelete ?? false,
     });
     setEditingRow(row);
     setModalOpen(true);
@@ -85,14 +86,18 @@ const SiLoTab = ({ loCaoOptions, filterLoCao, nvlOptions, onDataChange }: SiLoTa
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const dto: CreateLGTSLSiLoDto = {
+      const baseDto: CreateLGTSLSiLoDto = {
         idLoCao: values.idLoCao,
         tenSiLo: values.tenSiLo,
         thuTu: values.thuTu ?? null,
+        thuTuCoDinh: values.thuTuCoDinh ?? null,
       };
       setModalLoading(true);
-      if (editingRow) { await lgTSLSiLoApi.update(editingRow.id, dto); message.success("Cập nhật thành công"); }
-      else { await lgTSLSiLoApi.create(dto); message.success("Thêm mới thành công"); }
+      if (editingRow) {
+        const updateDto: UpdateLGTSLSiLoDto = { ...baseDto, isDelete: values.isDelete ?? false };
+        await lgTSLSiLoApi.update(editingRow.id, updateDto);
+        message.success("Cập nhật thành công");
+      } else { await lgTSLSiLoApi.create(baseDto); message.success("Thêm mới thành công"); }
       setModalOpen(false); fetchData(); onDataChange();
     } catch (err: any) { if (err?.errorFields) return; message.error("Lỗi khi lưu"); }
     finally { setModalLoading(false); }
@@ -143,9 +148,32 @@ const SiLoTab = ({ loCaoOptions, filterLoCao, nvlOptions, onDataChange }: SiLoTa
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="tenSiLo" label="Tên Silo" rules={[{ required: true, message: "Nhập tên Silo" }]}>
-            <Input maxLength={100} />
-          </Form.Item>
+          <Row gutter={12}>
+            <Col span={14}>
+              <Form.Item name="tenSiLo" label="Tên Silo" rules={[{ required: true, message: "Nhập tên Silo" }]}>
+                <Input maxLength={100} />
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item
+                name="thuTuCoDinh"
+                label="Thứ tự cố định"
+                rules={[
+                  { required: true, message: "Nhập thứ tự cố định" }
+                ]}
+              >
+                <InputNumber
+                  style={{ width: "100%" }}
+                  min={1}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          {editingRow && (
+            <Form.Item name="isDelete" label="Trạng thái" valuePropName="checked">
+              <Switch checkedChildren="Đã xóa" unCheckedChildren="Hoạt động" />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </>
@@ -160,11 +188,9 @@ interface MappingTabProps {
   ca: number | null;
   idLoCao: number | null;
   loCaoOptions: { label: string; value: number }[];
-  siloOptions: LGTSLSiLoDto[];
-  nvlOptions: LGTSLNvlDto[];
 }
 
-const MappingTab = ({ ngay, ca, idLoCao, loCaoOptions, siloOptions, nvlOptions }: MappingTabProps) => {
+const MappingTab = ({ ngay, ca, idLoCao, loCaoOptions: loCaoOptionsProp }: MappingTabProps) => {
   const [data, setData] = useState<LGTSLMappingDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -173,12 +199,43 @@ const MappingTab = ({ ngay, ca, idLoCao, loCaoOptions, siloOptions, nvlOptions }
   const [form] = Form.useForm();
   const selectedLoCao = Form.useWatch("idLoCao", form);
 
-  const filteredSiloOpts = siloOptions.filter(
-    (s) => !selectedLoCao || s.idLoCao === selectedLoCao,
-  );
-  const filteredNvlOpts = nvlOptions.filter(
-    (n) => !selectedLoCao || n.idLoCao === selectedLoCao,
-  );
+  // Lò cao options: dùng prop từ parent, tự load nếu prop rỗng
+  const [ownLoCaoOptions, setOwnLoCaoOptions] = useState<{ label: string; value: number }[]>([]);
+  const loCaoOptions = loCaoOptionsProp.length > 0 ? loCaoOptionsProp : ownLoCaoOptions;
+
+  // Silo và NVL cho modal: load động khi chọn lò cao
+  const [modalSiloOpts, setModalSiloOpts] = useState<LGTSLSiLoDto[]>([]);
+  const [modalNvlOpts, setModalNvlOpts] = useState<LGTSLNvlDto[]>([]);
+  const [modalSiloLoading, setModalSiloLoading] = useState(false);
+  const [modalNvlLoading, setModalNvlLoading] = useState(false);
+
+  useEffect(() => {
+    if (loCaoOptionsProp.length > 0) return;
+    const { PhieuApi } = require("../../../services/PhieuApi");
+    PhieuApi.getDsLoCao()
+      .then((res: any) => {
+        const list: LoCaoItem[] = Array.isArray(res) ? res : (res?.data ?? []);
+        setOwnLoCaoOptions(
+          list.map((item: LoCaoItem) => ({ label: item.tenLoCao, value: item.id }))
+            .filter((o: any) => Number.isFinite(o.value)),
+        );
+      })
+      .catch(() => {});
+  }, [loCaoOptionsProp.length]);
+
+  useEffect(() => {
+    if (!selectedLoCao || !modalOpen) return;
+    setModalSiloLoading(true);
+    lgTSLSiLoApi.getList({ idLoCao: Number(selectedLoCao) })
+      .then((res) => setModalSiloOpts(Array.isArray(res) ? res : []))
+      .catch(() => setModalSiloOpts([]))
+      .finally(() => setModalSiloLoading(false));
+    setModalNvlLoading(true);
+    lgTSLNvlApi.getList({ idLoCao: Number(selectedLoCao) })
+      .then((res) => setModalNvlOpts(Array.isArray(res) ? res : []))
+      .catch(() => setModalNvlOpts([]))
+      .finally(() => setModalNvlLoading(false));
+  }, [selectedLoCao, modalOpen]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -304,16 +361,16 @@ const MappingTab = ({ ngay, ca, idLoCao, loCaoOptions, siloOptions, nvlOptions }
           </Form.Item>
           <Form.Item name="idSiLo" label="Tên Silo" rules={[{ required: true, message: "Chọn Silo" }]}>
             <Select placeholder={selectedLoCao ? "Chọn Silo" : "Chọn lò cao trước"}
-              disabled={!selectedLoCao} showSearch optionFilterProp="children">
-              {filteredSiloOpts.map((s) => (
+              disabled={!selectedLoCao} loading={modalSiloLoading} showSearch optionFilterProp="children">
+              {modalSiloOpts.map((s) => (
                 <Option key={s.id} value={s.id}>{s.tenSiLo}</Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="idNVL" label="Nguyên vật liệu" rules={[{ required: true, message: "Chọn NVL" }]}>
             <Select placeholder={selectedLoCao ? "Chọn NVL" : "Chọn lò cao trước"}
-              disabled={!selectedLoCao} showSearch optionFilterProp="children">
-              {filteredNvlOpts.map((n) => (
+              disabled={!selectedLoCao} loading={modalNvlLoading} showSearch optionFilterProp="children">
+              {modalNvlOpts.map((n) => (
                 <Option key={n.id} value={n.id}>{n.tenHienThi ?? n.tenNVL}</Option>
               ))}
             </Select>
@@ -501,14 +558,7 @@ const QuanLyTonSiLoNVL = () => {
   const [filterNgay, setFilterNgay] = useState<string | null>(dayjs().format("YYYY-MM-DD"));
   const [filterCa, setFilterCa] = useState<number | null>(null);
   const [filterLoCao, setFilterLoCao] = useState<number | null>(null);
-  const [siloOptions, setSiloOptions] = useState<LGTSLSiLoDto[]>([]);
   const [nvlOptions, setNvlOptions] = useState<LGTSLNvlDto[]>([]);
-
-  const loadSiloOptions = useCallback(() => {
-    lgTSLSiLoApi.getList(filterLoCao ? { idLoCao: filterLoCao } : undefined)
-      .then((res) => setSiloOptions(Array.isArray(res) ? res : []))
-      .catch(() => setSiloOptions([]));
-  }, [filterLoCao]);
 
   const loadNvlOptions = useCallback(() => {
     const params: any = {};
@@ -530,7 +580,6 @@ const QuanLyTonSiLoNVL = () => {
       .catch(() => setLoCaoOptions([]));
   }, []);
 
-  useEffect(() => { loadSiloOptions(); }, [loadSiloOptions]);
   useEffect(() => { loadNvlOptions(); }, [loadNvlOptions]);
 
   return (
@@ -570,7 +619,7 @@ const QuanLyTonSiLoNVL = () => {
                 loCaoOptions={loCaoOptions}
                 filterLoCao={filterLoCao}
                 nvlOptions={nvlOptions}
-                onDataChange={loadSiloOptions}
+                onDataChange={() => {}}
               />
             ),
           },
@@ -583,8 +632,6 @@ const QuanLyTonSiLoNVL = () => {
                 ca={filterCa}
                 idLoCao={filterLoCao}
                 loCaoOptions={loCaoOptions}
-                siloOptions={siloOptions}
-                nvlOptions={nvlOptions}
               />
             ),
           },

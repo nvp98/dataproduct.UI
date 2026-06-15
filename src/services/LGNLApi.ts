@@ -22,6 +22,7 @@ export interface LGNLSiLoMasterDto {
   tagKey: string | null;
   ngaySanXuat: string | null;
   idCaSanXuat: number | null;
+  isDelete?: boolean | null;
 }
 
 export interface CreateLGNLSiLoMasterDto {
@@ -33,7 +34,9 @@ export interface CreateLGNLSiLoMasterDto {
   idCaSanXuat?: number | null;
 }
 
-export interface UpdateLGNLSiLoMasterDto extends CreateLGNLSiLoMasterDto {}
+export interface UpdateLGNLSiLoMasterDto extends CreateLGNLSiLoMasterDto {
+  isDelete?: boolean | null;
+}
 
 export const lgnlSiLoMasterApi = {
   getList: (params?: { idLoCao?: number; ngaySX?: string; idCaSX?: number }) =>
