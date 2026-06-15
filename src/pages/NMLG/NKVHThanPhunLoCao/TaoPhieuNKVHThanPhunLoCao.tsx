@@ -710,23 +710,108 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
         )}
 
         {prodSummarySection && (
-          <Card title={prodSummarySection.title} size="small" style={{ marginTop: 16 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-              {(prodSummarySection.fields as any[]).map((field: any) => (
-                <Form.Item
-                  key={field.key}
-                  name={[prodSummarySection.key, field.key]}
-                  label={field.label}
-                  style={{ marginBottom: 0 }}
-                >
-                  {field.type === "number" ? (
-                    <InputNumber style={{ width: "100%" }} disabled={isFormLocked} />
-                  ) : (
-                    <Input disabled={isFormLocked} />
-                  )}
-                </Form.Item>
-              ))}
-            </div>
+          <Card
+            title={prodSummarySection.title}
+            size="small"
+            style={{ marginTop: 16 }}
+          >
+            <Table
+
+              bordered
+              pagination={false}
+              size="small"
+              rowKey="key"
+              dataSource={[
+                {
+                  key: "sanLuongNghien",
+                  chiTieu: "Sản lượng nghiền (t)"
+                },
+                {
+                  key: "sanLuongPhun",
+                  chiTieu: "Sản lượng phun (t)"
+                },
+                {
+                  key: "tonThanTho",
+                  chiTieu: "Tồn than thô (t)"
+                },
+                {
+                  key: "tonThanTinh",
+                  chiTieu: "Tồn than tinh (t)"
+                }
+              ]}
+              columns={[
+                {
+                  title: "Kíp",
+                  dataIndex: "chiTieu",
+                  width: 250
+                },
+                {
+                  title: "Kíp A",
+                  dataIndex: "caNgay",
+                  render: (_, record) => (
+                    <Form.Item
+                      name={[
+                        prodSummarySection.key,
+                        record.key,
+                        "caNgay"
+                      ]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <InputNumber
+                        style={{ width: "100%" }}
+                        disabled={isFormLocked}
+                      />
+                    </Form.Item>
+                  )
+                },
+                {
+                  title: "Kíp B",
+                  dataIndex: "caDem",
+                  render: (_, record) => (
+                    <Form.Item
+                      name={[
+                        prodSummarySection.key,
+                        record.key,
+                        "caDem"
+                      ]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <InputNumber
+                        style={{ width: "100%" }}
+                        disabled={isFormLocked}
+                      />
+                    </Form.Item>
+                  )
+                },
+                {
+                  title: "Tổng",
+                  dataIndex: "tong",
+                  render: (_, record) => {
+                    const ngay =
+                      form.getFieldValue([
+                        prodSummarySection.key,
+                        record.key,
+                        "caNgay"
+                      ]) || 0;
+
+                    const dem =
+                      form.getFieldValue([
+                        prodSummarySection.key,
+                        record.key,
+                        "caDem"
+                      ]) || 0;
+
+                    return (
+                      <InputNumber
+                        value={Number(ngay) + Number(dem)}
+                        disabled
+                        style={{ width: "100%" }}
+                      />
+                    );
+                  }
+                }
+              ]}
+            />
           </Card>
         )}
 

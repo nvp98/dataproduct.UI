@@ -69,6 +69,8 @@ export interface LGPTLCChiTietDto {
 
   sanLuongNghien: number | null;
   sanLuongPhun: number | null;
+  tonThanTho: number | null;
+  tonThanTinh: number | null;
   ghiChu: string | null;
   tinhTrangSanXuat: string | null;
   sapXepSanXuat: string | null;
@@ -115,6 +117,8 @@ export interface UpdateLGPTLCManualDto {
 export interface UpdateLGPTLCSummaryDto {
   sanLuongNghien: number | null;
   sanLuongPhun: number | null;
+  tonThanTho: number | null;
+  tonThanTinh: number | null;
   tinhTrangSanXuat: string | null;
   sapXepSanXuat: string | null;
 }
