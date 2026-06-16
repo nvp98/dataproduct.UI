@@ -4,6 +4,7 @@
 //   - Ô nhập tay (_manual_) được tô cam + viền cam.
 //   - Hover hiển thị Tooltip "Giá trị gốc: X" (giá trị SCADA trước khi sửa tay).
 //   - handleCellChange: _goc_ chỉ được ghi đúng một lần (double-condition guard).
+//   - isEmpty = true → ô xám, không cho nhập (slot rỗng từ BE).
 
 import React, { useState, useEffect } from "react";
 import {
@@ -19,6 +20,16 @@ import {
 } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 
+interface ColumnChild {
+  title: string;
+  dataIndex: string | number;
+  format?: string;
+  type?: "text" | "number" | "float" | any;
+  options?: Array<{ label: string; value: string | number }>;
+  isEmpty?: boolean; // ← slot rỗng từ BE
+  width?: number | string;
+}
+
 interface CustomFormNLTableProps {
   columns: Array<{
     title: string;
@@ -28,13 +39,8 @@ interface CustomFormNLTableProps {
     fixed?: "left" | "right";
     format?: string;
     type?: "text" | "number" | "float" | any;
-    children?: Array<{
-      title: string;
-      dataIndex: string | number;
-      format?: string;
-      type?: "text" | "number" | "float" | any;
-      options?: Array<{ label: string; value: string | number }>;
-    }>;
+    isEmpty?: boolean; // ← slot rỗng từ BE (cột đơn không có children)
+    children?: ColumnChild[];
     options?: Array<{ label: string; value: string | number }>;
   }>;
   initialData?: any[];
@@ -58,10 +64,17 @@ interface CustomFormNLTableProps {
   onCellChange?: (rowIndex: number, dataIndex: string, value: any, row: any) => void;
   compactWhenEmpty?: boolean;
   summary?: (data: readonly any[]) => React.ReactNode;
-  // dataIndex khớp pattern này → track _manual_ + _goc_ khi người dùng sửa
   manualTrackPattern?: RegExp;
   onRow?: (record: any, index?: number) => any;
 }
+
+// ── Style cho ô slot rỗng (không có NVL tương ứng) ──────────────────────────
+const EMPTY_SLOT_STYLE: React.CSSProperties = {
+  backgroundColor: "#f0f0f0",
+  border: "1px solid #d9d9d9",
+  cursor: "not-allowed",
+  textAlign: "right",
+};
 
 export default function CustomFormNLTable({
   columns,
@@ -126,6 +139,11 @@ export default function CustomFormNLTable({
   };
 
   const [rows, setRows] = useState(initialData);
+
+  // ── Render ô slot rỗng ───────────────────────────────────────────────────────
+  const renderEmptySlot = () => (
+    <Input value="" readOnly style={EMPTY_SLOT_STYLE} />
+  );
 
   // ── NL-specific: tô cam cho ô nhập tay, vàng cho readonly ──────────────────
   const getCellStyle = (dataIndex: string | number, value: any, row?: any, readonly?: boolean) => {
@@ -195,8 +213,10 @@ export default function CustomFormNLTable({
   const getAllFieldKeys = (cols: any[]): string[] => {
     const keys: string[] = [];
     cols.forEach((col) => {
-      if (col.dataIndex) keys.push(col.dataIndex);
-      if (col.children) col.children.forEach((child: any) => { if (child.dataIndex) keys.push(child.dataIndex); });
+      if (col.dataIndex && !col.isEmpty) keys.push(col.dataIndex);
+      if (col.children) col.children.forEach((child: any) => {
+        if (child.dataIndex && !child.isEmpty) keys.push(child.dataIndex);
+      });
     });
     return keys;
   };
@@ -218,113 +238,161 @@ export default function CustomFormNLTable({
     onCellChange?.(rowIndex, dataIndex, value, newData[rowIndex]);
   };
 
+  // ── Render 1 child column (dùng chung cho cả có/không isEmpty) ──────────────
+  const renderChildColumn = (child: ColumnChild, record: any, idx: number) => {
+    // ✅ Slot rỗng từ BE → ô xám, không cho nhập
+    if (child.isEmpty) {
+      return renderEmptySlot();
+    }
+
+    // Readonly field
+    if (readonlyFields.includes(String(child.dataIndex))) {
+      return wrapManualCell(
+        <Input
+          placeholder={child.title}
+          value={formatIfNeeded(child.format, record[child.dataIndex])}
+          readOnly
+          style={getCellStyle(child.dataIndex, record[child.dataIndex], record, true)}
+        />,
+        child.dataIndex,
+        record
+      );
+    }
+
+    // Select
+    if (child.options) {
+      return (
+        <Select
+          placeholder={child.title}
+          value={record[child.dataIndex] ?? undefined}
+          onChange={(value) => handleCellChange(value, idx, child.dataIndex as string)}
+          options={child.options}
+          disabled={!editable}
+          style={{ width: "100%" }}
+        />
+      );
+    }
+
+    // Normal editable input
+    return wrapManualCell(
+      <Input
+        placeholder={child.title}
+        value={record[child.dataIndex] ?? ""}
+        onChange={(e) => {
+          const validated = validateAndFormatInput(e.target.value, child.type);
+          handleCellChange(validated, idx, child.dataIndex as string);
+        }}
+        disabled={!editable}
+        style={getCellStyle(child.dataIndex, record[child.dataIndex], record, false)}
+      />,
+      child.dataIndex,
+      record
+    );
+  };
+
+  // ── Render 1 cột đơn (không có children) ────────────────────────────────────
+  const renderSingleColumn = (col: any, record: any, idx: number) => {
+    // ✅ Slot rỗng từ BE
+    if (col.isEmpty) {
+      return renderEmptySlot();
+    }
+
+    if (readonlyFields.includes(String(col.dataIndex))) {
+      return wrapManualCell(
+        <Input
+          placeholder={col.title}
+          value={formatIfNeeded(col.format, record[col.dataIndex || ""])}
+          readOnly
+          style={getCellStyle(col.dataIndex as string, record[col.dataIndex || ""], record, true)}
+        />,
+        col.dataIndex as string,
+        record
+      );
+    }
+
+    if (col.options) {
+      return (
+        <Select
+          placeholder={col.title}
+          value={record[col.dataIndex ?? ""] ?? undefined}
+          onChange={(value) => handleCellChange(value, idx, col.dataIndex as string)}
+          options={col.options}
+          disabled={!editable}
+          style={{ width: "100%" }}
+        />
+      );
+    }
+
+    return wrapManualCell(
+      <Input
+        placeholder={col.title}
+        value={record[col.dataIndex ?? ""] ?? ""}
+        onChange={(e) => {
+          const validated = validateAndFormatInput(e.target.value, col.type);
+          handleCellChange(validated, idx, col.dataIndex as string);
+        }}
+        disabled={!editable}
+        style={getCellStyle(col.dataIndex as string, record[col.dataIndex ?? ""], record, false)}
+      />,
+      col.dataIndex as string,
+      record
+    );
+  };
+
   const tableColumns = [
     ...columns.map((col) => {
+      // Có children → nhóm cột
       if (col.children) {
         return {
           title: col.title,
           width: col.width,
           fixed: col.fixed,
-          children: col.children.map((child: { title: string | undefined; dataIndex: string | number; width?: number | string }) => ({
+          children: col.children.map((child) => ({
             title: child.title,
             dataIndex: child.dataIndex,
             width: child.width,
             render: (_: any, record: any, idx: number) =>
-              readonlyFields.includes(String(child.dataIndex)) ? (
-                wrapManualCell(
-                  <Input
-                    placeholder={child.title}
-                    value={formatIfNeeded((child as any)?.format, record[child.dataIndex])}
-                    readOnly
-                    style={getCellStyle(child.dataIndex, record[child.dataIndex], record, true)}
-                  />,
-                  child.dataIndex, record
-                )
-              ) : (child as any).options ? (
-                <Select
-                  placeholder={child.title}
-                  value={record[child.dataIndex] ?? undefined}
-                  onChange={(value) => handleCellChange(value, idx, child.dataIndex as string)}
-                  options={(child as any).options}
-                  disabled={!editable}
-                  style={{ width: "100%" }}
-                />
-              ) : (
-                wrapManualCell(
-                  <Input
-                    placeholder={child.title}
-                    value={record[child.dataIndex] ?? ""}
-                    onChange={(e) => {
-                      const validated = validateAndFormatInput(e.target.value, (child as any)?.type);
-                      handleCellChange(validated, idx, child.dataIndex as string);
-                    }}
-                    disabled={!editable}
-                    style={getCellStyle(child.dataIndex, record[child.dataIndex], record, false)}
-                  />,
-                  child.dataIndex, record
-                )
-              ),
+              renderChildColumn(child, record, idx),
           })),
         };
-      } else {
-        if (col.isLabel) {
-          return {
-            title: col.title,
-            dataIndex: col.dataIndex,
-            width: col.width,
-            render: (_: any, record: any) => (
-              <div style={{ paddingLeft: 8, backgroundColor: !editable ? "#fffbe6" : undefined }}>
-                {record[col.dataIndex || ""]}
-              </div>
-            ),
-          };
-        }
-        if ((col as any).type === "index") {
-          return { title: col.title, dataIndex: col.dataIndex, width: col.width, fixed: col.fixed, render: (col as any).render };
-        }
+      }
+
+      // Label column
+      if (col.isLabel) {
+        return {
+          title: col.title,
+          dataIndex: col.dataIndex,
+          width: col.width,
+          render: (_: any, record: any) => (
+            <div style={{ paddingLeft: 8, backgroundColor: !editable ? "#fffbe6" : undefined }}>
+              {record[col.dataIndex || ""]}
+            </div>
+          ),
+        };
+      }
+
+      // Index column
+      if ((col as any).type === "index") {
         return {
           title: col.title,
           dataIndex: col.dataIndex,
           width: col.width,
           fixed: col.fixed,
-          render: (_: any, record: any, idx: number) =>
-            readonlyFields.includes(String(col.dataIndex)) ? (
-              wrapManualCell(
-                <Input
-                  placeholder={col.title}
-                  value={formatIfNeeded((col as any)?.format, record[col.dataIndex || ""])}
-                  readOnly
-                  style={getCellStyle(col.dataIndex as string, record[col.dataIndex || ""], record, true)}
-                />,
-                col.dataIndex as string, record
-              )
-            ) : (col as any).options ? (
-              <Select
-                placeholder={col.title}
-                value={record[col.dataIndex ?? ""] ?? undefined}
-                onChange={(value) => handleCellChange(value, idx, col.dataIndex as string)}
-                options={(col as any).options}
-                disabled={!editable}
-                style={{ width: "100%" }}
-              />
-            ) : (
-              wrapManualCell(
-                <Input
-                  placeholder={col.title}
-                  value={record[col.dataIndex ?? ""] ?? ""}
-                  onChange={(e) => {
-                    const validated = validateAndFormatInput(e.target.value, (col as any)?.type);
-                    handleCellChange(validated, idx, col.dataIndex as string);
-                  }}
-                  disabled={!editable}
-                  style={getCellStyle(col.dataIndex as string, record[col.dataIndex ?? ""], record, false)}
-                />,
-                col.dataIndex as string, record
-              )
-            ),
+          render: (col as any).render,
         };
       }
+
+      // Cột đơn thông thường (hoặc isEmpty)
+      return {
+        title: col.title,
+        dataIndex: col.dataIndex,
+        width: col.width,
+        fixed: col.fixed,
+        render: (_: any, record: any, idx: number) =>
+          renderSingleColumn(col, record, idx),
+      };
     }),
+
     ...(showStatus ? [{
       title: "Tình trạng",
       key: "status",
@@ -336,6 +404,7 @@ export default function CustomFormNLTable({
         return <Tag color={color}>{text}</Tag>;
       },
     }] : []),
+
     ...(showDeleteButton ? [{
       title: "Thao tác",
       key: "action",
@@ -349,7 +418,13 @@ export default function CustomFormNLTable({
             onConfirm={() => handleDeleteRow(rowIndex)}
             disabled={rows.length <= minRows}
           >
-            <Button type="text" danger icon={<DeleteOutlined />} size="small" disabled={rows.length <= minRows} />
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              size="small"
+              disabled={rows.length <= minRows}
+            />
           </Popconfirm>
         </Space>
       ),
@@ -382,19 +457,27 @@ export default function CustomFormNLTable({
                 selectionEnabled ? {
                   selectedRowKeys: selectedRowKeys as any,
                   onChange: (keys, selected) => {
-                    const typedKeys = (selected as any[]).map((record, idx) => record?.key ?? record?.id ?? keys[idx]);
+                    const typedKeys = (selected as any[]).map((record, idx) =>
+                      record?.key ?? record?.id ?? keys[idx]
+                    );
                     onSelectionChange?.(typedKeys as any, selected as any);
                   },
-                  getCheckboxProps: (record: any) => ({ disabled: isRowSelectable ? !isRowSelectable(record) : false }),
+                  getCheckboxProps: (record: any) => ({
+                    disabled: isRowSelectable ? !isRowSelectable(record) : false,
+                  }),
                 } : undefined
               }
             />
           )}
           {showAddButton && editable && (
-            <Button onClick={handleAddRow} type="dashed" className="my-2">{addRowButtonText}</Button>
+            <Button onClick={handleAddRow} type="dashed" className="my-2">
+              {addRowButtonText}
+            </Button>
           )}
           {onRefresh && (
-            <Button onClick={onRefresh} style={{ marginLeft: 8 }} loading={loading}>Tải lại dữ liệu</Button>
+            <Button onClick={onRefresh} style={{ marginLeft: 8 }} loading={loading}>
+              Tải lại dữ liệu
+            </Button>
           )}
         </>
       )}

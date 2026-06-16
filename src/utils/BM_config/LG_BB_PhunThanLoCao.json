@@ -15,7 +15,7 @@
     {
       "label": "Ngày sản xuất",
       "type": "date",
-      "key": "ngaySanXuat",
+      "key": "NgaySX",
       "required": true
     },
     {

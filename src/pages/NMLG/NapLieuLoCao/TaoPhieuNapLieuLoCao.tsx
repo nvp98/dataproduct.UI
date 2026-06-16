@@ -312,7 +312,7 @@ const TaoPhieuNapLieuLoCao = () => {
     setMapDraftBySilo(initDrafts);
     setMapNoteBySilo(initNotes);
     // Load NVL options theo lò cao + ngày/ca để lấy đúng version tại thời điểm phiếu
-    lgnlNvlApi.getList({ idLoCao: Number(scope), ngaySX: ngay, idCaSX: caNum })
+    lgnlNvlApi.getList({ idLoCao: Number(scope) })
       .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
       .catch(() => setNvlOptions([]));
     lgnlNhomNvlApi.getList()
@@ -461,8 +461,8 @@ const TaoPhieuNapLieuLoCao = () => {
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     try {
       const [res, nvlRes] = await Promise.all([
-        lgnlSiLoMasterApi.getList({ idLoCao: Number(scope), ngaySX: ngay, idCaSX: Number(ca) }),
-        lgnlNvlApi.getList({ idLoCao: Number(scope), ngaySX: ngay, idCaSX: Number(ca) }),
+        lgnlSiLoMasterApi.getList({ idLoCao: Number(scope) }),
+        lgnlNvlApi.getList({ idLoCao: Number(scope) }),
         refreshSnapshotData(ngay, Number(ca), Number(scope)),
       ]);
       setSiloMasterOptions(Array.isArray(res) ? res : []);
@@ -1211,7 +1211,9 @@ const TaoPhieuNapLieuLoCao = () => {
             <Form.Item name="idNVL" label="NVL">
               <Select allowClear placeholder="Chọn NVL (tuỳ chọn)" showSearch optionFilterProp="children">
                 {scopeNvlOptions.map((n) => (
-                  <Select.Option key={n.id} value={n.id}>[{n.id}] {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}</Select.Option>
+                  <Select.Option key={n.id} value={n.id}>
+                   {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}
+                  </Select.Option>
                 ))}
               </Select>
             </Form.Item>

@@ -320,7 +320,18 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
           });
 
           const tinhTrang = (res as any)?.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
-          form.setFieldsValue({ ...data, ...signatureFields, ...parsedDates });
+
+          // Ưu tiên đọc scope và NgaySX từ cột BMPhieu (đáng tin cậy hơn jsonData)
+          const phieuOverrides: Record<string, any> = {};
+          const phieuScope = (res as any)?.scope ?? null;
+          const phieuNgaySX = (res as any)?.ngaySX ?? null;
+          if (phieuScope != null) phieuOverrides["loCao"] = phieuScope;
+          if (phieuNgaySX) {
+            const p = dayjs(phieuNgaySX);
+            if (p.isValid()) phieuOverrides["NgaySX"] = p;
+          }
+
+          form.setFieldsValue({ ...data, ...signatureFields, ...parsedDates, ...phieuOverrides });
 
           if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
             const overrides: Record<string, any> = {};
@@ -479,7 +490,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
       ...formData,
       ...formattedDates,
       scope: formData.loCao ?? null,
-      NgaySX: formattedDates.ngaySanXuat ?? null,
+      NgaySX: formattedDates.NgaySX ?? null,
       maBm: config.code,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
@@ -538,7 +549,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
   const handleLoadAutoData = useCallback(async () => {
     const values = form.getFieldsValue();
     const idLoCao: number | undefined = values.loCao;
-    const ngaySanXuat = values.ngaySanXuat;
+    const ngaySanXuat = values.NgaySX;
 
     if (!idLoCao || !ngaySanXuat) {
       message.warning("Vui lòng chọn Lò cao và Ngày sản xuất trước khi tải dữ liệu!");

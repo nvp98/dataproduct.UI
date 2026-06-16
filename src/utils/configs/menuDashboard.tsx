@@ -129,18 +129,21 @@ export const MenuDataDashboard = [
     icon: "nmlg",
     color: "#019221ff",
     items: [
-      // {
-      //   code: "naplieulocao",
-      //   title: "BM.05/QT.05.09 SỔ THEO DÕI NẠP LIỆU LÒ CAO",
-      // },
-      // {
-      //   code: "khoiluongsilo",
-      //   title: "BM.07/QT.05.09 CHỐT KHỐI LƯỢNG SILO LÒ CAO",
-      // },
-      // {
-      //   code: "vanhanhthanphun",
-      //   title: "BM.10/QT.05.09 NHẬT KÝ VẬN HÀNH THAN PHUN LÒ CAO",
-      // },
+      {
+        code: "naplieulocao",
+        title: "BM.05/QT.05.09 SỔ THEO DÕI NẠP LIỆU LÒ CAO",
+        maBm: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
+      },
+      {
+        code: "tonsilolocao",
+        title: "BM.07/QT.05.09 CHỐT KHỐI LƯỢNG SILO LÒ CAO",
+        maBm: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
+      },
+      {
+        code: "nkvhthanphunlocao",
+        title: "BM.10/QT.05.09 NHẬT KÝ VẬN HÀNH PHUN THAN LÒ CAO",
+        maBm: BM_CONFIG.NMLG.NMLG_NK_VHPTLC,
+      },
     ],
   },
 

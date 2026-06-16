@@ -1136,6 +1136,45 @@ export const menuConfig = [
           },
         ],
       },
+      {
+        key: "sub5-lg",
+        label: "NM.LG",
+        children: [
+          {
+            key: "5-lg-1",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
+            label: (
+              <Tooltip title="BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
+                <NavLink to="/viecdentoi/naplieulocao">
+                  BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "5-lg-2",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
+            label: (
+              <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)">
+                <NavLink to="/viecdentoi/tonsilolocao">
+                  BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "5-lg-3",
+            maBM: BM_CONFIG.NMLG.NMLG_NK_VHPTLC,
+            label: (
+              <Tooltip title="BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)">
+                <NavLink to="/viecdentoi/nkvhthanphunlocao">
+                  BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
     ],
   },
   // {

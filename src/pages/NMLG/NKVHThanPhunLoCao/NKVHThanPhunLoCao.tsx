@@ -10,6 +10,8 @@ import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
+import useRowSelection from "../../../hooks/useRowSelection";
+import useCheckPhieu from "../../../hooks/useCheckPhieu";
 
 const NKVHThanPhunLoCao = ({ type }: { type?: string }) => {
   const config = LG_BB_PhunThanLoCao as any;
@@ -22,11 +24,14 @@ const NKVHThanPhunLoCao = ({ type }: { type?: string }) => {
     [userObj?.maNV]
   );
 
-  const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange } =
+  const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange, refetch } =
     usePhieuSearchList({
       maBm: config.code as string,
       fixedFilters,
     });
+
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } = useRowSelection(data as any[]);
+  const { checkLoading, handleCheckPhieu } = useCheckPhieu(selectedRowKeys, () => setSelectedRowKeys([]), refetch);
 
   const statusConfig: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -50,6 +55,7 @@ const NKVHThanPhunLoCao = ({ type }: { type?: string }) => {
   };
 
   const columns = [
+    checkboxColumn,
     {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
@@ -181,12 +187,16 @@ const NKVHThanPhunLoCao = ({ type }: { type?: string }) => {
 
   return (
     <div>
+      <style>{`.row-checked td { background-color: #d9f7be !important; }`}</style>
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilter}
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        selectedRowCount={selectedRowKeys.length}
+        checkLoading={checkLoading}
+        onCheckPhieu={handleCheckPhieu}
       />
       <Card
         extra={
@@ -205,6 +215,7 @@ const NKVHThanPhunLoCao = ({ type }: { type?: string }) => {
           columns={columns}
           dataSource={data as TableRecord[]}
           loading={loading}
+          rowClassName={(record: any) => record.isCheck === 1 ? "row-checked" : ""}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

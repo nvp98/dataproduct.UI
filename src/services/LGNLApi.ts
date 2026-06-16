@@ -201,7 +201,7 @@ export interface CreateLGNLNvlDto {
 export interface UpdateLGNLNvlDto extends CreateLGNLNvlDto {}
 
 export const lgnlNvlApi = {
-  getList: (params?: { idLoCao?: number; ngaySX?: string; idCaSX?: number }) =>
+  getList: (params?: { idLoCao?: number }) =>
     apiService.get<LGNLNvlDto[]>("/api/LGNL/get-nvl", { params }),
 
   getById: (id: number) =>
