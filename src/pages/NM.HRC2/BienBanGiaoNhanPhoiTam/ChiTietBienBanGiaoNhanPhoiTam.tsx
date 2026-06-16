@@ -17,6 +17,8 @@ import {
   ReloadOutlined,
   LockOutlined,
   UnlockOutlined,
+  FileExcelOutlined,
+  FilePdfOutlined,
 } from "@ant-design/icons";
 import type { TableRowSelection } from "antd/es/table/interface";
 import dayjs from "dayjs";
@@ -150,6 +152,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [chotLoading, setChotLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState<string | null>(null);
 
   // ── Chốt / Hủy chốt phiếu ────────────────────────────────────────────────
   const handleChotPhieu = async () => {
@@ -344,6 +347,38 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
       setActionLoading(false);
     }
   };
+
+  // ── Export handlers ───────────────────────────────────────────────────────
+
+  const handleExportChiTietExcel = useCallback(async () => {
+    if (!idphieu) return;
+    setExportLoading("chitiet-excel");
+    try {
+      await Hrc2SlabApi.exportExcel(idphieu, "chitiet");
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi xuất Excel");
+    } finally { setExportLoading(null); }
+  }, [idphieu]);
+
+  const handleExportTongHopExcel = useCallback(async () => {
+    if (!idphieu) return;
+    setExportLoading("tonghop-excel");
+    try {
+      await Hrc2SlabApi.exportExcel(idphieu, "tonghop");
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi xuất Excel");
+    } finally { setExportLoading(null); }
+  }, [idphieu]);
+
+  const handleExportTongHopPdf = useCallback(async () => {
+    if (!idphieu) return;
+    setExportLoading("tonghop-pdf");
+    try {
+      await Hrc2SlabApi.exportPdf(idphieu);
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi xuất PDF");
+    } finally { setExportLoading(null); }
+  }, [idphieu]);
 
   // ── Columns bảng slab chi tiết ────────────────────────────────────────────
   const detailColumns = useMemo(
@@ -555,6 +590,15 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                   bodyStyle={{ padding: "8px 12px" }}
                   extra={
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Button
+                        size="small"
+                        icon={<FileExcelOutlined />}
+                        loading={exportLoading === "chitiet-excel"}
+                        onClick={() => void handleExportChiTietExcel()}
+                        style={{ color: "#217346" }}
+                      >
+                        Excel
+                      </Button>
                       {isDuc && (
                         <>
                           <Popconfirm
@@ -704,7 +748,27 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                     {formData?.kip || ""}
                   </Descriptions.Item>
                 </Descriptions>
-                <div style={{ marginTop: 16, fontSize: 11, lineHeight: 1.4 }}>
+                <div style={{ display: "flex", gap: 8, marginTop: 12, marginBottom: 8, justifyContent: "flex-end" }}>
+                  <Button
+                    size="small"
+                    icon={<FileExcelOutlined />}
+                    loading={exportLoading === "tonghop-excel"}
+                    onClick={() => void handleExportTongHopExcel()}
+                    style={{ color: "#217346" }}
+                  >
+                    Excel
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<FilePdfOutlined />}
+                    loading={exportLoading === "tonghop-pdf"}
+                    onClick={() => void handleExportTongHopPdf()}
+                    danger
+                  >
+                    PDF
+                  </Button>
+                </div>
+                <div style={{ marginTop: 0, fontSize: 11, lineHeight: 1.4 }}>
                   <Table
                     bordered
                     style={{}}

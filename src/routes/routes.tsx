@@ -76,11 +76,14 @@ import ChiTietGN from "../pages/NM.HRC2/GiaoNhanThepLong/ChiTietGN";
 import GiaoNhanThepLong_HRC1 from "../pages/NM.HRC1/GiaoNhanThepLong/GiaoNhanThepLong";
 import TaoPhieuGN_HRC1 from "../pages/NM.HRC1/GiaoNhanThepLong/TaoPhieuGN";
 import ChiTietGN_HRC1 from "../pages/NM.HRC1/GiaoNhanThepLong/ChiTietGN";
+import HRC1_BienBanGiaoNhanPhoiTam from "../pages/NM.HRC1/HRC1_BienBanGiaoNhanPhoiTam/HRC1_BienBanGiaoNhanPhoiTam";
+import ChiTietBienBanGiaoNhanPhoiTam_HRC1 from "../pages/NM.HRC1/HRC1_BienBanGiaoNhanPhoiTam/ChiTietBienBanGiaoNhanPhoiTam_HRC1";
 import ThongKePhieuHRC2 from "../pages/NM.HRC2/ThongKe/ThongKePhieuHRC2";
 import ThongKeHRC1 from "../pages/NM.HRC1/ThongKe/ThongKeHRC1";
 import ThongKePhieuHRC1 from "../pages/NM.HRC1/ThongKe/ThongKePhieuHRC1";
 import QuanLyMayDuc from "../pages/Settings/MayDuc";
 import QuanLyMacThep from "../pages/Settings/MacThep";
+import QuanLyMaVatTuHRC1 from "../pages/Settings/QuanLyMaVatTu";
 import QuanLyTaiKhoan from "../pages/Settings/QuanLyTaiKhoan";
 
 export const routes = [
@@ -1195,6 +1198,49 @@ export const routes = [
           </RequireAuth>
         ),
       },
+
+      // ========== BB GIAO NHẬN PHÔI TẤM - HRC1 ==========
+      {
+        path: "bbgnphoitam_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <HRC1_BienBanGiaoNhanPhoiTam />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/bbgnphoitam_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <HRC1_BienBanGiaoNhanPhoiTam type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/bbgnphoitam_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <HRC1_BienBanGiaoNhanPhoiTam type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietbbgnphoitam_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietBienBanGiaoNhanPhoiTam_HRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+
       {
         path: "mac-thep",
         element: (
@@ -1211,6 +1257,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <QuanLyMayDuc />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "ma-vat-tu-hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyMaVatTuHRC1 />
             </RequireRole>
           </RequireAuth>
         ),

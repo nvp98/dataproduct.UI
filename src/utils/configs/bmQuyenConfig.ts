@@ -162,6 +162,16 @@ export const bmQuyenConfig = {
       tenBm: "Biên bản theo dõi ben phế",
       nhom: "NM.NL",
     },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+      tenBm: "HRC1 - Biên bản giao nhận phôi tấm",
+      nhom: "NM.HRC1",
+      khuVucPhus: [
+        { khuVucPhu: "KCS", tenKhuVuc: "Bộ phận KCS" },
+        { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
+        { khuVucPhu: "Kho", tenKhuVuc: "Bộ phận Kho" },
+      ]
+    }
   ] as BieuMauQuyenItem[],
 
   // danhSachKhuVuc: [

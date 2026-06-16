@@ -18,18 +18,16 @@ async function downloadBlob(res: Response, fallbackName: string): Promise<void> 
   window.URL.revokeObjectURL(url);
 }
 
-export interface HrcSlabSearchRequest {
+export interface Hrc1SlabSearchRequest {
   tuNgay?: string | null;
   denNgay?: string | null;
-  caSanXuat?: string | null;
-  kip?: string | null;
-  mayDuc?: number | null;
-  meThep?: string | null;
-  idSlabs?: string[] | null;
+  caSX?: string | null;
+  kipSX?: string | null;
+  mayDuc?: string | null;
+  maMe?: string | null;
+  idSlab?: string | null;
   macThep?: string | null;
   isChot?: boolean | null;
-  isTrungIDSlab?: boolean | null;
-  isDiffMacThep?: boolean | null;
   trangThaiKCS?: number | null;
   trangThaiDuc?: number | null;
   trangThaiKho?: number | null;
@@ -38,59 +36,51 @@ export interface HrcSlabSearchRequest {
   pageSize?: number;
 }
 
-export interface HrcSlabItem {
+export interface Hrc1SlabItem {
   id: number;
-  bkmisId?: number | null;
-  ngaySanXuat?: string | null;
-  shiftName?: string | null;
-  caSanXuat?: string | null;
-  kipSanXuat?: string | null;
-  meThep?: string | null;
-  idSlab?: string | null;
+  idSlab: string;
+  idPiece?: string | null;
+  maMe?: string | null;
   macThep?: string | null;
-  chatLuong?: string | null;
+  ngaySX?: string | null;
+  caSX?: string | null;
+  kipSX?: string | null;
+  mayDuc?: string | null;
+  cutDate?: string | null;
   chieuDay?: number | null;
   chieuRong?: number | null;
   chieuDai?: number | null;
   khoiLuong?: number | null;
-  khoiLuongTinhToan?: number | null;
-  chatLuongTPHH?: string | null;
-  thongTinPhoi?: string | null;
-  tpKhongDatGangLong?: string | null;
+  ngayTao: string;
+  ngayCapNhat?: string | null;
   ghiChu?: string | null;
-  loaiPhoi?: string | null;
-  sapCode?: string | null;
-  sapDescription?: string | null;
-  soLo?: string | null;
-  orderId?: string | null;
-  mayDuc?: number | null;
-  isTrungIDSlab?: boolean | null;
-  isDiffMacThep?: boolean | null;
-  line?: number | null;
-  sapLastTime?: string | null;
-  isChot: boolean;
-  ngayTao?: string | null;
-  // Thông tin phiếu BBSL (join từ BM_Phieu khi slab đã được chuyển)
-  ngayXuLy?: string | null;
-  caBBSL?: number | null;
-  kipBBSL?: string | null;
-  // Trạng thái workflow
+  maVatTu?: string | null;
+  // Workflow
   trangThaiKCS: number;
   trangThaiDuc: number;
   trangThaiKho: number;
   trangThaiPKH: number;
   idPhieuBBSL?: string | null;
   soPhieuBBSL?: string | null;
+  ngayXuLy?: string | null;
+  caBBSL?: number | null;
+  kipBBSL?: string | null;
 }
 
-export interface HrcSlabSearchResponse {
-  data: HrcSlabItem[];
+export interface Hrc1TongHopGhiChuItem {
+  macThep?: string | null;
+  kichThuoc?: string | null;
+  ghiChu?: string | null;
+}
+
+export interface Hrc1SlabSearchResponse {
+  data: Hrc1SlabItem[];
   totalCount: number;
   page: number;
   pageSize: number;
 }
 
-export interface PhieuBBSLItem {
+export interface Hrc1PhieuBBSLItem {
   idPhieu: string;
   soPhieu?: string | null;
   ngaySX?: string | null;
@@ -103,16 +93,23 @@ export interface PhieuBBSLItem {
   soSlabPKH: number;
 }
 
-export interface SlabTongHopItem {
-  meThep?: string | null;
+export interface Hrc1SlabTongHopItem {
+  maMe?: string | null;
   macThep?: string | null;
   chieuDay?: number | null;
   chieuRong?: number | null;
   chieuDai?: number | null;
-  loaiPhoi?: string | null;
-  chatLuongTPHH?: string | null;
+  mayDuc?: string | null;
   soLuong: number;
-  tongKhoiLuong?: number | null;
+  tongKhoiLuong?: number | null; // decimal từ BE
+}
+
+export interface Hrc1SlabSyncResult {
+  success: boolean;
+  totalFromApi: number;
+  rowsUpserted: number;
+  macThepFilled: number;
+  message: string;
 }
 
 export interface WorkflowResult {
@@ -121,47 +118,36 @@ export interface WorkflowResult {
   affectedRows: number;
 }
 
-export interface SyncStatusItem {
-  id: number;
-  trangThai?: string | null;
-  ngayBatDau?: string | null;
-  ngayKetThuc?: string | null;
-  batDauLuc?: string | null;
-  ketThucLuc?: string | null;
-  soRecordSync?: number | null;
-  ghiChu?: string | null;
-}
+const BASE = "/api/hrc1-slab";
 
-const BASE = "/api/hrc2-slab";
-
-export const Hrc2SlabApi = {
-  search: async (request: HrcSlabSearchRequest): Promise<HrcSlabSearchResponse> => {
-    const res = (await apiService.post(`${BASE}/search`, request)) as HrcSlabSearchResponse;
+export const Hrc1SlabApi = {
+  search: async (req: Hrc1SlabSearchRequest): Promise<Hrc1SlabSearchResponse> => {
+    const res = (await apiService.post(`${BASE}/search`, req)) as Hrc1SlabSearchResponse;
     return { data: res.data ?? [], totalCount: res.totalCount ?? 0, page: res.page ?? 1, pageSize: res.pageSize ?? 50 };
   },
 
-  getTongHop: async (params: { tuNgay?: string; denNgay?: string; ca?: string; kip?: string }): Promise<SlabTongHopItem[]> => {
+  getTongHop: async (params: { tuNgay?: string; denNgay?: string; ca?: string; kip?: string }): Promise<Hrc1SlabTongHopItem[]> => {
     const qs = new URLSearchParams();
-    if (params.tuNgay) qs.set("tuNgay", params.tuNgay);
+    if (params.tuNgay)  qs.set("tuNgay", params.tuNgay);
     if (params.denNgay) qs.set("denNgay", params.denNgay);
-    if (params.ca) qs.set("ca", params.ca);
+    if (params.ca)  qs.set("ca", params.ca);
     if (params.kip) qs.set("kip", params.kip);
-    return (await apiService.get(`${BASE}/tong-hop?${qs}`)) as SlabTongHopItem[];
+    return (await apiService.get(`${BASE}/tong-hop?${qs}`)) as Hrc1SlabTongHopItem[];
   },
 
-  getPhieuBBSL: async (kip?: string | null, ca?: number | null): Promise<PhieuBBSLItem[]> => {
+  getPhieuBBSL: async (kip?: string | null, ca?: number | null): Promise<Hrc1PhieuBBSLItem[]> => {
     const qs = new URLSearchParams();
     if (kip) qs.set("kip", kip);
     if (ca != null) qs.set("ca", String(ca));
-    return (await apiService.get(`${BASE}/phieu-bbsl?${qs}`)) as PhieuBBSLItem[];
+    return (await apiService.get(`${BASE}/phieu-bbsl?${qs}`)) as Hrc1PhieuBBSLItem[];
   },
 
-  getRuotPhieu: async (idPhieu: string): Promise<SlabTongHopItem[]> => {
-    return (await apiService.get(`${BASE}/ruot-phieu/${idPhieu}`)) as SlabTongHopItem[];
+  getRuotPhieu: async (idPhieu: string): Promise<Hrc1SlabTongHopItem[]> => {
+    return (await apiService.get(`${BASE}/ruot-phieu/${idPhieu}`)) as Hrc1SlabTongHopItem[];
   },
 
-  getSlabsByPhieu: async (idPhieu: string): Promise<HrcSlabItem[]> => {
-    return (await apiService.get(`${BASE}/slabs-by-phieu/${idPhieu}`)) as HrcSlabItem[];
+  getSlabsByPhieu: async (idPhieu: string): Promise<Hrc1SlabItem[]> => {
+    return (await apiService.get(`${BASE}/slabs-by-phieu/${idPhieu}`)) as Hrc1SlabItem[];
   },
 
   chuyenBBSL: async (idSlabs: number[], idPhieu: string, nguoiThucHien: number): Promise<WorkflowResult> => {
@@ -172,11 +158,11 @@ export const Hrc2SlabApi = {
     return (await apiService.post(`${BASE}/thu-hoi`, { idSlabs, nguoiThucHien })) as WorkflowResult;
   },
 
-  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
+  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 
-  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
+  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/huy-xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 
@@ -188,16 +174,24 @@ export const Hrc2SlabApi = {
     return (await apiService.post(`${BASE}/huy-chot-phieu`, { idPhieu, nguoiThucHien })) as WorkflowResult;
   },
 
-  sync: async (ngayBatDau?: string | null, ngayKetThuc?: string | null): Promise<SyncStatusItem> => {
-    return (await apiService.post(`${BASE}/sync`, { ngayBatDau, ngayKetThuc })) as SyncStatusItem;
+  sync: async (ngaySX: string, caSX: number): Promise<Hrc1SlabSyncResult> => {
+    return (await apiService.post(`${BASE}/sync`, { ngaySX, caSX })) as Hrc1SlabSyncResult;
   },
 
-  getSyncStatus: async (): Promise<SyncStatusItem | null> => {
-    try {
-      return (await apiService.get(`${BASE}/sync/status`)) as SyncStatusItem;
-    } catch {
-      return null;
-    }
+  fillMacThep: async (): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/fill-mac-thep`, {})) as WorkflowResult;
+  },
+
+  updateSlab: async (id: number, payload: { ghiChu?: string | null; maVatTu?: string | null }): Promise<WorkflowResult> => {
+    return (await apiService.patch(`${BASE}/${id}`, payload)) as WorkflowResult;
+  },
+
+  getTongHopGhiChu: async (idPhieu: string): Promise<Hrc1TongHopGhiChuItem[]> => {
+    return (await apiService.get(`${BASE}/tonghop-ghi-chu/${idPhieu}`)) as Hrc1TongHopGhiChuItem[];
+  },
+
+  saveTongHopGhiChu: async (req: { idPhieuBBSL: string; macThep?: string | null; kichThuoc?: string | null; ghiChu?: string | null }): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/tonghop-ghi-chu`, req)) as WorkflowResult;
   },
 
   exportExcel: async (idPhieu: string, tab: "chitiet" | "tonghop"): Promise<void> => {
@@ -208,7 +202,7 @@ export const Hrc2SlabApi = {
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     );
     if (!res.ok) throw new Error("Lỗi xuất Excel");
-    await downloadBlob(res, `HRC2_PhoiTam_${tab}_${idPhieu}.xlsx`);
+    await downloadBlob(res, `HRC1_PhoiTam_${tab}_${idPhieu}.xlsx`);
   },
 
   exportPdf: async (idPhieu: string): Promise<void> => {
@@ -219,6 +213,6 @@ export const Hrc2SlabApi = {
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     );
     if (!res.ok) throw new Error("Lỗi xuất PDF");
-    await downloadBlob(res, `HRC2_BBXNSL_PhoiTam_${idPhieu}.pdf`);
+    await downloadBlob(res, `HRC1_BBXNSL_PhoiTam_${idPhieu}.pdf`);
   },
 };
