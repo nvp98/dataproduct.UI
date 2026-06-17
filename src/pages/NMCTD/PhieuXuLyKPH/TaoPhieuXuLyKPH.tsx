@@ -110,10 +110,11 @@ const TaoPhieuXuLyKPH = () => {
           }
 
           // Extract caXL: ký tự ở vị trí 8 = ca
-          const caStr = xLPart.substring(8, 9);
-          if (caStr && !isNaN(Number(caStr))) {
-            result.caXL = Number(caStr);
-          }
+          const caStr = xLPart.substring(8, 10);
+          result.caXL = caStr;
+          // if (caStr && !isNaN(Number(caStr))) {
+          //   result.caXL = Number(caStr);
+          // }
         }
 
         // Part 4 (index 3): CAN1 = extract ký tự số để lấy xuong
