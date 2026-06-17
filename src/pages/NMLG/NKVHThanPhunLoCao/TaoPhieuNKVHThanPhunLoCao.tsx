@@ -117,6 +117,19 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
     currentTinhTrang === TrangThaiPhieuConst.HieuChinh
   );
 
+  const nvVanHanhCaNgay = Form.useWatch("nvVanHanhCaNgay", form);
+  const nvVanHanhCaDem  = Form.useWatch("nvVanHanhCaDem",  form);
+
+  // capDuyet của người dùng hiện tại cho phiếu này:
+  // 0 = ca ngày, 1 = ca đêm, null = không phải signer (admin/PKH → sửa được hết)
+  const currentUserCapDuyet = useMemo(() => {
+    const uid = getUserInfo()?.iD_TaiKhoan;
+    if (uid == null) return null;
+    if (Number(nvVanHanhCaNgay) === Number(uid)) return 0;
+    if (Number(nvVanHanhCaDem)  === Number(uid)) return 1;
+    return null;
+  }, [nvVanHanhCaNgay, nvVanHanhCaDem]);
+
   const handleCellChange = useCallback((key: string, dataIndex: string, value: any) => {
     setTableData((prev) =>
       prev.map((row) => (row.key === key ? { ...row, [dataIndex]: value } : row))
@@ -125,6 +138,17 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
 
   const tableColumns = useMemo((): ColumnType<RowData>[] => {
     if (!tableSection) return [];
+
+    // Kiểm tra xem một dòng có bị khoá với người dùng hiện tại không
+    const isRowLocked = (row: RowData): boolean => {
+      if (isFormLocked) return true;
+      if (row._isSummary) return true;
+      if (currentUserCapDuyet === null) return false; // admin/PKH → sửa được hết
+      const h = parseInt((row.thoiGian as string ?? "").replace("h", ""));
+      if (isNaN(h)) return false;
+      const isCaNgay = h >= 8 && h <= 19;
+      return currentUserCapDuyet === 0 ? !isCaNgay : isCaNgay;
+    };
 
     // Detect a {Auto, Manual} leaf pair → merge into 1 editable column
     const isMergeablePair = (col: any): boolean => {
@@ -172,7 +196,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
               const autoVal = row[autoCol.dataIndex];
               const isOverridden = manualVal != null;
               const displayVal = isOverridden ? manualVal : autoVal;
-              if (isFormLocked) {
+              if (isRowLocked(row)) {
                 return displayVal != null
                   ? <span style={{ color: isOverridden ? undefined : "#1677ff" }}>{String(displayVal)}</span>
                   : "";
@@ -224,7 +248,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                 </span>
               );
             }
-            if (isFormLocked) return val != null ? String(val) : "";
+            if (isRowLocked(row)) return val != null ? String(val) : "";
             if (col.inputType === "text") {
               return (
                 <Input
@@ -249,7 +273,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
       });
 
     return buildCols(tableSection.columns);
-  }, [isFormLocked, handleCellChange]);
+  }, [isFormLocked, currentUserCapDuyet, handleCellChange]);
 
   const defaultTableData: RowData[] = useMemo(
     () =>
@@ -330,6 +354,12 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
             const p = dayjs(phieuNgaySX);
             if (p.isValid()) phieuOverrides["NgaySX"] = p;
           }
+
+          // Đọc tên kíp từ BMPhieu hoặc jsonData để hiển thị tiêu đề cột
+          const kCaNgay = (res as any)?.kipCaNgay ?? data.kipCaNgay ?? null;
+          const kCaDem = (res as any)?.kipCaDem ?? data.kipCaDem ?? null;
+          if (kCaNgay) setKipCaNgay(kCaNgay);
+          if (kCaDem) setKipCaDem(kCaDem);
 
           form.setFieldsValue({ ...data, ...signatureFields, ...parsedDates, ...phieuOverrides });
 
@@ -544,6 +574,29 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
     [tableData]
   );
 
+  const [kipCaNgay, setKipCaNgay] = useState("Kíp 1");
+  const [kipCaDem, setKipCaDem] = useState("Kíp 2");
+
+  // Auto-fill sanLuongPhun.caNgay/caDem từ lũy kế Tổng của mỗi ca
+  useEffect(() => {
+    if (!prodSummarySection) return;
+    const ca1Summary = displayTableData.find((r) => r.key === "summary-ca1");
+    const ca2Summary = displayTableData.find((r) => r.key === "summary-ca2");
+    const val1 = ca1Summary?.luongThanPhunThucTe_Manual ?? null;
+    const val2 = ca2Summary?.luongThanPhunThucTe_Manual ?? null;
+    const current = form.getFieldValue(prodSummarySection.key) ?? {};
+    form.setFieldsValue({
+      [prodSummarySection.key]: {
+        ...current,
+        sanLuongPhun: {
+          ...(current.sanLuongPhun ?? {}),
+          caNgay: val1,
+          caDem: val2,
+        },
+      },
+    });
+  }, [displayTableData, form]);
+
   const [loadingAuto, setLoadingAuto] = useState(false);
 
   const handleLoadAutoData = useCallback(async () => {
@@ -757,7 +810,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                   width: 250
                 },
                 {
-                  title: "Kíp A",
+                  title: kipCaNgay,
                   dataIndex: "caNgay",
                   render: (_, record) => (
                     <Form.Item
@@ -776,7 +829,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                   )
                 },
                 {
-                  title: "Kíp B",
+                  title: kipCaDem,
                   dataIndex: "caDem",
                   render: (_, record) => (
                     <Form.Item

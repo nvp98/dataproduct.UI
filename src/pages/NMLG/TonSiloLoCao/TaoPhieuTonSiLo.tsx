@@ -350,9 +350,13 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       message.warning("Vui lòng chọn Lò cao, Ca và Ngày sản xuất trước");
       return;
     }
+    const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue ?? "");
     try {
-      const res = await lgTSLSiLoApi.getList({ idLoCao: Number(scope) });
-      setSiloOptions(Array.isArray(res) ? res : []);
+      const [siloRes] = await Promise.all([
+        lgTSLSiLoApi.getList({ idLoCao: Number(scope) }),
+        refreshKiemTraData(ngay, Number(ca), Number(scope)),
+      ]);
+      setSiloOptions(Array.isArray(siloRes) ? siloRes : []);
     } catch {
       setSiloOptions([]);
     }
@@ -360,39 +364,14 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     addMappingForm.resetFields();
     addMappingForm.setFieldsValue({ ngay: ngayDisplay, ca: Number(ca), idLoCao: Number(scope) });
     setAddMappingOpen(true);
-  }, [form, scope, ca, addMappingForm]);
+  }, [form, scope, ca, addMappingForm, refreshKiemTraData]);
 
-  // Tạo mapping mới; cảnh báo qua Modal.confirm nếu silo đã được map trong ca này
+  // Tạo mapping mới
   const handleAddMapping = useCallback(async () => {
     const ngaySXValue = form.getFieldValue("NgaySX");
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     try {
       const values = await addMappingForm.validateFields();
-
-      // Cảnh báo nếu silo đã được map
-      const existingMapping = kiemTraData.find((r) => r.idSiLo === values.idSiLo);
-      if (existingMapping) {
-        const confirmed = await new Promise<boolean>((resolve) => {
-          Modal.confirm({
-            title: "Silo đã được cấu hình",
-            content: (
-              <span>
-                Silo <b>{existingMapping.tenSiLo ?? "này"}</b> đã được map với NVL{" "}
-                <b style={{ color: "#fa8c16" }}>{existingMapping.tenNVL ?? "(chưa có NVL)"}</b>.
-                <br />
-                Bạn có muốn thêm mapping mới không?
-              </span>
-            ),
-            okText: "Tiếp tục thêm",
-            cancelText: "Hủy",
-            okButtonProps: { danger: true },
-            onOk: () => resolve(true),
-            onCancel: () => resolve(false),
-          });
-        });
-        if (!confirmed) return;
-      }
-
       setAddMappingLoading(true);
       await lgTSLMappingApi.create({
         ngay,
@@ -412,7 +391,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     } finally {
       setAddMappingLoading(false);
     }
-  }, [addMappingForm, form, scope, ca, kiemTraData, refreshKiemTraData, resetMappingDrafts]);
+  }, [addMappingForm, form, scope, ca, refreshKiemTraData, resetMappingDrafts]);
 
   // ─── Sao chép mapping từ ca trước ────────────────────────────────────────
 
@@ -1157,7 +1136,18 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
               </Select>
             </Form.Item>
             <Form.Item name="idSiLo" label="Silo" rules={[{ required: true, message: "Chọn Silo" }]}>
-              <Select placeholder="Chọn Silo" showSearch optionFilterProp="label"
+              <Select
+                placeholder="Chọn Silo"
+                showSearch
+                optionFilterProp="label"
+                onChange={(val: number) => {
+                  const existing = kiemTraData.find((r) => r.idSiLo === val);
+                  if (existing) {
+                    message.warning(
+                      `Silo này đã được map với NVL "${existing.tenNVL ?? "chưa có NVL"}" trong ca này.`
+                    );
+                  }
+                }}
                 options={siloOptions.map((s) => {
                   const mapped = kiemTraData.find((r) => r.idSiLo === s.id);
                   return {
