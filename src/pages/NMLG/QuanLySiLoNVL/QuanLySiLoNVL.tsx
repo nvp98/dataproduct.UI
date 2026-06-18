@@ -114,14 +114,6 @@ const SiLoMasterTab = ({ loCaoOptions, tsOptions, onDataChange }: SiLoMasterTabP
     { title: "STT", key: "stt", width: 55, align: "center", render: (_v, _r, i) => i + 1 },
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
     { title: "Tên Silo", dataIndex: "tenSiLo", key: "tenSiLo" },
-    {
-      title: "Ngày SX", dataIndex: "ngaySanXuat", key: "ngaySanXuat", width: 110, align: "center",
-      render: (v) => v ? dayjs(v).format("DD/MM/YYYY") : "—",
-    },
-    {
-      title: "Ca SX", dataIndex: "idCaSanXuat", key: "idCaSanXuat", width: 70, align: "center",
-      render: (v) => v ?? "—",
-    },
     { title: "TagKey", dataIndex: "tagKey", key: "tagKey", width: 130, render: (v) => v ?? "—" },
     { title: "Thứ tự", dataIndex: "thuTu", key: "thuTu", width: 80, align: "center" },
     {

@@ -820,7 +820,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                         "caNgay"
                       ]}
                       style={{ marginBottom: 0 }}
-                    >
+                    >cột 
                       <InputNumber
                         style={{ width: "100%" }}
                         disabled={isFormLocked}

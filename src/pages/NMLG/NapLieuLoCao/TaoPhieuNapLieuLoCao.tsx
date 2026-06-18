@@ -27,6 +27,7 @@ import {
   type LGNLNvlDto,
   type LGNLSiLoMasterDto,
   type LGNLSiloSnapshotDto,
+  type LGNLUndoChangeSiLoNVLDto,
 } from "../../../services/LGNLApi";
 
 interface TableRow {
@@ -70,6 +71,7 @@ const TaoPhieuNapLieuLoCao = () => {
   const [doiNVLOpen, setDoiNVLOpen] = useState(false);
   const [doiNVLRow, setDoiNVLRow] = useState<LGNLSiloSnapshotDto | null>(null);
   const [doiNVLLoading, setDoiNVLLoading] = useState(false);
+  const [undoDoiNVLLoadingSiloId, setUndoDoiNVLLoadingSiloId] = useState<number | null>(null);
   const [nvlOptions, setNvlOptions] = useState<LGNLNvlDto[]>([]);
   const [nhomNvlOptions, setNhomNvlOptions] = useState<LGNLNhomNvlDto[]>([]);
   const [createNewNVL, setCreateNewNVL] = useState(false);
@@ -548,6 +550,30 @@ const TaoPhieuNapLieuLoCao = () => {
         (m) => m.idSiLo === row.idSiLo && !m.ngayHetHL && !m.thoiDiemBD
       );
 
+      // Bảo vệ: silo đã đổi NVL giữa ca
+      if (row.daDoiGiuaCa) {
+        if (!existing) {
+          // Không có row đầu ca — tạo mới sẽ xung đột với row mid-shift
+          message.warning(
+            `Silo ${row.tenSiLo ?? ""} đã đổi NVL giữa ca. Không thể thêm mapping mới — hãy dùng chức năng "Đổi NVL".`
+          );
+          return;
+        }
+        // Có row đầu ca — cập nhật chỉ ảnh hưởng giai đoạn TRƯỚC thời điểm đổi
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Modal.confirm({
+            title: "Silo đã có đổi NVL giữa ca",
+            content: `Cập nhật này chỉ thay đổi NVL cho giai đoạn TRƯỚC thời điểm đổi (${row.thoiDiemBD ? new Date(row.thoiDiemBD).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "—"}). NVL sau thời điểm đổi không thay đổi. Tiếp tục?`,
+            okText: "Tiếp tục",
+            cancelText: "Hủy",
+            okButtonProps: { danger: true },
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+          });
+        });
+        if (!confirmed) return;
+      }
+
       const payload: CreateLGNLMappingDto = {
         ngay,
         idCa: Number(ca),
@@ -615,6 +641,51 @@ const TaoPhieuNapLieuLoCao = () => {
       setDoiNVLLoading(false);
     }
   }, [doiNVLRow, doiNVLForm, form, scope, ca, refreshSnapshotData]);
+
+  const handleUndoDoiNVL = useCallback((row: LGNLSiloSnapshotDto) => {
+    const ngaySXValue = form.getFieldValue("NgaySX");
+    if (!scope || !ca || !ngaySXValue) return;
+    const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
+
+    Modal.confirm({
+      title: "Hoàn tác đổi NVL giữa ca",
+      content: (
+        <span>
+          Xóa toàn bộ lần đổi NVL giữa ca của Silo <strong>{row.tenSiLo ?? ""}</strong>?{" "}
+          Silo sẽ trở về NVL ban đầu đầu ca. Thao tác này không thể hoàn tác.
+        </span>
+      ),
+      okText: "Hoàn tác",
+      cancelText: "Hủy",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          setUndoDoiNVLLoadingSiloId(row.idSiLo);
+          const dto: LGNLUndoChangeSiLoNVLDto = {
+            idLoCao: Number(scope),
+            ngay,
+            idCa: Number(ca),
+            idSiLo: row.idSiLo,
+          };
+          await lgnlMappingApi.undoDoiNVL(dto);
+          message.success("Đã hoàn tác đổi NVL giữa ca");
+          const refreshed = await refreshSnapshotData(ngay, Number(ca), Number(scope));
+          const nextDrafts: Record<number, number | null> = {};
+          const nextNotes: Record<number, string> = {};
+          refreshed.forEach((item) => {
+            nextDrafts[item.idSiLo] = item.idNVL ?? null;
+            nextNotes[item.idSiLo] = "";
+          });
+          setMapDraftBySilo(nextDrafts);
+          setMapNoteBySilo(nextNotes);
+        } catch {
+          message.error("Lỗi khi hoàn tác đổi NVL");
+        } finally {
+          setUndoDoiNVLLoadingSiloId(null);
+        }
+      },
+    });
+  }, [form, scope, ca, refreshSnapshotData]);
 
   const initData = useCallback(async () => {
     try {
@@ -1016,15 +1087,27 @@ const TaoPhieuNapLieuLoCao = () => {
                           : <span style={{ color: "#bbb" }}>Từ đầu ca</span>,
                       },
                       {
-                        title: "", key: "action", width: 90, align: "center",
+                        title: "", key: "action", width: 160, align: "center",
                         render: (_v: unknown, row: LGNLSiloSnapshotDto) => (
-                          <Button
-                            size="small"
-                            icon={<SwapOutlined />}
-                            onClick={() => handleOpenDoiNVL(row)}
-                          >
-                            Đổi NVL
-                          </Button>
+                          <Space size={4}>
+                            <Button
+                              size="small"
+                              icon={<SwapOutlined />}
+                              onClick={() => handleOpenDoiNVL(row)}
+                            >
+                              Đổi NVL
+                            </Button>
+                            {row.daDoiGiuaCa && (
+                              <Button
+                                size="small"
+                                danger
+                                loading={undoDoiNVLLoadingSiloId === row.idSiLo}
+                                onClick={() => handleUndoDoiNVL(row)}
+                              >
+                                Hoàn tác
+                              </Button>
+                            )}
+                          </Space>
                         ),
                       },
                     ]}
@@ -1071,7 +1154,16 @@ const TaoPhieuNapLieuLoCao = () => {
                           dataIndex: "tenNVL",
                           key: "tenNVL",
                           width: 220,
-                          render: (v: string | null) => v ?? <span style={{ color: "#bbb" }}>Chưa cấu hình</span>,
+                          render: (v: string | null, row: LGNLSiloSnapshotDto) => (
+                            <Space size={4} wrap>
+                              <span>{v ?? <span style={{ color: "#bbb" }}>Chưa cấu hình</span>}</span>
+                              {row.daDoiGiuaCa && (
+                                <Tag color="orange" style={{ fontSize: 11, margin: 0 }}>
+                                  Đổi giữa ca {row.thoiDiemBD ? new Date(row.thoiDiemBD).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : ""}
+                                </Tag>
+                              )}
+                            </Space>
+                          ),
                         },
                         {
                           title: "NVL map mới",

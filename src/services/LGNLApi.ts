@@ -87,6 +87,13 @@ export interface LGNLChangeSiLoNVLDto {
   ghiChu?: string | null;
 }
 
+export interface LGNLUndoChangeSiLoNVLDto {
+  idLoCao: number;
+  ngay: string;           // "YYYY-MM-DD"
+  idCa: number;
+  idSiLo: number;
+}
+
 export interface CreateLGNLMappingDto {
   ngay: string;
   idCa: number;
@@ -128,6 +135,9 @@ export const lgnlMappingApi = {
 
   doiNVL: (dto: LGNLChangeSiLoNVLDto) =>
     apiService.post<{ message: string; id: number }>("/api/LGNL/doi-nvl", dto),
+
+  undoDoiNVL: (dto: LGNLUndoChangeSiLoNVLDto) =>
+    apiService.post<{ message: string; deleted: number }>("/api/LGNL/undo-doi-nvl", dto),
 
   getSnapshotSilo: (params: { ngay: string; idCa: number; idLoCao: number }) =>
     apiService.get<LGNLSiloSnapshotDto[]>("/api/LGNL/get-snapshot-silo", { params }),
