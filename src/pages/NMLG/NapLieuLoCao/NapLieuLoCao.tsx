@@ -8,7 +8,7 @@ import PhieuFilterCard, {
 import { useMemo } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
-import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
+import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import useRowSelection from "../../../hooks/useRowSelection";
 import useCheckPhieu from "../../../hooks/useCheckPhieu";
@@ -16,18 +16,28 @@ import useCheckPhieu from "../../../hooks/useCheckPhieu";
 const NapLieuLoCao = ({ type }: { type?: string }) => {
   const config = LG_BB_NapLieuLoCao as any;
   const navigate = useNavigate();
-  const userStr = localStorage.getItem("user");
-  const userObj = userStr ? JSON.parse(userStr) : {};
+  const userInfoStr = localStorage.getItem("userinfo");
+  const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
+
+  const currentUserId: number | null =
+    userInfoObj?.iD_TaiKhoan ??
+    userInfoObj?.ID_TaiKhoan ??
+    userInfoObj?.idTaiKhoan ??
+    null;
 
   const fixedFilters = useMemo(
-    () => ({ usercode: userObj?.maNV || "" }),
-    [userObj?.maNV]
+    () => ({
+      userId: currentUserId,
+      loaiVung: type === "xemphieu" ? 3 : type === "viecdentoi" ? 2 : 1,
+    }),
+    [currentUserId, type]
   );
 
   const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange, refetch } =
-    usePhieuSearchList({
+    usePhieuSearchListHRC({
       maBm: config.code as string,
       fixedFilters,
+      persistKey: true,
     });
 
   const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } = useRowSelection(data as any[]);
@@ -220,7 +230,7 @@ const NapLieuLoCao = ({ type }: { type?: string }) => {
         onFilter={handleFilter}
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
-        mergeFilters={{ usercode: userObj?.maNV || "" }}
+        mergeFilters={{}}
         selectedRowCount={selectedRowKeys.length}
         checkLoading={checkLoading}
         onCheckPhieu={handleCheckPhieu}
