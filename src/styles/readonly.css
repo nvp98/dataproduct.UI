@@ -44,6 +44,11 @@
   color: rgba(0, 0, 0, 0.65) !important;
 }
 
+/* Hàng đã được check/xác nhận: nền xám nhạt */
+.row-checked td {
+  background-color: #f0f8f1 !important;
+}
+
 /* Disabled inputs bên trong table cell: hiện màu xám nhạt để phân biệt với ô có thể nhập */
 .ant-table-cell .ant-input[disabled],
 .ant-table-cell .ant-input-affix-wrapper-disabled,

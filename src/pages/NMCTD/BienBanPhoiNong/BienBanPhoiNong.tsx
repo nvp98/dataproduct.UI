@@ -365,7 +365,6 @@ const BienBanPhoiNong = ({ type }: { type?: string }) => {
 
   return (
     <div>
-      <style>{`.row-checked td { background-color: #e6fae6 !important; }`}</style>
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilter}

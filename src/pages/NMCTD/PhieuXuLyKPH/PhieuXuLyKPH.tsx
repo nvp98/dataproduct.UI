@@ -279,7 +279,6 @@ const PhieuXuLyKPH = ({ type }: { type?: string }) => {
 
   return (
     <div>
-      <style>{`.row-checked td { background-color: #d9f7be !important; }`}</style>
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}

@@ -57,18 +57,55 @@ const mergeWithDefaultRows = (inputRows?: TableRow[]): TableRow[] => {
   const defaults = createDefaultTableRows();
   if (!inputRows || inputRows.length === 0) return defaults;
 
-  return defaults.map((base, idx) => {
-    const src = inputRows[idx] || {};
-    return {
+  const consumed = new Set<number>();
+  const result: TableRow[] = [];
+
+  for (const base of defaults) {
+    // Find first input row matching this mavitri
+    const firstIdx = inputRows.findIndex(
+      (r, i) => !consumed.has(i) && r.mavitri === base.mavitri,
+    );
+
+    if (firstIdx === -1) {
+      result.push(base);
+      continue;
+    }
+
+    // Merge base with first matched row
+    consumed.add(firstIdx);
+    const src = inputRows[firstIdx];
+    result.push({
       ...base,
-      mavitri: src.mavitri ?? base.mavitri ?? "",
       macThep: src.macThep ?? "",
       kichThuoc: src.kichThuoc ?? "",
       soCay: src.soCay ?? "",
       ghiChu: src.ghiChu ?? "",
-      key: base.key,
-    };
+    });
+
+    // Append all remaining input rows with same mavitri right after, merged with base
+    inputRows.forEach((r, i) => {
+      if (!consumed.has(i) && r.mavitri === base.mavitri) {
+        consumed.add(i);
+        result.push({
+          ...base,
+          macThep: r.macThep ?? "",
+          kichThuoc: r.kichThuoc ?? "",
+          soCay: r.soCay ?? "",
+          ghiChu: r.ghiChu ?? "",
+          key: r.key ?? `extra-${Date.now()}-${i}`,
+        });
+      }
+    });
+  }
+
+  // Append rows whose mavitri doesn't match any default (merged with empty base)
+  inputRows.forEach((r, i) => {
+    if (!consumed.has(i)) {
+      result.push({ ...r, key: r.key ?? `extra-${Date.now()}-${i}` });
+    }
   });
+
+  return result;
 };
 
 const TaoPhieuGiaoNhanPhoi = () => {
@@ -185,8 +222,8 @@ const TaoPhieuGiaoNhanPhoi = () => {
               form.setFieldsValue(overrides);
           }
 
-          const mergedRows = mergeWithDefaultRows(formValues.table1 || []);
-          setTableData(mergedRows);
+          const savedRows = (formValues.table1 || []) as TableRow[];
+          setTableData(savedRows.length > 0 ? savedRows : createDefaultTableRows());
           setPhieuInfo({
             tinhTrang: tinhTrang,
             nguoiTaoId: (res as any)?.nguoiTaoId ?? null,
@@ -433,6 +470,34 @@ const TaoPhieuGiaoNhanPhoi = () => {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (!idphieu) {
+      message.warning("Vui lòng lưu phiếu trước khi xuất Excel!");
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await PhieuApi.exportDynamicExcelPhieu(idphieu);
+      const blob = new Blob([response as any], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Bien_ban_giao_nhan_phoi_${soPhieu || idphieu}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success("Xuất Excel thành công!");
+    } catch (error: any) {
+      console.error("Export Excel failed:", error);
+      message.error(error?.message || "Xuất file Excel thất bại!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
     const buttons = phieuActionService.getActionButtons({
@@ -556,6 +621,20 @@ const TaoPhieuGiaoNhanPhoi = () => {
               Xuất PDF
             </Button>
           )}
+          {idphieu && phieuInfo.tinhTrang !== 5 && (
+            <Button
+              icon={<FileExcelOutlined />}
+              style={{
+                backgroundColor: "#217346",
+                borderColor: "#217346",
+                color: "#fff",
+              }}
+              onClick={handleExportExcel}
+              loading={loading}
+            >
+              Xuất Excel
+            </Button>
+          )}
           {actionButtons}
         </div>
 
@@ -569,9 +648,10 @@ const TaoPhieuGiaoNhanPhoi = () => {
                 addRowButtonText="+ Thêm dòng"
                 minRows={0}
                 loading={loading}
-                editable={true}
+                editable={!isFormLocked}
                 showAddButton={false}
                 showDeleteButton={false}
+                showRowCloneButton={!isFormLocked}
                 readonlyFields={["vitri"]}
                 summary={(pageData) => {
                   const totals = {

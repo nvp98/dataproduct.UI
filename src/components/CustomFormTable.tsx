@@ -9,7 +9,7 @@ import {
   Spin,
   Tag,
 } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import { DeleteOutlined, CopyOutlined } from "@ant-design/icons";
 
 interface CustomFormTableProps {
   columns: Array<{
@@ -57,6 +57,9 @@ interface CustomFormTableProps {
   compactWhenEmpty?: boolean; // Nếu true, khi không có dòng sẽ không chiếm nhiều chiều cao
   summary?: (data: readonly any[]) => React.ReactNode;
   onRow?: (record: any, index?: number) => any;
+  showCloneButton?: boolean;
+  cloneRowButtonText?: string;
+  showRowCloneButton?: boolean;
 }
 
 export default function CustomFormTable({
@@ -84,6 +87,9 @@ export default function CustomFormTable({
   compactWhenEmpty = false,
   summary,
   onRow,
+  showCloneButton = false,
+  cloneRowButtonText = "+ Nhân dòng trên",
+  showRowCloneButton = false,
 }: CustomFormTableProps) {
   // Validate và filter input theo type
   const validateAndFormatInput = (
@@ -193,6 +199,32 @@ export default function CustomFormTable({
     onDataChange?.(newRows);
   };
 
+  // Clone dòng cuối, thêm vào phía dưới
+  const handleCloneLastRow = () => {
+    if (rows.length === 0) {
+      handleAddRow();
+      return;
+    }
+    const lastRow = rows[rows.length - 1];
+    const newRow = { ...lastRow, key: Date.now() };
+    const newRows = [...rows, newRow];
+    setRows(newRows);
+    onDataChange?.(newRows);
+  };
+
+  // Clone 1 hàng cụ thể, chèn ngay bên dưới hàng đó
+  const handleCloneRow = (rowIndex: number) => {
+    const sourceRow = rows[rowIndex];
+    const newRow = { ...sourceRow, key: Date.now() };
+    const newRows = [
+      ...rows.slice(0, rowIndex + 1),
+      newRow,
+      ...rows.slice(rowIndex + 1),
+    ];
+    setRows(newRows);
+    onDataChange?.(newRows);
+  };
+
   // Xử lý xóa dòng
   const handleDeleteRow = (rowIndex: number) => {
     if (rows.length <= minRows) {
@@ -236,6 +268,25 @@ export default function CustomFormTable({
 
   // Sinh cột động từ config
   const tableColumns = [
+    ...(showRowCloneButton && editable
+      ? [
+          {
+            title: "",
+            key: "rowClone",
+            width: 40,
+            fixed: "left" as const,
+            render: (_: any, _record: any, rowIndex: number) => (
+              <Button
+                type="text"
+                icon={<CopyOutlined />}
+                size="small"
+                title="Sao chép hàng này"
+                onClick={() => handleCloneRow(rowIndex)}
+              />
+            ),
+          },
+        ]
+      : []),
     ...columns.map((col) => {
       if (col.children) {
         // Merge header: cột cha có con
@@ -498,6 +549,17 @@ export default function CustomFormTable({
           {showAddButton && editable && (
             <Button onClick={handleAddRow} type="dashed" className="my-2">
               {addRowButtonText}
+            </Button>
+          )}
+          {showCloneButton && editable && (
+            <Button
+              onClick={handleCloneLastRow}
+              type="dashed"
+              icon={<CopyOutlined />}
+              className="my-2"
+              style={{ marginLeft: showAddButton ? 8 : 0 }}
+            >
+              {cloneRowButtonText}
             </Button>
           )}
           {onRefresh && (
