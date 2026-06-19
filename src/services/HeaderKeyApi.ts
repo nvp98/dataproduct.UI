@@ -39,6 +39,7 @@ type HeaderKeySearchParams = {
   ToDate?: string; // ISO string
   SortThuTu?: string; // asc | desc
   IdNhom?: number;
+  chuaMappingNM?: boolean;
   page?: number;
   pageSize?: number;
 };

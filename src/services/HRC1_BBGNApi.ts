@@ -155,6 +155,7 @@ export interface HRC1_ExportQuery {
 
 export interface HRC1_ThongKeQuery extends HRC1_ExportQuery {
   isTrungMeThoi?: boolean | null;
+  isChuyenMe?: boolean | null;
   page?: number;
   pageSize?: number;
 }
@@ -169,6 +170,7 @@ export interface HRC1_ThongKeRow {
   klLan2?: number | null;
   klLan3?: number | null;
   klThepLong?: number | null;
+  klThepLongChot?: number | null;
   klThepLongPhanBo?: number | null;
   ghiChuLo?: string | null;
   ghiChuTL?: string | null;
@@ -204,6 +206,7 @@ export interface HRC1_ThongKeResult {
   items: HRC1_ThongKeRow[];
   totalRecords: number;
   totalKlThepLong: number | null;
+  totalKlThepLongChot?: number | null;
   totalKlThepLongPhanBo?: number | null;
   page: number;
   pageSize: number;
