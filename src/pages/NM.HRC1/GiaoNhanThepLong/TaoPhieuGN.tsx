@@ -80,7 +80,7 @@ const calcKlThepLong = (dichChuyen: string | null | undefined, kllf: number | nu
 };
 
 // Ghi chú dùng chung cả 3 công đoạn — auto-save khi blur
-const GhiChuInput = ({ meId, value, locked }: { meId: number; value?: string | null; locked: boolean }) => {
+const GhiChuInput = ({ meId, value, locked, field }: { meId: number; value?: string | null; locked: boolean; field: "lo" | "tl" | "duc" }) => {
   const [local, setLocal] = useState(value ?? "");
   useEffect(() => { setLocal(value ?? ""); }, [value]);
   if (locked) return <>{value ?? ""}</>;
@@ -93,7 +93,7 @@ const GhiChuInput = ({ meId, value, locked }: { meId: number; value?: string | n
       onBlur={async () => {
         const newVal = local.trim() || null;
         if (newVal === (value ?? null)) return;
-        try { await HRC1Api.updateGhiChu(meId, newVal); }
+        try { await HRC1Api.updateGhiChu(meId, newVal, field); }
         catch { message.error("Lỗi lưu ghi chú"); setLocal(value ?? ""); }
       }}
     />
@@ -350,7 +350,7 @@ export const LoThoiPanel = ({
   const buildColumns = (lk: (me: HRC1_MeThepVm) => boolean): TableColumnsType<HRC1_MeThepVm> => [
     { title: "STT",      key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
     {
-      title: "Mẻ thổi", key: "maMe",   width: 85, fixed: "left",
+      title: "Mẻ thổi", key: "maMe",   width: 90, fixed: "left",
       render: (_, me) => (
         <>
           {me.maMe ?? ""}
@@ -439,7 +439,7 @@ export const LoThoiPanel = ({
       title: "KL thép lỏng", key: "klThepLong", width: 80,
       render: (_, me) => {
         const computed = calcKlThepLong(me.dichChuyen, me.kllfSauThep, me.klLan1, me.klLan2);
-        return <InputNumber size="small" style={{ width: 73, fontWeight: 600 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
+        return <InputNumber size="small" style={{ width: 73, fontWeight: 700 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
     {
@@ -455,8 +455,8 @@ export const LoThoiPanel = ({
       },
     },
     {
-      title: "Ghi chú", key: "ghiChuLo", width: 90,
-      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={isLocked(me)} />,
+      title: "Ghi chú LT", key: "ghiChuLo", width: 90,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={isLocked(me)} field="lo" />,
     },
     {
       title: "Tinh luyện/Lên thẳng", key: "dichChuyen", width: 125,
@@ -499,7 +499,7 @@ export const LoThoiPanel = ({
         <Tag color="purple">TL {me.soTinhLuyenNhan}</Tag>
       ) : "-",
     },
-    { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 110, render: (v) => v ?? "-" },
+    { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 150, render: (v) => v ?? "-" },
     {
       title: "Tình trạng", key: "tinhTrang", width: 130, fixed: "right",
       render: (_, me) => (
@@ -540,16 +540,23 @@ export const LoThoiPanel = ({
     <Empty description="Chọn lò thổi để xem và nhập dữ liệu" style={{ padding: "40px 0" }} />
   );
 
+  const loThoiTotal = Math.round(displayData.reduce((s, m) => s + (m.klThepLong ?? 0), 0) * 100) / 100;
+
   return (
-    <MeThepTable
-      columns={columns}
-      dataSource={displayData}
-      scrollX={1325}
-      scrollY="calc(100vh - 190px)"
-      onRow={(me) => ({
-        style: me.isGhost ? { background: "#fff7e6", opacity: 0.85 } : undefined,
-      })}
-    />
+    <>
+      <MeThepTable
+        columns={columns}
+        dataSource={displayData}
+        scrollX={1325}
+        scrollY="calc(100vh - 207px)"
+        onRow={(me) => ({
+          style: me.isGhost ? { background: "#fff7e6", opacity: 0.85 } : undefined,
+        })}
+      />
+      <div style={{ padding: "4px 8px", background: "#fafafa", borderTop: "1px solid #f0f0f0", fontWeight: 600, fontSize: 13 }}>
+        Tổng KL thép lỏng: <strong>{loThoiTotal.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}</strong>
+      </div>
+    </>
   );
 };
 
@@ -922,12 +929,12 @@ export const TinhLuyenPanel = ({
       render: (_, me) => {
         // dichChuyen null ở TinhLuyen → mặc định dùng công thức tinh_luyen: klLan1 - klLan2
         const computed = calcKlThepLong(me.dichChuyen ?? "tinh_luyen", me.kllfSauThep, me.klLan1, me.klLan2);
-        return <InputNumber size="small" style={{ width: 73, fontWeight: 600 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
+        return <InputNumber size="small" style={{ width: 73, fontWeight: 700 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
     {
-      title: "Ghi chú", key: "ghiChuLo", width: 90,
-      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={readOnly || !!me.isChot} />,
+      title: "Ghi chú TL", key: "ghiChuTL", width: 90,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuTL} locked={readOnly || !!me.isChot} field="tl" />,
     },
     { title: "Thử nghiệm", dataIndex: "isThuNghiem", width: 44, render: (v) => <Checkbox checked={!!v} disabled /> },
     {
@@ -1059,9 +1066,12 @@ export const TinhLuyenPanel = ({
           dataSource={tlDisplayData}
           rowKey={(r) => `${r.id}-${r.mePhanCongId}`}
           scrollX={showChuyenMeCols ? 1391 : 1131}
-          scrollY="calc(100vh - 235px)"
-          onRow={(me) => ({ style: me.isManualTL ? { background: "#fff1f0" } : undefined })}
+          scrollY="calc(100vh - 258px)"
+          onRow={(me) => ({ style: me.isManualTL ? { background: "#f6f88e" } : undefined })}
         />
+        <div style={{ padding: "4px 8px", background: "#fafafa", borderTop: "1px solid #f0f0f0", fontWeight: 600, fontSize: 13 }}>
+          Tổng KL thép lỏng: <strong>{(Math.round(tlDisplayData.reduce((s, m) => s + (m.klThepLong ?? 0), 0) * 100) / 100).toLocaleString("vi-VN", { maximumFractionDigits: 2 })}</strong>
+        </div>
 
         {!readOnly && (
           <Space style={{ marginTop: 8 }}>
@@ -1295,17 +1305,17 @@ export const DucPanel = ({
       },
     },
     { title: "STT",       key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
-    { title: "Mẻ thổi",  dataIndex: "maMe",         width: 80, fixed: "left", render: (v) => v ?? "" },
+    { title: "Mẻ thổi",  dataIndex: "maMe",         width: 90, fixed: "left", render: (v) => v ?? "" },
     { title: "Thùng số", dataIndex: "thungSo",      width: 50, render: (v) => v ?? "" },
     { title: "Thời gian",dataIndex: "thoiGian",     width: 65, render: fmtTime },
     { title: "KL thùng LF sau khi ra thép",    dataIndex: "kllfSauThep",  width: 75,  render: (v) => v ?? "" },
     { title: "KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)", dataIndex: "klLan1",       width: 75,  render: (v) => v ?? "" },
     { title: "KL bì - Lần 2 (tấn)", dataIndex: "klLan2",       width: 75,  render: (v) => v ?? "" },
     { title: "KL bì - Lần 3 (tấn)", dataIndex: "klLan3",       width: 75,  render: (v) => v ?? "" },
-    { title: "KL thép lỏng", dataIndex: "klThepLong", width: 80, render: (v) => <span style={{ fontWeight: 600 }}>{v ?? ""}</span> },
+    { title: "KL thép lỏng", dataIndex: "klThepLong", width: 80, render: (v) => <span style={{ fontWeight: 700 }}>{v ?? ""}</span> },
     {
-      title: "Ghi chú", key: "ghiChuLo", width: 90,
-      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={readOnly || !!me.isChot} />,
+      title: "Ghi chú đúc", key: "ghiChuDuc", width: 90,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuDuc} locked={readOnly || !!me.isChot} field="duc" />,
     },
     {
       title: "Tinh luyện/Lên thẳng", key: "dichDisp", width: 90,
@@ -1317,6 +1327,19 @@ export const DucPanel = ({
     },
     { title: "Thử nghiệm",  dataIndex: "isThuNghiem", width: 50, render: (v) => v ? "✓" : "" },
     { title: "Máy đúc",  dataIndex: "tenMayDucDich", width: 90, render: (v) => v ?? "" },
+    {
+      title: "Chuyển mẻ", key: "chuyenVeMaMe", width: 100,
+      onCell: (me) => me.chuyenVeMaMe && me.chuyenVeMaMe !== me.maMe ? { style: { background: "#fffbe6" } } : {},
+      render: (_, me) => {
+        const isReal = me.chuyenVeMaMe && me.chuyenVeMaMe !== me.maMe;
+        return isReal ? <span style={{ color: "#d48806" }}>{me.chuyenVeMaMe}</span> : (me.maMe ?? "");
+      },
+    },
+    {
+      title: "Máy đúc chuyển", key: "tenMayDucChuyen", width: 110,
+      onCell: (me) => me.chuyenVeMaMe && me.chuyenVeMaMe !== me.maMe ? { style: { background: "#fffbe6" } } : {},
+      render: (_, me) => me.chuyenVeMaMe && me.chuyenVeMaMe !== me.maMe ? (me.tenMayDucChuyen ?? "—") : (me.tenMayDucDich ?? ""),
+    },
     { title: "Phân loại",dataIndex: "phanLoai",      width: 80,  render: (v) => v ?? "" },
     { title: "Mác BKMIS",dataIndex: "macThepBKMIS",  width: 110, render: (v) => v ?? "" },
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 110, render: (v) => v ?? "-" },
@@ -1330,9 +1353,9 @@ export const DucPanel = ({
     <MeThepTable
       columns={columns}
       dataSource={sortedMes}
-      scrollX={1370}
-      scrollY="calc(100vh - 190px)"
-      onRow={(me) => ({ style: me.isManualTL ? { background: "#fff1f0" } : undefined })}
+      scrollX={1630}
+      scrollY="calc(100vh - 360px)"
+      onRow={(me) => ({ style: me.isManualTL ? { background: "#f6f88e" } : undefined })}
       summary={(pageData) => {
         const total = Math.round(pageData.reduce((s, m) => s + (m.klThepLong ?? 0), 0) * 100) / 100;
         return (
@@ -1344,7 +1367,7 @@ export const DucPanel = ({
               <Table.Summary.Cell index={9}>
                 <strong>{total}</strong>
               </Table.Summary.Cell>
-              <Table.Summary.Cell index={10} colSpan={8} />
+              <Table.Summary.Cell index={10} colSpan={10} />
             </Table.Summary.Row>
           </Table.Summary>
         );
@@ -1499,7 +1522,7 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
 
   const buildExportFilename = (ext: "xlsx" | "pdf") => {
     if (!phieuData) return `HRC1_export.${ext}`;
-    const label = getGroupLabel(phieuData.maBm ?? "").replace(/\s/g, "_");
+    const label = getScopeName(phieuData.maBm ?? "", phieuData.scope).replace(/[\s/]/g, "_");
     const ngay = phieuData.ngaySX ? phieuData.ngaySX.toString().replace(/-/g, "") : "";
     const ca = phieuData.ca === 1 ? "CaNgay" : phieuData.ca === 2 ? "CaDem" : "";
     return `HRC1_${label}_${ngay}_${ca}.${ext}`;

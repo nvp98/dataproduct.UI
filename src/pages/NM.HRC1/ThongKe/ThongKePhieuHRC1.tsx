@@ -1,4 +1,4 @@
-import { Button, Card, Checkbox, message, Modal, Table, Tag } from "antd";
+import { Button, Card, Checkbox, message, Modal, Table, Tag, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -19,16 +19,19 @@ import { HRC1Api, type HRC1_ChotPhieuBatchThatBai } from "../../../services/HRC1
 
 const MABM_DETAIL_ROUTE: Record<string, string> = {
   HRC1_BB_Lothoi: "/taotieuhaolothoi",
+  HRC1_TinhLuyen: "/taophieugiaonhantheplong_hrc1",
   HRC1_BBGN_ThepLong: "/chitietgiaonhantheplong_hrc1",
 };
 
 const MABM_LIST: string[] = [
   BM_CONFIG.HRC1.HRC1_BB_Lothoi,
+  BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
 ];
 
 const LOAI_BM_TO_MABM: Record<string, string> = {
   LoThoi: BM_CONFIG.HRC1.HRC1_BB_Lothoi,
+  TinhLuyen: BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BBGN_ThepLong: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
 };
 
@@ -83,6 +86,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [chotLoading, setChotLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [selectedLoaiBM, setSelectedLoaiBM] = useState<string[]>([]);
   const [mayDucOptions, setMayDucOptions] = useState<Array<{ label: string; value: number }>>([]);
 
@@ -265,6 +269,25 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
     });
   }, [selectedKeys, data, refetch]);
 
+  const selectedMaBm = useMemo(() => {
+    if (selectedKeys.size === 0) return null;
+    const dataMap = new Map((data as TableRecord[]).map((r) => [r.idphieu, r.maBm as string]));
+    const maBms = new Set([...selectedKeys].map((id) => dataMap.get(id)).filter(Boolean) as string[]);
+    return maBms.size === 1 ? [...maBms][0] : null;
+  }, [selectedKeys, data]);
+
+  const handleExportBulk = useCallback(async () => {
+    if (selectedKeys.size === 0 || !selectedMaBm) return;
+    try {
+      setExportLoading(true);
+      await HRC1Api.exportBulkExcel([...selectedKeys]);
+    } catch (e: any) {
+      message.error(e?.message ?? "Xuất Excel thất bại.");
+    } finally {
+      setExportLoading(false);
+    }
+  }, [selectedKeys, selectedMaBm]);
+
   const columns = [
     {
       title: (
@@ -382,6 +405,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
         type: "multiselect",
         options: [
           { label: "Lò thổi", value: "LoThoi" },
+          { label: "Tinh luyện", value: "TinhLuyen" },
           { label: "Giao nhận thép lỏng", value: "BBGN_ThepLong" },
         ],
       },
@@ -481,6 +505,15 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
           >
             Hủy chốt ({selectedKeys.size})
           </Button>
+          <Tooltip title={selectedKeys.size > 0 && !selectedMaBm ? "Chỉ xuất được nhiều phiếu cùng loại biểu mẫu" : undefined}>
+            <Button
+              disabled={selectedKeys.size === 0 || !selectedMaBm}
+              loading={exportLoading}
+              onClick={handleExportBulk}
+            >
+              Export Excel ({selectedKeys.size})
+            </Button>
+          </Tooltip>
         </div>
         <Table<TableRecord>
           columns={columns}

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Button, Card, DatePicker, Form, message, Modal, Select, Space, Table, Tag } from "antd";
+import { Button, Card, Checkbox, DatePicker, Form, message, Modal, Select, Space, Table, Tag, Tooltip } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ import { bmQuyenConfig } from "../../../utils/configs/bmQuyenConfig";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import type { SearchPhieuByUserRequest, SearchPhieuResponseModel } from "../../../models/Phieu";
+import { HRC1Api } from "../../../services/HRC1_BBGNApi";
 
 type TableRecord = SearchPhieuResponseModel & { kip?: string | null };
 
@@ -181,6 +182,8 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
   const currentUserId = useMemo(() => getThongTinUser().iD_TaiKhoan ?? null, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedBms, setSelectedBms] = useState<string[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [exportLoading, setExportLoading] = useState(false);
 
   const routeCreate = "/taophieugiaonhantheplong_hrc1";
   const routeDetail = "/chitietgiaonhantheplong_hrc1";
@@ -270,6 +273,44 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
     },
   ], [allowedCongDoanOptions, allowedScopeOptions]);
 
+  const selectedMaBm = useMemo(() => {
+    if (selectedKeys.size === 0) return null;
+    const dataMap = new Map((data as TableRecord[]).map((r) => [r.idphieu, r.maBm as string]));
+    const maBms = new Set([...selectedKeys].map((id) => dataMap.get(id)).filter(Boolean) as string[]);
+    return maBms.size === 1 ? [...maBms][0] : null;
+  }, [selectedKeys, data]);
+
+  const firstSelectedMaBm = useMemo(() => {
+    if (selectedKeys.size === 0) return null;
+    return (data as TableRecord[]).find((r) => selectedKeys.has(r.idphieu))?.maBm ?? null;
+  }, [selectedKeys, data]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handlePageChange = useCallback((page: number, pageSize: number) => {
+    setSelectedKeys(new Set());
+    onPageChange(page, pageSize);
+  }, [onPageChange]);
+
+  const handleExportBulk = useCallback(async () => {
+    if (selectedKeys.size === 0 || !selectedMaBm) return;
+    try {
+      setExportLoading(true);
+      await HRC1Api.exportBulkExcel([...selectedKeys]);
+    } catch (e: any) {
+      message.error(e?.message ?? "Xuất Excel thất bại.");
+    } finally {
+      setExportLoading(false);
+    }
+  }, [selectedKeys, selectedMaBm]);
+
   const handleNavigate = (record: TableRecord, forceDetail = false) => {
     if (forceDetail || type === "xemphieu") {
       navigate(routeDetail, { state: { idphieu: record.idphieu } });
@@ -282,7 +323,42 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
     }
   };
 
+  const isAllSelected = (data as TableRecord[]).length > 0
+    && (data as TableRecord[]).every((r) => selectedKeys.has(r.idphieu));
+  const isIndeterminate = !isAllSelected && (data as TableRecord[]).some((r) => selectedKeys.has(r.idphieu));
+
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked) setSelectedKeys(new Set((data as TableRecord[]).map((r) => r.idphieu)));
+    else setSelectedKeys(new Set());
+  }, [data]);
+
   const columns = [
+    {
+      title: (
+        <Checkbox
+          checked={isAllSelected}
+          indeterminate={isIndeterminate}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+        />
+      ),
+      key: "select",
+      width: 50,
+      fixed: "left" as const,
+      render: (_: unknown, record: TableRecord) => {
+        const disabled = !!firstSelectedMaBm && !selectedKeys.has(record.idphieu) && record.maBm !== firstSelectedMaBm;
+        return (
+          <span onClick={(e) => e.stopPropagation()}>
+            <Tooltip title={disabled ? "Chỉ xuất được phiếu cùng loại biểu mẫu" : undefined}>
+              <Checkbox
+                checked={selectedKeys.has(record.idphieu)}
+                disabled={disabled}
+                onChange={() => toggleSelect(record.idphieu)}
+              />
+            </Tooltip>
+          </span>
+        );
+      },
+    },
     {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
@@ -388,6 +464,21 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
         congDoanOptions={activeCongDoanOptions}
       />
       <Card>
+        {selectedKeys.size > 0 && (
+          <div style={{ marginBottom: 12, display: "flex", gap: 12, alignItems: "center" }}>
+            <span style={{ color: "#666" }}>Đã chọn {selectedKeys.size} phiếu</span>
+            <Tooltip title={!selectedMaBm ? "Chỉ xuất được nhiều phiếu cùng loại biểu mẫu" : undefined}>
+              <Button
+                disabled={!selectedMaBm}
+                loading={exportLoading}
+                onClick={handleExportBulk}
+              >
+                Export Excel ({selectedKeys.size})
+              </Button>
+            </Tooltip>
+            <Button size="small" onClick={() => setSelectedKeys(new Set())}>Bỏ chọn tất cả</Button>
+          </div>
+        )}
         <Table<TableRecord>
           columns={columns}
           dataSource={data as TableRecord[]}
@@ -400,16 +491,16 @@ const GiaoNhanThepLong = ({ type, maBmFilter }: { type?: string; maBmFilter?: st
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} phiếu`,
-            onChange: onPageChange,
+            onChange: handlePageChange,
           }}
           onRow={(record) => ({
             onClick: () => handleNavigate(record),
             style: { cursor: "pointer" },
           })}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1250 }}
           summary={() => (
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={9} align="right">
+              <Table.Summary.Cell index={0} colSpan={10} align="right">
                 <span style={{ fontWeight: 500 }}>
                   Tổng: {pagination.total} Phiếu
                 </span>

@@ -37,6 +37,7 @@ export interface HRC1_MeThepVm {
   macThepBKMIS?: string | null;
   idMacThep?: number | null;
   ghiChuTL?: string | null;
+  ghiChuDuc?: string | null;
   // Trạng thái
   trangThaiLo?: number | null;
   trangThaiTL?: number | null;
@@ -170,12 +171,15 @@ export interface HRC1_ThongKeRow {
   klThepLong?: number | null;
   klThepLongPhanBo?: number | null;
   ghiChuLo?: string | null;
+  ghiChuTL?: string | null;
+  ghiChuDuc?: string | null;
   isThuNghiem?: boolean | null;
   tenMayDuc?: string | null;
   macThep?: string | null;
   phanLoai?: string | null;
   macThepBKMIS?: string | null;
   tinhLuyenLenThang?: string | null;
+  soTinhLuyenNhan?: number | null;
   isTrungMeThoi?: boolean | null;
   trangThaiLo?: number | null;
   trangThaiTL?: number | null;
@@ -207,7 +211,7 @@ export interface HRC1_ThongKeResult {
 
 export interface HRC1_TongHopItem {
   label: string;
-  soMe: number;
+  klThepLong: number;
 }
 
 export interface HRC1_TongHopResult {
@@ -321,9 +325,9 @@ export const HRC1Api = {
   xoaMeTay: (mePhanCongId: number): Promise<void> =>
     apiService.delete(`/api/hrc1/tinh-luyen/me-tay/${mePhanCongId}`, { headers: userHeaders() }),
 
-  // Ghi chú dùng chung cả 3 công đoạn — auto-save on blur
-  updateGhiChu: (meId: number, ghiChu: string | null) =>
-    apiService.put(`/api/hrc1/me/${meId}/ghi-chu`, { ghiChu }, { headers: userHeaders() }),
+  // Ghi chú — auto-save on blur; field: "lo" | "tl" | "duc"
+  updateGhiChu: (meId: number, ghiChu: string | null, field: "lo" | "tl" | "duc") =>
+    apiService.put(`/api/hrc1/me/${meId}/ghi-chu`, { ghiChu, field }, { headers: userHeaders() }),
 
   // Chốt / hủy chốt phiếu HRC1_BBGN_ThepLong theo batch (từ ThongKe P.KH)
   chotPhieuBatch: (idPhieuList: string[]): Promise<HRC1_ChotPhieuBatchResult> =>
@@ -338,6 +342,32 @@ export const HRC1Api = {
   tongHopThongKe: (q: HRC1_ThongKeQuery): Promise<HRC1_TongHopResult> =>
     apiService.get("/api/hrc1/thong-ke/tong-hop", { params: q }) as Promise<HRC1_TongHopResult>,
 
+  exportBulkExcel: async (idPhieuList: string[]): Promise<void> => {
+    const baseUrl = import.meta.env.VITE_API_URL as string;
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${baseUrl}api/hrc1/export/excel/bulk`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(idPhieuList),
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(t || "Xuất Excel thất bại."); }
+    const blob = await res.blob();
+    let fileName = `BBGN_ThepLong_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const cd = res.headers.get("Content-Disposition");
+    if (cd) {
+      const m = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(cd);
+      if (m?.[1]) fileName = decodeURIComponent(m[1].replace(/['"]/g, ""));
+    }
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   exportThongKe: async (q: HRC1_ExportQuery): Promise<void> => {
     const baseUrl = import.meta.env.VITE_API_URL as string;
     const token = localStorage.getItem("token");
@@ -348,7 +378,7 @@ export const HRC1Api = {
     });
     if (!res.ok) { const t = await res.text(); throw new Error(t || "Xuất Excel thất bại."); }
     const blob = await res.blob();
-    let fileName = `HRC1_BBGN_ThepLong.xlsx`;
+    let fileName = `HRC1_BBGN_ThepLong_${new Date().toISOString().split('T')[0]}.xlsx`;
     const cd = res.headers.get("Content-Disposition");
     if (cd) {
       const m = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(cd);
