@@ -129,62 +129,21 @@ export const MenuDataDashboard = [
     icon: "nmlg",
     color: "#019221ff",
     items: [
-      // {
-      //   code: "naplieulocao",
-      //   title: "BM.05/QT.05.09 SỔ THEO DÕI NẠP LIỆU LÒ CAO",
-      // },
-      // {
-      //   code: "khoiluongsilo",
-      //   title: "BM.07/QT.05.09 CHỐT KHỐI LƯỢNG SILO LÒ CAO",
-      // },
-      // {
-      //   code: "vanhanhthanphun",
-      //   title: "BM.10/QT.05.09 NHẬT KÝ VẬN HÀNH THAN PHUN LÒ CAO",
-      // },
+      {
+        code: "naplieulocao",
+        title: "BM.05/QT.05.09 SỔ THEO DÕI NẠP LIỆU LÒ CAO",
+        maBm: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
+      },
+      {
+        code: "tonsilolocao",
+        title: "BM.07/QT.05.09 CHỐT KHỐI LƯỢNG SILO LÒ CAO",
+        maBm: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
+      },
+      {
+        code: "nkvhthanphunlocao",
+        title: "BM.10/QT.05.09 NHẬT KÝ VẬN HÀNH PHUN THAN LÒ CAO",
+        maBm: BM_CONFIG.NMLG.NMLG_NK_VHPTLC,
+      },
     ],
   },
-
-  // {
-  //   category: "Quản lý thiết bị",
-  //   icon: "equipment",
-  //   color: "#13c2c2",
-  //   items: [
-  //     { code: "BM.09/QT.09", title: "Biên bản sự cố thiết bị" },
-  //     { code: "BM.11A/QT.09", title: "Phiếu đề nghị thuê ngoài" },
-  //     { code: "BM.11B/QT.09", title: "Phiếu đề nghị nội bộ" },
-  //   ],
-  // },
-  // {
-  //   category: "Công nghệ thông tin",
-  //   icon: "it",
-  //   color: "#2f54eb",
-  //   items: [
-  //     { code: "BM.01/QT.23.01", title: "Đăng ký tài khoản nội bộ" },
-  //     { code: "BM.03A/QT.23.01", title: "Chuyển đổi vị trí chấm công" },
-  //     { code: "BM.03B/QT.23.01", title: "Thêm vị trí chấm công" },
-  //   ],
-  // },
-  // {
-  //   category: "An toàn - Môi trường",
-  //   icon: "safety",
-  //   color: "#fa8c16",
-  //   items: [
-  //     { code: "BM.01/QT.18.07", title: "Giấy phép công việc đào đất" },
-  //     { code: "BM.02/QT.18.07", title: "Giấy phép công việc nâng hạ" },
-  //     {
-  //       code: "BM.05/QT.18.07",
-  //       title: "Giấy phép công việc phát sinh tia lửa",
-  //     },
-  //   ],
-  // },
-  // {
-  //   category: "Thủ tục hành chính",
-  //   icon: "admin",
-  //   color: "#52c41a",
-  //   items: [
-  //     { code: "BM.03/QT.22", title: "Đơn đề nghị hỗ trợ phương tiện" },
-  //     { code: "BM.21/QT.22", title: "Đề nghị photocopy, in ấn" },
-  //     { code: "BM.24/QT.22", title: "Đề nghị gửi hàng hóa" },
-  //   ],
-  // },
 ];

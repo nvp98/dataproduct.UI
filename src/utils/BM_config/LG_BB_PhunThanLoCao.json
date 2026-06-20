@@ -1,0 +1,788 @@
+{
+  "code": "NMLG_NK_VHPTLC",
+  "title": "NHẬT KÝ VẬN HÀNH PHUN THAN LÒ CAO",
+  "prefix": "NMLG_NKPTLC",
+  "headerInfo": {
+    "company": "HÒA PHÁT DUNG QUẤT",
+    "subCompany": "CÔNG TY CỔ PHẦN THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.10/QT.05.09",
+    "effectiveDate": "10/04/2025",
+    "revision": "01"
+  },
+  "headerFields": [
+    {
+      "label": "Ngày sản xuất",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    },
+    {
+      "label": "Lò cao",
+      "type": "select",
+      "key": "loCao",
+      "required": true,
+      "options": [
+        {
+          "label": "Lò cao 1",
+          "value": 1
+        },
+        {
+          "label": "Lò cao 2",
+          "value": 2
+        },
+        {
+          "label": "Lò cao 3",
+          "value": 3
+        },
+        {
+          "label": "Lò cao 4",
+          "value": 4
+        },
+        {
+          "label": "Lò cao 5",
+          "value": 5
+        },
+        {
+          "label": "Lò cao 6",
+          "value": 6
+        }
+      ]
+    }
+  ],
+  "layout": [
+    {
+      "sectionType": "table",
+      "key": "nhatKyVanHanh",
+      "tableType": "multiHeader",
+      "allowAddRow": false,
+      "defaultRows": [
+        {
+          "thoiGian": "08h"
+        },
+        {
+          "thoiGian": "09h"
+        },
+        {
+          "thoiGian": "10h"
+        },
+        {
+          "thoiGian": "11h"
+        },
+        {
+          "thoiGian": "12h"
+        },
+        {
+          "thoiGian": "13h"
+        },
+        {
+          "thoiGian": "14h"
+        },
+        {
+          "thoiGian": "15h"
+        },
+        {
+          "thoiGian": "16h"
+        },
+        {
+          "thoiGian": "17h"
+        },
+        {
+          "thoiGian": "18h"
+        },
+        {
+          "thoiGian": "19h"
+        },
+        {
+          "thoiGian": "20h"
+        },
+        {
+          "thoiGian": "21h"
+        },
+        {
+          "thoiGian": "22h"
+        },
+        {
+          "thoiGian": "23h"
+        },
+        {
+          "thoiGian": "00h"
+        },
+        {
+          "thoiGian": "01h"
+        },
+        {
+          "thoiGian": "02h"
+        },
+        {
+          "thoiGian": "03h"
+        },
+        {
+          "thoiGian": "04h"
+        },
+        {
+          "thoiGian": "05h"
+        },
+        {
+          "thoiGian": "06h"
+        },
+        {
+          "thoiGian": "07h"
+        }
+      ],
+      "columns": [
+        {
+          "title": "Thời gian",
+          "children": [
+            {
+              "title": "",
+              "dataIndex": "thoiGian",
+              "width": 80,
+              "editable": false,
+              "align": "center",
+              "fixed": "left"
+            }
+          ]
+        },
+        {
+          "title": "Nhiệt độ silo bột than",
+          "children": [
+            {
+              "title": "1#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "nhietDoSiloBotThan1_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "nhietDoSiloBotThan1_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            },
+            {
+              "title": "2#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "nhietDoSiloBotThan2_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "nhietDoSiloBotThan2_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Nhiệt độ bồn phun thổi",
+          "children": [
+            {
+              "title": "1#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "nhietDoBonPhunThoi1_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "nhietDoBonPhunThoi1_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            },
+            {
+              "title": "2#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "nhietDoBonPhunThoi2_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "nhietDoBonPhunThoi2_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            },
+            {
+              "title": "3#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "nhietDoBonPhunThoi3_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "nhietDoBonPhunThoi3_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dòng điện máy nghiền",
+          "children": [
+            {
+              "title": "Tự động (A)",
+              "dataIndex": "dongDienMayNghien_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (A)",
+              "dataIndex": "dongDienMayNghien_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Dòng điện quạt gió thổi ngược",
+          "children": [
+            {
+              "title": "Tự động (A)",
+              "dataIndex": "dongDienQuatGioNguoc_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (A)",
+              "dataIndex": "dongDienQuatGioNguoc_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Nhiệt độ đầu vào máy nghiền",
+          "children": [
+            {
+              "title": "Tự động (℃)",
+              "dataIndex": "nhietDoDauVaoMayNghien_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (℃)",
+              "dataIndex": "nhietDoDauVaoMayNghien_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Nhiệt độ đầu ra máy nghiền",
+          "children": [
+            {
+              "title": "Tự động (℃)",
+              "dataIndex": "nhietDoDauRaMayNghien_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (℃)",
+              "dataIndex": "nhietDoDauRaMayNghien_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Nhiệt độ khoang lò",
+          "children": [
+            {
+              "title": "Tự động (℃)",
+              "dataIndex": "nhietDoKhoangLo_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (℃)",
+              "dataIndex": "nhietDoKhoangLo_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Mức liệu silo bột than",
+          "children": [
+            {
+              "title": "1#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "mucLieuSiloBotThan1_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "mucLieuSiloBotThan1_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            },
+            {
+              "title": "2#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "mucLieuSiloBotThan2_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "mucLieuSiloBotThan2_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Mức liệu silo than thô",
+          "children": [
+            {
+              "title": "Tự động (m)",
+              "dataIndex": "mucLieuSiloThanTho_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (m)",
+              "dataIndex": "mucLieuSiloThanTho_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Trọng lượng bồn phun thổi",
+          "children": [
+            {
+              "title": "1#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "trongLuongBonPhunThoi1_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "trongLuongBonPhunThoi1_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            },
+            {
+              "title": "2#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "trongLuongBonPhunThoi2_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "trongLuongBonPhunThoi2_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            },
+            {
+              "title": "3#",
+              "children": [
+                {
+                  "title": "Tự động",
+                  "dataIndex": "trongLuongBonPhunThoi3_Auto",
+                  "width": 90,
+                  "editable": false,
+                  "align": "center"
+                },
+                {
+                  "title": "Thủ công",
+                  "dataIndex": "trongLuongBonPhunThoi3_Manual",
+                  "width": 90,
+                  "align": "center"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Áp lực khí than",
+          "children": [
+            {
+              "title": "Tự động (Kpa)",
+              "dataIndex": "apLucKhiThan_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (Kpa)",
+              "dataIndex": "apLucKhiThan_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Áp lực bồn khí N2",
+          "children": [
+            {
+              "title": "Tự động (Kpa)",
+              "dataIndex": "apLucBonKhiN2_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (Kpa)",
+              "dataIndex": "apLucBonKhiN2_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Nhiệt độ trạm dầu bôi trơn",
+          "children": [
+            {
+              "title": "Tự động (℃)",
+              "dataIndex": "nhietDoTramDauBoiTron_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (℃)",
+              "dataIndex": "nhietDoTramDauBoiTron_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Nhiệt độ stato động cơ máy nghiền",
+          "children": [
+            {
+              "title": "Tự động (℃)",
+              "dataIndex": "nhietDoStatoDongCoMayNghien_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (℃)",
+              "dataIndex": "nhietDoStatoDongCoMayNghien_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Nhiệt độ trục động cơ máy nghiền",
+          "children": [
+            {
+              "title": "Tự động (℃)",
+              "dataIndex": "nhietDoTrucDongCoMayNghien_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (℃)",
+              "dataIndex": "nhietDoTrucDongCoMayNghien_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Áp lực trục nghiền",
+          "children": [
+            {
+              "title": "Tự động (Mpa)",
+              "dataIndex": "apLucTrucNghien_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (Mpa)",
+              "dataIndex": "apLucTrucNghien_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Yêu cầu từ lò cao",
+          "children": [
+            {
+              "title": "Tự động (t/h)",
+              "dataIndex": "yeuCauTuLoCao_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (t/h)",
+              "dataIndex": "yeuCauTuLoCao_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Lượng than phun thực tế",
+          "children": [
+            {
+              "title": "Tự động (t/h)",
+              "dataIndex": "luongThanPhunThucTe_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (t/h)",
+              "dataIndex": "luongThanPhunThucTe_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Lũy kế lượng phun than trong ca",
+          "children": [
+            {
+              "title": "Tự động (t)",
+              "dataIndex": "luyKeLuongPhunThanTrongCa_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (t)",
+              "dataIndex": "luyKeLuongPhunThanTrongCa_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Số lượng súng phun",
+          "children": [
+            {
+              "title": "Tự động (cái)",
+              "dataIndex": "soLuongSungPhun_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center",
+              "precision": 0
+            },
+            {
+              "title": "Thủ công (cái)",
+              "dataIndex": "soLuongSungPhun_Manual",
+              "width": 100,
+              "align": "center",
+              "precision": 0
+            }
+          ]
+        },
+        {
+          "title": "Áp lực gió lạnh lò cao",
+          "children": [
+            {
+              "title": "Tự động (Kpa)",
+              "dataIndex": "apLucGioLanhLoCao_Auto",
+              "width": 100,
+              "editable": false,
+              "align": "center"
+            },
+            {
+              "title": "Thủ công (Kpa)",
+              "dataIndex": "apLucGioLanhLoCao_Manual",
+              "width": 100,
+              "align": "center"
+            }
+          ]
+        },
+        {
+          "title": "Ghi chú",
+          "children": [
+            {
+              "title": "",
+              "dataIndex": "ghiChu",
+              "width": 200,
+              "inputType": "text",
+              "align": "left"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionType": "productionSummary",
+      "key": "tinhHinhSanLuong",
+      "title": "Tình hình sản lượng",
+      "dynamicShiftHeader": true,
+      "columns": [
+        {
+          "title": "Chỉ tiêu",
+          "dataIndex": "chiTieu",
+          "width": 250,
+          "editable": false
+        },
+        {
+          "title": "{KipCaNgay}",
+          "dataIndex": "caNgay",
+          "width": 120,
+          "inputType": "number"
+        },
+        {
+          "title": "{KipCaDem}",
+          "dataIndex": "caDem",
+          "width": 120,
+          "inputType": "number"
+        },
+        {
+          "title": "Tổng",
+          "dataIndex": "tong",
+          "width": 120,
+          "editable": false,
+          "formula": "caNgay + caDem"
+        }
+      ],
+      "rows": [
+        {
+          "chiTieu": "Sản lượng nghiền (t)",
+          "key": "sanLuongNghien"
+        },
+        {
+          "chiTieu": "Sản lượng phun (t)",
+          "key": "sanLuongPhun"
+        },
+        {
+          "chiTieu": "Tồn than thô (t)",
+          "key": "tonThanTho"
+        },
+        {
+          "chiTieu": "Tồn than tinh (t)",
+          "key": "tonThanTinh"
+        }
+      ]
+    },
+    {
+      "sectionType": "productionSummaryTable",
+      "key": "tinhHinhSanLuong",
+      "title": "Tình hình sản lượng",
+      "rows": [
+        {
+          "label": "Sản lượng nghiền (t)",
+          "key": "sanLuongNghien"
+        },
+        {
+          "label": "Sản lượng phun (t)",
+          "key": "sanLuongPhun"
+        },
+        {
+          "label": "Tồn than thô (t)",
+          "key": "tonThanTho"
+        },
+        {
+          "label": "Tồn than tinh (t)",
+          "key": "tonThanTinh"
+        }
+      ]
+    },
+    {
+      "sectionType": "textarea",
+      "key": "sapXepSanXuat",
+      "title": "Sắp xếp sản xuất",
+      "rows": 4
+    },
+    {
+      "sectionType": "textarea",
+      "key": "tinhTrangSanXuatNgay",
+      "title": "1- Tình trạng sản xuất từ 8h00-20h00",
+      "rows": 5
+    },
+    {
+      "sectionType": "textarea",
+      "key": "tinhTrangSanXuatDem",
+      "title": "2- Tình trạng sản xuất từ 20h00-8h00",
+      "rows": 5
+    }
+  ],
+  "footerNotes": [
+    "Nhân viên vận hành phải ghi chép đầy đủ các thông số trong ca.",
+    "Các thông số bất thường phải được ghi chú rõ nguyên nhân và hướng xử lý.",
+    "Dữ liệu nhật ký là cơ sở phục vụ công tác vận hành, theo dõi và truy xuất sản xuất."
+  ],
+  "signatures": [
+    {
+      "label": "NV vận hành ca ngày",
+      "type": "selectNguoiKy",
+      "key": "nvVanHanhCaNgay",
+      "maphongBan": "NM.LG",
+      "capDuyet": 0,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "NV vận hành ca đêm",
+      "type": "selectNguoiKy",
+      "key": "nvVanHanhCaDem",
+      "maphongBan": "NM.LG",
+      "capDuyet": 1,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

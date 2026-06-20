@@ -56,6 +56,8 @@ interface CustomFormTableProps {
   ) => void;
   compactWhenEmpty?: boolean; // Nếu true, khi không có dòng sẽ không chiếm nhiều chiều cao
   summary?: (data: readonly any[]) => React.ReactNode;
+  // Nếu dataIndex khớp pattern này → tự động lưu _manual_{di}=true + _goc_{di}=oldVal khi người dùng sửa
+  manualTrackPattern?: RegExp;
   onRow?: (record: any, index?: number) => any;
   showCloneButton?: boolean;
   cloneRowButtonText?: string;
@@ -86,6 +88,7 @@ export default function CustomFormTable({
   onCellChange,
   compactWhenEmpty = false,
   summary,
+  manualTrackPattern,
   onRow,
   showCloneButton = false,
   cloneRowButtonText = "+ Nhân dòng trên",
@@ -259,7 +262,16 @@ export default function CustomFormTable({
     rowIndex: number,
     dataIndex: string,
   ) => {
-    const newData = [...rows];
+    const newData = rows.map((r, i) => (i === rowIndex ? { ...r } : r));
+    // Manual tracking: nếu dataIndex khớp pattern → lưu giá trị gốc lần đầu người dùng sửa
+    if (manualTrackPattern?.test(dataIndex)) {
+      const manualKey = `_manual_${dataIndex}`;
+      const gocKey = `_goc_${dataIndex}`;
+      if (!newData[rowIndex][manualKey]) {
+        newData[rowIndex][gocKey] = newData[rowIndex][dataIndex] ?? null;
+      }
+      newData[rowIndex][manualKey] = true;
+    }
     newData[rowIndex][dataIndex] = value;
     setRows(newData);
     onDataChange?.(newData);

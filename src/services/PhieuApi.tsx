@@ -64,6 +64,7 @@ export const PhieuApi = {
       params,
       responseType: "blob",
     }),
+  getDsLoCao: () => apiService.get("/api/Phieus/DsLoCao"),
 
   chotNhieuPhieu: (idPhieus: string[], status: number) =>
     apiService.post("/api/Phieus/chot-nhieu-phieu", { idPhieus, status }),
