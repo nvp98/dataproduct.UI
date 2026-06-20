@@ -789,7 +789,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     if (scope && nvlOptions.filter((n) => n.idLoCao === Number(scope)).length === 0) {
       lgTSLNvlApi.getList({ idLoCao: Number(scope) })
         .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [tableData, scope, nvlOptions]);
 
@@ -893,14 +893,30 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
           ))}
         </div>
 
-        <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <Button type="primary" icon={<FilterOutlined />} onClick={loadDataFromAPI} disabled={isFormLocked} loading={loading}>
             Tải dữ liệu
           </Button>
-          <Button icon={<SearchOutlined />} onClick={handleKiemTra}>
-            Kiểm tra Silo
-          </Button>
+          {!isSignatureReadonly && (
+            <Button icon={<SearchOutlined />} onClick={handleKiemTra}>
+              Kiểm tra Silo
+            </Button>
+          )}
           {actionButtons}
+          <span
+            style={{
+              marginLeft: "auto",
+              border: "1px solid #91caff",
+              borderRadius: 6,
+              padding: "4px 12px",
+              color: "#0958d9",
+              fontSize: 13,
+              fontWeight: 500,
+              background: "#e6f4ff",
+            }}
+          >
+            Khối lượng tồn được chốt lúc 7h30 và 19h30 hằng ngày
+          </span>
         </div>
 
         {/* ── Modal: Kiểm tra Silo ─────────────────────────────────────────── */}
@@ -1354,36 +1370,36 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
               },
               ...(!isFormLocked
                 ? [{
-                    title: "Thao tác",
-                    key: "action",
-                    width: 120,
-                    align: "center" as const,
-                    render: (_: any, row: TableRow) => {
-                      if (row._isSplitParent) return null;
-                      if (row._splitGroupId) {
-                        const childCount = tableData.filter((r) => r._splitGroupId === row._splitGroupId && !r._isSplitParent).length;
-                        return (
-                          <Popconfirm
-                            title="Xóa dòng liệu này?"
-                            okText="Xóa"
-                            cancelText="Hủy"
-                            disabled={childCount <= 1}
-                            onConfirm={() => handleDeleteSplitChild(row.key!)}
-                          >
-                            <Button
-                              type="text" danger size="small" icon={<DeleteOutlined />}
-                              disabled={childCount <= 1}
-                              title={childCount <= 1 ? "Dùng 'Gộp lại' để hủy tách" : "Xóa dòng liệu này"}
-                            />
-                          </Popconfirm>
-                        );
-                      }
+                  title: "Thao tác",
+                  key: "action",
+                  width: 120,
+                  align: "center" as const,
+                  render: (_: any, row: TableRow) => {
+                    if (row._isSplitParent) return null;
+                    if (row._splitGroupId) {
+                      const childCount = tableData.filter((r) => r._splitGroupId === row._splitGroupId && !r._isSplitParent).length;
                       return (
-                        <Space size={4}>
-                          <Button size="small" onClick={() => handleSplitRow(row.key!)} title="Tách silo thành nhiều loại liệu">
-                            Tách liệu
-                          </Button>
-                          {/* <Popconfirm
+                        <Popconfirm
+                          title="Xóa dòng liệu này?"
+                          okText="Xóa"
+                          cancelText="Hủy"
+                          disabled={childCount <= 1}
+                          onConfirm={() => handleDeleteSplitChild(row.key!)}
+                        >
+                          <Button
+                            type="text" danger size="small" icon={<DeleteOutlined />}
+                            disabled={childCount <= 1}
+                            title={childCount <= 1 ? "Dùng 'Gộp lại' để hủy tách" : "Xóa dòng liệu này"}
+                          />
+                        </Popconfirm>
+                      );
+                    }
+                    return (
+                      <Space size={4}>
+                        <Button size="small" onClick={() => handleSplitRow(row.key!)} title="Tách silo thành nhiều loại liệu">
+                          Tách liệu
+                        </Button>
+                        {/* <Popconfirm
                             title="Xóa dòng này?"
                             okText="Xóa"
                             cancelText="Hủy"
@@ -1395,10 +1411,10 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                               disabled={tableData.filter((r) => !r._isSplitParent).length <= 1}
                             />
                           </Popconfirm> */}
-                        </Space>
-                      );
-                    },
-                  }]
+                      </Space>
+                    );
+                  },
+                }]
                 : []),
             ]}
           />

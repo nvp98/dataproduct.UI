@@ -204,16 +204,16 @@ const TaoPhieuNapLieuLoCao = () => {
 
         lgnlNhomNvlApi.getList()
           .then((res) => setNhomNvlOptions(Array.isArray(res) ? res : []))
-          .catch(() => {});
+          .catch(() => { });
 
         const rows = (response.rows ?? []).map((row: any, index: number) => {
           const { time, ...rest } = row;
           const thoiGianNapLieu = time
             ? new Date(time).toLocaleTimeString("vi-VN", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              })
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
             : "";
           return { key: row?.id ?? `row-${index}`, thoiGianNapLieu, ...rest };
         });
@@ -468,11 +468,11 @@ const TaoPhieuNapLieuLoCao = () => {
         refreshSnapshotData(ngay, Number(ca), Number(scope)),
       ]);
       setSiloMasterOptions(Array.isArray(res) ? res : []);
-      setNvlOptions( Array.isArray(nvlRes) ? nvlRes : []
-  );
+      setNvlOptions(Array.isArray(nvlRes) ? nvlRes : []
+      );
     } catch {
       setSiloMasterOptions([]);
-       setNvlOptions([]);
+      setNvlOptions([]);
     }
     addMappingForm.resetFields();
     addMappingForm.setFieldsValue({
@@ -996,12 +996,15 @@ const TaoPhieuNapLieuLoCao = () => {
           >
             Tải dữ liệu
           </Button>
-          <Button
-            icon={<SearchOutlined />}
-            onClick={handleKiemTraSilo}
-          >
-            Kiểm tra Silo
-          </Button>
+
+          {!isSignatureReadonly && (
+            <Button
+              icon={<SearchOutlined />}
+              onClick={handleKiemTraSilo}
+            >
+              Kiểm tra Silo
+            </Button>
+          )}
           {actionButtons}
         </div>
 
@@ -1181,7 +1184,7 @@ const TaoPhieuNapLieuLoCao = () => {
                             >
                               {scopeNvlOptions.map((n) => (
                                 <Select.Option key={n.id} value={n.id}>
-                                   {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}
+                                  {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}
                                 </Select.Option>
                               ))}
                             </Select>
@@ -1304,7 +1307,7 @@ const TaoPhieuNapLieuLoCao = () => {
               <Select allowClear placeholder="Chọn NVL (tuỳ chọn)" showSearch optionFilterProp="children">
                 {scopeNvlOptions.map((n) => (
                   <Select.Option key={n.id} value={n.id}>
-                   {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}
+                    {n.xacNhan && n.tenNVL_TK ? n.tenNVL_TK : n.tenNVL_NM}
                   </Select.Option>
                 ))}
               </Select>
@@ -1359,8 +1362,8 @@ const TaoPhieuNapLieuLoCao = () => {
                       {duyet?.tinhTrang === 1
                         ? "Đã ký"
                         : duyet?.tinhTrang === 2
-                        ? "Đã từ chối"
-                        : "Chưa xử lý"}
+                          ? "Đã từ chối"
+                          : "Chưa xử lý"}
                     </Typography.Text>
                   </div>
                 )}
