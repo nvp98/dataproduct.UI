@@ -605,7 +605,7 @@ export const routes = [
         ),
       },
       {
-        path: "/xemphieu/std_nhapxuatton",
+        path: "xemphieu/std_nhapxuatton",
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
@@ -1175,6 +1175,36 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <NKVHThanPhunLoCao type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/naplieulocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <NapLieuLoCao type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/tonsilolocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TonSiloLoCao type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/nkvhthanphunlocao",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <NKVHThanPhunLoCao type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),

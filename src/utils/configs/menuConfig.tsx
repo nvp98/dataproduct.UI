@@ -770,11 +770,11 @@ export const menuConfig = [
     icon: <EyeOutlined />,
     children: [
       {
-        key: "sub3-nl",
+        key: "sub4-nl",
         label: "NM.NL",
         children: [
           {
-            key: "sub3-nl-1",
+            key: "sub4-nl-1",
             maBM: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
             label: (
               <Tooltip title="BM.18/HD.25.08 (Bảng theo dõi ben phế)">
@@ -787,11 +787,11 @@ export const menuConfig = [
         ],
       },
       {
-        key: "sub3-ctd",
+        key: "sub4-ctd",
         label: "NM.CTD",
         children: [
           {
-            key: "3-4-1",
+            key: "sub4-ctd-1",
             maBM: BM_CONFIG.CTD.CTD_STD_Sanxuat,
             label: (
               <Tooltip title="BM.09/QT.05.13 (Sổ theo dõi sản xuất hàng ngày)">
@@ -802,7 +802,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "3-4-2",
+            key: "sub4-ctd-2",
             maBM: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
             label: (
               <Tooltip title="BM.05/QT.05.13 (Biên bản giao nhận phôi)">
@@ -813,7 +813,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "3-4-3",
+            key: "sub4-ctd-3",
             maBM: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
             label: (
               <Tooltip title="BM.02/QT.05.13 (Biên bản giao nhận phôi nạp nguội)">
@@ -824,7 +824,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "3-4-4",
+            key: "sub4-ctd-4",
             maBM: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
             label: (
               <Tooltip title="BM.01C/QT.11 (Phiếu xử lý sản phẩm không phù hợp)">
@@ -835,7 +835,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub3-4-5",
+            key: "sub4-ctd-5",
             maBM: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
             label: (
               <Tooltip title="BM.08/QT.05.13 (Biên bản xác nhận sản lượng)">
@@ -846,7 +846,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub3-4-6",
+            key: "sub4-ctd-6",
             maBM: BM_CONFIG.CTD.CTD_BB_Phoinong,
             label: (
               <Tooltip title="BM.06/QT.05.10 (Biên bản giao nhận phôi nóng)">
@@ -948,15 +948,15 @@ export const menuConfig = [
         ],
       },
       {
-        key:'sub4-7',
-        label:'NM.LG',
-         children: [
+        key: "sub4-7",
+        label: "NM.LG",
+        children: [
           {
             key: "sub4-7-1",
             maBM: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
             label: (
               <Tooltip title="BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
-                <NavLink to="/viecdentoi/naplieulocao">
+                <NavLink to="/xemphieu/naplieulocao">
                   BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
                 </NavLink>
               </Tooltip>
@@ -967,7 +967,7 @@ export const menuConfig = [
             maBM: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
             label: (
               <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)">
-                <NavLink to="/viecdentoi/tonsilolocao">
+                <NavLink to="/xemphieu/tonsilolocao">
                   BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)
                 </NavLink>
               </Tooltip>
@@ -978,14 +978,14 @@ export const menuConfig = [
             maBM: BM_CONFIG.NMLG.NMLG_NK_VHPTLC,
             label: (
               <Tooltip title="BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)">
-                <NavLink to="/viecdentoi/nkvhthanphunlocao">
+                <NavLink to="/xemphieu/nkvhthanphunlocao">
                   BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)
                 </NavLink>
               </Tooltip>
             ),
           },
-        ]
-      }
+        ],
+      },
     ],
   },
   {

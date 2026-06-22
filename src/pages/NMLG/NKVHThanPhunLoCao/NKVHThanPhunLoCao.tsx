@@ -74,7 +74,7 @@ const NKVHThanPhunLoCao = ({ type }: { type?: string }) => {
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
-            if (type === "viecdentoi") {
+            if (type === "viecdentoi" || type === "xemphieu") {
               return navigate(`/chitietnkvhthanphunlocao/${record.idphieu}`);
             }
             if (record.tinhTrang === 0 || record.tinhTrang === 3 || record.tinhTrang === 7) {
