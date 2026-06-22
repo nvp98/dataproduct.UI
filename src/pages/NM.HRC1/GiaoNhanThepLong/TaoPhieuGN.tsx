@@ -269,6 +269,26 @@ export const LoThoiPanel = ({
       return;
     }
 
+    const loKlFields: { key: string; label: string }[] = [
+      { key: "kllfSauThep",      label: "KL thùng LF sau khi ra thép" },
+      { key: "klLan2",           label: "KL bì - Lần 2" },
+      { key: "klLan3",           label: "KL bì - Lần 3" },
+      { key: "klThepLongPhanBo", label: "KL phân bổ" },
+    ];
+    const negativeErrors: string[] = [];
+    for (const [meIdStr, req] of dirty) {
+      const me = phieuData.danhSachMe.find((m) => m.id === Number(meIdStr));
+      for (const { key, label } of loKlFields) {
+        const val = (req as Record<string, unknown>)[key];
+        if (val != null && Number(val) < 0)
+          negativeErrors.push(`Mẻ ${me?.maMe ?? meIdStr}: ${label}`);
+      }
+    }
+    if (negativeErrors.length > 0) {
+      message.error(`Không được nhập số âm:\n${negativeErrors.join("\n")}`);
+      return;
+    }
+
     setSaving(true);
     try {
       await Promise.all(dirty.map(([meIdStr, req]) => {
@@ -402,6 +422,7 @@ export const LoThoiPanel = ({
           <InputNumber size="small" style={{ width: 65 }}
             status={!locked && val == null ? "error" : undefined}
             value={val}
+            min={0}
             disabled={locked}
             onChange={locked ? undefined : (v) => set(me.id, "kllfSauThep", v)} />
         );
@@ -419,6 +440,7 @@ export const LoThoiPanel = ({
           <InputNumber size="small" style={{ width: 65 }}
             status={!disabled && val == null ? "error" : undefined}
             value={val}
+            min={0}
             disabled={disabled}
             onChange={disabled ? undefined : (v) => set(me.id, "klLan2", v)} />
         );
@@ -431,6 +453,7 @@ export const LoThoiPanel = ({
         return (
           <InputNumber size="small" style={{ width: 65 }}
             value={klLan3Locked ? me.klLan3 : get(me, "klLan3")}
+            min={0}
             disabled={klLan3Locked}
             onChange={klLan3Locked ? undefined : (v) => set(me.id, "klLan3", v)} />
         );
@@ -450,6 +473,7 @@ export const LoThoiPanel = ({
         return (
           <InputNumber size="small" style={{ width: 73 }}
             value={locked ? (me.klThepLongPhanBo ?? undefined) : (get(me, "klThepLongPhanBo") as number ?? undefined)}
+            min={0}
             disabled={locked}
             onChange={locked ? undefined : (v) => set(me.id, "klThepLongPhanBo", v)} />
         );
@@ -622,6 +646,27 @@ export const TinhLuyenPanel = ({
   const handleSaveAll = async () => {
     const dirty = Object.entries(edits);
     if (dirty.length === 0) return;
+
+    const tlKlFields: { key: string; label: string }[] = [
+      { key: "kllfSauThep", label: "KL thùng LF sau khi ra thép" },
+      { key: "klLan1",      label: "KL lần 1" },
+      { key: "klLan2",      label: "KL bì - Lần 2" },
+      { key: "klLan3",      label: "KL bì - Lần 3" },
+    ];
+    const negativeErrors: string[] = [];
+    for (const [meIdStr, req] of dirty) {
+      const me = phieuData.danhSachMe.find((m) => m.id === Number(meIdStr));
+      for (const { key, label } of tlKlFields) {
+        const val = (req as Record<string, unknown>)[key];
+        if (val != null && Number(val) < 0)
+          negativeErrors.push(`Mẻ ${me?.maMe ?? meIdStr}: ${label}`);
+      }
+    }
+    if (negativeErrors.length > 0) {
+      message.error(`Không được nhập số âm:\n${negativeErrors.join("\n")}`);
+      return;
+    }
+
     setSaving(true);
     try {
       type SaveItem = { pcId: number; maMe: string; req: HRC1_TinhLuyenUpdateRequest };
@@ -894,6 +939,7 @@ export const TinhLuyenPanel = ({
           <InputNumber size="small" style={{ width: 64 }}
             status={editable && val == null ? "error" : undefined}
             value={val}
+            min={0}
             disabled={!editable}
             onChange={editable ? (v) => set(me.id, "kllfSauThep", v) : undefined} />
         );
@@ -908,6 +954,7 @@ export const TinhLuyenPanel = ({
           <InputNumber size="small" style={{ width: 68 }}
             status={!disabled && val == null ? "error" : undefined}
             value={val}
+            min={0}
             disabled={disabled}
             onChange={disabled ? undefined : (v) => set(me.id, "klLan1", v)} />
         );
@@ -922,6 +969,7 @@ export const TinhLuyenPanel = ({
           <InputNumber size="small" style={{ width: 68 }}
             status={!locked && val == null ? "error" : undefined}
             value={val}
+            min={0}
             disabled={locked}
             onChange={locked ? undefined : (v) => set(me.id, "klLan2", v)} />
         );
@@ -934,6 +982,7 @@ export const TinhLuyenPanel = ({
         return (
           <InputNumber size="small" style={{ width: 64 }}
             value={editable ? (get(me, "klLan3") as number) : (me.klLan3 ?? undefined)}
+            min={0}
             disabled={!editable}
             onChange={editable ? (v) => set(me.id, "klLan3", v) : undefined} />
         );
