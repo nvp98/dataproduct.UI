@@ -151,6 +151,8 @@ export interface HRC1_ExportQuery {
   isManualTL?: boolean | null;
   chuaCoNhomPhanLoai?: boolean | null;
   idNhomPhanLoai?: number | null;
+  tuNgayLoThoi?: string | null;
+  denNgayLoThoi?: string | null;
 }
 
 export interface HRC1_ThongKeQuery extends HRC1_ExportQuery {

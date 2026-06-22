@@ -494,6 +494,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
           if (cap0Signatures.length > 0) {
             const overrideFields: Record<string, any> = {};
             if (
+              tinhTrang === TrangThaiPhieuConst.DangLuu ||
               tinhTrang === TrangThaiPhieuConst.DaThuHoi ||
               tinhTrang === TrangThaiPhieuConst.HieuChinh
             ) {
@@ -504,11 +505,6 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
             } else if (hasNguoiTaoIdFromRes) {
               cap0Signatures.forEach((sig: any) => {
                 overrideFields[sig.key] = nguoiTaoIdFromRes;
-              });
-            } else if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
-              const currentUserInfo = getUserInfo();
-              cap0Signatures.forEach((sig: any) => {
-                overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
               });
             }
             if (Object.keys(overrideFields).length > 0) {
@@ -937,7 +933,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
               const shouldUseCurrentUser =
                 isLevelZero &&
                 (!idphieu ||
-                  (currentTinhTrang === TrangThaiPhieuConst.DangLuu && !hasNguoiTaoIdFromPhiếu) ||
+                  currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
                   currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
                   currentTinhTrang === TrangThaiPhieuConst.HieuChinh);
 
