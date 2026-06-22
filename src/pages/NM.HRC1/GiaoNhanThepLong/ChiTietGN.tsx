@@ -277,6 +277,7 @@ const ChiTietGN = () => {
                     onExtraChange={canDoAnything ? setDucExtraControls : undefined}
                     canXacNhan={hasQuyenXacNhan}
                     canChot={effectiveCanChot}
+                    tableScrollY="calc(100vh - 440px)"
                   />
                 </>
               )}

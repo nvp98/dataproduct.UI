@@ -27,9 +27,10 @@ const ThongKeBBGNThepLongHRC1 = () => {
   const [data, setData]             = useState<HRC1_ThongKeRow[]>([]);
   const [totalRecords, setTotal]    = useState(0);
   const [totalKl, setTotalKl]           = useState<number | null>(null);
+  const [totalKlChot, setTotalKlChot]   = useState<number | null>(null);
   const [totalKlPhanBo, setTotalKlPhanBo] = useState<number | null>(null);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
-  const [filters, setFilters]       = useState<HRC1_ThongKeQuery>({ page: 1, pageSize: 20 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 100 });
+  const [filters, setFilters]       = useState<HRC1_ThongKeQuery>({ page: 1, pageSize: 100 });
   const [mayDucOpts, setMayDucOpts] = useState<{ label: string; value: number }[]>([]);
   const [nhomMacOpts, setNhomMacOpts] = useState<{ label: string; value: number }[]>([]);
   const [tongHopData, setTongHopData] = useState<HRC1_TongHopResult | null>(null);
@@ -50,6 +51,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
       setData(res.items);
       setTotal(res.totalRecords);
       setTotalKl(res.totalKlThepLong);
+      setTotalKlChot(res.totalKlThepLongChot ?? null);
       setTotalKlPhanBo(res.totalKlThepLongPhanBo ?? null);
       setPagination({ current: res.page, pageSize: res.pageSize });
       setFilters(q);
@@ -63,7 +65,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
     }
   }, []);
 
-  useEffect(() => { void fetchData({ page: 1, pageSize: 20 }); }, [fetchData]);
+  useEffect(() => { void fetchData({ page: 1, pageSize: 100 }); }, [fetchData]);
 
   const handleFilter = useCallback(() => {
     const v = form.getFieldsValue(true) as Record<string, unknown>;
@@ -88,6 +90,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
       phanLoai:      v.phanLoai ? String(v.phanLoai).trim() : undefined,
       isManualTL:           v.isManualTL === true ? true : undefined,
       isTrungMeThoi:        v.isTrungMeThoi === true ? true : undefined,
+      isChuyenMe:           v.isChuyenMe === true ? true : undefined,
       chuaCoNhomPhanLoai:   v.chuaCoNhomPhanLoai === true ? true : undefined,
       idNhomPhanLoai:       v.idNhomPhanLoai != null ? Number(v.idNhomPhanLoai) : undefined,
       trangThaiLo,
@@ -226,13 +229,39 @@ const ThongKeBBGNThepLongHRC1 = () => {
       ),
     },
     {
+      title: "KL TL chốt", key: "klThepLongChot", width: 85,
+      align: "right",
+      render: (_: unknown, r: HRC1_ThongKeRow) => {
+        const v = r.klThepLongChot;
+        if (v == null) return "";
+        const isTransferred = r.chuyenVeMaMe != null && r.chuyenVeMaMe !== r.maMe;
+        return (
+          <Tooltip title={isTransferred ? `Đã chuyển sang mẻ ${r.chuyenVeMaMe}` : undefined}>
+            <span style={{ fontWeight: 600, color: isTransferred ? "#aaa" : undefined }}>
+              {fmt(v)}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: "KL phân bổ", dataIndex: "klThepLongPhanBo", key: "klThepLongPhanBo", width: 80,
       align: "right",
       render: (v: number) => fmt(v),
     },
     { title: "TL / Lên thẳng", dataIndex: "tinhLuyenLenThang", key: "tinhLuyenLenThang", width: 90, align: "center" },
+    {
+      title: "TL số", key: "soTinhLuyenNhan", width: 60, align: "center",
+      render: (_: unknown, r: HRC1_ThongKeRow) =>
+        r.soTinhLuyenNhan != null ? `TL ${r.soTinhLuyenNhan}` : "-",
+    },
     { title: "Chuyển mẻ", dataIndex: "chuyenVeMaMe", key: "chuyenVeMaMe", width: 100, align: "center",
-      render: (v: string | null) => v ? <span style={{ background: "#fffbe6", padding: "0 4px", borderRadius: 3 }}>{v}</span> : null },
+      render: (_: unknown, r: HRC1_ThongKeRow) => {
+        const isRealTransfer = r.chuyenVeMaMe && r.chuyenVeMaMe !== r.maMe;
+        return isRealTransfer
+          ? <span style={{ background: "#FFFF00", padding: "0 4px", borderRadius: 3 }}>{r.chuyenVeMaMe}</span>
+          : <span>{r.maMe}</span>;
+      }},
     { title: "Máy đúc chuyển", dataIndex: "tenMayDucChuyen", key: "tenMayDucChuyen", width: 115, align: "center",
       render: (v: string | null) => v ?? "" },
     { title: "Phân loại", dataIndex: "phanLoai", key: "phanLoai", width: 100, align: "center" },
@@ -247,7 +276,9 @@ const ThongKeBBGNThepLongHRC1 = () => {
       title: "Thử nghiệm", dataIndex: "isThuNghiem", key: "isThuNghiem", width: 70, align: "center",  
       render: (v: boolean) => v ? "✓" : "",
     },
-    { title: "Ghi chú", dataIndex: "ghiChuLo", key: "ghiChuLo", width: 160 },
+    { title: "Ghi chú Lò", dataIndex: "ghiChuLo",  key: "ghiChuLo",  width: 140 },
+    { title: "Ghi chú TL", dataIndex: "ghiChuTL",  key: "ghiChuTL",  width: 140 },
+    { title: "Ghi chú đúc", dataIndex: "ghiChuDuc", key: "ghiChuDuc", width: 140 },
     { title: "Người sửa lò",  dataIndex: "tenCapNhatBoiLo",  key: "tenCapNhatBoiLo",  width: 160 },
     { title: "Người sửa TL", dataIndex: "tenCapNhatBoiTL",  key: "tenCapNhatBoiTL",  width: 160 },
     { title: "Người XN đúc", dataIndex: "tenCapNhatBoiDuc", key: "tenCapNhatBoiDuc", width: 160 },
@@ -271,7 +302,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
     return (
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontWeight: isTotal ? 600 : undefined }}>
         <span>{item.label}</span>
-        <span>{item.soMe}</span>
+        <span>{fmt(item.klThepLong)}</span>
       </div>
     );
   };
@@ -290,16 +321,16 @@ const ThongKeBBGNThepLongHRC1 = () => {
       ducTam:              ducTam[i]              ?? null,
       nhomPhanLoaiMacThep: nhomPhanLoaiMacThep[i] ?? null,
     }));
-    const sum = (arr: HRC1_TongHopItem[]) => arr.reduce((acc, x) => acc + x.soMe, 0);
+    const sum = (arr: HRC1_TongHopItem[]) => arr.reduce((acc, x) => acc + x.klThepLong, 0);
     rows.push({
       key: "total", isTotal: true,
-      phanLoai:            { label: "Tổng", soMe: sum(phanLoai) },
-      ca:                  { label: "Tổng", soMe: sum(ca) },
-      kip:                 { label: "Tổng", soMe: sum(kip) },
-      tinhLuyenLenThang:   { label: "Tổng", soMe: sum(tinhLuyenLenThang) },
-      ducVuong:            { label: "Tổng", soMe: sum(ducVuong) },
-      ducTam:              { label: "Tổng", soMe: sum(ducTam) },
-      nhomPhanLoaiMacThep: { label: "Tổng", soMe: sum(nhomPhanLoaiMacThep) },
+      phanLoai:            { label: "Tổng", klThepLong: sum(phanLoai) },
+      ca:                  { label: "Tổng", klThepLong: sum(ca) },
+      kip:                 { label: "Tổng", klThepLong: sum(kip) },
+      tinhLuyenLenThang:   { label: "Tổng", klThepLong: sum(tinhLuyenLenThang) },
+      ducVuong:            { label: "Tổng", klThepLong: sum(ducVuong) },
+      ducTam:              { label: "Tổng", klThepLong: sum(ducTam) },
+      nhomPhanLoaiMacThep: { label: "Tổng", klThepLong: sum(nhomPhanLoaiMacThep) },
     });
     return rows;
   }, [tongHopData]);
@@ -350,12 +381,12 @@ const ThongKeBBGNThepLongHRC1 = () => {
             <Select allowClear style={{ minWidth: 80 }} placeholder="Phân loại"
               options={["Loại 1","Loại 2","Loại 3","Phế phẩm"].map(n => ({ label: `${n}`, value: n }))} />
           </Form.Item>
-          <Form.Item name="idNhomPhanLoai" label="Nhóm phân loại mác">
+          <Form.Item name="idNhomPhanLoai" label="Nhóm PL mác">
             <Select allowClear showSearch style={{ minWidth: 180 }} placeholder="Tất cả"
               optionFilterProp="label" options={nhomMacOpts} />
           </Form.Item>
           <Form.Item name="trangThai" label="Trạng thái">
-            <Select allowClear style={{ minWidth: 160 }} placeholder="Tất cả"
+            <Select allowClear style={{ minWidth: 150 }} placeholder="Tất cả"
               options={[
                 { label: "TL: chưa nhận",         value: "tl_0" },
                 { label: "TL: đã nhận",           value: "tl_1" },
@@ -371,8 +402,11 @@ const ThongKeBBGNThepLongHRC1 = () => {
           <Form.Item name="isTrungMeThoi" valuePropName="checked">
             <Checkbox>Trùng mẻ</Checkbox>
           </Form.Item>
+          <Form.Item name="isChuyenMe" valuePropName="checked">
+            <Checkbox>Đã chuyển mẻ</Checkbox>
+          </Form.Item>
           <Form.Item name="chuaCoNhomPhanLoai" valuePropName="checked">
-            <Checkbox>Chưa có nhóm phân loại</Checkbox>
+            <Checkbox>Chưa có nhóm PL</Checkbox>
           </Form.Item>
           <Form.Item>
             <Space>
@@ -406,7 +440,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
         loading={loading}
         rowKey={(r) => String(r.meId)}
         scroll={{ x: 1800, y: 520 }}
-        onRow={(r) => (r.isManualTL ? { style: { backgroundColor: "#fdfce6" } } : {})}
+        onRow={(r) => (r.isManualTL ? { style: { backgroundColor: "#FFFFCC" } } : {})}
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,
@@ -430,9 +464,12 @@ const ThongKeBBGNThepLongHRC1 = () => {
                 </span>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={14} align="right">
+                <span style={{ fontWeight: 600 }}>{fmt(totalKlChot)}</span>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={15} align="right">
                 {fmt(totalKlPhanBo)}
               </Table.Summary.Cell>
-              <Table.Summary.Cell index={15} colSpan={8} />
+              <Table.Summary.Cell index={16} colSpan={8} />
             </Table.Summary.Row>
           </Table.Summary>
         )}

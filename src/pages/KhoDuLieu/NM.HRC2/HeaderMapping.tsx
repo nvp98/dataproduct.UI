@@ -54,6 +54,7 @@ type FilterState = {
   ToDate?: string;
   SortThuTu?: string;
   IdNhom?: number;
+  chuaMappingNM?: boolean;
 };
 
 type ErrorLike = {
@@ -192,6 +193,7 @@ const HeaderMapping = () => {
       ToDate: toDate,
       SortThuTu: values.SortThuTu || undefined,
       IdNhom: typeof values.IdNhom === "number" ? values.IdNhom : undefined,
+      chuaMappingNM: values.chuaMappingNM === true ? true : undefined,
     };
     fetchData(1, pagination.pageSize, appliedFilters);
   };
@@ -633,6 +635,11 @@ const HeaderMapping = () => {
                   <Select.Option value="KL">KL</Select.Option>
                   <Select.Option value="PG">PG</Select.Option>
                 </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={4} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 4 }}>
+              <Form.Item name="chuaMappingNM" valuePropName="checked" style={{ marginBottom: 0 }}>
+                <Checkbox>Chưa mapping NM</Checkbox>
               </Form.Item>
             </Col>
           </Row>

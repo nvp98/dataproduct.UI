@@ -46,6 +46,10 @@ const GiaoNhanThepLongList = ({
     Array<{ label: string; value: number }>
   >([]);
 
+  const userStr = localStorage.getItem("user");
+  const userObj = userStr ? JSON.parse(userStr) : {};
+  const isAdmin = userObj?.role?.includes("admin") || false;
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -238,7 +242,7 @@ const GiaoNhanThepLongList = ({
         onFilter={handleFilter}
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
-        showCreateButton={false}
+        showCreateButton={true}
         onCreateClick={() => {
           navigate(routeCreate);
         }}
