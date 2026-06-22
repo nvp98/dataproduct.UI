@@ -531,10 +531,11 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
           if (cap0Signatures.length > 0) {
             const overrideFields: Record<string, any> = {};
             if (
+              tinhTrang === TrangThaiPhieuConst.DangLuu ||
               tinhTrang === TrangThaiPhieuConst.DaThuHoi ||
               tinhTrang === TrangThaiPhieuConst.HieuChinh
             ) {
-              // Trạng thái 3/7: người đang thao tác trở thành người tạo phiếu mới
+              // Trạng thái 0/3/7: người đang thao tác là người tạo phiếu
               const currentUserInfo = getUserInfo();
               cap0Signatures.forEach((sig: any) => {
                 overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
@@ -542,11 +543,6 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
             } else if (hasNguoiTaoIdFromRes) {
               cap0Signatures.forEach((sig: any) => {
                 overrideFields[sig.key] = nguoiTaoIdFromRes;
-              });
-            } else if (tinhTrang === TrangThaiPhieuConst.DangLuu) {
-              const currentUserInfo = getUserInfo();
-              cap0Signatures.forEach((sig: any) => {
-                overrideFields[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
               });
             }
             if (Object.keys(overrideFields).length > 0) {
@@ -985,7 +981,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
               const shouldUseCurrentUser =
                 isLevelZero &&
                 (!idphieu ||
-                  (currentTinhTrang === TrangThaiPhieuConst.DangLuu && !hasNguoiTaoIdFromPhiếu) ||
+                  currentTinhTrang === TrangThaiPhieuConst.DangLuu ||
                   currentTinhTrang === TrangThaiPhieuConst.DaThuHoi ||
                   currentTinhTrang === TrangThaiPhieuConst.HieuChinh);
 

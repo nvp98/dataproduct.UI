@@ -24,8 +24,8 @@ const MABM_DETAIL_ROUTE: Record<string, string> = {
 };
 
 const MABM_LIST: string[] = [
-  BM_CONFIG.HRC1.HRC1_BB_Lothoi,
-  BM_CONFIG.HRC1.HRC1_TinhLuyen,
+  // BM_CONFIG.HRC1.HRC1_BB_Lothoi,
+  // BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
 ];
 

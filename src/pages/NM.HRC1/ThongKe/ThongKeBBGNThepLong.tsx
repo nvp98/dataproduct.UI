@@ -70,6 +70,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
   const handleFilter = useCallback(() => {
     const v = form.getFieldsValue(true) as Record<string, unknown>;
     const dr = v.ngaySX as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+    const drLo = v.ngayLoThoi as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
     // Decode select "Trạng thái" → các filter riêng biệt
     const tt = v.trangThai as string | undefined;
     const trangThaiLo  = tt === "lo_0"  ? 0 : tt === "lo_1"  ? 1 : undefined;
@@ -80,6 +81,8 @@ const ThongKeBBGNThepLongHRC1 = () => {
     const q: HRC1_ThongKeQuery = {
       tuNgay:        dr?.[0]?.format("YYYY-MM-DD"),
       denNgay:       dr?.[1]?.format("YYYY-MM-DD"),
+      tuNgayLoThoi:  drLo?.[0]?.format("YYYY-MM-DD"),
+      denNgayLoThoi: drLo?.[1]?.format("YYYY-MM-DD"),
       ca:            v.ca != null ? Number(v.ca) : undefined,
       kip:           v.kip ? String(v.kip) : undefined,
       loSo:          v.loSo != null ? Number(v.loSo) : undefined,
@@ -185,7 +188,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
         r.isChot ? <Tag color="green">Đã chốt</Tag> : <Tag color="default">-</Tag>,
     },
     {
-      title: "Ngày tạo", dataIndex: "ngayTao", key: "ngayTao", width: 110, fixed: "left", align: "center",
+      title: "Ngày lò thổi", dataIndex: "ngayTao", key: "ngayTao", width: 110, fixed: "left", align: "center",
       render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-",
     },
     {
@@ -346,10 +349,13 @@ const ThongKeBBGNThepLongHRC1 = () => {
   ], [tongHopData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Card style={{ marginTop: 12 }}>
+    <Card style={{ marginTop: -10 }}>
       <Form form={form} layout="inline" style={{ marginBottom: 16 }}>
         <Space wrap align="center">
           <Form.Item name="ngaySX" label="Ngày Đúc">
+            <RangePicker format="DD/MM/YYYY" />
+          </Form.Item>
+          <Form.Item name="ngayLoThoi" label="Ngày Lò thổi">
             <RangePicker format="DD/MM/YYYY" />
           </Form.Item>
           <Form.Item name="ca" label="Ca Đúc">
