@@ -17,7 +17,13 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
   const userInfoStr = localStorage.getItem("userinfo");
   const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
   const isAdmin = userObj?.role?.includes("admin") || false;
-
+  
+  const statusXL: Record<string, { color: string; text: string }> = {
+    0: { color: "purple", text: "Chờ xử lý" },
+    1: { color: "green", text: "Đã xử lý" },
+    2: { color: "pink", text: "Hủy" },
+  };
+  
   const currentUserId: number | null =
     userInfoObj?.iD_TaiKhoan ??
     userInfoObj?.ID_TaiKhoan ??
@@ -103,14 +109,14 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
       title: "Quy trình",
       dataIndex: "maBm",
       key: "maBm",
-      width: 220,
+      width: 200,
       ellipsis: true,
     },
     {
       title: "Lò thổi",
       dataIndex: "tenScope",
       key: "tenScope",
-      width: 220,
+      width: 120,
       ellipsis: true,
       render: (value: string | null | undefined, record: { scope?: number | string | null }) => {
         if (value) return value;
@@ -119,10 +125,10 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
       },
     },
     {
-      title: "Ngày lập phiếu",
+      title: "Ngày lập",
       dataIndex: "ngaySX",
       key: "ngaySX",
-      width: 190,
+      width: 120,
       render: (value: string) =>
         value ? dayjs(value).format("DD/MM/YYYY") : "-",
     },
@@ -130,7 +136,7 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
       title: "Ca",
       dataIndex: "ca",
       key: "ca",
-      width: 130,
+      width: 100,
       ellipsis: true,
       render: (value: number) => {
         return value === 1 ? "Ca Ngày" : "Ca Đêm";
@@ -140,7 +146,7 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
       title: "Kíp",
       dataIndex: "kip",
       key: "kip",
-      width: 100,
+      width: 60,
       ellipsis: true,
       render: (value: string) => {
         return value;
@@ -148,12 +154,40 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
     },
     {
       title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
-      width: 270,  
+      dataIndex: "pheDuyet",
+      key: "nguoiTao",
+      width: 230,
       ellipsis: true,
+      render: (_: any, record: TableRecord) => {
+        const ctdApproval = record.pheDuyet?.find(
+          (item: any) => item.capDuyet === 0,
+        );
+        const status = ctdApproval?.tinhTrang?.toString() || "0";
+        return (
+          <Tag color={statusXL[status]?.color || "default"}>
+            {ctdApproval?.hoVaTen?.toString()}
+          </Tag>
+        );
+      },
     },
-   
+    {
+      title: "Người duyệt",
+      dataIndex: "pheDuyet",
+      key: "nguoiDuyetID",
+      width: 230,
+      ellipsis: true,
+      render: (_: any, record: TableRecord) => {
+        const ctdApproval = record.pheDuyet?.find(
+          (item: any) => item.capDuyet === 1,
+        );
+        const status = ctdApproval?.tinhTrang?.toString() || "0";
+        return (
+          <Tag color={statusXL[status]?.color || "default"}>
+            {ctdApproval?.hoVaTen?.toString()}
+          </Tag>
+        );
+      },
+    },
     {
       title: "Trạng thái",
       dataIndex: "tinhTrang",
@@ -221,13 +255,17 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
       type: "select",
       options: getAllowedScopeOptions(config.code as string),
     },
-    // {
-    //   key: "tinhTrang",
-    //   label: "Trạng thái",
-    //   type: "select",
-    //   options: [...],
-    // },
-  ], [getAllowedScopeOptions]);
+    {
+      key: "tinhTrang",
+      label: "Tình trạng",
+      type: "select",
+      placeholder: "Chọn tình trạng",
+      options: Object.entries(statusConfig).map(([value, cfg]) => ({
+        label: cfg.text,
+        value: Number(value),
+      })),
+    },
+  ], [getAllowedScopeOptions, statusConfig]);
 
   return (
     <div>
@@ -243,6 +281,7 @@ const TieuHaoNauLuyen_BOF = ({ type }: { type?: string }) => {
           navigate("/taophieutieuhaonauluyen_bof");
         }}
         createButtonText="Tạo phiếu mới"
+        singleRow
       />
       <Card>
         <Table<TableRecord>

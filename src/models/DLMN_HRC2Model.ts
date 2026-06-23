@@ -52,6 +52,7 @@ export interface DLNM_HRC2MainData extends HRC2MainData {
   isNM?: boolean | null;
   isChuyenCa?: boolean | null;
   isTrungMeThoi?: boolean | null;
+  klThepPheGang?: number | null;
 }
 
 export type HeaderKeyResponse = HRC2DetailRow;
@@ -157,6 +158,7 @@ export const normalizeHRC2GroupedResponse = (
         // "KLGangLong"
       ), // Ưu tiên lấy từ klGangLongCCT, fallback về klGangLong
       klThepPhe: getValue<number>("klThepPhe", "KLThepPhe"),
+      klThepPheGang: getValue<number>("klThepPheGang", "KLThepPheGang"),
       isNM: getValue<boolean>("isNM", "IsNM"),
       isChuyenCa: getValue<boolean>("isChuyenCa", "IsChuyenCa"),
       isTrungMeThoi: getValue<boolean>("isTrungMeThoi", "IsTrungMeThoi"),

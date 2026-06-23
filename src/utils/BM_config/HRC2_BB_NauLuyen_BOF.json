@@ -100,12 +100,21 @@
             {
               "title": "Thép phế",
               "dataIndex": "klThepPhe",
-              "editable": false,
+              "editable": true,
               "width": 90,
               "format": "number-group",
               "align": "right",
-              "sum": true,
-              "readonly": true
+              "sum": true
+            },
+            {
+              "title": "Thép phế (gang)",
+              "dataIndex": "klThepPheGang",
+              "editable": false,
+              "readonly": true,
+              "width": 110,
+              "format": "number-group",
+              "align": "right",
+              "sum": true
             }
           ]
         },
