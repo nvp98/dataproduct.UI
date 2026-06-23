@@ -56,6 +56,8 @@ export interface PhieuFilterCardProps {
   selectedRowCount?: number;
   checkLoading?: boolean;
   onCheckPhieu?: (isCheck: number) => void;
+  /** Render toàn bộ filter fields + buttons trên 1 dòng (flex nowrap). */
+  singleRow?: boolean;
 }
 
 type FilterStateValue =
@@ -93,6 +95,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
   selectedRowCount = 0,
   checkLoading = false,
   onCheckPhieu,
+  singleRow = false,
 }) => {
   const isPKH = useMemo(() => {
     const user = getThongTinUser();
@@ -280,12 +283,15 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
 
   const renderFilterField = (field: FilterFieldConfig) => {
     const span = field.span || { xs: 24, sm: 12, md: 6 };
+    const colProps = singleRow
+      ? { flex: "auto", style: { minWidth: field.type === "dateRange" ? 210 : 130, maxWidth: field.type === "dateRange" ? 260 : 200 } }
+      : { xs: span.xs, sm: span.sm, md: span.md };
     const rawValue = filterStates[field.key];
 
     switch (field.type) {
       case "text":
         return (
-          <Col key={field.key} xs={span.xs} sm={span.sm} md={span.md}>
+          <Col key={field.key} {...colProps}>
             <Input
               placeholder={field.placeholder || field.label}
               allowClear
@@ -297,7 +303,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
         );
       case "number":
         return (
-          <Col key={field.key} xs={span.xs} sm={span.sm} md={span.md}>
+          <Col key={field.key} {...colProps}>
             <Input
               type="number"
               placeholder={field.placeholder || field.label}
@@ -323,7 +329,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
         );
       case "select":
         return (
-          <Col key={field.key} xs={span.xs} sm={span.sm} md={span.md}>
+          <Col key={field.key} {...colProps}>
             <Select
               placeholder={field.placeholder || field.label}
               allowClear
@@ -340,7 +346,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
         );
       case "multiselect":
         return (
-          <Col key={field.key} xs={span.xs} sm={span.sm} md={span.md}>
+          <Col key={field.key} {...colProps}>
             <Select
               mode="multiple"
               placeholder={field.placeholder || field.label}
@@ -355,7 +361,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
         );
       case "dateRange":
         return (
-          <Col key={field.key} xs={span.xs} sm={span.sm} md={span.md}>
+          <Col key={field.key} {...colProps}>
             <DatePicker.RangePicker
               style={{ width: "100%" }}
               format="DD/MM/YYYY"
@@ -379,7 +385,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
 
   return (
     <Card style={{ marginBottom: 16 }} title={title}>
-      <Row gutter={[16, 16]}>
+      <Row gutter={[8, singleRow ? 0 : 16]} wrap={singleRow ? false : undefined} align="middle">
         {useCustomFields ? (
           // Render các filter fields từ config
           <>{filterFields.map((field) => renderFilterField(field))}</>

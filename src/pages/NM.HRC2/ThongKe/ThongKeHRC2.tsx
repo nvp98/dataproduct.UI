@@ -376,6 +376,14 @@ const ThongKeHRC2 = () => {
             row[di] = getFieldValue(di);
           });
 
+          // BOF: gộp klThepPheGang vào klThepPhe, hiển thị 1 cột duy nhất
+          if (currentLoaiBm === "BOF") {
+            const v1 = Number(row.klThepPhe ?? 0);
+            const v2 = Number(getFieldValue("klThepPheGang") ?? 0);
+            const sum = v1 + v2;
+            row.klThepPhe = sum !== 0 ? sum : null;
+          }
+
           row.isNM = getFieldValue("isNM");
           row.isTrungMeThoi = getFieldValue("isTrungMeThoi");
 

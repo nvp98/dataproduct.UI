@@ -22,6 +22,7 @@ import type {
 import { STD_NXT_HRC2ServiceApi } from "../../../services/STD_NXT_HRC2ServiceApi";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { FileExcelOutlined } from "@ant-design/icons";
 
 const Tao_STD = () => {
@@ -159,11 +160,15 @@ const Tao_STD = () => {
   const initData = useCallback(async () => {
     try {
       setLoading(true);
+      let tinhTrangFromRes: number = TrangThaiPhieuConst.DangLuu;
+      let nguoiTaoIdFromRes: number | null = null;
       if (idphieu) {
         const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
         if (!res) return;
 
         const phieuPayload = (res as any)?.data ?? res;
+        tinhTrangFromRes = (phieuPayload as any)?.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
+        nguoiTaoIdFromRes = (phieuPayload as any)?.nguoiTaoId ?? null;
         const formData = phieuPayload?.jsonData || {};
 
         // Khôi phục form values (ưu tiên jsonData). Tách NgaySX/ca để tránh bị override bởi spread.
@@ -244,13 +249,21 @@ const Tao_STD = () => {
 
       }
 
-      // Sau khi setFieldsValue (hoặc phiếu mới): nếu capduyet=0 chưa có giá trị thì set current user
+      // Set chữ ký capduyet=0: DangLuu/DaThuHoi/HieuChinh → currentUser; trạng thái khác → nguoiTaoId cũ
+      const shouldUseCurrentUser =
+        !idphieu ||
+        tinhTrangFromRes === TrangThaiPhieuConst.DangLuu ||
+        tinhTrangFromRes === TrangThaiPhieuConst.DaThuHoi ||
+        tinhTrangFromRes === TrangThaiPhieuConst.HieuChinh;
+      const hasNguoiTaoId = nguoiTaoIdFromRes != null && Number(nguoiTaoIdFromRes) > 0;
       const sigOverrides: Record<string, any> = {};
       config.signatures
         .filter((sig: any) => sig.isChon && sig.capduyet === 0)
         .forEach((sig: any) => {
-          const val = form.getFieldValue(sig.key);
-          if (val == null) sigOverrides[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
+          if (shouldUseCurrentUser)
+            sigOverrides[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
+          else if (hasNguoiTaoId)
+            sigOverrides[sig.key] = nguoiTaoIdFromRes;
         });
       if (Object.keys(sigOverrides).length > 0) form.setFieldsValue(sigOverrides);
     } catch (err: any) {
