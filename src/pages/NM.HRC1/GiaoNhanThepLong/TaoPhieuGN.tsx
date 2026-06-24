@@ -1450,21 +1450,26 @@ export const DucPanel = ({
         onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
         summary={(pageData) => {
           const total = Math.round(pageData.reduce((s, m) => s + (m.klThepLong ?? 0), 0) * 100) / 100;
+          const totalChot = Math.round(pageData.reduce((s, m) => s + (m.klThepLongChot ?? 0), 0) * 100) / 100;
           return (
             <Table.Summary fixed>
               <Table.Summary.Row>
-                {/* fixed-left: chk / tinhTrang / STT / maMe */}
+                {/* fixed-left: chk / STT / tinhTrang / maMe */}
                 <Table.Summary.Cell index={0} colSpan={4}>
                   <strong>Tổng</strong>
                 </Table.Summary.Cell>
-                {/* non-fixed before klThepLong: thungSo → klLan3 (6 cols) */}
+                {/* thungSo → klLan3 (6 cols) */}
                 <Table.Summary.Cell index={4} colSpan={6} />
                 {/* klThepLong */}
                 <Table.Summary.Cell index={10}>
                   <strong>{total}</strong>
                 </Table.Summary.Cell>
-                {/* klThepLongChot + remaining cols (12 cols) */}
-                <Table.Summary.Cell index={11} colSpan={12} />
+                {/* klThepLongChot */}
+                <Table.Summary.Cell index={11}>
+                  <strong>{totalChot > 0 ? totalChot : ""}</strong>
+                </Table.Summary.Cell>
+                {/* remaining 11 cols */}
+                <Table.Summary.Cell index={12} colSpan={11} />
               </Table.Summary.Row>
             </Table.Summary>
           );
