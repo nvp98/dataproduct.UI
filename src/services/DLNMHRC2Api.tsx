@@ -43,5 +43,10 @@ export const dlnmHRC2Api = {
       },
     }),
   deleteRowNM: (rowKey: number) => apiService.delete(`/api/DLNMHRC2/delete-row-nm/${rowKey}`),
+  refreshGangMetrics: (phieuIds: string[]) =>
+    apiService.post<{ updatedRows: number; skippedPhieu: number; message: string }>(
+      "/api/DLNMHRC2/refresh-gang-metrics",
+      { phieuIds }
+    ),
   };
 

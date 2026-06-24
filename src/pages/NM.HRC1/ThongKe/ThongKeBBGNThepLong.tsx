@@ -132,20 +132,49 @@ const ThongKeBBGNThepLongHRC1 = () => {
   }, [data, filters, fetchData]);
 
   const handleExport = useCallback(async () => {
-    if (!filters.tuNgay || !filters.denNgay) {
-      message.warning("Vui lòng chọn khoảng ngày (từ ngày – đến ngày) trước khi xuất Excel.");
+    const v = form.getFieldsValue(true) as Record<string, unknown>;
+    const dr = v.ngaySX as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+    if (!dr?.[0] || !dr?.[1]) {
+      message.warning("Vui lòng chọn khoảng ngày đúc trước khi xuất Excel.");
       return;
     }
+    const drLo = v.ngayLoThoi as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+    const tt = v.trangThai as string | undefined;
+    const q: HRC1_ThongKeQuery = {
+      tuNgay:        dr[0].format("YYYY-MM-DD"),
+      denNgay:       dr[1].format("YYYY-MM-DD"),
+      tuNgayLoThoi:  drLo?.[0]?.format("YYYY-MM-DD"),
+      denNgayLoThoi: drLo?.[1]?.format("YYYY-MM-DD"),
+      ca:            v.ca != null ? Number(v.ca) : undefined,
+      kip:           v.kip ? String(v.kip) : undefined,
+      loSo:          v.loSo != null ? Number(v.loSo) : undefined,
+      tlSo:          v.tlSo != null ? Number(v.tlSo) : undefined,
+      idMayDuc:      v.idMayDuc != null ? Number(v.idMayDuc) : undefined,
+      maMe:          v.maMe ? String(v.maMe).trim() : undefined,
+      thungSo:       v.thungSo ? String(v.thungSo).trim() : undefined,
+      phanLoai:      v.phanLoai ? String(v.phanLoai).trim() : undefined,
+      isManualTL:           v.isManualTL === true ? true : undefined,
+      isTrungMeThoi:        v.isTrungMeThoi === true ? true : undefined,
+      isChuyenMe:           v.isChuyenMe === true ? true : undefined,
+      chuaCoNhomPhanLoai:   v.chuaCoNhomPhanLoai === true ? true : undefined,
+      idNhomPhanLoai:       v.idNhomPhanLoai != null ? Number(v.idNhomPhanLoai) : undefined,
+      trangThaiLo:   tt === "lo_0"  ? 0 : tt === "lo_1"  ? 1 : undefined,
+      trangThaiTL:   tt === "tl_0"  ? 0 : tt === "tl_1"  ? 1 : undefined,
+      trangThaiDuc:  tt === "duc_0" ? 0 : tt === "duc_1" ? 1 : undefined,
+      isChot:        tt === "chot"  ? true : undefined,
+      page: 1,
+      pageSize: pagination.pageSize,
+    };
     setExporting(true);
     try {
-      await HRC1Api.exportThongKe(filters);
+      await HRC1Api.exportThongKe(q);
     } catch (e: unknown) {
       const msg = typeof e === "string" ? e : (e as { message?: string })?.message ?? "Xuất Excel thất bại.";
       message.error(msg);
     } finally {
       setExporting(false);
     }
-  }, [filters]);
+  }, [form, pagination.pageSize]);
 
   const columns = useMemo((): TableColumnsType<HRC1_ThongKeRow> => [
     {
@@ -232,7 +261,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
       ),
     },
     {
-      title: "KL TL chốt", key: "klThepLongChot", width: 85,
+      title: "KL Thép Lỏng chốt", key: "klThepLongChot", width: 85,
       align: "right",
       render: (_: unknown, r: HRC1_ThongKeRow) => {
         const v = r.klThepLongChot;

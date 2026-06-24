@@ -32,7 +32,7 @@ const ChoNhanMePanel = ({ caPhieuId, readOnly, onNhanSuccess, refreshTrigger, sc
 
   const [filterTuNgay,  setFilterTuNgay]  = useState<Dayjs | null>(() => ngayPhieu ? dayjs(ngayPhieu) : null);
   const [filterDenNgay, setFilterDenNgay] = useState<Dayjs | null>(() => ngayPhieu ? dayjs(ngayPhieu) : null);
-  const [filterCa,      setFilterCa]      = useState<number | null>(() => caPhieu ?? null);
+  const [filterCa,      setFilterCa]      = useState<number | null>(() => null);
   const [filterMaMe,    setFilterMaMe]    = useState("");
   const [filterThungSo, setFilterThungSo] = useState("");
   const [filterLoSo,    setFilterLoSo]    = useState<number | null>(null);

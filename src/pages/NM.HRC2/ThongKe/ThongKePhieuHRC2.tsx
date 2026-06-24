@@ -15,6 +15,7 @@ import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
 import type { NhaMayEnum } from "../../../models/SiloModel";
+import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
 
 // Map maBm -> route chi tiết
 const MABM_DETAIL_ROUTE: Record<string, string> = {
@@ -111,6 +112,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [chotLoading, setChotLoading] = useState(false);
+  const [gangMetricsLoading, setGangMetricsLoading] = useState(false);
   const [selectedLoaiBM, setSelectedLoaiBM] = useState<string[]>([]);
   const [mayDucOptions, setMayDucOptions] = useState<Array<{ label: string; value: number }>>([]);
 
@@ -244,6 +246,56 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
       },
     });
   }, [selectedKeys, refetch]);
+
+  const handleRefreshGangMetrics = useCallback(() => {
+    if (selectedKeys.size === 0) return;
+
+    const selectedRecords = (data as TableRecord[]).filter((r) => selectedKeys.has(r.idphieu));
+    const nonBofRecords = selectedRecords.filter(
+      (r) => r.maBm !== BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF
+    );
+
+    if (nonBofRecords.length > 0) {
+      message.warning(
+        `Chỉ hỗ trợ phiếu HRC2_BB_NauLuyen_BOF. ${nonBofRecords.length} phiếu không hợp lệ sẽ bị bỏ qua.`
+      );
+    }
+
+    const bofIds = selectedRecords
+      .filter((r) => r.maBm === BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF)
+      .map((r) => r.idphieu);
+
+    if (bofIds.length === 0) {
+      message.error("Không có phiếu BOF nào được chọn.");
+      return;
+    }
+
+    if (bofIds.length > 10) {
+      message.error("Tối đa 10 phiếu BOF mỗi lần làm mới. Vui lòng bỏ chọn bớt.");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Làm mới dữ liệu gang",
+      content: `Cập nhật KL gang lỏng CCT và KL thép phế gang cho ${bofIds.length} phiếu BOF đã chọn. Tiếp tục?`,
+      okText: "Làm mới",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          setGangMetricsLoading(true);
+          const res = await dlnmHRC2Api.refreshGangMetrics(bofIds);
+          const result = (res as { updatedRows?: number; skippedPhieu?: number; message?: string }) ?? {};
+          message.success(result.message ?? `Đã làm mới ${result.updatedRows ?? 0} mẻ.`);
+          if ((result.skippedPhieu ?? 0) > 0)
+            message.warning(`${result.skippedPhieu} phiếu không phải BOF đã bị bỏ qua.`);
+        } catch {
+          message.error("Làm mới dữ liệu gang thất bại. Vui lòng thử lại.");
+        } finally {
+          setGangMetricsLoading(false);
+        }
+      },
+    });
+  }, [selectedKeys, data]);
 
   const columns = [
     {
@@ -482,6 +534,13 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
             onClick={handleHuyChotPhieu}
           >
             Hủy chốt ({selectedKeys.size})
+          </Button>
+          <Button
+            disabled={selectedKeys.size === 0}
+            loading={gangMetricsLoading}
+            onClick={handleRefreshGangMetrics}
+          >
+            Làm mới dữ liệu gang ({selectedKeys.size})
           </Button>
         </div>
         <Table<TableRecord>
