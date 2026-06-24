@@ -1165,9 +1165,9 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                   }
                 }}
                 options={siloOptions.map((s) => {
-                  const mapped = kiemTraData.find((r) => r.idSiLo === s.id);
+                  const mapped = kiemTraData.find((r) => r.idSiLo === s.thuTuCoDinh);
                   return {
-                    value: s.id,
+                    value: s.thuTuCoDinh ?? s.id,
                     label: mapped
                       ? `${s.tenSiLo} ⚠ Đã map: ${mapped.tenNVL ?? "chưa có NVL"}`
                       : (s.tenSiLo ?? ""),

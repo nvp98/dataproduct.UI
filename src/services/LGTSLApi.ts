@@ -7,6 +7,7 @@ export interface LGTSLSiLoDto {
   idLoCao: number | null;
   tenSiLo: string | null;
   thuTu: number | null;
+  thuTuCoDinh: number | null;
   isDelete?: boolean | null;
 }
 

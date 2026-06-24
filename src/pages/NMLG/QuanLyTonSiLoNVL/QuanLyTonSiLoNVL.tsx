@@ -363,7 +363,7 @@ const MappingTab = ({ ngay, ca, idLoCao, loCaoOptions: loCaoOptionsProp }: Mappi
             <Select placeholder={selectedLoCao ? "Chọn Silo" : "Chọn lò cao trước"}
               disabled={!selectedLoCao} loading={modalSiloLoading} showSearch optionFilterProp="children">
               {modalSiloOpts.map((s) => (
-                <Option key={s.id} value={s.id}>{s.tenSiLo}</Option>
+                <Option key={s.id} value={s.thuTuCoDinh ?? s.id}>{s.tenSiLo}</Option>
               ))}
             </Select>
           </Form.Item>
