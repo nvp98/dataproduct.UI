@@ -203,7 +203,6 @@ export const LoThoiPanel = ({
   const [edits, setEdits] = useState<Record<number, Partial<HRC1_LoThoiUpdateRequest>>>({});
   const [saving, setSaving] = useState(false);
   const [xoaBusy, setXoaBusy] = useState<Set<number>>(new Set());
-  const [showGhiChuExtra, setShowGhiChuExtra] = useState(false);
 
   const ghostCount = phieuData.danhSachMe.filter((m) => m.isGhost).length;
   const dirtyCount = Object.keys(edits).length;
@@ -371,6 +370,26 @@ export const LoThoiPanel = ({
   const buildColumns = (lk: (me: HRC1_MeThepVm) => boolean): TableColumnsType<HRC1_MeThepVm> => [
     { title: "STT",      key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
     {
+      title: "Tình trạng", key: "tinhTrang", width: 130, fixed: "left",
+      render: (_, me) => (
+        <Space size={4}>
+          {tinhTrangTag(me.trangThaiDuc, me.isChot)}
+          {me.isGhost && !readOnly && !me.isChot && (
+            <Popconfirm
+              title="Xóa mẻ ghost này khỏi phiếu?"
+              okText="Xóa" okButtonProps={{ danger: true }} cancelText="Không"
+              onConfirm={() => handleXoaGhost(me.id)}>
+              <Button
+                size="small" type="link" danger
+                icon={<DeleteOutlined />}
+                loading={xoaBusy.has(me.id)}
+              />
+            </Popconfirm>
+          )}
+        </Space>
+      ),
+    },
+    {
       title: "Mẻ thổi", key: "maMe",   width: 90, fixed: "left",
       render: (_, me) => (
         <>
@@ -399,7 +418,6 @@ export const LoThoiPanel = ({
         const effectiveDich = (edits[me.id] && "dichChuyen" in edits[me.id]) ? edits[me.id].dichChuyen : me.dichChuyen;
         const rowLocked = lk(me);
         const disabled = rowLocked || effectiveDich !== "len_thang";
-        // Khi row bị lock thật sự → hiện giá trị DB; khi chỉ disabled do dichChuyen → hiện giá trị edit (có thể null sau reset)
         const raw = (rowLocked ? me.thoiGian : get(me, "thoiGian")) as string | null;
         const hasError = !disabled && !raw;
         return (
@@ -467,6 +485,19 @@ export const LoThoiPanel = ({
       },
     },
     {
+      title: "KL thép lỏng chốt", key: "klThepLongChot", width: 85,
+      render: (_, me) => {
+        const v = me.klThepLongChot;
+        if (v == null) return "";
+        const isTransferred = me.chuyenVeMaMe != null && me.chuyenVeMaMe !== me.maMe;
+        return (
+          <Tooltip title={isTransferred ? `Đã chuyển sang mẻ ${me.chuyenVeMaMe}` : undefined}>
+            <span style={{ fontWeight: 600, color: isTransferred ? "#aaa" : undefined }}>{v}</span>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: "KL phân bổ", key: "klThepLongPhanBo", width: 80,
       render: (_, me) => {
         const locked = lk(me);
@@ -480,14 +511,6 @@ export const LoThoiPanel = ({
       },
     },
     {
-      title: "Ghi chú LT", key: "ghiChuLo", width: 90,
-      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={isLocked(me)} field="lo" />,
-    },
-    ...(showGhiChuExtra ? [
-      { title: "Ghi chú TL",  key: "ghiChuTL",  width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuTL  ?? "" },
-      { title: "Ghi chú đúc", key: "ghiChuDuc", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
-    ] as TableColumnsType<HRC1_MeThepVm> : []),
-    {
       title: "Tinh luyện/Lên thẳng", key: "dichChuyen", width: 125,
       render: (_, me) => {
         if (lk(me)) {
@@ -499,7 +522,7 @@ export const LoThoiPanel = ({
           );
         }
         const optsForMe = (me.trangThaiTL ?? 0) >= 1
-          ? dichChuyenOpts.slice(0, 1)   // TL đã nhận → chỉ hiện nhóm Tinh luyện (tham khảo)
+          ? dichChuyenOpts.slice(0, 1)
           : dichChuyenOpts;
         return (
           <Select size="small" style={{ width: 125 }} showSearch optionFilterProp="label"
@@ -530,25 +553,11 @@ export const LoThoiPanel = ({
     },
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 150, render: (v) => v ?? "-" },
     {
-      title: "Tình trạng", key: "tinhTrang", width: 130, fixed: "right",
-      render: (_, me) => (
-        <Space size={4}>
-          {tinhTrangTag(me.trangThaiDuc, me.isChot)}
-          {me.isGhost && !readOnly && !me.isChot && (
-            <Popconfirm
-              title="Xóa mẻ ghost này khỏi phiếu?"
-              okText="Xóa" okButtonProps={{ danger: true }} cancelText="Không"
-              onConfirm={() => handleXoaGhost(me.id)}>
-              <Button
-                size="small" type="link" danger
-                icon={<DeleteOutlined />}
-                loading={xoaBusy.has(me.id)}
-              />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      title: "Ghi chú LT", key: "ghiChuLo", width: 90,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuLo} locked={isLocked(me)} field="lo" />,
     },
+    { title: "Ghi chú TL",  key: "ghiChuTL",  width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuTL  ?? "" },
+    { title: "Ghi chú đúc", key: "ghiChuDuc", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
   ];
 
   const isLocked = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiLo ?? 0) >= 1 || !!me.isGhost;
@@ -573,19 +582,10 @@ export const LoThoiPanel = ({
 
   return (
     <>
-      <div style={{ marginBottom: 6, textAlign: "right" }}>
-        <Button
-          size="small"
-          icon={showGhiChuExtra ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-          onClick={() => setShowGhiChuExtra((v) => !v)}
-        >
-          {showGhiChuExtra ? "Ẩn ghi chú TL / đúc" : "Hiện ghi chú TL / đúc"}
-        </Button>
-      </div>
       <MeThepTable
         columns={columns}
         dataSource={displayData}
-        scrollX={showGhiChuExtra ? 1505 : 1325}
+        scrollX={1850}
         scrollY="calc(100vh - 207px)"
         onRow={(me) => ({
           style: me.isGhost ? { background: "#fff7e6", opacity: 0.85 } : undefined,
@@ -623,7 +623,6 @@ export const TinhLuyenPanel = ({
   const [huyNhanBusy, setHuyNhanBusy] = useState(false);
   const [choNhanRefreshKey, setChoNhanRefreshKey] = useState(0);
   const [showChuyenMeCols, setShowChuyenMeCols] = useState(false);
-  const [showGhiChuExtraTL, setShowGhiChuExtraTL] = useState(false);
 
   // Thêm mẻ tay
   const [showThemMeTay, setShowThemMeTay] = useState(false);
@@ -898,6 +897,15 @@ export const TinhLuyenPanel = ({
       },
     },
     { title: "STT",        key: "stt",     width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
+    {
+      title: "Tình trạng", key: "tinhTrang", width: 120, fixed: "left",
+      render: (_, me) => (
+        <Space size={4}>
+          {tinhTrangTag(me.trangThaiDuc, me.isChot)}
+          {me.isTrungMeThoi && <Tag color="orange" style={{ fontSize: 11 }}>Trùng</Tag>}
+        </Space>
+      ),
+    },
     { title: "Mẻ thổi",   dataIndex: "maMe",    width: 90, fixed: "left", render: (v) => v ?? "" },
     {
       title: "Thùng số", key: "thungSo", width: 40,
@@ -991,19 +999,23 @@ export const TinhLuyenPanel = ({
     {
       title: "KL thép lỏng", key: "klThepLong", width: 80,
       render: (_, me) => {
-        // dichChuyen null ở TinhLuyen → mặc định dùng công thức tinh_luyen: klLan1 - klLan2
         const computed = calcKlThepLong(me.dichChuyen ?? "tinh_luyen", me.kllfSauThep, me.klLan1, me.klLan2);
         return <InputNumber size="small" style={{ width: 73, fontWeight: 700 }} value={computed ?? me.klThepLong ?? undefined} disabled />;
       },
     },
     {
-      title: "Ghi chú TL", key: "ghiChuTL", width: 90,
-      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuTL} locked={readOnly || !!me.isChot} field="tl" />,
+      title: "KL thép lỏng chốt", key: "klThepLongChot", width: 85,
+      render: (_, me) => {
+        const v = me.klThepLongChot;
+        if (v == null) return "";
+        const isTransferred = me.chuyenVeMaMe != null && me.chuyenVeMaMe !== me.maMe;
+        return (
+          <Tooltip title={isTransferred ? `Đã chuyển sang mẻ ${me.chuyenVeMaMe}` : undefined}>
+            <span style={{ fontWeight: 600, color: isTransferred ? "#aaa" : undefined }}>{v}</span>
+          </Tooltip>
+        );
+      },
     },
-    ...(showGhiChuExtraTL ? [
-      { title: "Ghi chú LT",  key: "ghiChuLo",  width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo  ?? "" },
-      { title: "Ghi chú đúc", key: "ghiChuDuc2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
-    ] as TableColumnsType<HRC1_MeThepVm> : []),
     { title: "Thử nghiệm", dataIndex: "isThuNghiem", width: 44, render: (v) => <Checkbox checked={!!v} disabled /> },
     {
       title: "Máy đúc", key: "idMayDucDich", width: 125,
@@ -1061,14 +1073,11 @@ export const TinhLuyenPanel = ({
     { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 115, render: (v) => <Input size="small" style={{ width: 110}} value={v ?? ""} disabled /> },
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 150, render: (v) => v ?? "" },
     {
-      title: "Tình trạng", key: "tinhTrang", width: 150, fixed: "right",
-      render: (_, me) => (
-        <Space size={4}>
-          {tinhTrangTag(me.trangThaiDuc, me.isChot)}
-          {me.isTrungMeThoi && <Tag color="orange" style={{ fontSize: 11 }}>Trùng</Tag>}
-        </Space>
-      ),
+      title: "Ghi chú TL", key: "ghiChuTL", width: 90,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuTL} locked={readOnly || !!me.isChot} field="tl" />,
     },
+    { title: "Ghi chú LT",  key: "ghiChuLo",  width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo  ?? "" },
+    { title: "Ghi chú đúc", key: "ghiChuDuc2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
     {
       title: "", key: "xoaTay", width: 36, fixed: "right",
       render: (_, me) => {
@@ -1121,28 +1130,19 @@ export const TinhLuyenPanel = ({
       {/* Phải: Bảng TL chính + Thêm dòng */}
       <Col flex="auto" style={{ minWidth: 0, overflow: "hidden" }}>
         <div style={{ marginBottom: 6, textAlign: "right" }}>
-          <Space size="small">
-            <Button
-              size="small"
-              icon={showGhiChuExtraTL ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-              onClick={() => setShowGhiChuExtraTL((v) => !v)}
-            >
-              {showGhiChuExtraTL ? "Ẩn ghi chú LT / đúc" : "Hiện ghi chú LT / đúc"}
-            </Button>
-            <Button
-              size="small"
-              icon={showChuyenMeCols ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-              onClick={() => setShowChuyenMeCols((v) => !v)}
-            >
-              {showChuyenMeCols ? "Ẩn cột chuyển mẻ" : "Hiện cột chuyển mẻ"}
-            </Button>
-          </Space>
+          <Button
+            size="small"
+            icon={showChuyenMeCols ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            onClick={() => setShowChuyenMeCols((v) => !v)}
+          >
+            {showChuyenMeCols ? "Ẩn cột chuyển mẻ" : "Hiện cột chuyển mẻ"}
+          </Button>
         </div>
         <MeThepTable
           columns={mainCols}
           dataSource={tlDisplayData}
           rowKey={(r) => `${r.id}-${r.mePhanCongId}`}
-          scrollX={(showChuyenMeCols ? 1391 : 1131) + (showGhiChuExtraTL ? 180 : 0)}
+          scrollX={showChuyenMeCols ? 2010 : 1750}
           scrollY="calc(100vh - 258px)"
           onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
         />
@@ -1202,7 +1202,6 @@ export const DucPanel = ({
   tableScrollY?: string | number;
 }) => {
   const [selected, setSelected] = useState<number[]>([]);
-  const [showGhiChuExtraDuc, setShowGhiChuExtraDuc] = useState(false);
 
   const sortedMes = useMemo(() =>
     [...phieuData.danhSachMe].sort((a, b) =>
@@ -1367,24 +1366,25 @@ export const DucPanel = ({
         const toggle = (e: { target: { checked: boolean } }) =>
           setSelected((p) => e.target.checked ? [...p, me.id] : p.filter((id) => id !== me.id));
 
-        // vùng 4: enable cho mẻ đã xác nhận (kể cả đã chốt → để hủy chốt); disabled nếu chưa xác nhận
         if (canChot && !canXacNhan) {
           if ((me.trangThaiDuc ?? 0) < 1)
             return <Tooltip title="Mẻ chưa được xác nhận" placement="right"><Checkbox disabled /></Tooltip>;
           return <Checkbox checked={selected.includes(me.id)} onChange={toggle} />;
         }
 
-        // vùng 3 hoặc cả hai: không cho thao tác mẻ đã chốt
         if (me.isChot)
           return <Tooltip title="Mẻ đã chốt, không thể thao tác"><Checkbox disabled /></Tooltip>;
         const missing = checkDucReady(me);
-        // chưa đủ thông tin VÀ chưa xác nhận → disabled
         if (missing.length > 0 && (me.trangThaiDuc ?? 0) < 1)
           return <Tooltip title={`Thiếu: ${missing.join(", ")}`} placement="right"><Checkbox disabled /></Tooltip>;
         return <Checkbox checked={selected.includes(me.id)} onChange={toggle} />;
       },
     },
     { title: "STT",       key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
+    {
+      title: "Tình trạng", key: "tinhTrang", width: 100, fixed: "left",
+      render: (_, me) => tinhTrangTag(me.trangThaiDuc, me.isChot),
+    },
     { title: "Mẻ thổi",  dataIndex: "maMe",         width: 90, fixed: "left", render: (v) => v ?? "" },
     { title: "Thùng số", dataIndex: "thungSo",      width: 50, render: (v) => v ?? "" },
     { title: "Thời gian",dataIndex: "thoiGian",     width: 65, render: fmtTime },
@@ -1394,13 +1394,18 @@ export const DucPanel = ({
     { title: "KL bì - Lần 3 (tấn)", dataIndex: "klLan3",       width: 75,  render: (v) => v ?? "" },
     { title: "KL thép lỏng", dataIndex: "klThepLong", width: 80, render: (v) => <span style={{ fontWeight: 700 }}>{v ?? ""}</span> },
     {
-      title: "Ghi chú đúc", key: "ghiChuDuc", width: 90,
-      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuDuc} locked={readOnly || !!me.isChot} field="duc" />,
+      title: "KL thép lỏng chốt", key: "klThepLongChot", width: 85,
+      render: (_, me) => {
+        const v = me.klThepLongChot;
+        if (v == null) return "";
+        const isTransferred = me.chuyenVeMaMe != null && me.chuyenVeMaMe !== me.maMe;
+        return (
+          <Tooltip title={isTransferred ? `Đã chuyển sang mẻ ${me.chuyenVeMaMe}` : undefined}>
+            <span style={{ fontWeight: 600, color: isTransferred ? "#aaa" : undefined }}>{v}</span>
+          </Tooltip>
+        );
+      },
     },
-    ...(showGhiChuExtraDuc ? [
-      { title: "Ghi chú LT", key: "ghiChuLo2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo ?? "" },
-      { title: "Ghi chú TL", key: "ghiChuTL2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuTL ?? "" },
-    ] as TableColumnsType<HRC1_MeThepVm> : []),
     {
       title: "Tinh luyện/Lên thẳng", key: "dichDisp", width: 90,
       render: (_, me) => {
@@ -1428,53 +1433,43 @@ export const DucPanel = ({
     { title: "Mác BKMIS",dataIndex: "macThepBKMIS",  width: 110, render: (v) => v ?? "" },
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 150, render: (v) => v ?? "-" },
     {
-      title: "Tình trạng", key: "tinhTrang", width: 100, fixed: "right",
-      render: (_, me) => tinhTrangTag(me.trangThaiDuc, me.isChot),
+      title: "Ghi chú đúc", key: "ghiChuDuc", width: 90,
+      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuDuc} locked={readOnly || !!me.isChot} field="duc" />,
     },
+    { title: "Ghi chú LT", key: "ghiChuLo2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo ?? "" },
+    { title: "Ghi chú TL", key: "ghiChuTL2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuTL ?? "" },
   ];
 
   return (
     <>
-      <div style={{ marginBottom: 6, textAlign: "right" }}>
-        <Button
-          size="small"
-          icon={showGhiChuExtraDuc ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-          onClick={() => setShowGhiChuExtraDuc((v) => !v)}
-        >
-          {showGhiChuExtraDuc ? "Ẩn ghi chú LT / TL" : "Hiện ghi chú LT / TL"}
-        </Button>
-      </div>
       <MeThepTable
         columns={columns}
         dataSource={sortedMes}
-        scrollX={showGhiChuExtraDuc ? 1810 : 1630}
+        scrollX={1870}
         scrollY={tableScrollY}
-      onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
-      summary={(pageData) => {
-        const total = Math.round(pageData.reduce((s, m) => s + (m.klThepLong ?? 0), 0) * 100) / 100;
-        const extraCols = showGhiChuExtraDuc ? 2 : 0;
-        return (
-          <Table.Summary fixed>
-            <Table.Summary.Row>
-              {/* fixed-left: chk / STT / maMe */}
-              <Table.Summary.Cell index={0} colSpan={3}>
-                <strong>Tổng</strong>
-              </Table.Summary.Cell>
-              {/* non-fixed before klThepLong: thungSo → klLan3 (6 cols) */}
-              <Table.Summary.Cell index={3} colSpan={6} />
-              {/* klThepLong */}
-              <Table.Summary.Cell index={9}>
-                <strong>{total}</strong>
-              </Table.Summary.Cell>
-              {/* ghiChuDuc + optional extras + remaining non-fixed cols */}
-              <Table.Summary.Cell index={10} colSpan={9 + extraCols} />
-              {/* fixed-right: tinhTrang */}
-              <Table.Summary.Cell index={19 + extraCols} />
-            </Table.Summary.Row>
-          </Table.Summary>
-        );
-      }}
-    />
+        onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
+        summary={(pageData) => {
+          const total = Math.round(pageData.reduce((s, m) => s + (m.klThepLong ?? 0), 0) * 100) / 100;
+          return (
+            <Table.Summary fixed>
+              <Table.Summary.Row>
+                {/* fixed-left: chk / tinhTrang / STT / maMe */}
+                <Table.Summary.Cell index={0} colSpan={4}>
+                  <strong>Tổng</strong>
+                </Table.Summary.Cell>
+                {/* non-fixed before klThepLong: thungSo → klLan3 (6 cols) */}
+                <Table.Summary.Cell index={4} colSpan={6} />
+                {/* klThepLong */}
+                <Table.Summary.Cell index={10}>
+                  <strong>{total}</strong>
+                </Table.Summary.Cell>
+                {/* klThepLongChot + remaining cols (12 cols) */}
+                <Table.Summary.Cell index={11} colSpan={12} />
+              </Table.Summary.Row>
+            </Table.Summary>
+          );
+        }}
+      />
     </>
   );
 };
@@ -1573,13 +1568,36 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
   }, [selectedId, loadPhieu]);
 
   // Reload khi loSo hoặc tlSo thay đổi (sau khi đã có phiếu)
+  // Lò thổi: khi loSo thay đổi → tự động sync rồi reload (thay vì chỉ reload)
   const prevLoSo = useRef(loSo);
   const prevTlSo = useRef(tlSo);
+  const phieuDataRef = useRef(phieuData);
+  phieuDataRef.current = phieuData;
   useEffect(() => {
     if (prevLoSo.current === loSo && prevTlSo.current === tlSo) return;
+    const loSoChanged = prevLoSo.current !== loSo;
     prevLoSo.current = loSo;
     prevTlSo.current = tlSo;
-    if (selectedId) loadPhieu(selectedId, { loSo, tlSo });
+    if (!selectedId) return;
+
+    const pd = phieuDataRef.current;
+    if (loSoChanged && loSo && pd?.congDoan === "lo_thoi") {
+      setSyncing(true);
+      void (async () => {
+        try {
+          const updated = await HRC1Api.syncLoThoi(pd.idPhieu, loSo);
+          const maMes = updated.danhSachMe.map((m) => m.maMe).filter((m): m is string => !!m);
+          if (maMes.length > 0) await HRC1Api.syncPhanLoaiMeThep(maMes);
+          await loadPhieu(selectedId, { loSo, tlSo });
+        } catch (e: any) {
+          message.error(e?.message ?? "Lỗi đồng bộ");
+        } finally {
+          setSyncing(false);
+        }
+      })();
+    } else {
+      void loadPhieu(selectedId, { loSo, tlSo });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loSo, tlSo]);
 

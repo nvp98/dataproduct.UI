@@ -21,6 +21,7 @@ export interface HRC1_MeThepVm {
   klLan2?: number | null;         // TL nhập
   klLan3?: number | null;         // LT nhập
   klThepLong?: number | null;     // Auto-tính (len_thang: KLLF-klLan2; tinh_luyen: klLan1-klLan2)
+  klThepLongChot?: number | null;
   klThepLongPhanBo?: number | null;
   dichChuyen?: string | null;
   tlDichSo?: number | null;
