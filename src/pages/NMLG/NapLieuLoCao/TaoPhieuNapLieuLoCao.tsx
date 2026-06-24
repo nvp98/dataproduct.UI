@@ -263,47 +263,6 @@ const TaoPhieuNapLieuLoCao = () => {
     const caNum = Number(ca);
     setSiloSnapshotOpen(true);
 
-    // Dùng getList (không có fallback) để kiểm tra ngày/ca hiện tại có mapping thực không.
-    // Backend GetSiloSnapshotAsync đã bỏ fallback nên phải tự động sao chép nếu chưa có data.
-    try {
-      const actualRaw = await lgnlMappingApi.getList({ ngay, idCa: caNum, idLoCao: Number(scope) });
-      const actualMappings: LGNLMappingDto[] = Array.isArray(actualRaw) ? actualRaw : [];
-
-      if (actualMappings.length === 0) {
-        // Chưa có mapping cho ngày/ca này → sao chép từ ca trước, không dùng fallback backend
-        const prevCa = caNum === 1 ? 2 : 1;
-        const prevNgay = caNum === 1 ? dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD") : ngay;
-        const prevSnapshotRaw = await lgnlMappingApi.getSnapshotSilo({
-          ngay: prevNgay,
-          idCa: prevCa,
-          idLoCao: Number(scope),
-        });
-        const prevSnapshot: LGNLSiloSnapshotDto[] = Array.isArray(prevSnapshotRaw) ? prevSnapshotRaw : [];
-        const mappedPrev = prevSnapshot.filter((item: LGNLSiloSnapshotDto) => item.idNVL != null);
-        if (mappedPrev.length > 0) {
-          for (const item of mappedPrev) {
-            try {
-              await lgnlMappingApi.create({
-                ngay,
-                idCa: caNum,
-                idLoCao: Number(scope),
-                idSiLo: item.idSiLo,
-                idNVL: item.idNVL!,
-                ghiChu: null,
-              });
-            } catch {
-              // bỏ qua lỗi từng silo, tiếp tục
-            }
-          }
-          message.success(
-            `Đã tự động sao chép ${mappedPrev.length} mapping từ Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`
-          );
-        }
-      }
-    } catch {
-      message.error("Không thể kiểm tra/sao chép mapping ca trước");
-    }
-
     const snapshot = await refreshSnapshotData(ngay, caNum, Number(scope));
     const initDrafts: Record<number, number | null> = {};
     const initNotes: Record<number, string> = {};
