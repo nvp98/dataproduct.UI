@@ -12,7 +12,7 @@ export interface ThongKeHeaderColumn {
 
 // Header cho bảng tổng hợp dữ liệu tiêu hao Lò thổi (BOF)
 export const Header_TieuHaoLoThoi: ThongKeHeaderColumn[] = [
-  { dataIndex: "ngaySx", title: "Ngày", width: 120 },
+  { dataIndex: "ngay", title: "Ngày", width: 120 },
   { dataIndex: "ca", title: "Ca", width: 80 },
   { dataIndex: "kip", title: "Kíp", width: 80 },
   { dataIndex: "loThoi", title: "Lò thổi", width: 80 },

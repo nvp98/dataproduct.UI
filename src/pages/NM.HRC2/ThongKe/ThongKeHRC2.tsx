@@ -81,7 +81,7 @@ const toAntdColumns = (cols: ThongKeHeaderColumn[]): any[] => {
       align: "right" as const,
     };
 
-    if (c.dataIndex === "ngaySx") {
+    if (c.dataIndex === "ngay") {
       mapped.render = (value: unknown) =>
         value ? dayjs(String(value)).format("DD/MM/YYYY") : "";
     }
@@ -188,7 +188,7 @@ const ThongKeHRC2 = () => {
         const fixedDataIndexes =
           currentLoaiBm === "BOF"
             ? new Set([
-                "ngaySx",
+                "ngay",
                 "ca",
                 "kip",
                 "loThoi",
@@ -197,7 +197,7 @@ const ThongKeHRC2 = () => {
                 "klGangLongCCT",
                 "klThepPhe",
               ])
-            : new Set(["ngaySx", "ca", "kip", "tinhLuyen", "meThoi", "macThep"]);
+            : new Set(["ngay", "ca", "kip", "tinhLuyen", "meThoi", "macThep"]);
         const fixedCols = configCols.filter((c) => fixedDataIndexes.has(c.dataIndex));
         const fixedColumns = toAntdColumns(fixedCols);
 
