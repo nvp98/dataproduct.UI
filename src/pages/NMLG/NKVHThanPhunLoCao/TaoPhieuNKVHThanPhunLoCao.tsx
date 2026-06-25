@@ -576,6 +576,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
 
   const [kipCaNgay, setKipCaNgay] = useState("Kíp 1");
   const [kipCaDem, setKipCaDem] = useState("Kíp 2");
+  const prodSummaryWatch = Form.useWatch(prodSummarySection?.key, form);
 
   // Auto-fill sanLuongPhun.caNgay/caDem từ lũy kế Tổng của mỗi ca
   useEffect(() => {
@@ -807,73 +808,112 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                 {
                   title: "Kíp",
                   dataIndex: "chiTieu",
-                  width: 250
+                  width: 200,
                 },
                 {
                   title: kipCaNgay,
-                  dataIndex: "caNgay",
-                  render: (_, record) => (
-                    <Form.Item
-                      name={[
-                        prodSummarySection.key,
-                        record.key,
-                        "caNgay"
-                      ]}
-                      style={{ marginBottom: 0 }}
-                    >cột 
-                      <InputNumber
-                        style={{ width: "100%" }}
-                        disabled={isFormLocked}
-                      />
-                    </Form.Item>
-                  )
+                  children: [
+                    {
+                      title: "(1) Chưa quy khô",
+                      render: (_: any, record: any) => (
+                        <Form.Item
+                          name={[prodSummarySection.key, record.key, "caNgay"]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber style={{ width: "100%" }} disabled={isFormLocked} />
+                        </Form.Item>
+                      ),
+                    },
+                    {
+                      title: "(2) Độ ẩm (%)",
+                      render: (_: any, record: any) => (
+                        <Form.Item
+                          name={[prodSummarySection.key, record.key, "doAmKip1"]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber style={{ width: "100%" }} min={0} max={100} disabled={isFormLocked} />
+                        </Form.Item>
+                      ),
+                    },
+                    {
+                      title: "(3) Đã quy khô",
+                      render: (_: any, record: any) => {
+                        const raw = Number(prodSummaryWatch?.[record.key]?.caNgay || 0);
+                        const doAm = Number(prodSummaryWatch?.[record.key]?.doAmKip1 || 0);
+                        const quyKho = raw * (1 - doAm / 100);
+                        return (
+                          <InputNumber
+                            value={parseFloat(quyKho.toFixed(3))}
+                            disabled
+                            style={{ width: "100%" }}
+                          />
+                        );
+                      },
+                    },
+                  ],
                 },
                 {
                   title: kipCaDem,
-                  dataIndex: "caDem",
-                  render: (_, record) => (
-                    <Form.Item
-                      name={[
-                        prodSummarySection.key,
-                        record.key,
-                        "caDem"
-                      ]}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <InputNumber
-                        style={{ width: "100%" }}
-                        disabled={isFormLocked}
-                      />
-                    </Form.Item>
-                  )
+                  children: [
+                    {
+                      title: "(4) Chưa quy khô",
+                      render: (_: any, record: any) => (
+                        <Form.Item
+                          name={[prodSummarySection.key, record.key, "caDem"]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber style={{ width: "100%" }} disabled={isFormLocked} />
+                        </Form.Item>
+                      ),
+                    },
+                    {
+                      title: "(5) Độ ẩm (%)",
+                      render: (_: any, record: any) => (
+                        <Form.Item
+                          name={[prodSummarySection.key, record.key, "doAmKip2"]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber style={{ width: "100%" }} min={0} max={100} disabled={isFormLocked} />
+                        </Form.Item>
+                      ),
+                    },
+                    {
+                      title: "(6) Đã quy khô",
+                      render: (_: any, record: any) => {
+                        const raw = Number(prodSummaryWatch?.[record.key]?.caDem || 0);
+                        const doAm = Number(prodSummaryWatch?.[record.key]?.doAmKip2 || 0);
+                        const quyKho = raw * (1 - doAm / 100);
+                        return (
+                          <InputNumber
+                            value={parseFloat(quyKho.toFixed(3))}
+                            disabled
+                            style={{ width: "100%" }}
+                          />
+                        );
+                      },
+                    },
+                  ],
                 },
                 {
-                  title: "Tổng",
-                  dataIndex: "tong",
-                  render: (_, record) => {
-                    const ngay =
-                      form.getFieldValue([
-                        prodSummarySection.key,
-                        record.key,
-                        "caNgay"
-                      ]) || 0;
+                  title: "Tổng (3)+(6)",
+                  render: (_: any, record: any) => {
+                    const raw1 = Number(prodSummaryWatch?.[record.key]?.caNgay || 0);
+                    const doAm1 = Number(prodSummaryWatch?.[record.key]?.doAmKip1 || 0);
+                    const kip1QuyKho = raw1 * (1 - doAm1 / 100);
 
-                    const dem =
-                      form.getFieldValue([
-                        prodSummarySection.key,
-                        record.key,
-                        "caDem"
-                      ]) || 0;
+                    const raw2 = Number(prodSummaryWatch?.[record.key]?.caDem || 0);
+                    const doAm2 = Number(prodSummaryWatch?.[record.key]?.doAmKip2 || 0);
+                    const kip2QuyKho = raw2 * (1 - doAm2 / 100);
 
                     return (
                       <InputNumber
-                        value={Number(ngay) + Number(dem)}
+                        value={parseFloat((kip1QuyKho + kip2QuyKho).toFixed(3))}
                         disabled
                         style={{ width: "100%" }}
                       />
                     );
-                  }
-                }
+                  },
+                },
               ]}
             />
           </Card>
