@@ -89,6 +89,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
       tlSo:          v.tlSo != null ? Number(v.tlSo) : undefined,
       idMayDuc:      v.idMayDuc != null ? Number(v.idMayDuc) : undefined,
       maMe:          v.maMe ? String(v.maMe).trim() : undefined,
+      maMeChuyenVe: v.maMeChuyenVe ? String(v.maMeChuyenVe).trim() : undefined,
       thungSo:       v.thungSo ? String(v.thungSo).trim() : undefined,
       phanLoai:      v.phanLoai ? String(v.phanLoai).trim() : undefined,
       isManualTL:           v.isManualTL === true ? true : undefined,
@@ -402,6 +403,9 @@ const ThongKeBBGNThepLongHRC1 = () => {
           <Form.Item name="tlSo" label="Tinh luyện">
             <Select allowClear style={{ minWidth: 70 }} placeholder="TL số"
               options={[1,2,3,4,5].map(n => ({ label: `TL ${n}`, value: n }))} />
+          </Form.Item>
+          <Form.Item name="maMeChuyenVe" label="Mẻ chuyển về">
+            <Input placeholder="Mã mẻ chuyển về" style={{ width: 110 }} />
           </Form.Item>
           <Form.Item name="idMayDuc" label="Máy đúc">
             <Select allowClear style={{ minWidth: 120 }} placeholder="Máy đúc" options={mayDucOpts} />

@@ -154,6 +154,7 @@ export interface HRC1_ExportQuery {
   idNhomPhanLoai?: number | null;
   tuNgayLoThoi?: string | null;
   denNgayLoThoi?: string | null;
+  maMeChuyenVe?: string | null;
 }
 
 export interface HRC1_ThongKeQuery extends HRC1_ExportQuery {
