@@ -163,7 +163,7 @@ const TaoPhieuNapLieuLoCao = () => {
             if (item.giaTri_Goc != null)
               rowMap.get(t)![`_goc_${item.idNVL}`] = item.giaTri_Goc;
           }
-          rowMap.get(t)![String(item.idNVL)] = item.giaTri;
+          rowMap.get(t)![String(item.idNVL)] = item.giaTri != null ? parseFloat(Number(item.giaTri).toFixed(3)) : null;
         }
         const rows = Array.from(rowMap.values());
         setTableData(rows);
@@ -215,7 +215,13 @@ const TaoPhieuNapLieuLoCao = () => {
               second: "2-digit",
             })
             : "";
-          return { key: row?.id ?? `row-${index}`, thoiGianNapLieu, ...rest };
+          const rounded: Record<string, any> = {};
+          for (const [k, v] of Object.entries(rest)) {
+            rounded[k] = /^\d+$/.test(k) && typeof v === "number"
+              ? parseFloat(Number(v).toFixed(3))
+              : v;
+          }
+          return { key: row?.id ?? `row-${index}`, thoiGianNapLieu, ...rounded };
         });
         setTableData(rows);
 
@@ -754,7 +760,7 @@ const TaoPhieuNapLieuLoCao = () => {
                   if (item.giaTri_Goc != null)
                     rowMap.get(thuTu)![`_goc_${item.idNVL}`] = item.giaTri_Goc;
                 }
-                rowMap.get(thuTu)![String(item.idNVL)] = item.giaTri;
+                rowMap.get(thuTu)![String(item.idNVL)] = item.giaTri != null ? parseFloat(Number(item.giaTri).toFixed(3)) : null;
               }
               setTableData(Array.from(rowMap.values()));
 
