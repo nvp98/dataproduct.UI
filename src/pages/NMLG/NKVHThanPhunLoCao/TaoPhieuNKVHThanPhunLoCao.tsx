@@ -176,7 +176,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
           const unit = extractUnit(autoCol.title);
           const precision = manualCol.precision !== undefined
             ? manualCol.precision
-            : autoCol.precision !== undefined ? autoCol.precision : 1;
+            : autoCol.precision !== undefined ? autoCol.precision : 2;
           return {
             title: `${col.title}${unit}`,
             dataIndex: manualCol.dataIndex,
@@ -198,7 +198,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
               const displayVal = isOverridden ? manualVal : autoVal;
               if (isRowLocked(row)) {
                 return displayVal != null
-                  ? <span style={{ color: isOverridden ? undefined : "#1677ff" }}>{String(displayVal)}</span>
+                  ? <span style={{ color: isOverridden ? undefined : "#1677ff" }}>{Number(displayVal).toFixed(precision)}</span>
                   : "";
               }
               return (
