@@ -72,6 +72,7 @@ const SiLoTab = ({ loCaoOptions, filterLoCao, nvlOptions, onDataChange }: SiLoTa
       idLoCao: row.idLoCao,
       tenSiLo: row.tenSiLo,
       thuTu: row.thuTu,
+      thuTuCoDinh: row.thuTuCoDinh,
       isDelete: row.isDelete ?? false,
     });
     setEditingRow(row);
@@ -108,6 +109,7 @@ const SiLoTab = ({ loCaoOptions, filterLoCao, nvlOptions, onDataChange }: SiLoTa
     { title: "Lò cao", dataIndex: "idLoCao", key: "idLoCao", width: 80, align: "center" },
     { title: "Tên Silo", dataIndex: "tenSiLo", key: "tenSiLo" },
     { title: "Thứ tự", dataIndex: "thuTu", key: "thuTu", width: 80, align: "center", render: (v) => v ?? "—" },
+    { title: "Thứ tự cố định", dataIndex: "thuTuCoDinh", key: "thuTuCoDinh", width: 120, align: "center", render: (v) => v ?? "—" },
     {
       title: "Thao tác", key: "action", width: 100, align: "center",
       render: (_v, row) => (
