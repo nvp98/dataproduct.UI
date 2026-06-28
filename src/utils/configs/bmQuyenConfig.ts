@@ -167,9 +167,8 @@ export const bmQuyenConfig = {
       tenBm: "HRC1 - Biên bản giao nhận phôi tấm",
       nhom: "NM.HRC1",
       khuVucPhus: [
-        { khuVucPhu: "KCS", tenKhuVuc: "Bộ phận KCS" },
         { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
-        { khuVucPhu: "Kho", tenKhuVuc: "Bộ phận Kho" },
+        { khuVucPhu: "Can", tenKhuVuc: "Bộ phận Cán Tấm" },
       ]
     }
   ] as BieuMauQuyenItem[],

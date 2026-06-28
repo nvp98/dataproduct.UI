@@ -28,7 +28,6 @@ export interface Hrc1SlabSearchRequest {
   idSlab?: string | null;
   macThep?: string | null;
   isChot?: boolean | null;
-  trangThaiKCS?: number | null;
   trangThaiDuc?: number | null;
   trangThaiKho?: number | null;
   trangThaiPKH?: number | null;
@@ -56,7 +55,8 @@ export interface Hrc1SlabItem {
   ghiChu?: string | null;
   maVatTu?: string | null;
   // Workflow
-  trangThaiKCS: number;
+  isChuyenCa: boolean;
+  idPhieuGoc?: string | null;
   trangThaiDuc: number;
   trangThaiKho: number;
   trangThaiPKH: number;
@@ -101,7 +101,7 @@ export interface Hrc1SlabTongHopItem {
   chieuDai?: number | null;
   mayDuc?: string | null;
   soLuong: number;
-  tongKhoiLuong?: number | null; // decimal từ BE
+  tongKhoiLuong?: number | null;
 }
 
 export interface Hrc1SlabSyncResult {
@@ -150,12 +150,13 @@ export const Hrc1SlabApi = {
     return (await apiService.get(`${BASE}/slabs-by-phieu/${idPhieu}`)) as Hrc1SlabItem[];
   },
 
-  chuyenBBSL: async (idSlabs: number[], idPhieu: string, nguoiThucHien: number): Promise<WorkflowResult> => {
-    return (await apiService.post(`${BASE}/chuyen-bbsl`, { idSlabs, idPhieu, nguoiThucHien })) as WorkflowResult;
-  },
-
-  thuHoi: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
-    return (await apiService.post(`${BASE}/thu-hoi`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  chuyenPhoi: async (
+    idSlabs: number[],
+    idPhieuNguon: string,
+    huong: "truoc" | "sau",
+    nguoiChuyen: number
+  ): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/chuyen-phoi`, { idSlabs, idPhieuNguon, huong, nguoiChuyen })) as WorkflowResult;
   },
 
   xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho", nguoiThucHien: number): Promise<WorkflowResult> => {
@@ -184,6 +185,10 @@ export const Hrc1SlabApi = {
 
   updateSlab: async (id: number, payload: { ghiChu?: string | null; maVatTu?: string | null }): Promise<WorkflowResult> => {
     return (await apiService.patch(`${BASE}/${id}`, payload)) as WorkflowResult;
+  },
+
+  bulkUpdateMaVatTu: async (ids: number[], maVatTu: string | null): Promise<WorkflowResult> => {
+    return (await apiService.patch(`${BASE}/bulk-ma-vat-tu`, { ids, maVatTu })) as WorkflowResult;
   },
 
   getTongHopGhiChu: async (idPhieu: string): Promise<Hrc1TongHopGhiChuItem[]> => {

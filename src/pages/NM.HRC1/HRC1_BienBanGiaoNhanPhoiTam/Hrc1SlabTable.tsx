@@ -62,7 +62,7 @@ const Hrc1SlabTable = () => {
   const userInfo = (() => { try { const s = localStorage.getItem("userinfo"); return s ? JSON.parse(s) : null; } catch { return null; } })();
   const maBm = BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam;
   const isView = getBmQuyenUiFlags(maBm, userInfo).isView;
-  const isKCS  = hasKhuVucPhu(userInfo, maBm, "KCS");
+  const isDuc  = hasKhuVucPhu(userInfo, maBm, "Duc");
 
   const [form] = Form.useForm();
   const [data, setData] = useState<Hrc1SlabItem[]>([]);
@@ -291,7 +291,7 @@ const Hrc1SlabTable = () => {
 
   const columns = useMemo((): ColumnsType<Hrc1SlabItem> => [
     {
-      title: "TT KCS",
+      title: "TT Đúc",
       dataIndex: "trangThaiKCS",
       width: 80,
       align: "center",
@@ -302,8 +302,6 @@ const Hrc1SlabTable = () => {
         </Tooltip>
       ),
     },
-    { title: "TT Đúc", dataIndex: "trangThaiDuc", width: 70, align: "center", fixed: "left",
-      render: (v: number) => <Tag color={TT_COLOR[v]}>{TT_TEXT[v]}</Tag> },
     { title: "TT Kho", dataIndex: "trangThaiKho", width: 70, align: "center", fixed: "left",
       render: (v: number) => <Tag color={TT_COLOR[v]}>{TT_TEXT[v]}</Tag> },
     { title: "TT PKH", dataIndex: "trangThaiPKH", width: 70, align: "center", fixed: "left",
@@ -415,7 +413,7 @@ const Hrc1SlabTable = () => {
               </Form.Item>
             </Col>
             <Col xs={12} sm={6} md={2}>
-              <Form.Item name="trangThaiKCS" label="TT KCS">
+              <Form.Item name="trangThaiKCS" label="TT Đúc">
                 <Select allowClear placeholder="Tất cả">
                   <Select.Option value={0}>Chưa chuyển</Select.Option>
                   <Select.Option value={1}>Đã chuyển</Select.Option>
@@ -434,7 +432,7 @@ const Hrc1SlabTable = () => {
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", borderTop: "1px solid #f0f0f0", paddingTop: 10 }}>
             <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>Tìm</Button>
-            <Button icon={<ClearOutlined />} onClick={handleClear}>Xóa</Button>
+            <Button icon={<ClearOutlined />} onClick={handleClear}>Xóa Lọc</Button>
 
             <span style={{ color: "#d9d9d9" }}>|</span>
             <span style={{ color: "#555" }}>
@@ -443,7 +441,7 @@ const Hrc1SlabTable = () => {
                 : `Tổng: ${pagination.total} bản ghi`}
             </span>
 
-            {!isView && isKCS && (<>
+            {!isView && isDuc && (<>
               <Button type="primary" icon={<ArrowUpOutlined />} disabled={!canChuyenBBSL} loading={actionLoading} onClick={handleOpenChuyenBBSL}>
                 Chuyển BBSL
               </Button>
@@ -453,7 +451,7 @@ const Hrc1SlabTable = () => {
             </>)}
 
             <div style={{ marginLeft: "auto" }}>
-              {isKCS && (
+              {isDuc && (
                 <Button icon={<SyncOutlined />} onClick={() => setSyncVisible(true)}>Làm mới dữ liệu</Button>
               )}
             </div>

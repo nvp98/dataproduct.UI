@@ -3,6 +3,8 @@ import apiService from "./ApiService";
 export interface Hrc1MaVatTuItem {
   id: number;
   maVatTu: string;
+  tenVatTu?: string | null;
+  isLock?: boolean | null;
 }
 
 export interface Hrc1MaVatTuSearchRequest {
@@ -26,11 +28,11 @@ export const Hrc1MaVatTuApi = {
     return { data: res.data ?? [], totalCount: res.totalCount ?? 0, page: res.page ?? 1, pageSize: res.pageSize ?? 50 };
   },
 
-  create: async (payload: { maVatTu: string }): Promise<Hrc1MaVatTuItem> => {
+  create: async (payload: { maVatTu: string; tenVatTu?: string | null; isLock?: boolean | null }): Promise<Hrc1MaVatTuItem> => {
     return (await apiService.post(BASE, payload)) as Hrc1MaVatTuItem;
   },
 
-  update: async (id: number, payload: { maVatTu: string }): Promise<void> => {
+  update: async (id: number, payload: { maVatTu: string; tenVatTu?: string | null; isLock?: boolean | null }): Promise<void> => {
     await apiService.put(`${BASE}/${id}`, payload);
   },
 
@@ -38,7 +40,7 @@ export const Hrc1MaVatTuApi = {
     await apiService.delete(`${BASE}/${id}`);
   },
 
-  bulkCreate: async (items: { maVatTu: string }[]): Promise<{
+  bulkCreate: async (items: { maVatTu: string; tenVatTu?: string | null }[]): Promise<{
     created: number;
     skipped: number;
     skippedItems: string[];

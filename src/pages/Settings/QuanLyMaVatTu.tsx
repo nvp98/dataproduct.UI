@@ -8,6 +8,7 @@ import {
   Popconfirm,
   Row,
   Space,
+  Switch,
   Table,
   Typography,
   message,
@@ -25,10 +26,15 @@ import { Hrc1MaVatTuApi, type Hrc1MaVatTuItem } from "../../services/Hrc1MaVatTu
 
 const { Text } = Typography;
 
-const parsePasteText = (text: string): { maVatTu: string }[] =>
+type PasteRow = { tenVatTu: string; maVatTu: string };
+
+const parsePasteText = (text: string): PasteRow[] =>
   text
     .split("\n")
-    .map((line) => ({ maVatTu: line.split("\t")[0].trim() }))
+    .map((line) => {
+      const cols = line.split("\t");
+      return { tenVatTu: (cols[0] ?? "").trim(), maVatTu: (cols[1] ?? "").trim() };
+    })
     .filter((item) => item.maVatTu !== "");
 
 const QuanLyMaVatTu = () => {
@@ -41,10 +47,12 @@ const QuanLyMaVatTu = () => {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
   const [editingRecord, setEditingRecord] = useState<Hrc1MaVatTuItem | null>(null);
 
+  const [toggleLoading, setToggleLoading] = useState<Record<number, boolean>>({});
+
   const [pasteVisible, setPasteVisible] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
-  const [pastePreview, setPastePreview] = useState<{ maVatTu: string }[]>([]);
+  const [pastePreview, setPastePreview] = useState<PasteRow[]>([]);
 
   const fetchData = useCallback(async (page = 1, pageSize = 20, searchKey?: string) => {
     setLoading(true);
@@ -79,7 +87,7 @@ const QuanLyMaVatTu = () => {
 
   const openEditModal = (record: Hrc1MaVatTuItem) => {
     setEditingRecord(record);
-    modalForm.setFieldsValue({ maVatTu: record.maVatTu });
+    modalForm.setFieldsValue({ maVatTu: record.maVatTu, tenVatTu: record.tenVatTu ?? "", isLock: record.isLock ?? false });
     setModalVisible(true);
   };
 
@@ -93,7 +101,11 @@ const QuanLyMaVatTu = () => {
     try {
       const values = await modalForm.validateFields();
       setModalLoading(true);
-      const payload = { maVatTu: values.maVatTu.trim() };
+      const payload = {
+        maVatTu: values.maVatTu.trim(),
+        tenVatTu: values.tenVatTu?.trim() || null,
+        isLock: values.isLock ?? false,
+      };
       if (editingRecord) {
         await Hrc1MaVatTuApi.update(editingRecord.id, payload);
         message.success("Cập nhật mã vật tư thành công");
@@ -118,6 +130,22 @@ const QuanLyMaVatTu = () => {
       fetchData(nextPage, pagination.pageSize);
     } catch {
       message.error("Không thể xóa mã vật tư");
+    }
+  };
+
+  const handleToggleLock = async (record: Hrc1MaVatTuItem, checked: boolean) => {
+    setToggleLoading((prev) => ({ ...prev, [record.id]: true }));
+    try {
+      await Hrc1MaVatTuApi.update(record.id, {
+        maVatTu: record.maVatTu,
+        tenVatTu: record.tenVatTu ?? null,
+        isLock: checked,
+      });
+      setData((prev) => prev.map((r) => r.id === record.id ? { ...r, isLock: checked } : r));
+    } catch {
+      message.error("Không thể cập nhật trạng thái");
+    } finally {
+      setToggleLoading((prev) => ({ ...prev, [record.id]: false }));
     }
   };
 
@@ -150,7 +178,23 @@ const QuanLyMaVatTu = () => {
   };
 
   const columns = [
-    { title: "Mã vật tư", dataIndex: "maVatTu", key: "maVatTu" },
+    { title: "Tên vật tư", dataIndex: "tenVatTu", key: "tenVatTu", width: 240 },
+    { title: "Mã vật tư", dataIndex: "maVatTu", key: "maVatTu", width: 160 },
+    {
+      title: "Trạng thái",
+      dataIndex: "isLock",
+      key: "isLock",
+      width: 130,
+      render: (v: boolean | null | undefined, record: Hrc1MaVatTuItem) => (
+        <Switch
+          checked={!!v}
+          checkedChildren="Khóa"
+          unCheckedChildren="Hoạt động"
+          loading={!!toggleLoading[record.id]}
+          onChange={(checked) => handleToggleLock(record, checked)}
+        />
+      ),
+    },
     {
       title: "Thao tác",
       key: "actions",
@@ -186,7 +230,7 @@ const QuanLyMaVatTu = () => {
           <Row gutter={16}>
             <Col xs={24} md={8}>
               <Form.Item label="Tìm kiếm" name="searchKey">
-                <Input placeholder="Mã vật tư..." allowClear />
+                <Input placeholder="Mã hoặc tên vật tư..." allowClear />
               </Form.Item>
             </Col>
             <Col xs={24} md={4} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
@@ -240,6 +284,12 @@ const QuanLyMaVatTu = () => {
           >
             <Input placeholder="Nhập mã vật tư" />
           </Form.Item>
+          <Form.Item name="tenVatTu" label="Tên vật tư">
+            <Input placeholder="Nhập tên vật tư" />
+          </Form.Item>
+          <Form.Item name="isLock" label="Trạng thái" valuePropName="checked">
+            <Switch checkedChildren="Khóa" unCheckedChildren="Hoạt động" />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -251,30 +301,33 @@ const QuanLyMaVatTu = () => {
         confirmLoading={pasteLoading}
         okText={pastePreview.length > 0 ? `Tạo (${pastePreview.length} mã)` : "Tạo"}
         cancelText="Hủy"
-        width={500}
+        width={560}
         destroyOnClose
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
-          Paste từ Excel — mỗi dòng 1 mã vật tư.
+          Paste từ Excel — 2 cột: <strong>Tên vật tư</strong> (cột A) và <strong>Mã vật tư</strong> (cột B).
         </Text>
         <Input.TextArea
           autoFocus
           value={pasteText}
           onChange={(e) => handlePasteTextChange(e.target.value)}
-          placeholder={"SPA01\nSPA02\nSPB01"}
+          placeholder={"Tên SP A\tSPA01\nTên SP B\tSPA02"}
           rows={8}
           style={{ fontFamily: "monospace", marginBottom: 12 }}
         />
         {pastePreview.length > 0 && (
           <>
             <Text strong>Xem trước ({pastePreview.length} mã):</Text>
-            <Table
+            <Table<PasteRow>
               size="small"
               dataSource={pastePreview.slice(0, 10)}
               rowKey="maVatTu"
               pagination={false}
               style={{ marginTop: 6 }}
-              columns={[{ title: "Mã vật tư", dataIndex: "maVatTu" }]}
+              columns={[
+                { title: "Tên vật tư", dataIndex: "tenVatTu" },
+                { title: "Mã vật tư", dataIndex: "maVatTu", width: 140 },
+              ]}
               footer={pastePreview.length > 10
                 ? () => <Text type="secondary">... và {pastePreview.length - 10} mã khác</Text>
                 : undefined}

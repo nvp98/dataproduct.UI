@@ -718,6 +718,23 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                     pagination={false}
                     scroll={{ x: "max-content", y: 520 }}
                     sticky={{ offsetHeader: 0 }}
+                    summary={() => {
+                      const totalKL = slabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
+                      const optColCount = (isDuc ? 1 : 0) + (isKho ? 1 : 0) + (isPKH ? 1 : 0);
+                      return (
+                        <Table.Summary fixed>
+                          <Table.Summary.Row>
+                            <Table.Summary.Cell index={0} colSpan={7} align="center">
+                              <strong>Tổng</strong>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={7} align="right">
+                              <strong>{Number(totalKL).toLocaleString("vi-VN", { minimumFractionDigits: 3 })}</strong>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={8} colSpan={1 + optColCount} />
+                          </Table.Summary.Row>
+                        </Table.Summary>
+                      );
+                    }}
                   />
                 </Card>
               </>

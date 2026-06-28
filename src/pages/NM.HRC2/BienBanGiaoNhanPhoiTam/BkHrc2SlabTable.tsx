@@ -548,7 +548,7 @@ const BkHrc2SlabTable = () => {
           {/* Hàng nút tìm kiếm + actions */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", borderTop: "1px solid #f0f0f0", paddingTop: 10 }}>
             <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>Tìm</Button>
-            <Button icon={<ClearOutlined />} onClick={handleClear}>Xóa</Button>
+            <Button icon={<ClearOutlined />} onClick={handleClear}>Xóa Lọc</Button>
 
             <span style={{ color: "#d9d9d9" }}>|</span>
             <span style={{ color: "#555" }}>
