@@ -7,6 +7,7 @@ import {
   Modal,
   Popconfirm,
   Row,
+  Select,
   Space,
   Switch,
   Table,
@@ -22,20 +23,26 @@ import {
   SnippetsOutlined,
 } from "@ant-design/icons";
 import { useCallback, useEffect, useState } from "react";
-import { Hrc1MaVatTuApi, type Hrc1MaVatTuItem } from "../../services/Hrc1MaVatTuApi";
+import { MaVatTuApi, type MaVatTuItem } from "../../services/MaVatTuApi";
 
 const { Text } = Typography;
 
-type PasteRow = { tenVatTu: string; maVatTu: string };
+const NHA_MAY_OPTIONS = ["HRC1", "HRC2"];
+
+type PasteRow = { macThep: string; vatTuCode: string; tenVatTu: string };
 
 const parsePasteText = (text: string): PasteRow[] =>
   text
     .split("\n")
     .map((line) => {
       const cols = line.split("\t");
-      return { tenVatTu: (cols[0] ?? "").trim(), maVatTu: (cols[1] ?? "").trim() };
+      return {
+        macThep: (cols[0] ?? "").trim(),
+        vatTuCode: (cols[1] ?? "").trim(),
+        tenVatTu: (cols[2] ?? "").trim(),
+      };
     })
-    .filter((item) => item.maVatTu !== "");
+    .filter((item) => item.macThep !== "" && item.vatTuCode !== "");
 
 const QuanLyMaVatTu = () => {
   const [searchForm] = Form.useForm();
@@ -43,21 +50,27 @@ const QuanLyMaVatTu = () => {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [data, setData] = useState<Hrc1MaVatTuItem[]>([]);
+  const [data, setData] = useState<MaVatTuItem[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
-  const [editingRecord, setEditingRecord] = useState<Hrc1MaVatTuItem | null>(null);
-
+  const [editingRecord, setEditingRecord] = useState<MaVatTuItem | null>(null);
   const [toggleLoading, setToggleLoading] = useState<Record<number, boolean>>({});
 
   const [pasteVisible, setPasteVisible] = useState(false);
+  const [pasteNhaMay, setPasteNhaMay] = useState<string | null>(null);
   const [pasteText, setPasteText] = useState("");
   const [pasteLoading, setPasteLoading] = useState(false);
   const [pastePreview, setPastePreview] = useState<PasteRow[]>([]);
 
-  const fetchData = useCallback(async (page = 1, pageSize = 20, searchKey?: string) => {
+  const fetchData = useCallback(async (page = 1, pageSize = 20) => {
+    const { nhaMay, searchKey } = searchForm.getFieldsValue();
     setLoading(true);
     try {
-      const res = await Hrc1MaVatTuApi.search({ searchKey, page, pageSize });
+      const res = await MaVatTuApi.search({
+        nhaMay: nhaMay || undefined,
+        searchKey: searchKey?.trim() || undefined,
+        page,
+        pageSize,
+      });
       setData(res.data);
       setPagination({ current: res.page, pageSize: res.pageSize, total: res.totalCount });
     } catch {
@@ -65,14 +78,11 @@ const QuanLyMaVatTu = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchForm]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleSearch = () => {
-    const { searchKey } = searchForm.getFieldsValue();
-    fetchData(1, pagination.pageSize, searchKey?.trim());
-  };
+  const handleSearch = () => fetchData(1, pagination.pageSize);
 
   const handleReset = () => {
     searchForm.resetFields();
@@ -85,9 +95,15 @@ const QuanLyMaVatTu = () => {
     setModalVisible(true);
   };
 
-  const openEditModal = (record: Hrc1MaVatTuItem) => {
+  const openEditModal = (record: MaVatTuItem) => {
     setEditingRecord(record);
-    modalForm.setFieldsValue({ maVatTu: record.maVatTu, tenVatTu: record.tenVatTu ?? "", isLock: record.isLock ?? false });
+    modalForm.setFieldsValue({
+      nhaMay: record.nhaMay,
+      macThep: record.macThep,
+      vatTuCode: record.vatTuCode,
+      tenVatTu: record.tenVatTu ?? "",
+      isLock: record.isLock ?? false,
+    });
     setModalVisible(true);
   };
 
@@ -102,20 +118,23 @@ const QuanLyMaVatTu = () => {
       const values = await modalForm.validateFields();
       setModalLoading(true);
       const payload = {
-        maVatTu: values.maVatTu.trim(),
-        tenVatTu: values.tenVatTu?.trim() || null,
-        isLock: values.isLock ?? false,
+        nhaMay: values.nhaMay as string,
+        macThep: (values.macThep as string).trim(),
+        vatTuCode: (values.vatTuCode as string).trim(),
+        tenVatTu: (values.tenVatTu as string | undefined)?.trim() || null,
+        isLock: (values.isLock as boolean | undefined) ?? false,
       };
       if (editingRecord) {
-        await Hrc1MaVatTuApi.update(editingRecord.id, payload);
+        await MaVatTuApi.update(editingRecord.id, payload);
         message.success("Cập nhật mã vật tư thành công");
       } else {
-        await Hrc1MaVatTuApi.create(payload);
+        await MaVatTuApi.create(payload);
         message.success("Tạo mới mã vật tư thành công");
       }
       handleModalCancel();
       fetchData(editingRecord ? pagination.current : 1, pagination.pageSize);
     } catch (error: unknown) {
+      if (error && typeof error === "object" && "errorFields" in error) return;
       message.error(error ? (error as Error).message : "Không thể lưu");
     } finally {
       setModalLoading(false);
@@ -124,7 +143,7 @@ const QuanLyMaVatTu = () => {
 
   const handleDelete = async (id: number) => {
     try {
-      await Hrc1MaVatTuApi.delete(id);
+      await MaVatTuApi.delete(id);
       message.success("Đã xóa mã vật tư");
       const nextPage = data.length === 1 && pagination.current > 1 ? pagination.current - 1 : pagination.current;
       fetchData(nextPage, pagination.pageSize);
@@ -133,11 +152,13 @@ const QuanLyMaVatTu = () => {
     }
   };
 
-  const handleToggleLock = async (record: Hrc1MaVatTuItem, checked: boolean) => {
+  const handleToggleLock = async (record: MaVatTuItem, checked: boolean) => {
     setToggleLoading((prev) => ({ ...prev, [record.id]: true }));
     try {
-      await Hrc1MaVatTuApi.update(record.id, {
-        maVatTu: record.maVatTu,
+      await MaVatTuApi.update(record.id, {
+        nhaMay: record.nhaMay,
+        macThep: record.macThep,
+        vatTuCode: record.vatTuCode,
         tenVatTu: record.tenVatTu ?? null,
         isLock: checked,
       });
@@ -149,17 +170,32 @@ const QuanLyMaVatTu = () => {
     }
   };
 
+  const openPasteModal = () => {
+    setPasteNhaMay(null);
+    setPasteText("");
+    setPastePreview([]);
+    setPasteVisible(true);
+  };
+
   const handlePasteTextChange = (val: string) => {
     setPasteText(val);
     setPastePreview(parsePasteText(val));
   };
 
   const handlePasteConfirm = async () => {
+    if (!pasteNhaMay) { message.warning("Vui lòng chọn nhà máy trước."); return; }
     const items = parsePasteText(pasteText);
     if (items.length === 0) { message.warning("Không có dữ liệu hợp lệ."); return; }
     try {
       setPasteLoading(true);
-      const res = await Hrc1MaVatTuApi.bulkCreate(items);
+      const res = await MaVatTuApi.bulkCreate(
+        items.map((r) => ({
+          nhaMay: pasteNhaMay,
+          macThep: r.macThep,
+          vatTuCode: r.vatTuCode,
+          tenVatTu: r.tenVatTu || null,
+        }))
+      );
       const parts: string[] = [];
       if (res.created > 0) parts.push(`Tạo mới: ${res.created}`);
       if (res.skipped > 0) parts.push(`Bỏ qua (trùng): ${res.skipped}`);
@@ -167,8 +203,6 @@ const QuanLyMaVatTu = () => {
       if (res.skipped > 0 && res.skippedItems.length > 0)
         message.warning(`Trùng: ${res.skippedItems.slice(0, 5).join(", ")}${res.skippedItems.length > 5 ? "..." : ""}`);
       setPasteVisible(false);
-      setPasteText("");
-      setPastePreview([]);
       fetchData(1, pagination.pageSize);
     } catch {
       message.error("Không thể tạo hàng loạt mã vật tư");
@@ -178,28 +212,30 @@ const QuanLyMaVatTu = () => {
   };
 
   const columns = [
-    { title: "Tên vật tư", dataIndex: "tenVatTu", key: "tenVatTu", width: 240 },
-    { title: "Mã vật tư", dataIndex: "maVatTu", key: "maVatTu", width: 160 },
+    { title: "Nhà máy", dataIndex: "nhaMay", key: "nhaMay", width: 90 },
+    { title: "Mác thép", dataIndex: "macThep", key: "macThep", width: 160 },
+    { title: "Mã vật tư", dataIndex: "vatTuCode", key: "vatTuCode", width: 150 },
+    { title: "Tên vật tư", dataIndex: "tenVatTu", key: "tenVatTu" },
     {
       title: "Trạng thái",
       dataIndex: "isLock",
       key: "isLock",
       width: 130,
-      render: (v: boolean | null | undefined, record: Hrc1MaVatTuItem) => (
+      render: (v: boolean | null | undefined, record: MaVatTuItem) => (
         <Switch
-          checked={!!v}
-          checkedChildren="Khóa"
-          unCheckedChildren="Hoạt động"
+          checked={!v}
+          checkedChildren="Hoạt động"
+          unCheckedChildren="Khóa"
           loading={!!toggleLoading[record.id]}
-          onChange={(checked) => handleToggleLock(record, checked)}
+          onChange={(checked) => handleToggleLock(record, !checked)}
         />
       ),
     },
     {
       title: "Thao tác",
       key: "actions",
-      width: 130,
-      render: (_: unknown, record: Hrc1MaVatTuItem) => (
+      width: 120,
+      render: (_: unknown, record: MaVatTuItem) => (
         <Space>
           <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openEditModal(record)}>Sửa</Button>
           <Popconfirm title="Xác nhận xóa mã vật tư này?" onConfirm={() => handleDelete(record.id)} okText="Xóa" cancelText="Hủy">
@@ -213,10 +249,10 @@ const QuanLyMaVatTu = () => {
   return (
     <div>
       <Card
-        title="Quản lý mã vật tư (HRC1)"
+        title="Quản lý mã vật tư"
         extra={
           <Space>
-            <Button icon={<SnippetsOutlined />} onClick={() => { setPasteVisible(true); setPasteText(""); setPastePreview([]); }}>
+            <Button icon={<SnippetsOutlined />} onClick={openPasteModal}>
               Paste nhiều mã
             </Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
@@ -228,9 +264,18 @@ const QuanLyMaVatTu = () => {
       >
         <Form form={searchForm} layout="vertical">
           <Row gutter={16}>
-            <Col xs={24} md={8}>
+            <Col xs={24} md={5}>
+              <Form.Item label="Nhà máy" name="nhaMay">
+                <Select
+                  placeholder="Tất cả"
+                  allowClear
+                  options={NHA_MAY_OPTIONS.map((v) => ({ value: v, label: v }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={9}>
               <Form.Item label="Tìm kiếm" name="searchKey">
-                <Input placeholder="Mã hoặc tên vật tư..." allowClear />
+                <Input placeholder="Mác thép, mã hoặc tên vật tư..." allowClear />
               </Form.Item>
             </Col>
             <Col xs={24} md={4} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
@@ -256,14 +301,12 @@ const QuanLyMaVatTu = () => {
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} bản ghi`,
-            onChange: (page, pageSize) => {
-              const { searchKey } = searchForm.getFieldsValue();
-              fetchData(page, pageSize, searchKey);
-            },
+            onChange: (page, pageSize) => fetchData(page, pageSize),
           }}
         />
       </Card>
 
+      {/* Modal tạo / sửa */}
       <Modal
         title={editingRecord ? "Cập nhật mã vật tư" : "Thêm mã vật tư"}
         open={modalVisible}
@@ -274,7 +317,29 @@ const QuanLyMaVatTu = () => {
       >
         <Form layout="vertical" form={modalForm}>
           <Form.Item
-            name="maVatTu"
+            name="nhaMay"
+            label="Nhà máy"
+            rules={[{ required: true, message: "Vui lòng chọn nhà máy" }]}
+          >
+            <Select
+              placeholder="Chọn nhà máy"
+              options={NHA_MAY_OPTIONS.map((v) => ({ value: v, label: v }))}
+              disabled={!!editingRecord}
+            />
+          </Form.Item>
+          <Form.Item
+            name="macThep"
+            label="Mác thép"
+            rules={[
+              { required: true, message: "Vui lòng nhập mác thép" },
+              { max: 100, message: "Tối đa 100 ký tự" },
+              { whitespace: true, message: "Không được chỉ có khoảng trắng" },
+            ]}
+          >
+            <Input placeholder="Nhập mác thép" disabled={!!editingRecord} />
+          </Form.Item>
+          <Form.Item
+            name="vatTuCode"
             label="Mã vật tư"
             rules={[
               { required: true, message: "Vui lòng nhập mã vật tư" },
@@ -287,53 +352,74 @@ const QuanLyMaVatTu = () => {
           <Form.Item name="tenVatTu" label="Tên vật tư">
             <Input placeholder="Nhập tên vật tư" />
           </Form.Item>
-          <Form.Item name="isLock" label="Trạng thái" valuePropName="checked">
-            <Switch checkedChildren="Khóa" unCheckedChildren="Hoạt động" />
+          <Form.Item
+            name="isLock"
+            label="Trạng thái"
+            valuePropName="checked"
+            getValueProps={(v) => ({ checked: !v })}
+            getValueFromEvent={(checked: boolean) => !checked}
+          >
+            <Switch checkedChildren="Hoạt động" unCheckedChildren="Khóa" />
           </Form.Item>
         </Form>
       </Modal>
 
+      {/* Modal paste hàng loạt */}
       <Modal
         title="Paste nhiều mã vật tư"
         open={pasteVisible}
-        onCancel={() => { setPasteVisible(false); setPasteText(""); setPastePreview([]); }}
+        onCancel={() => setPasteVisible(false)}
         onOk={handlePasteConfirm}
         confirmLoading={pasteLoading}
-        okText={pastePreview.length > 0 ? `Tạo (${pastePreview.length} mã)` : "Tạo"}
+        okText={pastePreview.length > 0 ? `Tạo ${pastePreview.length} dòng` : "Tạo"}
         cancelText="Hủy"
-        width={560}
+        width={640}
         destroyOnClose
       >
-        <Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
-          Paste từ Excel — 2 cột: <strong>Tên vật tư</strong> (cột A) và <strong>Mã vật tư</strong> (cột B).
-        </Text>
-        <Input.TextArea
-          autoFocus
-          value={pasteText}
-          onChange={(e) => handlePasteTextChange(e.target.value)}
-          placeholder={"Tên SP A\tSPA01\nTên SP B\tSPA02"}
-          rows={8}
-          style={{ fontFamily: "monospace", marginBottom: 12 }}
-        />
-        {pastePreview.length > 0 && (
-          <>
-            <Text strong>Xem trước ({pastePreview.length} mã):</Text>
-            <Table<PasteRow>
-              size="small"
-              dataSource={pastePreview.slice(0, 10)}
-              rowKey="maVatTu"
-              pagination={false}
-              style={{ marginTop: 6 }}
-              columns={[
-                { title: "Tên vật tư", dataIndex: "tenVatTu" },
-                { title: "Mã vật tư", dataIndex: "maVatTu", width: 140 },
-              ]}
-              footer={pastePreview.length > 10
-                ? () => <Text type="secondary">... và {pastePreview.length - 10} mã khác</Text>
-                : undefined}
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Text strong>Nhà máy:</Text>
+            <Select
+              style={{ width: 140 }}
+              placeholder="Chọn nhà máy"
+              value={pasteNhaMay}
+              onChange={setPasteNhaMay}
+              options={NHA_MAY_OPTIONS.map((v) => ({ value: v, label: v }))}
             />
-          </>
-        )}
+          </div>
+          <Text type="secondary">
+            Paste từ Excel — 3 cột: <strong>Mác thép</strong> (A) | <strong>Mã vật tư</strong> (B) | <strong>Tên vật tư</strong> (C).
+          </Text>
+          <Input.TextArea
+            autoFocus
+            value={pasteText}
+            onChange={(e) => handlePasteTextChange(e.target.value)}
+            placeholder={"SS400\tVT001\tThép cuộn SS400\nQ235B\tVT002\tThép cuộn Q235B"}
+            rows={8}
+            style={{ fontFamily: "monospace" }}
+          />
+          {pastePreview.length > 0 && (
+            <>
+              <Text strong>Xem trước ({pastePreview.length} dòng):</Text>
+              <Table<PasteRow>
+                size="small"
+                dataSource={pastePreview.slice(0, 10)}
+                rowKey={(r) => `${r.macThep}|${r.vatTuCode}`}
+                pagination={false}
+                columns={[
+                  { title: "Mác thép", dataIndex: "macThep", width: 140 },
+                  { title: "Mã vật tư", dataIndex: "vatTuCode", width: 130 },
+                  { title: "Tên vật tư", dataIndex: "tenVatTu" },
+                ]}
+                footer={
+                  pastePreview.length > 10
+                    ? () => <Text type="secondary">... và {pastePreview.length - 10} dòng khác</Text>
+                    : undefined
+                }
+              />
+            </>
+          )}
+        </Space>
       </Modal>
     </div>
   );

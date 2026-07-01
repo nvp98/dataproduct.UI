@@ -185,7 +185,16 @@ const BkHrc2SlabTable = () => {
   const validateSameCaSanXuat = (): boolean => {
     const caValues = [...new Set(selectedRows.map((r) => r.caSanXuat ?? ""))];
     if (caValues.length > 1) {
-      message.warning("Các mẻ được chọn phải cùng ca sản xuất (kíp)!");
+      message.warning("Các mẻ được chọn phải cùng ca sản xuất!");
+      return false;
+    }
+    return true;
+  };
+
+  const validateSameKipSanXuat = (): boolean => {
+    const kipValues = [...new Set(selectedRows.map((r) => r.kipSanXuat ?? ""))];
+    if (kipValues.length > 1) {
+      message.warning("Các mẻ được chọn phải cùng kíp sản xuất!");
       return false;
     }
     return true;
@@ -196,6 +205,7 @@ const BkHrc2SlabTable = () => {
   const handleOpenChuyenBBSL = async () => {
     if (selectedRows.length === 0) { message.warning("Vui lòng chọn ít nhất 1 slab!"); return; }
     if (!validateSameCaSanXuat()) return;
+    if (!validateSameKipSanXuat()) return;
 
     const hasChuyenRoi = selectedRows.some((r) => r.trangThaiKCS === 1);
     if (hasChuyenRoi) { message.warning("Một số mẻ đã được chuyển BBSL, vui lòng bỏ chọn chúng!"); return; }
@@ -248,7 +258,7 @@ const BkHrc2SlabTable = () => {
         xuongId: userInfo.iD_PhanXuong ?? null,
         idphongBan: userInfo.iD_PhongBan ?? null,
         tinhTrang: 0,
-        prefix: "BBSL_PhoiTam",
+        prefix: "BBGN_PhoiTam",
       };
       const res = await PhieuApi.postData(payload as Record<string, unknown>);
       message.success(`Tạo phiếu thành công: ${(res as any)?.soPhieu ?? ""}`);
@@ -425,10 +435,10 @@ const BkHrc2SlabTable = () => {
 
   // Cột phiếu BBSL trong modal
   const phieuColumns = [
-    { title: "Số phiếu", dataIndex: "soPhieu", width: 160 },
-    { title: "Ngày SX", dataIndex: "ngaySX", width: 110, render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-" },
-    { title: "Ca", dataIndex: "ca", width: 60, render: (v: number) => v === 1 ? "Ca Ngày" : v === 2 ? "Ca Đêm" : v ?? "-" },
-    { title: "Kíp", dataIndex: "kip", width: 70 },
+    { title: "Số phiếu", dataIndex: "soPhieu", width: 170 },
+    { title: "Ngày SX", dataIndex: "ngaySX", width: 110, render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-", onCell: () => ({ style: { fontWeight: "bold" } }) },
+    { title: "Ca", dataIndex: "ca", width: 100, render: (v: number) => v === 1 ? "Ca Ngày" : v === 2 ? "Ca Đêm" : v ?? "-", onCell: () => ({ style: { fontWeight: "bold" } }) },
+    { title: "Kíp", dataIndex: "kip", width: 70, onCell: () => ({ style: { fontWeight: "bold" } }) },
     { title: "Số slab", dataIndex: "soSlabDaChot", width: 75, align: "right" as const },
     {
       title: "Trạng thái",

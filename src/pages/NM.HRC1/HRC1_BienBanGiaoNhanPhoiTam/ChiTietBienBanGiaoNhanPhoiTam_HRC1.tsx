@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AutoComplete,
   Button,
   Card,
   Descriptions,
   Input,
-  Modal,
   Popconfirm,
   Table,
   Tabs,
@@ -27,7 +25,6 @@ import {
   UnlockOutlined,
   FileExcelOutlined,
   FilePdfOutlined,
-  TagOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
@@ -37,7 +34,6 @@ import {
   type Hrc1SlabItem,
   type Hrc1TongHopGhiChuItem,
 } from "../../../services/Hrc1SlabApi";
-import { Hrc1MaVatTuApi } from "../../../services/Hrc1MaVatTuApi";
 import {
   getBmQuyenUiFlags,
   hasKhuVucPhu,
@@ -63,13 +59,7 @@ const getUserId = (): number => {
   return 0;
 };
 
-const buildMacPhoi = (r: { chieuDay?: number | null; chieuRong?: number | null; chieuDai?: number | null; macThep?: string | null }) => {
-  const kt = [r.chieuDay, r.chieuRong, r.chieuDai].every((v) => v != null)
-    ? `${r.chieuDay}x${r.chieuRong}x${r.chieuDai}`
-    : null;
-  if (!kt && !r.macThep) return "-";
-  return ["Phôi tấm", kt ? `${kt}mm` : null, r.macThep].filter(Boolean).join(" ");
-};
+
 
 // Tính ca đích khi chuyển phôi
 const tinhCaDich = (phieuNgaySX: string, phieuCa: number, huong: "truoc" | "sau") => {
@@ -85,7 +75,7 @@ const tinhCaDich = (phieuNgaySX: string, phieuCa: number, huong: "truoc" | "sau"
 };
 
 // ── Row edit state ──────────────────────────────────────────────────────────
-type RowEdit = { ghiChu: string; maVatTu: string };
+type RowEdit = { ghiChu: string };
 
 const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } =
@@ -98,6 +88,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   }, []);
+  const isDuc = hasKhuVucPhu(userInfo, MA_BM, "Duc");
   const isCan = hasKhuVucPhu(userInfo, MA_BM, "Can");
   const isPKH = canChotBm(userInfo, MA_BM);
 
@@ -113,20 +104,11 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   const [syncLoading, setSyncLoading] = useState(false);
 
   const [chuyenLoading, setChuyenLoading] = useState<"truoc" | "sau" | null>(null);
-  const [bulkMvtVisible, setBulkMvtVisible] = useState(false);
-  const [bulkMvtValue, setBulkMvtValue] = useState("");
-  const [bulkMvtLoading, setBulkMvtLoading] = useState(false);
 
   // inline edits per slab id
   const [rowEdits, setRowEdits] = useState<Record<number, RowEdit>>({});
-  // tonghop ghi chu local edits: key = "macThep|kichThuoc"
+  // tonghop ghi chu local edits: key = "macThep|maVatTu"
   const [thGhiChuEdits, setThGhiChuEdits] = useState<Record<string, string>>({});
-  // tonghop maVatTu per nhóm: key = "macThep|kichThuoc"
-  const [tongHopMvt, setTongHopMvt] = useState<Record<string, string>>({});
-
-  // MaVatTu autocomplete options
-  const [mvtOptions, setMvtOptions] = useState<{ value: string; label: string }[]>([]);
-  const mvtSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Load data ─────────────────────────────────────────────────────────────
   const loadSlabs = useCallback(async () => {
@@ -139,23 +121,14 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     setTongHopGhiChu(ghiChuList);
     setSelectedRowKeys([]);
     const edits: Record<number, RowEdit> = {};
-    details.forEach((s) => { edits[s.id] = { ghiChu: s.ghiChu ?? "", maVatTu: s.maVatTu ?? "" }; });
+    details.forEach((s) => { edits[s.id] = { ghiChu: s.ghiChu ?? "" }; });
     setRowEdits(edits);
     const thEdits: Record<string, string> = {};
     ghiChuList.forEach((g) => {
-      const key = `${g.macThep ?? ""}|${g.kichThuoc ?? ""}`;
+      const key = `${g.macThep ?? ""}|${g.maVatTu ?? ""}`;
       thEdits[key] = g.ghiChu ?? "";
     });
     setThGhiChuEdits(thEdits);
-    // Init mã vật tư theo nhóm: lấy giá trị đầu tiên khác rỗng trong mỗi nhóm
-    const thMvt: Record<string, string> = {};
-    details.forEach((s) => {
-      const kt = [s.chieuDay, s.chieuRong, s.chieuDai].every((v) => v != null)
-        ? `${s.chieuDay}x${s.chieuRong}x${s.chieuDai}` : "";
-      const key = `${s.macThep ?? ""}|${kt}`;
-      if (!thMvt[key] && s.maVatTu) thMvt[key] = s.maVatTu;
-    });
-    setTongHopMvt(thMvt);
   }, [idphieu]);
 
   const loadData = useCallback(async () => {
@@ -166,7 +139,6 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       setSelectedRowKeys([]);
       setRowEdits({});
       setThGhiChuEdits({});
-      setTongHopMvt({});
       if (!idphieu) return;
 
       // Get phiếu detail trước để lấy ngaySX + ca cho sync
@@ -239,12 +211,14 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   );
   const selectedCount = selectedRowKeys.length;
 
-  const canXacNhanDuc = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 0 && r.trangThaiPKH === 0);
-  const canHuyDuc     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiPKH === 0);
-  const canXacNhanKho = selectedCount > 0 && selectedRows.every((r) => r.trangThaiKho === 0 && r.trangThaiPKH === 0);
-  const canHuyKho     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiKho === 1 && r.trangThaiPKH === 0);
+  const canXacNhanDuc = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 0 && r.trangThaiCan === 0 && r.trangThaiPKH === 0);
+  const canHuyDuc     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiCan === 0 && r.trangThaiPKH === 0);
+  const canXacNhanCan = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 0 && r.trangThaiPKH === 0);
+  const canHuyCan     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 1 && r.trangThaiPKH === 0);
+  const canChotPKH    = selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 0);
+  const canHuyChotPKH = selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 1);
 
-  const handleXacNhan = async (loai: "Duc" | "Kho") => {
+  const handleXacNhan = async (loai: "Duc" | "Can") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -256,7 +230,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     } finally { setActionLoading(false); }
   };
 
-  const handleHuyXacNhan = async (loai: "Duc" | "Kho") => {
+  const handleHuyXacNhan = async (loai: "Duc" | "Can") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -268,7 +242,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     } finally { setActionLoading(false); }
   };
 
-  const canChuyen = selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 0);
+  const canChuyen = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 0 && r.trangThaiPKH === 0);
 
   // ── Chuyển phôi bulk (áp dụng cho tất cả slab đã chọn) ───────────────────
   const handleChuyenBulk = useCallback(async (huong: "truoc" | "sau") => {
@@ -284,76 +258,34 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     } finally { setChuyenLoading(null); }
   }, [idphieu, selectedRows, loadSlabs]);
 
-  // ── Bulk gán mã vật tư cho selection ─────────────────────────────────────
-  const handleBulkApplyMvt = useCallback(async () => {
-    if (!bulkMvtValue || selectedRows.length === 0) return;
-    try {
-      setBulkMvtLoading(true);
-      const ids = selectedRows.map((r) => r.id);
-      await Hrc1SlabApi.bulkUpdateMaVatTu(ids, bulkMvtValue);
-      setSlabDetails((prev) =>
-        prev.map((s) => selectedRowKeys.includes(s.id) ? { ...s, maVatTu: bulkMvtValue } : s)
-      );
-      setRowEdits((prev) => {
-        const updated = { ...prev };
-        selectedRows.forEach((r) => { updated[r.id] = { ...updated[r.id], maVatTu: bulkMvtValue }; });
-        return updated;
-      });
-      message.success(`Đã gán "${bulkMvtValue}" cho ${selectedRows.length} slab`);
-      setBulkMvtVisible(false);
-      setBulkMvtValue("");
-    } catch {
-      message.error("Lỗi khi gán mã vật tư");
-    } finally {
-      setBulkMvtLoading(false);
-    }
-  }, [bulkMvtValue, selectedRows, selectedRowKeys]);
-
-  // ── Inline save GhiChu / MaVatTu ─────────────────────────────────────────
+  // ── Inline save GhiChu ───────────────────────────────────────────────────
   const saveRowEdit = useCallback(async (id: number) => {
     const edit = rowEdits[id];
     if (!edit) return;
     const original = slabDetails.find((s) => s.id === id);
     if (!original) return;
     const ghiChu = edit.ghiChu || null;
-    const maVatTu = edit.maVatTu || null;
-    if (ghiChu === (original.ghiChu ?? null) && maVatTu === (original.maVatTu ?? null)) return;
+    if (ghiChu === (original.ghiChu ?? null)) return;
     try {
-      await Hrc1SlabApi.updateSlab(id, { ghiChu, maVatTu });
-      setSlabDetails((prev) => prev.map((s) => s.id === id ? { ...s, ghiChu, maVatTu } : s));
+      await Hrc1SlabApi.updateSlab(id, { ghiChu });
+      setSlabDetails((prev) => prev.map((s) => s.id === id ? { ...s, ghiChu } : s));
     } catch {
-      message.error("Lỗi lưu ghi chú / mã vật tư");
+      message.error("Lỗi lưu ghi chú");
     }
   }, [rowEdits, slabDetails]);
 
-  const fetchMvtOptions = useCallback(async (searchText: string) => {
-    try {
-      const res = await Hrc1MaVatTuApi.search({ searchKey: searchText || undefined, pageSize: 20 });
-      setMvtOptions(res.data.map((x) => ({ value: x.maVatTu, label: x.maVatTu })));
-    } catch { /* ignore */ }
-  }, []);
-
-  const handleMvtSearch = (searchText: string) => {
-    if (mvtSearchTimer.current) clearTimeout(mvtSearchTimer.current);
-    mvtSearchTimer.current = setTimeout(() => void fetchMvtOptions(searchText), 250);
-  };
-
-  const handleMvtFocus = () => {
-    if (mvtOptions.length === 0) void fetchMvtOptions("");
-  };
-
   // ── Inline save TongHop GhiChu ────────────────────────────────────────────
-  const saveTongHopGhiChu = useCallback(async (macThep: string | null, kichThuoc: string | null) => {
+  const saveTongHopGhiChu = useCallback(async (macThep: string | null, maVatTu: string | null) => {
     if (!idphieu) return;
-    const key = `${macThep ?? ""}|${kichThuoc ?? ""}`;
+    const key = `${macThep ?? ""}|${maVatTu ?? ""}`;
     const ghiChu = thGhiChuEdits[key] ?? null;
-    const original = tongHopGhiChu.find((g) => g.macThep === macThep && g.kichThuoc === kichThuoc);
+    const original = tongHopGhiChu.find((g) => g.macThep === macThep && g.maVatTu === maVatTu);
     if ((ghiChu || null) === (original?.ghiChu ?? null)) return;
     try {
-      await Hrc1SlabApi.saveTongHopGhiChu({ idPhieuBBSL: idphieu, macThep, kichThuoc, ghiChu: ghiChu || null });
+      await Hrc1SlabApi.saveTongHopGhiChu({ idPhieuBBSL: idphieu, macThep, maVatTu, ghiChu: ghiChu || null });
       setTongHopGhiChu((prev) => {
-        const idx = prev.findIndex((g) => g.macThep === macThep && g.kichThuoc === kichThuoc);
-        const updated = { macThep, kichThuoc, ghiChu: ghiChu || null };
+        const idx = prev.findIndex((g) => g.macThep === macThep && g.maVatTu === maVatTu);
+        const updated = { macThep, maVatTu, ghiChu: ghiChu || null };
         return idx >= 0 ? prev.map((g, i) => (i === idx ? updated : g)) : [...prev, updated];
       });
     } catch {
@@ -381,29 +313,13 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       title: "Mã vật tư",
       key: "maVatTu",
       width: 140,
-      render: (_: unknown, r: Hrc1SlabItem) => (
-        <AutoComplete
-          value={rowEdits[r.id]?.maVatTu ?? ""}
-          options={mvtOptions}
-          onFocus={handleMvtFocus}
-          onSearch={handleMvtSearch}
-          onChange={(val) => setRowEdits((prev) => ({ ...prev, [r.id]: { ...prev[r.id], maVatTu: val } }))}
-          onSelect={(val) => {
-            setRowEdits((prev) => ({ ...prev, [r.id]: { ...prev[r.id], maVatTu: val } }));
-            void saveRowEdit(r.id);
-          }}
-          onBlur={() => void saveRowEdit(r.id)}
-          size="small"
-          style={{ width: "100%" }}
-          placeholder="Tìm mã vật tư..."
-        />
-      ),
+      render: (_: unknown, r: Hrc1SlabItem) => r.maVatTu ?? "-",
     },
     {
       title: "Mác phôi",
       key: "macPhoi",
       width: 300,
-      render: (_: unknown, r: Hrc1SlabItem) => buildMacPhoi(r),
+      render: (_: unknown, r: Hrc1SlabItem) => r.tenVatTu || r.macThep || "-",
     },
     {
       title: "Số Mẻ",
@@ -440,16 +356,16 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
         />
       ),
     },
-    ...(isCan ? [{
+    ...((isDuc || isCan || isPKH) ? [{
       title: "TT Đúc",
       dataIndex: "trangThaiDuc",
       width: 85,
       align: "center" as const,
       render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>,
     }] : []),
-    ...(isCan ? [{
-      title: "TT Kho",
-      dataIndex: "trangThaiKho",
+    ...((isCan || isPKH) ? [{
+      title: "TT Cán",
+      dataIndex: "trangThaiCan",
       width: 85,
       align: "center" as const,
       render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>,
@@ -462,18 +378,15 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       render: (v: number) => <Tag color={v === 1 ? "blue" : "default"}>{v === 1 ? "Đã chốt" : "Chưa"}</Tag>,
     }] : []),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [isCan, isPKH, rowEdits, mvtOptions, saveRowEdit]);
+  ], [isDuc, isCan, isPKH, rowEdits, saveRowEdit]);
 
   // ── Tab tổng hợp rows ─────────────────────────────────────────────────────
   const tongHopRows = useMemo(() => {
-    const map = new Map<string, { macThep: string | null; kichThuoc: string; soPhoi: number; tongKL: number }>();
+    const map = new Map<string, { macThep: string | null; maVatTu: string | null; tenVatTu: string | null; soPhoi: number; tongKL: number }>();
     slabDetails.forEach((r) => {
-      const kt = [r.chieuDay, r.chieuRong, r.chieuDai].every((v) => v != null)
-        ? `${r.chieuDay}x${r.chieuRong}x${r.chieuDai}`
-        : "";
-      const key = `${r.macThep ?? ""}|${kt}`;
+      const key = `${r.macThep ?? ""}|${r.maVatTu ?? ""}`;
       if (!map.has(key)) {
-        map.set(key, { macThep: r.macThep ?? null, kichThuoc: kt, soPhoi: 0, tongKL: 0 });
+        map.set(key, { macThep: r.macThep ?? null, maVatTu: r.maVatTu ?? null, tenVatTu: r.tenVatTu ?? null, soPhoi: 0, tongKL: 0 });
       }
       const row = map.get(key)!;
       row.soPhoi += 1;
@@ -519,52 +432,13 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     } finally { setExportLoading(null); }
   }, [idphieu]);
 
-  // ── Gán mã vật tư theo nhóm (tổng hợp) ──────────────────────────────────
-  const saveTongHopMvt = useCallback(async (macThep: string | null, kichThuoc: string) => {
-    const key = `${macThep ?? ""}|${kichThuoc}`;
-    const newMvt = tongHopMvt[key] ?? "";
-
-    const matchingSlabs = slabDetails.filter((s) => {
-      const slabKt = [s.chieuDay, s.chieuRong, s.chieuDai].every((v) => v != null)
-        ? `${s.chieuDay}x${s.chieuRong}x${s.chieuDai}` : "";
-      return (s.macThep ?? "") === (macThep ?? "") && slabKt === kichThuoc;
-    });
-    if (matchingSlabs.length === 0) return;
-
-    // Chỉ lưu khi giá trị thực sự thay đổi so với hiện tại
-    const currentMvt = matchingSlabs[0].maVatTu ?? "";
-    if (newMvt === currentMvt) return;
-
-    try {
-      const ids = matchingSlabs.map((r) => r.id);
-      await Hrc1SlabApi.bulkUpdateMaVatTu(ids, newMvt || null);
-      const mvtValue = newMvt || null;
-      setSlabDetails((prev) =>
-        prev.map((s) => {
-          const slabKt = [s.chieuDay, s.chieuRong, s.chieuDai].every((v) => v != null)
-            ? `${s.chieuDay}x${s.chieuRong}x${s.chieuDai}` : "";
-          return (s.macThep ?? "") === (macThep ?? "") && slabKt === kichThuoc
-            ? { ...s, maVatTu: mvtValue } : s;
-        })
-      );
-      setRowEdits((prev) => {
-        const updated = { ...prev };
-        matchingSlabs.forEach((r) => { updated[r.id] = { ...updated[r.id], maVatTu: newMvt }; });
-        return updated;
-      });
-      message.success(`Đã gán mã vật tư cho ${matchingSlabs.length} slab`);
-    } catch {
-      message.error("Lỗi khi gán mã vật tư theo nhóm");
-    }
-  }, [tongHopMvt, slabDetails]);
-
   const tongHopColumns = useMemo(() => [
     { title: "STT", dataIndex: "stt", width: 60, align: "center" as const },
     {
       title: "Sản phẩm x Mác thép",
       key: "sanPham",
-      render: (_: unknown, r: { macThep: string | null; kichThuoc: string }) =>
-        ["Phôi tấm", r.kichThuoc ? `${r.kichThuoc}mm` : null, r.macThep].filter(Boolean).join(" ") || "-",
+      render: (_: unknown, r: { macThep: string | null; maVatTu: string | null; tenVatTu: string | null }) =>
+        r.tenVatTu || r.macThep || "-",
     },
     {
       title: "Số phôi",
@@ -581,41 +455,16 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       render: (v: number) => Number(v).toLocaleString("vi-VN", { minimumFractionDigits: 2 }),
     },
     {
-      title: "Mã vật tư",
-      key: "maVatTuNhom",
-      width: 160,
-      render: (_: unknown, r: { macThep: string | null; kichThuoc: string }) => {
-        const key = `${r.macThep ?? ""}|${r.kichThuoc}`;
-        return (
-          <AutoComplete
-            value={tongHopMvt[key] ?? ""}
-            options={mvtOptions}
-            onSearch={handleMvtSearch}
-            onChange={(val) => setTongHopMvt((prev) => ({ ...prev, [key]: val }))}
-            onSelect={(val) => {
-              setTongHopMvt((prev) => ({ ...prev, [key]: val }));
-              void saveTongHopMvt(r.macThep, r.kichThuoc);
-            }}
-            onBlur={() => void saveTongHopMvt(r.macThep, r.kichThuoc)}
-            onFocus={() => { if (mvtOptions.length === 0) void fetchMvtOptions(""); }}
-            size="small"
-            style={{ width: "100%" }}
-            placeholder="Chọn mã vật tư..."
-          />
-        );
-      },
-    },
-    {
       title: "Ghi chú",
       key: "ghiChu",
       width: 260,
-      render: (_: unknown, r: { macThep: string | null; kichThuoc: string }) => {
-        const key = `${r.macThep ?? ""}|${r.kichThuoc ?? ""}`;
+      render: (_: unknown, r: { macThep: string | null; maVatTu: string | null }) => {
+        const key = `${r.macThep ?? ""}|${r.maVatTu ?? ""}`;
         return (
           <Input
             value={thGhiChuEdits[key] ?? ""}
             onChange={(e) => setThGhiChuEdits((prev) => ({ ...prev, [key]: e.target.value }))}
-            onBlur={() => void saveTongHopGhiChu(r.macThep, r.kichThuoc || null)}
+            onBlur={() => void saveTongHopGhiChu(r.macThep, r.maVatTu || null)}
             size="small"
             placeholder="Nhập ghi chú..."
           />
@@ -623,7 +472,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [thGhiChuEdits, saveTongHopGhiChu, tongHopMvt, saveTongHopMvt, mvtOptions]);
+  ], [thGhiChuEdits, saveTongHopGhiChu]);
 
   // ── Action buttons phiếu ──────────────────────────────────────────────────
   const getUserInfo = useCallback(() => {
@@ -725,59 +574,34 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                       >
                         Làm mới dữ liệu
                       </Button>
-                      <Tooltip title={canChuyen ? `Chuyển ${selectedCount} slab → ${chuyenTargets?.truoc ?? "ca trước"}` : "Chọn slab để chuyển"}>
-                        <Popconfirm
-                          title={`Chuyển ${selectedCount} slab về ${chuyenTargets?.truoc ?? "ca trước"}?`}
-                          onConfirm={() => void handleChuyenBulk("truoc")}
-                          disabled={!canChuyen}
-                        >
-                          <Button
-                            size="small"
-                            icon={<ArrowLeftOutlined />}
-                            disabled={!canChuyen}
-                            loading={chuyenLoading === "truoc"}
-                          />
-                        </Popconfirm>
-                      </Tooltip>
-                      <Tooltip title={canChuyen ? `Chuyển ${selectedCount} slab → ${chuyenTargets?.sau ?? "ca sau"}` : "Chọn slab để chuyển"}>
-                        <Popconfirm
-                          title={`Chuyển ${selectedCount} slab về ${chuyenTargets?.sau ?? "ca sau"}?`}
-                          onConfirm={() => void handleChuyenBulk("sau")}
-                          disabled={!canChuyen}
-                        >
-                          <Button
-                            size="small"
-                            icon={<ArrowRightOutlined />}
-                            disabled={!canChuyen}
-                            loading={chuyenLoading === "sau"}
-                          />
-                        </Popconfirm>
-                      </Tooltip>
-                      
-                      <Tooltip title={selectedCount > 0 ? `Gán mã vật tư cho ${selectedCount} slab đã chọn` : "Chọn slab để gán mã vật tư hàng loạt"}>
-                        <Button
-                          size="small"
-                          icon={<TagOutlined />}
-                          disabled={selectedCount === 0}
-                          onClick={() => { setBulkMvtValue(""); setBulkMvtVisible(true); void fetchMvtOptions(""); }}
-                        >
-                          Gán mã VT
-                        </Button>
-                      </Tooltip>
-                      {isCan && (
+
+                      {/* Đúc: chuyển ca + xác nhận Đúc */}
+                      {isDuc && (
                         <>
+                          <Tooltip title={canChuyen ? `Chuyển ${selectedCount} slab → ${chuyenTargets?.truoc ?? "ca trước"}` : "Chọn slab chưa Cán xác nhận để chuyển"}>
+                            <Popconfirm
+                              title={`Chuyển ${selectedCount} slab về ${chuyenTargets?.truoc ?? "ca trước"}?`}
+                              onConfirm={() => void handleChuyenBulk("truoc")}
+                              disabled={!canChuyen}
+                            >
+                              <Button size="small" icon={<ArrowLeftOutlined />} disabled={!canChuyen} loading={chuyenLoading === "truoc"} />
+                            </Popconfirm>
+                          </Tooltip>
+                          <Tooltip title={canChuyen ? `Chuyển ${selectedCount} slab → ${chuyenTargets?.sau ?? "ca sau"}` : "Chọn slab chưa Cán xác nhận để chuyển"}>
+                            <Popconfirm
+                              title={`Chuyển ${selectedCount} slab về ${chuyenTargets?.sau ?? "ca sau"}?`}
+                              onConfirm={() => void handleChuyenBulk("sau")}
+                              disabled={!canChuyen}
+                            >
+                              <Button size="small" icon={<ArrowRightOutlined />} disabled={!canChuyen} loading={chuyenLoading === "sau"} />
+                            </Popconfirm>
+                          </Tooltip>
                           <Popconfirm
                             title={`Xác nhận Đúc ${selectedCount} slab?`}
                             onConfirm={() => void handleXacNhan("Duc")}
                             disabled={!canXacNhanDuc}
                           >
-                            <Button
-                              size="small"
-                              icon={<CheckCircleOutlined />}
-                              disabled={!canXacNhanDuc}
-                              loading={actionLoading}
-                              style={{ color: canXacNhanDuc ? "#1890ff" : undefined }}
-                            >
+                            <Button size="small" icon={<CheckCircleOutlined />} disabled={!canXacNhanDuc} loading={actionLoading} style={{ color: canXacNhanDuc ? "#1890ff" : undefined }}>
                               XN Đúc
                             </Button>
                           </Popconfirm>
@@ -792,6 +616,55 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                           </Popconfirm>
                         </>
                       )}
+
+                      {/* Cán: xác nhận Cán */}
+                      {isCan && (
+                        <>
+                          <Popconfirm
+                            title={`Xác nhận Cán ${selectedCount} slab?`}
+                            onConfirm={() => void handleXacNhan("Can")}
+                            disabled={!canXacNhanCan}
+                          >
+                            <Button size="small" icon={<CheckCircleOutlined />} disabled={!canXacNhanCan} loading={actionLoading} style={{ color: canXacNhanCan ? "#52c41a" : undefined }}>
+                              XN Cán
+                            </Button>
+                          </Popconfirm>
+                          <Popconfirm
+                            title={`Hủy XN Cán ${selectedCount} slab?`}
+                            onConfirm={() => void handleHuyXacNhan("Can")}
+                            disabled={!canHuyCan}
+                          >
+                            <Button size="small" icon={<CloseCircleOutlined />} disabled={!canHuyCan} loading={actionLoading} danger>
+                              Hủy XN Cán
+                            </Button>
+                          </Popconfirm>
+                        </>
+                      )}
+
+                      {/* PKH: chốt từng dòng (chỉ khi phiếu chưa chốt) */}
+                      {isPKH && data?.tinhTrang !== 5 && (
+                        <>
+                          <Popconfirm
+                            title={`Chốt PKH ${selectedCount} slab?`}
+                            onConfirm={() => void handleXacNhan("PKH")}
+                            disabled={!canChotPKH}
+                          >
+                            <Button size="small" icon={<LockOutlined />} disabled={!canChotPKH} loading={actionLoading} style={{ color: canChotPKH ? "#722ed1" : undefined }}>
+                              Chốt PKH
+                            </Button>
+                          </Popconfirm>
+                          <Popconfirm
+                            title={`Hủy chốt PKH ${selectedCount} slab?`}
+                            onConfirm={() => void handleHuyXacNhan("PKH")}
+                            disabled={!canHuyChotPKH}
+                          >
+                            <Button size="small" icon={<UnlockOutlined />} disabled={!canHuyChotPKH} loading={actionLoading} danger>
+                              Hủy chốt PKH
+                            </Button>
+                          </Popconfirm>
+                        </>
+                      )}
+
                       <Button
                         size="small"
                         icon={<FileExcelOutlined />}
@@ -818,7 +691,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                     rowClassName={(r) => r.isChuyenCa ? "row-chuyen-ca" : ""}
                     summary={() => {
                       const totalKL = slabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
-                      const optColCount = (isCan ? 2 : 0) + (isPKH ? 1 : 0);
+                      const optColCount = ((isDuc || isCan || isPKH) ? 1 : 0) + ((isCan || isPKH) ? 1 : 0) + (isPKH ? 1 : 0);
                       return (
                         <Table.Summary fixed>
                           <Table.Summary.Row>
@@ -865,7 +738,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                   </Button>
                 </div>
                 <Table
-                  rowKey={(r) => `${r.macThep ?? ""}|${r.kichThuoc ?? ""}`}
+                  rowKey={(r) => `${r.macThep ?? ""}|${r.maVatTu ?? ""}`}
                   bordered
                   columns={tongHopColumns}
                   dataSource={tongHopRows}
@@ -912,14 +785,16 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
           Làm mới
         </Button>
         {isPKH && data?.tinhTrang !== 5 && (
-          <Popconfirm
-            title="Chốt phiếu này? Sau khi chốt sẽ không thể thay đổi."
-            onConfirm={handleChotPhieu}
-          >
-            <Button type="primary" icon={<LockOutlined />} loading={chotLoading}>
-              Chốt phiếu
-            </Button>
-          </Popconfirm>
+          <Tooltip title="Tự động chốt tất cả dòng chưa chốt và đóng phiếu">
+            <Popconfirm
+              title="Chốt phiếu? Tất cả slab chưa chốt sẽ được chốt tự động và phiếu sẽ bị khóa."
+              onConfirm={handleChotPhieu}
+            >
+              <Button type="primary" icon={<LockOutlined />} loading={chotLoading}>
+                Chốt phiếu
+              </Button>
+            </Popconfirm>
+          </Tooltip>
         )}
         {isPKH && data?.tinhTrang === 5 && (
           <Popconfirm title="Hủy chốt phiếu này?" onConfirm={handleHuyChotPhieu}>
@@ -930,30 +805,6 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
         )}
         {actionButtons}
       </div>
-
-      {/* Modal gán mã vật tư hàng loạt */}
-      <Modal
-        title={`Gán mã vật tư cho ${selectedCount} slab đã chọn`}
-        open={bulkMvtVisible}
-        onCancel={() => { setBulkMvtVisible(false); setBulkMvtValue(""); }}
-        onOk={() => void handleBulkApplyMvt()}
-        okText="Gán"
-        cancelText="Hủy"
-        confirmLoading={bulkMvtLoading}
-        okButtonProps={{ disabled: !bulkMvtValue }}
-        destroyOnClose
-      >
-        <AutoComplete
-          value={bulkMvtValue}
-          options={mvtOptions}
-          onSearch={handleMvtSearch}
-          onChange={setBulkMvtValue}
-          onFocus={() => { if (mvtOptions.length === 0) void fetchMvtOptions(""); }}
-          style={{ width: "100%", marginTop: 8 }}
-          placeholder="Tìm hoặc nhập mã vật tư..."
-          autoFocus
-        />
-      </Modal>
 
       {/* CSS cho row được chuyển ca */}
       <style>{`

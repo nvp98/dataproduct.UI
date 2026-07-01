@@ -1,4 +1,4 @@
-import apiService from "./ApiService";
+﻿import apiService from "./ApiService";
 
 async function downloadBlob(res: Response, fallbackName: string): Promise<void> {
   const blob = await res.blob();
@@ -29,7 +29,7 @@ export interface Hrc1SlabSearchRequest {
   macThep?: string | null;
   isChot?: boolean | null;
   trangThaiDuc?: number | null;
-  trangThaiKho?: number | null;
+  trangThaiCan?: number | null;
   trangThaiPKH?: number | null;
   page?: number;
   pageSize?: number;
@@ -54,11 +54,12 @@ export interface Hrc1SlabItem {
   ngayCapNhat?: string | null;
   ghiChu?: string | null;
   maVatTu?: string | null;
+  tenVatTu?: string | null;
   // Workflow
   isChuyenCa: boolean;
   idPhieuGoc?: string | null;
   trangThaiDuc: number;
-  trangThaiKho: number;
+  trangThaiCan: number;
   trangThaiPKH: number;
   idPhieuBBSL?: string | null;
   soPhieuBBSL?: string | null;
@@ -69,7 +70,7 @@ export interface Hrc1SlabItem {
 
 export interface Hrc1TongHopGhiChuItem {
   macThep?: string | null;
-  kichThuoc?: string | null;
+  maVatTu?: string | null;
   ghiChu?: string | null;
 }
 
@@ -159,11 +160,11 @@ export const Hrc1SlabApi = {
     return (await apiService.post(`${BASE}/chuyen-phoi`, { idSlabs, idPhieuNguon, huong, nguoiChuyen })) as WorkflowResult;
   },
 
-  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho", nguoiThucHien: number): Promise<WorkflowResult> => {
+  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 
-  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho", nguoiThucHien: number): Promise<WorkflowResult> => {
+  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/huy-xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 
@@ -187,15 +188,11 @@ export const Hrc1SlabApi = {
     return (await apiService.patch(`${BASE}/${id}`, payload)) as WorkflowResult;
   },
 
-  bulkUpdateMaVatTu: async (ids: number[], maVatTu: string | null): Promise<WorkflowResult> => {
-    return (await apiService.patch(`${BASE}/bulk-ma-vat-tu`, { ids, maVatTu })) as WorkflowResult;
-  },
-
   getTongHopGhiChu: async (idPhieu: string): Promise<Hrc1TongHopGhiChuItem[]> => {
     return (await apiService.get(`${BASE}/tonghop-ghi-chu/${idPhieu}`)) as Hrc1TongHopGhiChuItem[];
   },
 
-  saveTongHopGhiChu: async (req: { idPhieuBBSL: string; macThep?: string | null; kichThuoc?: string | null; ghiChu?: string | null }): Promise<WorkflowResult> => {
+  saveTongHopGhiChu: async (req: { idPhieuBBSL: string; macThep?: string | null; maVatTu?: string | null; ghiChu?: string | null }): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/tonghop-ghi-chu`, req)) as WorkflowResult;
   },
 

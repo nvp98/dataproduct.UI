@@ -70,6 +70,7 @@ export interface HrcSlabItem {
   sapLastTime?: string | null;
   isChot: boolean;
   ngayTao?: string | null;
+  phanLoai?: string | null;
   // Thông tin phiếu BBSL (join từ BM_Phieu khi slab đã được chuyển)
   ngayXuLy?: string | null;
   caBBSL?: number | null;
@@ -111,6 +112,7 @@ export interface SlabTongHopItem {
   chieuDai?: number | null;
   loaiPhoi?: string | null;
   chatLuongTPHH?: string | null;
+  phanLoai?: string | null;
   soLuong: number;
   tongKhoiLuong?: number | null;
 }
@@ -172,11 +174,11 @@ export const Hrc2SlabApi = {
     return (await apiService.post(`${BASE}/thu-hoi`, { idSlabs, nguoiThucHien })) as WorkflowResult;
   },
 
-  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
+  xacNhan: async (idSlabs: number[], loaiXacNhan: "KCS" | "Duc" | "Kho" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 
-  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
+  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "KCS" | "Duc" | "Kho" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/huy-xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 

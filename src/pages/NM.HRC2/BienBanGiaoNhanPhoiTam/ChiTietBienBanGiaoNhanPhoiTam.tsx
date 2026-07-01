@@ -29,6 +29,7 @@ import {
   type HrcSlabItem,
   type SlabTongHopItem,
 } from "../../../services/Hrc2SlabApi";
+import { HRC2_PHAN_LOAI_ORDER } from "../../../utils/enums/Hrc2PhanLoaiEnum";
 import HRC2_BBGN_PhoiTam from "../../../utils/BM_config/HRC2_BBGN_PhoiTam.json";
 import {
   getBmQuyenUiFlags,
@@ -56,44 +57,26 @@ const getUserId = (): number => {
   return 0;
 };
 
-// Map (loaiPhoi, chatLuongTPHH) → cặp key cột trong pivot row
-function getColKeys(
-  loaiPhoi?: string | null,
-  chatLuong?: string | null,
+// Map phanLoai code → cặp key cột trong pivot row
+function getColKeysByPhanLoai(
+  phanLoai?: string | null,
 ): { soKey: string; klKey: string } | null {
-  const lp = loaiPhoi ?? "";
-  const cl = chatLuong ?? "";
-  const isNguoi = /nguội|nguoi/i.test(lp);
-  const isNong = /nóng|nong/i.test(lp);
-  if (!isNguoi && !isNong) return null;
-  const p = isNguoi ? "nguoi" : "nong";
-  let mid: string | null = null;
-  // Kiểm tra theo thứ tự từ cụ thể nhất đến chung nhất
-  if (/iii.*th[àa]nh|3.*th[àa]nh/i.test(cl)) mid = "loai3tp";
-  else if (/\biii\b|\b3\b/i.test(cl)) mid = isNguoi ? "loai3" : null;
-  else if (/ii.*th[àa]nh|2.*th[àa]nh/i.test(cl)) mid = "loai2tp";
-  else if (/\bii\b|\b2\b/i.test(cl)) mid = "loai2";
-  else if (/\bi\b|\b1\b/i.test(cl)) mid = "loai1";
-  else if (/ng[aắ]n/i.test(cl)) mid = isNguoi ? "nganDai" : null;
-  if (!mid) return null;
-  return { soKey: `${p}_${mid}_so`, klKey: `${p}_${mid}_kl` };
+  if (!phanLoai || !HRC2_PHAN_LOAI_ORDER.includes(phanLoai as any)) return null;
+  return { soKey: `pl_${phanLoai}_so`, klKey: `pl_${phanLoai}_kl` };
 }
 
 function getLeafCols(cols: any[]): any[] {
   return cols.flatMap((c: any) => (c.children ? getLeafCols(c.children) : [c]));
 }
 
-// Chiều rộng tối ưu cho detail view — cột hiếm (loại II, III, nóng) thu nhỏ tối đa
 const COMPACT_WIDTHS: Record<string, number> = {
-  stt: 50,
-  kipNgay: 120,
-  macThep: 110,
-  meThep: 90,
-  kichThuoc: 130,
-  nguoi_loai1_so: 45,
-  nguoi_loai1_kl: 100,
+  stt: 40,
+  shiftName: 100,
+  macThep: 100,
+  meThep: 80,
+  kichThuoc: 100,
   tongSoPhoi: 50,
-  tongKhoiLuong: 100,
+  tongKhoiLuong: 80,
 };
 
 function buildAntCols(cols: any[]): any[] {
@@ -140,6 +123,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
       return null;
     }
   }, []);
+  const isKCS = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, "KCS");
   const isDuc = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, "Duc");
   const isKho = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, "Kho");
   const isPKH = canChotBm(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam);
@@ -264,7 +248,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
         });
       }
       const row = map.get(rowKey)!;
-      const keys = getColKeys(r.loaiPhoi, r.chatLuongTPHH);
+      const keys = getColKeysByPhanLoai(r.phanLoai);
       if (keys) {
         row[keys.soKey] = (row[keys.soKey] ?? 0) + (r.soLuong ?? 0);
         row[keys.klKey] = (row[keys.klKey] ?? 0) + (r.tongKhoiLuong ?? 0);
@@ -320,7 +304,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
     selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 1);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleXacNhan = async (loai: "Duc" | "Kho" | "PKH") => {
+  const handleXacNhan = async (loai: "KCS" | "Duc" | "Kho" | "PKH") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -334,7 +318,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
     }
   };
 
-  const handleHuyXacNhan = async (loai: "Duc" | "Kho" | "PKH") => {
+  const handleHuyXacNhan = async (loai: "KCS" | "Duc" | "Kho" | "PKH") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -407,7 +391,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
         dataIndex: "mayDuc",
         width: 80,
         align: "center" as const,
-        render: (v: number) => v != null ? `Máy ${v}` : "-",
+        render: (v: number) => v != null ? `Đúc ${v}` : "-",
       },
       {
         title: "Kích thước",
@@ -426,7 +410,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
         align: "center" as const,
       },
       {
-        title: "KL (tấn)",
+        title: "Khối lượng",
         dataIndex: "khoiLuong",
         width: 110,
         align: "right" as const,
@@ -478,7 +462,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
           ]
         : []),
     ],
-    [isDuc, isKho, isPKH],
+    [isKCS, isDuc, isKho, isPKH],
   );
 
   // ── Action buttons phiếu ──────────────────────────────────────────────────
@@ -720,7 +704,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                     sticky={{ offsetHeader: 0 }}
                     summary={() => {
                       const totalKL = slabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
-                      const optColCount = (isDuc ? 1 : 0) + (isKho ? 1 : 0) + (isPKH ? 1 : 0);
+                      const optColCount = (isKCS ? 1 : 0) + (isDuc ? 1 : 0) + (isKho ? 1 : 0) + (isPKH ? 1 : 0);
                       return (
                         <Table.Summary fixed>
                           <Table.Summary.Row>

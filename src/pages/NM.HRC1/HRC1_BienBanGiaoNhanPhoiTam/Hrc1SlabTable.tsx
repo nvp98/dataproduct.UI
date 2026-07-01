@@ -228,7 +228,7 @@ const Hrc1SlabTable = () => {
         xuongId: ui.iD_PhanXuong ?? null,
         idphongBan: ui.iD_PhongBan ?? null,
         tinhTrang: 0,
-        prefix: "BBSL_PhoiTam_HRC1",
+        prefix: "BBGN_PhoiTam_HRC1",
       };
       const res = await PhieuApi.postData(payload as Record<string, unknown>);
       message.success(`Tạo phiếu thành công: ${(res as any)?.soPhieu ?? ""}`);
