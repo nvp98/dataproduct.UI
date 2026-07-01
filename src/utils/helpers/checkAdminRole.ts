@@ -273,6 +273,58 @@ export const getAllowedChotBmList = (user: any): string[] => {
  * có ít nhất một dòng phân quyền cho `maBm` và **mọi** dòng đó đều là quyền Xem (5).
  * Không có dòng nào cho `maBm` → `isView === false` (giữ hành vi nút như trước).
  */
+/**
+ * Danh sách khuVucPhu mà user được phép cho một maBm, dựa trên `quyenTheoLo`
+ * (lưu ở localStorage.userinfo sau login/AuthInitializer).
+ *
+ * Trả `null` khi admin hoặc khi không có dòng phân quyền nào cho maBm này
+ * → quy ước "không có entry = không hạn chế" (giữ nguyên hành vi cũ cho user
+ * chưa được cấu hình).
+ */
+export const getAllowedKhuVucPhu = (
+  maBm: string,
+  user?: unknown
+): string[] | null => {
+  const u = user !== undefined ? user : readUserFromStorage();
+  if (isAdminUser(u as Parameters<typeof isAdminUser>[0])) return null;
+
+  const info = u as { quyenTheoLo?: unknown } | null;
+  const quyenTheoLo = Array.isArray(info?.quyenTheoLo)
+    ? (info!.quyenTheoLo as { maBm?: unknown; khuVucPhus?: unknown[] }[])
+    : [];
+  const entry = quyenTheoLo.find((x) => x.maBm === maBm);
+  if (!entry) return null;
+
+  return (entry.khuVucPhus ?? []).map(String);
+};
+
+/**
+ * Danh sách MaKhuVuc (scope) mà user được phép cho một maBm, dựa trên
+ * `quyenTheoScope` (lưu ở localStorage.userinfo sau login/AuthInitializer).
+ *
+ * Không bypass riêng cho admin/PKH — áp dụng đồng nhất cho mọi tài khoản.
+ * Admin/PKH vốn đã có đường vào không giới hạn ở menu "Xử lý phiếu" (vùng 4)
+ * nên không cần đặc cách ở đây; nếu họ không có dòng phân quyền nào cho maBm
+ * này thì vẫn rơi vào quy ước "không có entry = không hạn chế" như user thường.
+ *
+ * Trả `null` khi không có dòng phân quyền nào cho maBm này (không hạn chế),
+ * hoặc khi user được cấp scope "ALL" (Tất cả) — nghĩa là không giới hạn.
+ */
+export const getAllowedScope = (maBm: string, user?: unknown): string[] | null => {
+  const u = user !== undefined ? user : readUserFromStorage();
+
+  const info = u as { quyenTheoScope?: unknown } | null;
+  const quyenTheoScope = Array.isArray(info?.quyenTheoScope)
+    ? (info!.quyenTheoScope as { maBm?: unknown; maKhuVucs?: unknown[] }[])
+    : [];
+  const entry = quyenTheoScope.find((x) => x.maBm === maBm);
+  if (!entry) return null;
+
+  const scopes = (entry.maKhuVucs ?? []).map(String);
+  if (scopes.includes("ALL")) return null;
+  return scopes;
+};
+
 export const getBmQuyenUiFlags = (
   maBm: string,
   user?: unknown

@@ -186,6 +186,24 @@ export const bmQuyenConfig = {
         { maKhuVuc: "5", tenKhuVuc: "Lò Cao 5" },
         { maKhuVuc: "6", tenKhuVuc: "Lò Cao 6" },
       ]
+    },
+    {
+      maBm: BM_CONFIG.HRC1.THONGKE_HRC1,
+      tenBm: "Thống kê dữ liệu HRC1 ",
+      nhom: "NM.HRC1",
+      scope: [
+        { maKhuVuc: "TIEUHAO", tenKhuVuc: "Tab: Thống kê tiêu hao HRC1" },
+        { maKhuVuc: "BBGN", tenKhuVuc: "Tab: Thống kê BBGN thép lỏng" },
+      ]
+    },
+    {
+      maBm: BM_CONFIG.HRC2.THONGKE_HRC2,
+      tenBm: "Thống kê dữ liệu HRC2 ",
+      nhom: "NM.HRC2",
+      scope: [
+        { maKhuVuc: "TIEUHAO", tenKhuVuc: "Tab: Thống kê tiêu hao HRC2" },
+        { maKhuVuc: "BBGN", tenKhuVuc: "Tab: Thống kê BBGN thép lỏng" },
+      ]
     }
 
   ] as BieuMauQuyenItem[],

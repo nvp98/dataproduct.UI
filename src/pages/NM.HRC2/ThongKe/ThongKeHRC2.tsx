@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Card,
   Checkbox,
@@ -24,6 +24,8 @@ import {
   type ThongKeLoaiBMKey,
 } from "../../../utils/configs/thongKeHRC2HeaderConfig";
 import ThongKeBBGNThepLong from "./ThongKeBBGNThepLong";
+import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
+import { getAllowedScope } from "../../../utils/helpers/checkAdminRole";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -147,6 +149,11 @@ type SumRowMap = Record<string, number | null>;
 const flattenLeafColumns = (cols: any[]): any[] =>
   cols.flatMap((c) => (Array.isArray(c.children) ? flattenLeafColumns(c.children) : [c]));
 
+const MAIN_TAB_SCOPE_MAP: Record<"tieuhao" | "bbgn", string> = {
+  tieuhao: "TIEUHAO",
+  bbgn: "BBGN",
+};
+
 const ThongKeHRC2 = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -157,6 +164,26 @@ const ThongKeHRC2 = () => {
   const [loaiBmKey, setLoaiBmKey] = useState<LoaiBMKey>("BOF");
   const [mainTabKey, setMainTabKey] = useState<"tieuhao" | "bbgn">("tieuhao");
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
+
+  const allowedScope = useMemo(
+    () => getAllowedScope(BM_CONFIG.HRC2.THONGKE_HRC2),
+    []
+  );
+
+  const mainTabItems = useMemo(() => {
+    const all: { key: "tieuhao" | "bbgn"; label: string }[] = [
+      { key: "tieuhao", label: "Thống kê tiêu hao HRC2" },
+      { key: "bbgn", label: "Thống kê BBGN thép lỏng" },
+    ];
+    if (allowedScope === null) return all;
+    return all.filter((t) => allowedScope.includes(MAIN_TAB_SCOPE_MAP[t.key]));
+  }, [allowedScope]);
+
+  useEffect(() => {
+    if (mainTabItems.length > 0 && !mainTabItems.some((t) => t.key === mainTabKey)) {
+      setMainTabKey(mainTabItems[0].key);
+    }
+  }, [mainTabItems, mainTabKey]);
 
   const handleSearch = useCallback(
     async (overrideLoaiBm?: LoaiBMKey, page?: number, pageSize?: number) => {
@@ -547,10 +574,7 @@ const ThongKeHRC2 = () => {
       <Tabs
         activeKey={mainTabKey}
         onChange={(k) => setMainTabKey(k as "tieuhao" | "bbgn")}
-        items={[
-          { key: "tieuhao", label: "Thống kê tiêu hao HRC2" },
-          { key: "bbgn", label: "Thống kê BBGN thép lỏng" },
-        ]}
+        items={mainTabItems}
       />
 
       {mainTabKey === "bbgn" ? (
