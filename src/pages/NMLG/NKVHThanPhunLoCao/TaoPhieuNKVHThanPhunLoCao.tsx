@@ -117,19 +117,6 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
     currentTinhTrang === TrangThaiPhieuConst.HieuChinh
   );
 
-  const nvVanHanhCaNgay = Form.useWatch("nvVanHanhCaNgay", form);
-  const nvVanHanhCaDem  = Form.useWatch("nvVanHanhCaDem",  form);
-
-  // capDuyet của người dùng hiện tại cho phiếu này:
-  // 0 = ca ngày, 1 = ca đêm, null = không phải signer (admin/PKH → sửa được hết)
-  const currentUserCapDuyet = useMemo(() => {
-    const uid = getUserInfo()?.iD_TaiKhoan;
-    if (uid == null) return null;
-    if (Number(nvVanHanhCaNgay) === Number(uid)) return 0;
-    if (Number(nvVanHanhCaDem)  === Number(uid)) return 1;
-    return null;
-  }, [nvVanHanhCaNgay, nvVanHanhCaDem]);
-
   const handleCellChange = useCallback((key: string, dataIndex: string, value: any) => {
     setTableData((prev) =>
       prev.map((row) => (row.key === key ? { ...row, [dataIndex]: value } : row))
@@ -139,16 +126,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
   const tableColumns = useMemo((): ColumnType<RowData>[] => {
     if (!tableSection) return [];
 
-    // Kiểm tra xem một dòng có bị khoá với người dùng hiện tại không
-    const isRowLocked = (row: RowData): boolean => {
-      if (isFormLocked) return true;
-      if (row._isSummary) return true;
-      if (currentUserCapDuyet === null) return false; // admin/PKH → sửa được hết
-      const h = parseInt((row.thoiGian as string ?? "").replace("h", ""));
-      if (isNaN(h)) return false;
-      const isCaNgay = h >= 8 && h <= 19;
-      return currentUserCapDuyet === 0 ? !isCaNgay : isCaNgay;
-    };
+    const isRowLocked = (row: RowData): boolean => isFormLocked || !!row._isSummary;
 
     // Detect a {Auto, Manual} leaf pair → merge into 1 editable column
     const isMergeablePair = (col: any): boolean => {
@@ -273,7 +251,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
       });
 
     return buildCols(tableSection.columns);
-  }, [isFormLocked, currentUserCapDuyet, handleCellChange]);
+  }, [isFormLocked, handleCellChange]);
 
   const defaultTableData: RowData[] = useMemo(
     () =>
