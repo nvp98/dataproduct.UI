@@ -18,6 +18,8 @@ import { BM_CONFIG } from "./BieuMauConst";
 export type MenuItemWithMaBM = {
   key: string;
   maBM?: string;
+  /** true → không bypass cho admin/P.KH, luôn kiểm tra đúng quyền thật (dùng khi item đã có đường vào không giới hạn khác, vd bản gốc ở vùng khác). */
+  strictMaBM?: boolean;
   label: React.ReactNode;
   vung?: number;
   children?: MenuItemWithMaBM[];
@@ -765,7 +767,7 @@ export const menuConfig = [
   },
   {
     key: "sub4",
-    label: "Xem phiếu",
+    label: "Xem",
     vung: 3,
     icon: <EyeOutlined />,
     children: [
@@ -873,6 +875,16 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub4-1-2",
+            maBM: BM_CONFIG.HRC1.THONGKE_HRC1,
+            strictMaBM: true,
+            label: (
+              <Tooltip title="Thống kê Dữ liệu HRC1">
+                <NavLink to="/thongkehrc1">Thống kê dữ liệu HRC1</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -942,6 +954,16 @@ export const menuConfig = [
                 <NavLink to="/xemphieu/giaonhantheplong">
                   BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
                 </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-2-6",
+            maBM: BM_CONFIG.HRC2.THONGKE_HRC2,
+            strictMaBM: true,
+            label: (
+              <Tooltip title="Thống kê Dữ liệu HRC2">
+                <NavLink to="/thongkehrc2">Thống kê dữ liệu HRC2</NavLink>
               </Tooltip>
             ),
           },

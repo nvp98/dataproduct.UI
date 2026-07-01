@@ -20,6 +20,7 @@ const AuthInitializer = () => {
         const userinfo = userinfoStr ? JSON.parse(userinfoStr) : {};
         userinfo.bmQuyenXlList = quyenData.bmQuyenXlList || [];
         userinfo.quyenTheoLo = quyenData.quyenTheoLo || [];
+        userinfo.quyenTheoScope = quyenData.quyenTheoScope || [];
         localStorage.setItem("userinfo", JSON.stringify(userinfo));
       } catch {
         // fail silently
