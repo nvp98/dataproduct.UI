@@ -116,7 +116,7 @@ const TonSiloLoCao = ({ type }: { type?: string }) => {
       dataIndex: "scope",
       key: "scope",
       width: 120,
-      ellipsis: true,
+      render: (value: number | string) => (value ? `Lò Cao ${value}` : "-"),
     },
     {
       title: "Ngày sản xuất",
@@ -208,6 +208,20 @@ const TonSiloLoCao = ({ type }: { type?: string }) => {
       label: "Ngày sản xuất",
       type: "dateRange",
       placeholder: "Khoảng ngày",
+    },
+    {
+      key: "scope",
+      label: "Lò cao",
+      type: "select",
+      placeholder: "Chọn lò cao",
+      options: [
+        { label: "Lò Cao 1", value: 1 },
+        { label: "Lò Cao 2", value: 2 },
+        { label: "Lò Cao 3", value: 3 },
+        { label: "Lò Cao 4", value: 4 },
+        { label: "Lò Cao 5", value: 5 },
+        { label: "Lò Cao 6", value: 6 },
+      ],
     },
     {
       key: "kip",

@@ -35,6 +35,12 @@ interface TableRow {
   [key: string]: any;
 }
 
+// Lò cao 5 & 6 không có ts0 (số mẻ từ SCADA) → tự sinh soMe = thứ tự dòng (1-based)
+function applyAutoSoMe(rows: TableRow[], scopeId: any): TableRow[] {
+  if (![5, 6].includes(Number(scopeId))) return rows;
+  return rows.map((r, i) => ({ ...r, soMe: i + 1 }));
+}
+
 const TaoPhieuNapLieuLoCao = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -166,7 +172,7 @@ const TaoPhieuNapLieuLoCao = () => {
           rowMap.get(t)![String(item.idNVL)] = item.giaTri != null ? parseFloat(Number(item.giaTri).toFixed(3)) : null;
         }
         const rows = Array.from(rowMap.values());
-        setTableData(rows);
+        setTableData(applyAutoSoMe(rows, scope));
 
         const restoredDoAm: Record<string, number> = {};
         for (const item of chiTietList) {
@@ -209,11 +215,10 @@ const TaoPhieuNapLieuLoCao = () => {
         const rows = (response.rows ?? []).map((row: any, index: number) => {
           const { time, ...rest } = row;
           const thoiGianNapLieu = time
-            ? new Date(time).toLocaleTimeString("vi-VN", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })
+            ? (() => {
+                const d = new Date(time);
+                return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+              })()
             : "";
           const rounded: Record<string, any> = {};
           for (const [k, v] of Object.entries(rest)) {
@@ -223,7 +228,7 @@ const TaoPhieuNapLieuLoCao = () => {
           }
           return { key: row?.id ?? `row-${index}`, thoiGianNapLieu, ...rounded };
         });
-        setTableData(rows);
+        setTableData(applyAutoSoMe(rows, scope));
 
         if (rows.length > 0) {
           message.success(`Cập nhật dữ liệu thành công! Có ${rows.length} bản ghi`);
@@ -762,7 +767,7 @@ const TaoPhieuNapLieuLoCao = () => {
                 }
                 rowMap.get(thuTu)![String(item.idNVL)] = item.giaTri != null ? parseFloat(Number(item.giaTri).toFixed(3)) : null;
               }
-              setTableData(Array.from(rowMap.values()));
+              setTableData(applyAutoSoMe(Array.from(rowMap.values()), normalizedData.scope));
 
               // Restore doAmMap từ chi tiết (lấy DoAm từ bất kỳ record nào của mỗi NVL)
               const restoredDoAm: Record<string, number> = {};
@@ -773,13 +778,13 @@ const TaoPhieuNapLieuLoCao = () => {
               }
               setDoAmMap(restoredDoAm);
             } else {
-              setTableData(formValues.table1 || []);
+              setTableData(applyAutoSoMe(formValues.table1 || [], normalizedData.scope));
               // Fallback: restore doAm từ JSON nếu có
               if (data.doAm && typeof data.doAm === "object")
                 setDoAmMap(data.doAm as Record<string, number>);
             }
           } catch {
-            setTableData(formValues.table1 || []);
+            setTableData(applyAutoSoMe(formValues.table1 || [], normalizedData.scope));
           }
           setPhieuInfo({
             tinhTrang,
@@ -1288,7 +1293,7 @@ const TaoPhieuNapLieuLoCao = () => {
             tableConfig={tableConfig}
             materialColumnsOverride={materialColumnsOverride}
             initialData={tableData}
-            onDataChange={(rows) => setTableData(rows as TableRow[])}
+            onDataChange={(rows) => setTableData(applyAutoSoMe(rows as TableRow[], scope))}
             loading={loading}
             editable={!isFormLocked}
             showAddButton={!isFormLocked}
@@ -1296,6 +1301,7 @@ const TaoPhieuNapLieuLoCao = () => {
             minRows={0}
             initialDoAmMap={doAmMap}
             onDoAmChange={setDoAmMap}
+            readonlyFields={[5, 6].includes(Number(scope)) ? ["soMe"] : []}
           />
         )}
 

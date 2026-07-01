@@ -1145,7 +1145,7 @@ export const menuConfig = [
             maBM: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
             label: (
               <Tooltip title="BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)">
-                <NavLink to="/viecdentoi/naplieulocao">
+                <NavLink to="/naplieulocao">
                   BM.05/QT.05.09 (Sổ theo dõi nạp liệu lò cao)
                 </NavLink>
               </Tooltip>
@@ -1156,7 +1156,7 @@ export const menuConfig = [
             maBM: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
             label: (
               <Tooltip title="BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)">
-                <NavLink to="/viecdentoi/tonsilolocao">
+                <NavLink to="/tonsilolocao">
                   BM.07/QT.05.09 (Sổ theo dõi tồn silo lò cao)
                 </NavLink>
               </Tooltip>
@@ -1167,7 +1167,7 @@ export const menuConfig = [
             maBM: BM_CONFIG.NMLG.NMLG_NK_VHPTLC,
             label: (
               <Tooltip title="BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)">
-                <NavLink to="/viecdentoi/nkvhthanphunlocao">
+                <NavLink to="/nkvhthanphunlocao">
                   BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)
                 </NavLink>
               </Tooltip>
