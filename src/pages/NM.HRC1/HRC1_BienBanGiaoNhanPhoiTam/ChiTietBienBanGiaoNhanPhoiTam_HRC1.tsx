@@ -211,14 +211,16 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   );
   const selectedCount = selectedRowKeys.length;
 
-  const canXacNhanDuc = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 0 && r.trangThaiCan === 0 && r.trangThaiPKH === 0);
-  const canHuyDuc     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiCan === 0 && r.trangThaiPKH === 0);
+  // Đúc và Cán đồng cấp (song song, không phụ thuộc lẫn nhau)
+  const canXacNhanDuc = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 0 && r.trangThaiPKH === 0);
+  const canHuyDuc     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiPKH === 0);
   const canXacNhanCan = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 0 && r.trangThaiPKH === 0);
   const canHuyCan     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 1 && r.trangThaiPKH === 0);
-  const canChotPKH    = selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 0);
+  // PKH chỉ chốt được khi cả Đúc và Cán đã xác nhận
+  const canChotPKH    = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiCan === 1 && r.trangThaiPKH === 0);
   const canHuyChotPKH = selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 1);
 
-  const handleXacNhan = async (loai: "Duc" | "Can") => {
+  const handleXacNhan = async (loai: "Duc" | "Can" | "PKH") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -230,7 +232,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     } finally { setActionLoading(false); }
   };
 
-  const handleHuyXacNhan = async (loai: "Duc" | "Can") => {
+  const handleHuyXacNhan = async (loai: "Duc" | "Can" | "PKH") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -353,6 +355,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
           onBlur={() => void saveRowEdit(r.id)}
           size="small"
           placeholder="Nhập ghi chú..."
+          disabled={data?.tinhTrang === 5}
         />
       ),
     },
@@ -378,7 +381,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       render: (v: number) => <Tag color={v === 1 ? "blue" : "default"}>{v === 1 ? "Đã chốt" : "Chưa"}</Tag>,
     }] : []),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [isDuc, isCan, isPKH, rowEdits, saveRowEdit]);
+  ], [isDuc, isCan, isPKH, rowEdits, saveRowEdit, data?.tinhTrang]);
 
   // ── Tab tổng hợp rows ─────────────────────────────────────────────────────
   const tongHopRows = useMemo(() => {
@@ -571,6 +574,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                         onClick={() => void handleSyncData()}
                         type="primary"
                         ghost
+                        disabled={data?.tinhTrang === 5}
                       >
                         Làm mới dữ liệu
                       </Button>

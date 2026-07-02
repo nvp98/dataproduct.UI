@@ -298,8 +298,12 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
   const canHuyKho =
     selectedCount > 0 &&
     selectedRows.every((r) => r.trangThaiKho === 1 && r.trangThaiPKH === 0);
+  // PKH chỉ chốt được khi cả Đúc và Kho đã xác nhận
   const canChot =
-    selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 0);
+    selectedCount > 0 &&
+    selectedRows.every(
+      (r) => r.trangThaiDuc === 1 && r.trangThaiKho === 1 && r.trangThaiPKH === 0,
+    );
   const canHuyChot =
     selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 1);
 

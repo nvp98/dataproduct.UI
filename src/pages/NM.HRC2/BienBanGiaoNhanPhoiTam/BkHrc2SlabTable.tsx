@@ -166,7 +166,16 @@ const BkHrc2SlabTable = () => {
 
   useEffect(() => { fetchData(1, pagination.pageSize); }, []);
 
-  const handleSearch = async (values: any) => fetchData(1, pagination.pageSize, values);
+  const handleSearch = async (values: any) => {
+    setLoading(true);
+    try {
+      const homNay = dayjs().format("YYYY-MM-DD");
+      await Hrc2SlabApi.sync(homNay, homNay);
+    } catch (err) {
+      console.error("Auto-sync BKMIS trước khi tìm bị lỗi:", err);
+    }
+    await fetchData(1, pagination.pageSize, values);
+  };
 
   const handleClear = () => {
     form.resetFields();
@@ -557,7 +566,7 @@ const BkHrc2SlabTable = () => {
 
           {/* Hàng nút tìm kiếm + actions */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", borderTop: "1px solid #f0f0f0", paddingTop: 10 }}>
-            <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>Tìm</Button>
+            <Button type="primary" htmlType="submit" icon={<SearchOutlined />} loading={loading}>Tìm</Button>
             <Button icon={<ClearOutlined />} onClick={handleClear}>Xóa Lọc</Button>
 
             <span style={{ color: "#d9d9d9" }}>|</span>
