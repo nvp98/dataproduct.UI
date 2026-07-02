@@ -47,6 +47,7 @@ interface CustomTableLGProps {
   // DoAm: controlled từ parent để persist khi save/load phiếu
   initialDoAmMap?: Record<string, number>;
   onDoAmChange?: (map: Record<string, number>) => void;
+  readonlyFields?: string[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
       minRows,
       initialDoAmMap,
       onDoAmChange,
+      readonlyFields,
     },
     ref
   ) {
@@ -283,6 +285,7 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
         stickyHeader
         scrollY={500}
         manualTrackPattern={editable ? /^\d+$/ : undefined}
+        readonlyFields={readonlyFields}
       />
     );
   }

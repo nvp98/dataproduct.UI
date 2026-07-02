@@ -79,7 +79,7 @@
   ],
   "signatures": [
     {
-      "label": "Bên nhận",
+      "label": "Xưởng đúc",
       "type": "selectNguoiKy",
       "key": "nguoiKy_Nhan",
       "maphongBan": "NM.HRC2",
@@ -88,7 +88,7 @@
       "required": true
     },
     {
-      "label": "Bên giao",
+      "label": "Xưởng tinh luyện",
       "type": "selectNguoiKy",
       "key": "nguoiKy_Giao", 
       "maphongBan": "NM.HRC2",

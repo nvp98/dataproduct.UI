@@ -50,12 +50,20 @@ const SidebarMenu = () => {
       .catch(() => setMenuPermissions(null));
   }, [user]);
 
-  /** Lọc item theo maBM: item có maBM thì hiển thị khi maBM nằm trong allowedSet (hoặc allowAll). */
+  /**
+   * Lọc item theo maBM: item có maBM thì hiển thị khi maBM nằm trong allowedSet (hoặc allowAll).
+   *
+   * `strictMaBM: true` trên item → KHÔNG bypass cho admin/P.KH (allowAll bị bỏ qua), chỉ dựa
+   * đúng vào allowedSet thực tế — dùng cho các item đã có đường vào không giới hạn khác (vd
+   * "Thống kê dữ liệu HRC1/HRC2" ở vùng 3 đã có bản gốc không giới hạn ở vùng 4).
+   * Vẫn fail-open khi `menuPermissions` chưa tải xong/lỗi (null) để tránh ẩn nhầm.
+   */
   const filterByMaBM = useCallback(
     (
       items: {
         key?: string;
         maBM?: string;
+        strictMaBM?: boolean;
         children?: unknown[];
         [k: string]: unknown;
       }[],
@@ -69,8 +77,12 @@ const SidebarMenu = () => {
             return isAdminUser(user);
           if (Array.isArray(roles) && roles.includes("PKH"))
             return user?.tenNgan === "P.KH";
-          if (item.maBM != null && item.maBM !== "")
-            return allowAll || allowedSet.has(item.maBM);
+          if (item.maBM != null && item.maBM !== "") {
+            const effectiveAllowAll = item.strictMaBM
+              ? menuPermissions === null
+              : allowAll;
+            return effectiveAllowAll || allowedSet.has(item.maBM);
+          }
           return true;
         })
         .map((item) => {
@@ -79,6 +91,7 @@ const SidebarMenu = () => {
               item.children as {
                 key?: string;
                 maBM?: string;
+                strictMaBM?: boolean;
                 children?: unknown[];
                 [k: string]: unknown;
               }[],
@@ -99,28 +112,29 @@ const SidebarMenu = () => {
           return true;
         });
     },
-    [user],
+    [user, menuPermissions],
   );
 
   const filteredMenu = useMemo(() => {
     if (!user) return [];
     const isAdmin = isAdminUser(user);
     const showAll = isAdmin || menuPermissions === null;
-    const mkSet = (forms: string[]) =>
-      showAll ? new Set<string>(["*"]) : new Set<string>(forms);
 
-    // vung 1 = xử lý, vung 2 = phê duyệt, vung 3 = chỉ xem
+    // vung 1 = xử lý, vung 2 = phê duyệt, vung 3 = chỉ xem — luôn là danh sách thật
+    // (không wildcard), để các item `strictMaBM` vẫn kiểm tra được đúng quyền thật
+    // ngay cả khi admin/P.KH thường được bypass (showAll) ở các item khác.
     const vungSets: Record<number, Set<string>> = {
-      1: mkSet(menuPermissions?.processingForms ?? []),
-      2: mkSet(menuPermissions?.approvingForms ?? []),
-      3: mkSet(menuPermissions?.viewingForms ?? []),
-      4: mkSet(menuPermissions?.chotPhieuForms ?? []),
+      1: new Set<string>(menuPermissions?.processingForms ?? []),
+      2: new Set<string>(menuPermissions?.approvingForms ?? []),
+      3: new Set<string>(menuPermissions?.viewingForms ?? []),
+      4: new Set<string>(menuPermissions?.chotPhieuForms ?? []),
     };
 
     type Item = {
       key?: string;
       vung?: number;
       maBM?: string;
+      strictMaBM?: boolean;
       children?: unknown[];
       [k: string]: unknown;
     };
@@ -140,7 +154,7 @@ const SidebarMenu = () => {
             const set = vung != null ? vungSets[vung] : undefined;
             const filteredChildren =
               set != null
-                ? filterByMaBM(item.children as Item[], set, set.has("*"))
+                ? filterByMaBM(item.children as Item[], set, showAll)
                 : filterMenuItems(item.children as Item[]);
             return { ...item, children: filteredChildren };
           }
@@ -174,6 +188,7 @@ const SidebarMenu = () => {
         const clean = { ...rest } as Record<string, unknown>;
         delete clean.maBM;
         delete clean.roles;
+        delete clean.strictMaBM;
         return {
           ...clean,
           ...(children

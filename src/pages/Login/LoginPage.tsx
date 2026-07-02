@@ -56,7 +56,12 @@ const LoginPage = () => {
       try {
         const quyenData = await TaiKhoanApi.getQuyen(user.username) as any;
         localStorage.setItem("bmQuyenXlList", JSON.stringify(quyenData.bmQuyenXlList || []));
-        const userinfo = { ...res, bmQuyenXlList: quyenData.bmQuyenXlList || [], quyenTheoLo: quyenData.quyenTheoLo || [] };
+        const userinfo = {
+          ...res,
+          bmQuyenXlList: quyenData.bmQuyenXlList || [],
+          quyenTheoLo: quyenData.quyenTheoLo || [],
+          quyenTheoScope: quyenData.quyenTheoScope || [],
+        };
         localStorage.setItem("userinfo", JSON.stringify(userinfo));
       } catch {
         // fail silently

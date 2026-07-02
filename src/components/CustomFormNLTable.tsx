@@ -240,9 +240,22 @@ export default function CustomFormNLTable({
 
   // ── Render 1 child column (dùng chung cho cả có/không isEmpty) ──────────────
   const renderChildColumn = (child: ColumnChild, record: any, idx: number) => {
-    // ✅ Slot rỗng từ BE → ô xám, không cho nhập
+    // Không có SCADA data (tagKey null hoặc không có data tự động):
+    // - Khi editable → vẫn cho nhập tay, nền xám nhạt để phân biệt
+    // - Khi readonly → ô xám không cho nhập (xem phiếu)
     if (child.isEmpty) {
-      return renderEmptySlot();
+      if (!editable) return renderEmptySlot();
+      return (
+        <Input
+          value={record[child.dataIndex] ?? ""}
+          onChange={(e) => {
+            const validated = validateAndFormatInput(e.target.value, child.type);
+            handleCellChange(validated, idx, child.dataIndex as string);
+          }}
+          style={{ backgroundColor: "#f5f5f5", textAlign: "right" }}
+          placeholder="-"
+        />
+      );
     }
 
     // Readonly field
@@ -292,9 +305,20 @@ export default function CustomFormNLTable({
 
   // ── Render 1 cột đơn (không có children) ────────────────────────────────────
   const renderSingleColumn = (col: any, record: any, idx: number) => {
-    // ✅ Slot rỗng từ BE
+    // Không có SCADA data: editable → cho nhập tay, readonly → ô xám
     if (col.isEmpty) {
-      return renderEmptySlot();
+      if (!editable) return renderEmptySlot();
+      return (
+        <Input
+          value={record[col.dataIndex ?? ""] ?? ""}
+          onChange={(e) => {
+            const validated = validateAndFormatInput(e.target.value, col.type);
+            handleCellChange(validated, idx, col.dataIndex as string);
+          }}
+          style={{ backgroundColor: "#f5f5f5", textAlign: "right" }}
+          placeholder="-"
+        />
+      );
     }
 
     if (readonlyFields.includes(String(col.dataIndex))) {
