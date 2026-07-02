@@ -1090,6 +1090,14 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "5-1-tk",
+            label: (
+              <Tooltip title="Thống kê Phiếu CTD">
+                <NavLink to="/thongkephieuCTD">Thống kê Phiếu CTD</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {

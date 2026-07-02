@@ -92,6 +92,7 @@ import ThongKePhieuHRC1 from "../pages/NM.HRC1/ThongKe/ThongKePhieuHRC1";
 import QuanLyMayDuc from "../pages/Settings/MayDuc";
 import QuanLyMacThep from "../pages/Settings/MacThep";
 import QuanLyTaiKhoan from "../pages/Settings/QuanLyTaiKhoan";
+import ThongKePhieuCTD from "../pages/NMCTD/ThongKe/ThongKePhieuCTD";
 
 export const routes = [
   {
@@ -1295,6 +1296,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <ThongKePhieuHRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "thongkephieuCTD",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ThongKePhieuCTD />
             </RequireRole>
           </RequireAuth>
         ),
