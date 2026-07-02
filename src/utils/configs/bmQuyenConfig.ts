@@ -217,8 +217,6 @@ export const bmQuyenConfig = {
         { maKhuVuc: "TIEUHAO", tenKhuVuc: "Tab: Thống kê tiêu hao HRC2" },
         { maKhuVuc: "BBGN", tenKhuVuc: "Tab: Thống kê BBGN thép lỏng" },
       ]
-    }
-
     },
     {
       maBm: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
