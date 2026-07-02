@@ -26,6 +26,37 @@ a {
   padding: 4px !important;
 } */
 
+/* HRC2 Slab — row highlight */
+.row-trung-idslab > td { background-color: #fffbe6 !important; }
+.row-trung-idslab:hover > td { background-color: #fff1b8 !important; }
+
+/* Scrollbar mảnh, tự ẩn — chỉ hiện khi hover/scroll vào vùng chứa */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: #c1c1c1 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 3px;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background-color: #c1c1c1;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #a8a8a8;
+}
+
 /* Override cho các class CSS auto-generated của Ant Design */
 /* .css-dev-only-do-not-override-xepvsj.ant-layout-content {
   padding: 16px !important;
