@@ -33,6 +33,7 @@ const LOAI_BM_TO_MABM: Record<string, string> = {
   SoTheoDoiSX: BM_CONFIG.CTD.CTD_STD_Sanxuat,
   PhieuKPH: BM_CONFIG.CTD.CTD_KPH_Sanxuat,
   SanLuongKCS: BM_CONFIG.CTD.CTD_BB_SanLuong_KCS,
+  PhoiNapNguoi: BM_CONFIG.CTD.CTD_BB_PhoiNapnguoi,
 };
 
 // Một số trang CTD dùng useParams (cần id trong URL), một số dùng useLocation (đọc state).
@@ -40,6 +41,7 @@ const LOAI_BM_TO_MABM: Record<string, string> = {
 const getDetailPath = (maBm: string, idphieu: string): string => {
   switch (maBm) {
     case BM_CONFIG.CTD.CTD_BB_Phoinong:
+      // TaoPhieuPhoiNong render đầy đủ form; ChiTietPhieuPhoiNong chỉ có view đơn giản
       return `/chitietphieuphoinong/${idphieu}`;
     case BM_CONFIG.CTD.CTD_BB_Phoinguoi:
       // route không có :id param, component đọc state
@@ -160,9 +162,22 @@ const ThongKePhieuCTD = ({ type }: ThongKePhieuCTDProps) => {
             style={{ color: "#1976d2", cursor: "pointer" }}
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
-              const path = getDetailPath(record.maBm as string, record.idphieu);
+              const maBm = record.maBm as string;
+              const path = getDetailPath(maBm, record.idphieu);
               if (path === "/") return;
-              if (type === "viecdentoi") {
+              if (maBm === BM_CONFIG.CTD.CTD_BB_Phoinong) {
+                const userInfo = JSON.parse(
+                  localStorage.getItem("userinfo") || "null",
+                );
+                navigate(path, {
+                  state: {
+                    idphieu: record.idphieu,
+                    thongtinphieu: record,
+                    type: type === "viecdentoi" ? "viecdentoi" : "tao",
+                    userInfo,
+                  },
+                });
+              } else if (type === "viecdentoi") {
                 navigate(path, {
                   state: {
                     idphieu: record.idphieu,
