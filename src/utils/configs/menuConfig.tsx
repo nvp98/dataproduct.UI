@@ -51,6 +51,14 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub1-1.2",
+            label: (
+              <Tooltip title="Quản lý danh mục phụ liệu HRC1">
+                <NavLink to="/hrc1-phulieu">Phụ liệu HRC1</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       // {
@@ -453,6 +461,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub2-7-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+            label: (
+              <Tooltip title="BM.16/QT.05.10 (BB Tiêu hao lò thổi BOF)">
+                <NavLink to="/hrc1_tieuhaolothoi">
+                  BM.16/QT.05.10 (BB Tiêu hao lò thổi BOF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -761,6 +780,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub3-6-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+            label: (
+              <Tooltip title="BM.16/QT.05.10 (BB Tiêu hao lò thổi BOF)">
+                <NavLink to="/viecdentoi/hrc1_tieuhaolothoi">
+                  BM.16/QT.05.10 (BB Tiêu hao lò thổi BOF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -877,6 +907,17 @@ export const menuConfig = [
           },
           {
             key: "sub4-1-2",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+            label: (
+              <Tooltip title="BM.16/QT.05.10 (BB Tiêu hao lò thổi BOF)">
+                <NavLink to="/xemphieu/hrc1_tieuhaolothoi">
+                  BM.16/QT.05.10 (BB Tiêu hao lò thổi BOF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-1-3",
             maBM: BM_CONFIG.HRC1.THONGKE_HRC1,
             strictMaBM: true,
             label: (
@@ -885,6 +926,7 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          
         ],
       },
       {
@@ -1238,6 +1280,7 @@ export const menuConfig = [
           </Tooltip>
         ),
       },
+      
       // {
       //   key: "admin-4",
       //   icon: <UserOutlined />,

@@ -128,6 +128,11 @@ interface CustomTableHRCProps {
   lyDoValue?: string;
   onLyDoChange?: (value: string) => void;
   onSave?: () => Promise<void>;
+  /** API xóa dòng — mặc định dùng dlnmHRC2Api (giữ hành vi cũ cho các trang HRC2 chưa truyền prop này). */
+  deleteApi?: {
+    deleteRowByKey: (rowKey: number) => Promise<unknown>;
+    deleteRowNM: (rowKey: number) => Promise<unknown>;
+  };
 }
 
 const CHUYEN_TOI_CA = {
@@ -209,6 +214,7 @@ const CustomTableHRC = forwardRef(({
   lyDoValue = "",
   onLyDoChange,
   onSave,
+  deleteApi = dlnmHRC2Api,
 }: CustomTableHRCProps, ref: React.ForwardedRef<CustomTableHRCHandle>) => {
   const [rows, setRows] = useState<HRCTableRow[]>(initialData as HRCTableRow[]);
   const rowsRef = useRef<HRCTableRow[]>(rows);
@@ -352,10 +358,10 @@ const CustomTableHRC = forwardRef(({
     if (typeof id === "number") {
       try {
         if(record.IsNM === false){
-          await dlnmHRC2Api.deleteRowByKey(id);
+          await deleteApi.deleteRowByKey(id);
         }
         else{
-          await dlnmHRC2Api.deleteRowNM(id);
+          await deleteApi.deleteRowNM(id);
         }
         message.success("Xóa dòng thành công");
         setRows((prev) => {

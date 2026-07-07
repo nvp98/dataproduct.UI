@@ -58,6 +58,11 @@ export const MenuDataDashboard = [
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
         maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
       },
+      {
+        code: "hrc1_tieuhaolothoi",
+        title: "BM.16/QT.05.10 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI BOF",
+        maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+      },
     ],
   },
   {

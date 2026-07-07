@@ -1,141 +1,67 @@
-﻿import HRC1_BB_Lothoi from "../../../utils/BM_config/HRC1_BB_Lothoi.json";
-import {
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Form,
-  Input,
-  message,
-  Modal,
-  Popconfirm,
-  Row,
-  Select,
-  Space,
-  Table,
-  Tag,
-} from "antd";
-// import PdfMakeExample from "../../components/PdfMakeExample";
-import {
-  DeleteTwoTone,
-  EditTwoTone,
-  PlusOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
-import { useEffect, useState } from "react";
+import HRC1_BB_TieuHao_BOF from "../../../utils/BM_config/HRC1_BB_TieuHao_BOF.json";
+import { Button, Card, Space, Table, Tag } from "antd";
+import { EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
-import { PhieuApi } from "../../../services/PhieuApi";
-// Dữ liệu mẫu
+import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
+import { useMemo } from "react";
+import type { SearchPhieuResponseModel } from "../../../models/Phieu";
+import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 
-const TieuHaoLoThoi = () => {
-  const config = HRC1_BB_Lothoi;
+const TieuHaoLoThoi = ({ type }: { type?: string }) => {
+  const config = HRC1_BB_TieuHao_BOF;
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any[]>([]);
-  // const [filters, setFilters] = useState<any>({});
-  const [pagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
-  const [editModal, setEditModal] = useState<{ open: boolean; record?: any }>({
-    open: false,
-    record: undefined,
-  });
-  const [editForm] = Form.useForm();
-  // const editEditorRef = useRef<any>(null); // Ref for TinyMCE editor
-
-  // Thêm state cho bộ lọc ngày
-  const [dateRange, setDateRange] = useState<any>(null);
-
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
+  const userInfoStr = localStorage.getItem("userinfo");
+  const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
+  const isAdmin = userObj?.role?.includes("admin") || false;
 
-  const fetchData = async (page = 1, pageSize = 10, filters = {}) => {
-    setLoading(true);
-    try {
-      const res = await PhieuApi.getData({
-        MaBM: config.code,
-        NguoiTaoID: userObj.id,
-        page,
-        pageSize,
-        ...filters,
-      });
-      setData(res as any);
-      // setPagination({
-      //   current: page,
-      //   pageSize: pageSize,
-      //   total: res.totalRecords,
-      // });
-      // setFilters(filters); // lưu filter hiện tại
-    } catch (err) {
-      console.error("Error fetch tickets:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    // fetchData(pagination.current, pagination.pageSize, {
-    //   usercode: userObj?.maNV || "",
-    // });
-    fetchData();
-    // setData(mockData);
-    // setPagination({
-    //   current: 1,
-    //   pageSize: 10,
-    //   total: mockData.length,
-    // });
-  }, []);
-
-  // Xử lý khi nhấn nút Lọc
-  const handleFilter = () => {
-    const filterObj: any = {
-      usercode: userObj?.maNV || "",
-    };
-    if (dateRange && dateRange.length === 2) {
-      filterObj.fromDate = dateRange[0].format("YYYY-MM-DD");
-      filterObj.toDate = dateRange[1].format("YYYY-MM-DD");
-    }
-    // fetchData(1, pagination.pageSize, filterObj);
-  };
-  const statusConfig: Record<string, { color: string; text: string }> = {
+  const statusXL: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Chờ xử lý" },
-    1: { color: "pink", text: "Đang xử lý" },
-    2: { color: "green", text: "Hoàn tất" },
+    1: { color: "green", text: "Đã xử lý" },
+    2: { color: "pink", text: "Hủy" },
   };
 
-  // Xử lý khi xóa bộ lọc
-  const handleClearFilter = () => {
-    setDateRange(null);
-    // fetchData(1, pagination.pageSize, {
-    //   usercode: userObj?.maNV || "",
-    // });
-  };
+  const currentUserId: number | null =
+    userInfoObj?.iD_TaiKhoan ??
+    userInfoObj?.ID_TaiKhoan ??
+    userInfoObj?.idTaiKhoan ??
+    userInfoObj?.IdTaiKhoan ??
+    userObj?.iD_TaiKhoan ??
+    userObj?.ID_TaiKhoan ??
+    userObj?.idTaiKhoan ??
+    userObj?.IdTaiKhoan ??
+    null;
 
-  const handleDelete = (key: string) => {
-    setLoading(true);
-    setTimeout(() => {
-      setData((prev) => prev.filter((item) => item.key !== key));
-      setLoading(false);
-      message.success("Đã xóa ticket!");
-    }, 500);
-  };
-  const handleEdit = (record: any) => {
-    console.log("Edit record:", record);
-    setEditModal({ open: true, record });
-    editForm.setFieldsValue(record);
-  };
+  // [API mới] dùng userId + loaiVung — backend tách vùng 1 (bắt đầu) / vùng 2 (đến tôi)
+  const fixedFilters = useMemo(() => {
+    return {
+      userId: currentUserId,
+      loaiVung: type === "xemphieu" ? 3 : type === "viecdentoi" ? 2 : 1,
+    };
+  }, [currentUserId, type]);
 
-  const handleEditFinish = (values: any) => {
-    setData((prev) =>
-      prev.map((item) =>
-        item.key === editModal.record.key ? { ...item, ...values } : item
-      )
-    );
-    setEditModal({ open: false, record: undefined });
-    console.log("Edited values:", values);
-    message.success("Đã cập nhật ticket!");
+  const {
+    data,
+    loading,
+    pagination,
+    handleFilter,
+    handleClearFilter,
+    onPageChange,
+    getAllowedScopeOptions,
+  } = usePhieuSearchListHRC({
+    maBm: config.code as string,
+    fixedFilters,
+    persistKey: true,
+  });
+
+  const statusConfig = PHIEU_STATUS_CONFIG;
+
+  type TableRecord = SearchPhieuResponseModel & {
+    pheDuyet?: Array<Record<string, unknown>>;
+    [key: string]: unknown;
   };
 
   const columns = [
@@ -143,175 +69,217 @@ const TieuHaoLoThoi = () => {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
       key: "soPhieu",
-      render: (text: string, record: any) => (
+      render: (text: string, record: TableRecord) => (
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
-          onClick={() =>
-            navigate("/taotieuhaolothoi", {
-              state: { idphieu: record.idphieu },
-            })
-          }
+          onClick={() => {
+            if (type === "viecdentoi" || type === "xemphieu") {
+              return navigate("/hrc1_chitiettieuhaolothoi_bof", {
+                state: {
+                  idphieu: record.idphieu,
+                  pheduyet: record?.pheDuyet?.[0] ?? null,
+                },
+              });
+            } else {
+              return navigate("/hrc1_taotieuhaolothoi", {
+                state: { idphieu: record.idphieu },
+              });
+            }
+          }}
         >
           {text}
         </b>
       ),
-      width: 200,
+      width: 250,
     },
     {
       title: "Quy trình",
-      dataIndex: "quyTrinh",
-      key: "quyTrinh",
-      width: 220,
+      dataIndex: "maBm",
+      key: "maBm",
+      width: 200,
       ellipsis: true,
     },
     {
-      title: "Ca",
-      dataIndex: "ca",
-      key: "ca",
-      width: 220,
+      title: "Lò thổi",
+      dataIndex: "tenScope",
+      key: "tenScope",
+      width: 120,
       ellipsis: true,
-    },
-    {
-      title: "Xưởng sản xuất",
-      dataIndex: "xuong",
-      key: "xuong",
-      width: 220,
-      ellipsis: true,
+      render: (value: string | null | undefined, record: { scope?: number | string | null }) => {
+        if (value) return value;
+        if (record.scope !== null && record.scope !== undefined) return "Lò thổi " + String(record.scope);
+        return null;
+      },
     },
     {
       title: "Ngày lập",
       dataIndex: "ngaySX",
       key: "ngaySX",
-      width: 140,
+      width: 120,
       render: (value: string) =>
         value ? dayjs(value).format("DD/MM/YYYY") : "-",
     },
     {
-      title: "Người tạo",
-      dataIndex: "nguoiTao",
-      key: "nguoiTao",
-      // width: 220,
+      title: "Ca",
+      dataIndex: "ca",
+      key: "ca",
+      width: 100,
       ellipsis: true,
+      render: (value: number) => {
+        return value === 1 ? "Ca Ngày" : "Ca Đêm";
+      },
     },
     {
-      title: "Ngày tạo",
-      dataIndex: "ngayTao",
-      key: "ngayTao",
-      width: 140,
-      render: (value: string) =>
-        value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "-",
+      title: "Kíp",
+      dataIndex: "kip",
+      key: "kip",
+      width: 60,
+      ellipsis: true,
+      render: (value: string) => {
+        return value;
+      },
+    },
+    {
+      title: "Người tạo",
+      dataIndex: "pheDuyet",
+      key: "nguoiTao",
+      width: 230,
+      ellipsis: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      render: (_: any, record: TableRecord) => {
+        const ctdApproval = record.pheDuyet?.find(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (item: any) => item.capDuyet === 0,
+        );
+        const status = ctdApproval?.tinhTrang?.toString() || "0";
+        return (
+          <Tag color={statusXL[status]?.color || "default"}>
+            {ctdApproval?.hoVaTen?.toString()}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Người duyệt",
+      dataIndex: "pheDuyet",
+      key: "nguoiDuyetID",
+      width: 230,
+      ellipsis: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      render: (_: any, record: TableRecord) => {
+        const ctdApproval = record.pheDuyet?.find(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (item: any) => item.capDuyet === 1,
+        );
+        const status = ctdApproval?.tinhTrang?.toString() || "0";
+        return (
+          <Tag color={statusXL[status]?.color || "default"}>
+            {ctdApproval?.hoVaTen?.toString()}
+          </Tag>
+        );
+      },
     },
     {
       title: "Trạng thái",
-      dataIndex: "ticketStatus",
-      key: "ticketStatus",
-      width: 110,
+      dataIndex: "tinhTrang",
+      key: "tinhTrang",
+      width: 150,
       render: (status: string) => (
         <Tag color={statusConfig[status]?.color || "default"}>
           {statusConfig[status]?.text || status}
         </Tag>
       ),
     },
-    // {
-    //   title: "Người hỗ trợ",
-    //   dataIndex: "userAssigneeName",
-    //   key: "userAssigneeName",
-    //   width: 150,
-    //   render: (assignee: string) =>
-    //     assignee || <span style={{ color: "#aaa" }}>-</span>,
-    // },
-    {
-      title: "Ghi chú",
-      dataIndex: "note",
-      key: "note",
-      width: 150,
-    },
-
     {
       title: "Thao tác",
       key: "action",
       width: 90,
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: TableRecord) => (
         <Space>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa ticket này?"
-            okText="Xóa"
-            cancelText="Hủy"
-            onConfirm={() => handleDelete(record.key)}
-          >
-            <Button
-              type="text"
-              icon={<DeleteTwoTone twoToneColor="#ff4d4f" />}
-            />
-          </Popconfirm>
           <Button
             type="text"
-            icon={<EditTwoTone twoToneColor="#1890ff" />}
-            onClick={() => handleEdit(record)}
+            icon={<EyeOutlined twoToneColor="#1890ff" />}
+            onClick={() =>
+              navigate("/hrc1_chitiettieuhaolothoi_bof", {
+                state: { idphieu: record.idphieu },
+              })
+            }
           />
         </Space>
       ),
     },
   ];
 
+  const filterFieldsConfig = useMemo((): FilterFieldConfig[] => [
+    {
+      key: "soPhieu",
+      label: "Số phiếu",
+      type: "text",
+      placeholder: "Số phiếu...",
+    },
+    {
+      key: "ngaySX",
+      label: "Ngày sản xuất",
+      type: "dateRange",
+      placeholder: "Khoảng ngày",
+    },
+    {
+      key: "ca",
+      label: "Ca",
+      type: "select",
+      options: [
+        { label: "Ca ngày (1)", value: 1 },
+        { label: "Ca đêm (2)", value: 2 },
+      ],
+    },
+    {
+      key: "scope",
+      label: "Lò thổi",
+      type: "select",
+      options: getAllowedScopeOptions(config.code as string),
+    },
+    {
+      key: "tinhTrang",
+      label: "Tình trạng",
+      type: "select",
+      placeholder: "Chọn tình trạng",
+      options: Object.entries(statusConfig).map(([value, cfg]) => ({
+        label: cfg.text,
+        value: Number(value),
+      })),
+    },
+  ], [getAllowedScopeOptions, statusConfig]);
+
   return (
     <div>
-      <Card style={{ marginBottom: 16 }} title={config.title}>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
-            <Input placeholder="Số phiếu..." allowClear />
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <DatePicker.RangePicker
-              style={{ width: "100%" }}
-              format="DD/MM/YYYY"
-              placeholder={["Từ ngày", "Đến ngày"]}
-              value={dateRange}
-              onChange={setDateRange}
-            />
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              onClick={handleFilter}
-            >
-              Lọc
-            </Button>
-          </Col>
-          <Col>
-            <Button onClick={handleClearFilter}>Xóa bộ lọc</Button>
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => navigate("/taotieuhaolothoi")}
-            >
-              Tạo phiếu mới
-            </Button>
-          </Col>
-        </Row>
-      </Card>
+      <PhieuFilterCard
+        title={config.title}
+        onFilter={handleFilter}
+        onClearFilter={handleClearFilter}
+        filterFields={filterFieldsConfig}
+        mergeFilters={{ usercode: userObj?.maNV || "" }}
+        storageKey={true}
+        showCreateButton={isAdmin}
+        onCreateClick={() => {
+          navigate("/hrc1_taotieuhaolothoi");
+        }}
+        createButtonText="Tạo phiếu mới"
+        singleRow
+      />
       <Card>
-        <Table
+        <Table<TableRecord>
           columns={columns}
-          dataSource={data}
+          dataSource={data as TableRecord[]}
           loading={loading}
-          rowKey={(record) => record.idphieu || record.soPhieu || record.key} 
-          // pagination={{
-          //   total: data.length,
-          //   pageSize: pagination.pageSize,
-          //   showSizeChanger: true,
-          //   showQuickJumper: true,
-          //   showTotal: (total, range) =>
-          //     `${range[0]}-${range[1]} của ${total} ticket`,
-          // }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
             total: pagination.total,
-            // onChange: (page, pageSize) => fetchData(page, pageSize, filters), // phân trang
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} phiếu`,
+            onChange: onPageChange,
           }}
           scroll={{ x: 1100 }}
           summary={() => (
@@ -325,80 +293,6 @@ const TieuHaoLoThoi = () => {
           )}
         />
       </Card>
-      <Modal
-        title={
-          editModal.record
-            ? `Chỉnh sửa: ${editModal.record.soPhieu}`
-            : "Chỉnh sửa"
-        }
-        open={editModal.open}
-        onCancel={() => setEditModal({ open: false, record: undefined })}
-        footer={null}
-        destroyOnHidden
-      >
-        <Form layout="vertical" form={editForm} onFinish={handleEditFinish}>
-          <Form.Item
-            name="soPhieu"
-            label="Số phiếu"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="Nhập số phiếu" />
-          </Form.Item>
-          <Form.Item
-            name="quyTrinh"
-            label="Quy trình"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="Nhập quy trình" />
-          </Form.Item>
-          <Form.Item name="kip" label="Kíp" rules={[{ required: true }]}>
-            <Input placeholder="Nhập kíp" />
-          </Form.Item>
-          <Form.Item
-            name="xuong"
-            label="Xưởng sản xuất"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="Nhập xưởng" />
-          </Form.Item>
-          <Form.Item
-            name="nguoiTao"
-            label="Người tạo"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="Nhập người tạo" />
-          </Form.Item>
-          <Form.Item name="ngaytao" label="Ngày tạo">
-            <DatePicker showTime style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item
-            name="ticketStatus"
-            label="Trạng thái"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={[
-                { value: "0", label: "Chờ xử lý" },
-                { value: "1", label: "Đang xử lý" },
-                { value: "2", label: "Hoàn tất" },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea rows={3} placeholder="Nhập ghi chú" />
-          </Form.Item>
-          <Space style={{ display: "flex", justifyContent: "end" }}>
-            <Button
-              onClick={() => setEditModal({ open: false, record: undefined })}
-            >
-              Hủy
-            </Button>
-            <Button type="primary" htmlType="submit">
-              Lưu
-            </Button>
-          </Space>
-        </Form>
-      </Modal>
     </div>
   );
 };

@@ -30,6 +30,12 @@ export type AdjustColumnMeta = {
 
 const DEFAULT_EXCLUDED_KEYS = ["meThoi", "macThep", "ghiChu", "stt", "STT"];
 
+// Cột "thêm tay" qua nút Thêm cột điều chỉnh: manual_col_* (HRC2, dựa Header_Key) hoặc
+// phuLieu_* khi được lưu trong nhóm meta "adjust" (HRC1, dựa HRC1_PhuLieuNM — xem TaoTieuHaoLoThoi.tsx).
+// HRC2 không bao giờ lưu phuLieu_* vào nhóm "adjust" (chỉ dùng ở nhóm BOF_PhuGia/others), nên broaden này an toàn cho cả 2 module.
+const isManuallyAddedAdjustDataIndex = (dataIndex?: string | null): boolean =>
+  (dataIndex ?? "").startsWith("manual_col_") || (dataIndex ?? "").startsWith("phuLieu_");
+
 const canCurrentUserMap = (): boolean => {
   try {
     if (typeof window === "undefined") return false;
@@ -91,11 +97,10 @@ export const hrc2TableService = {
     prev: AdjustColumnMeta[] = [],
     incoming: AdjustColumnMeta[] = []
   ): AdjustColumnMeta[] {
-    // Chuẩn hoá: manual_col_* luôn xem như cột thêm tay để được editable (render autocomplete)
+    // Chuẩn hoá: cột thêm tay luôn xem như vậy để được editable (render autocomplete)
     const normalize = (m: AdjustColumnMeta): AdjustColumnMeta => ({
       ...m,
-      isManuallyAdded:
-        m.isManuallyAdded === true || (m.dataIndex ?? "").startsWith("manual_col_"),
+      isManuallyAdded: m.isManuallyAdded === true || isManuallyAddedAdjustDataIndex(m.dataIndex),
     });
 
     const byDataIndex = new Map<string, AdjustColumnMeta>();
@@ -250,7 +255,7 @@ export const hrc2TableService = {
       headerKeyId: item.headerKeyId ?? null,
       headerKeyLabel: item.label,
       width: item.width,
-      isManuallyAdded: (item.dataIndex ?? "").startsWith("manual_col_"),
+      isManuallyAdded: isManuallyAddedAdjustDataIndex(item.dataIndex),
     }));
   },
 

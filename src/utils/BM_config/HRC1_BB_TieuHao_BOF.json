@@ -1,0 +1,253 @@
+{
+  "code": "HRC1_BB_TieuHao_BOF",
+  "prefix": "BBTH_BOF",
+  "loaiBm": "BOF",
+  "title": "BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.08/QT.05.15",
+    "effectiveDate": "10/01/2025",
+    "revision": "00"
+  },
+
+  "headerFields": [
+    {
+      "label": "Lò thổi",
+      "type": "select",
+      "key": "scope",
+      "required": true,
+      "options": [
+        { "label": "Lò thổi 1", "value": 1, "tenScope": "Lò thổi 1" },
+        { "label": "Lò thổi 2", "value": 2, "tenScope": "Lò thổi 2" },
+        { "label": "Lò thổi 3", "value": 3, "tenScope": "Lò thổi 3" },
+        { "label": "Lò thổi 4", "value": 4, "tenScope": "Lò thổi 4" },
+        { "label": "Lò thổi 5", "value": 5, "tenScope": "Lò thổi 5" }
+      ]
+    },
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca ngày", "value": 1 },
+        { "label": "Ca đêm", "value": 2 }
+      ]
+    },
+    {
+      "label": "Ngày sản xuất",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết tiêu hao nấu luyện lò thổi",
+      "key": "table1",
+      "lyDo": { "label": "Lý do điều chỉnh" },
+      "columns": [
+        {
+          "title": "STT",
+          "dataIndex": "stt",
+          "width": 60,
+          "editable": false,
+          "readonly": true
+        },
+        {
+          "title": "Mẻ thổi số",
+          "dataIndex": "meThoi",
+          "width": 115,
+          "editable": false,
+          "readonly": true
+        },
+        {
+          "title": "Mác thép",
+          "dataIndex": "macThep",
+          "width": 130,
+          "editable": false,
+          "readonly": true
+        },
+        {
+          "title": "Nguyên liệu đầu vào (tấn)",
+          "children": [
+            {
+              "title": "Gang lỏng",
+              "dataIndex": "klGang",
+              "editable": false,
+              "width": 90,
+              "format": "number-group",
+              "align": "right",
+              "sum": true,
+              "readonly": true
+            },
+            {
+              "title": "Thép phế",
+              "dataIndex": "klThepPhe",
+              "editable": false,
+              "width": 90,
+              "format": "number-group",
+              "align": "right",
+              "sum": true,
+              "readonly": true
+            },
+            {
+              "title": "Thép phế (gang)",
+              "dataIndex": "klThepPheGang",
+              "editable": false,
+              "readonly": true,
+              "width": 110,
+              "format": "number-group",
+              "align": "right",
+              "sum": true
+            }
+          ]
+        },
+        {
+          "title": "Phụ gia công nghệ (Kg)",
+          "dataIndex": "BOF_PhuGia",
+          "editable": false,
+          "sum": true
+        },
+        {
+          "dataIndex": "dieuChinh"
+        },
+        {
+          "title": "Khí (nhập tay)",
+          "children": [
+            {
+              "title": "Oxy (m3)",
+              "dataIndex": "o2",
+              "width": 100,
+              "format": "number-group",
+              "align": "right",
+              "editable": true,
+              "sum": true
+            },
+            {
+              "title": "Nitơ (m3)",
+              "dataIndex": "n2",
+              "width": 100,
+              "format": "number-group",
+              "align": "right",
+              "editable": true,
+              "sum": true
+            },
+            {
+              "title": "Argon (m3)",
+              "dataIndex": "ar",
+              "width": 100,
+              "format": "number-group",
+              "align": "right",
+              "editable": true,
+              "sum": true
+            }
+          ]
+        },
+        {
+          "title": "Que",
+          "children": [
+            {
+              "title": "Que lấy mẫu",
+              "dataIndex": "queLayMau",
+              "width": 90,
+              "align": "right",
+              "editable": true
+            },
+            {
+              "title": "Que đo nhiệt",
+              "dataIndex": "queDoNhiet",
+              "width": 90,
+              "align": "right",
+              "editable": true
+            }
+          ]
+        },
+        {
+          "title": "Ghi chú",
+          "dataIndex": "ghiChu",
+          "width": 120,
+          "editable": true
+        }
+      ]
+    }
+  ],
+
+  "layout2": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết tiêu hao nấu luyện lò thổi (bảng 2)",
+      "key": "table2",
+      "columns": [
+        {
+          "title": "",
+          "dataIndex": "materialName",
+          "isLabel": true
+        },
+        {
+          "title": "Tồn đầu kíp",
+          "dataIndex": "tonDauKip",
+          "format": "number-group",
+          "align": "right"
+        },
+        {
+          "title": "Nhập trong kíp",
+          "dataIndex": "nhapTrongKip",
+          "format": "number-group",
+          "align": "right"
+        },
+        {
+          "title": "Tồn cuối kíp",
+          "dataIndex": "tonCuoiKip",
+          "format": "number-group",
+          "align": "right"
+        }
+      ],
+      "initialData": [
+        { "key": "1", "materialName": "Quặng Fe" },
+        { "key": "2", "materialName": "Vôi" },
+        { "key": "3", "materialName": "Dolo" },
+        { "key": "4", "materialName": "Dolomite Sống" },
+        { "key": "5", "materialName": "Vôi LF" },
+        { "key": "6", "materialName": "SiMn" },
+        { "key": "7", "materialName": "FeSi" },
+        { "key": "8", "materialName": "Than" },
+        { "key": "9", "materialName": "FeMn" },
+        { "key": "10", "materialName": "HCFeMn75" },
+        { "key": "11", "materialName": "LDSF" },
+        { "key": "12", "materialName": "Al" },
+        { "key": "13", "materialName": "Tăng C" }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+    "Biên bản này được lập thành 2 bản có giá trị như nhau: bên giao và bên nhận mỗi bên giữ 1 bản."
+  ],
+
+  "signatures": [
+    {
+      "label": "Trưởng kíp",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Duyet",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Người lập",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Kip",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 0,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

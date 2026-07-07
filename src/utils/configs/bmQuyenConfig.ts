@@ -107,6 +107,18 @@ export const bmQuyenConfig = {
       nhom: "NM.HRC1",
     },
     {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+      tenBm: "Biên bản tiêu hao nấu luyện lò thổi BOF",
+      nhom: "NM.HRC1",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Lò thổi 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Lò thổi 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Lò thổi 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Lò thổi 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Lò thổi 5" },
+      ]
+    },
+    {
       maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
       tenBm: "HRC2 -Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC2",
@@ -203,6 +215,18 @@ export const bmQuyenConfig = {
       scope: [
         { maKhuVuc: "TIEUHAO", tenKhuVuc: "Tab: Thống kê tiêu hao HRC2" },
         { maKhuVuc: "BBGN", tenKhuVuc: "Tab: Thống kê BBGN thép lỏng" },
+      ]
+    },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+      tenBm: "HRC1 - Biên bản tiêu hao nấu luyện lò thổi BOF",
+      nhom: "NM.HRC1",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Lò thổi 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Lò thổi 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Lò thổi 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Lò thổi 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Lò thổi 5" },
       ]
     }
 
