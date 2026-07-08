@@ -69,8 +69,6 @@ const ChiTietGN = () => {
   );
   const hasQuyenXacNhan = hasQuyenForScope(2); // quyenChucNang=2 (PHEDUYET)
   const hasQuyenChot = hasQuyenForScope(3);    // quyenChucNang=3 (CHOT)
-  // Quyền riêng (extraQuyens) của HRC1_BBGN_ThepLong — value 6 = "Xác nhận PCN"
-  const hasQuyenXacNhanPCN = hasQuyenForScope(6);
 
   // loadData dùng loSo/tlSo làm dependency → tự reload khi scope thay đổi
   const loadData = useCallback(async () => {
@@ -106,7 +104,7 @@ const ChiTietGN = () => {
   }, [loadData, data]);
 
   const effectiveCanChot = isPKHAdmin || hasQuyenChot;
-  const canDoAnything = effectiveCanChot || hasQuyenXacNhan || hasQuyenXacNhanPCN;
+  const canDoAnything = effectiveCanChot || hasQuyenXacNhan;
 
   const congDoanLabel = data ? getGroupLabel(data.maBm ?? "") : "";
   const scopeName = data ? getScopeName(data.maBm ?? "", data.scope ?? 0) : "";
@@ -289,7 +287,6 @@ const ChiTietGN = () => {
                     onExtraChange={canDoAnything ? setDucExtraControls : undefined}
                     canXacNhan={hasQuyenXacNhan}
                     canChot={effectiveCanChot}
-                    canXacNhanPCN={hasQuyenXacNhanPCN}
                     tableScrollY="calc(100vh - 440px)"
                   />
                 </>

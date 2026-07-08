@@ -78,15 +78,6 @@ const tinhTrangPCNTag = (me: Pick<HRC1_MeThepVm, "isThuNghiem" | "trangThaiPCN">
   return <Tag color="default" style={{ fontSize: 11 }}>Chờ</Tag>;
 };
 
-// Cột riêng chỉ hiện cho user có quyền extra "Xác nhận PCN" (canXacNhanPCN) — người không có
-// quyền này không cần biết mẻ đã bị khóa chốt PCN hay chưa.
-const tinhTrangChotPCNTag = (me: Pick<HRC1_MeThepVm, "isThuNghiem" | "trangThaiChotPCN">) => {
-  if (me.isThuNghiem !== true) return "";
-  return me.trangThaiChotPCN === true
-    ? <Tag color="green" style={{ fontSize: 11 }}>Đã chốt</Tag>
-    : <Tag color="default" style={{ fontSize: 11 }}>Chưa chốt</Tag>;
-};
-
 // Tính klThepLong tự động
 const calcKlThepLong = (dichChuyen: string | null | undefined, kllf: number | null | undefined, klLan1: number | null | undefined, klLan2: number | null | undefined): number | null => {
   if (!klLan2) return null;
@@ -219,6 +210,7 @@ export const LoThoiPanel = ({
   const [edits, setEdits] = useState<Record<number, Partial<HRC1_LoThoiUpdateRequest>>>({});
   const [saving, setSaving] = useState(false);
   const [xoaBusy, setXoaBusy] = useState<Set<number>>(new Set());
+  const [showChuyenMeCols, setShowChuyenMeCols] = useState(false);
 
   const ghostCount = phieuData.danhSachMe.filter((m) => m.isGhost).length;
   const dirtyCount = Object.keys(edits).length;
@@ -316,6 +308,9 @@ export const LoThoiPanel = ({
           const l2   = ("klLan2"      in req ? req.klLan2      : me?.klLan2)      ?? undefined;
           const computed = calcKlThepLong(dich, kllf, me?.klLan1 ?? undefined, l2);
           if (computed != null) finalReq = { ...finalReq, klThepLong: computed };
+          // Chuyển mẻ chỉ có ý nghĩa khi lên thẳng — luôn gửi lại để giữ đúng trạng thái hiện tại (self = không chuyển)
+          const editedChuyen = "chuyenVeMeId" in req ? req.chuyenVeMeId : me?.chuyenVeMeId;
+          finalReq = { ...finalReq, chuyenVeMeId: editedChuyen ?? me?.id ?? null };
         }
         return HRC1Api.updateLoThoi(meId, finalReq);
       }));
@@ -583,6 +578,42 @@ export const LoThoiPanel = ({
       },
     },
     { title: "Máy đúc",   dataIndex: "tenMayDucDich", width: 90, render: (v) => <Input size="small" style={{ width: 84 }} value={v ?? ""} disabled /> },
+    ...(showChuyenMeCols ? [
+      {
+        title: "Chuyển mẻ", key: "chuyenVeMeId", width: 150,
+        onCell: (me: HRC1_MeThepVm) => {
+          const editedVal = edits[me.id]?.chuyenVeMeId;
+          const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
+          return effectiveId != null && effectiveId !== me.id ? { style: { background: "#fffbe6" } } : {};
+        },
+        render: (_: unknown, me: HRC1_MeThepVm) => {
+          if (me.dichChuyen !== "len_thang") return "—";
+          return (
+            <ChuyenMeCell
+              serverMaMe={me.chuyenVeMaMe ?? null}
+              ownMaMe={me.maMe ?? null}
+              locked={lk(me)}
+              onSet={(mid) => set(me.id, "chuyenVeMeId", mid)}
+            />
+          );
+        },
+      },
+      {
+        title: "Máy đúc chuyển", key: "tenMayDucChuyen", width: 110,
+        onCell: (me: HRC1_MeThepVm) => {
+          const editedVal = edits[me.id]?.chuyenVeMeId;
+          const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
+          return effectiveId != null && effectiveId !== me.id ? { style: { background: "#fffbe6" } } : {};
+        },
+        render: (_: unknown, me: HRC1_MeThepVm) => {
+          if (me.dichChuyen !== "len_thang") return "—";
+          const editedChuyen = edits[me.id]?.chuyenVeMeId;
+          const effectiveChuyenId = editedChuyen !== undefined ? editedChuyen : me.chuyenVeMeId;
+          const isSelf = effectiveChuyenId == null || effectiveChuyenId === me.id;
+          return isSelf ? (me.tenMayDucDich ?? "—") : (me.tenMayDucChuyen ?? "—");
+        },
+      },
+    ] as TableColumnsType<HRC1_MeThepVm> : []),
     { title: "Phân loại", dataIndex: "phanLoai",      width: 80, render: (v) => <Input size="small" style={{ width: 74 }} value={v ?? ""} disabled /> },
     { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 110, render: (v) => <Input size="small" style={{ width: 110 }} value={v ?? ""} disabled /> },
     {
@@ -622,10 +653,19 @@ export const LoThoiPanel = ({
 
   return (
     <>
+      <div style={{ marginBottom: 6, textAlign: "right" }}>
+        <Button
+          size="small"
+          icon={showChuyenMeCols ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+          onClick={() => setShowChuyenMeCols((v) => !v)}
+        >
+          {showChuyenMeCols ? "Ẩn cột chuyển mẻ" : "Hiện cột chuyển mẻ"}
+        </Button>
+      </div>
       <MeThepTable
         columns={columns}
         dataSource={displayData}
-        scrollX={1850}
+        scrollX={showChuyenMeCols ? 2110 : 1850}
         scrollY="calc(100vh - 207px)"
         onRow={(me) => ({
           style: me.isGhost ? { background: "#fff7e6", opacity: 0.85 } : undefined,
@@ -1235,7 +1275,6 @@ export const DucPanel = ({
   onExtraChange,
   canXacNhan = true,
   canChot = true,
-  canXacNhanPCN = true,
   tableScrollY = "calc(100vh - 360px)",
 }: {
   phieuData: HRC1_PhieuDataVm;
@@ -1244,7 +1283,6 @@ export const DucPanel = ({
   onExtraChange?: (node: ReactNode) => void;
   canXacNhan?: boolean;
   canChot?: boolean;
-  canXacNhanPCN?: boolean;
   tableScrollY?: string | number;
 }) => {
   const [selected, setSelected] = useState<number[]>([]);
@@ -1274,25 +1312,6 @@ export const DucPanel = ({
       return mes.filter((m) => !m.isChot && (checkDucReady(m).length === 0 || (m.trangThaiDuc ?? 0) >= 1));
     return mes.filter((m) => !m.isChot && checkDucReady(m).length === 0);
   }, [phieuData.danhSachMe, canXacNhan, canChot]);
-
-  // Cột tick dùng chung cho cả Xác nhận/Chốt và Xác nhận PCN — không disable theo IsThuNghiem
-  // nữa, chỉ kiểm tra hợp lệ PCN (thử nghiệm, chưa chốt) lúc bấm nút và cảnh báo mẻ không hợp lệ.
-  const validateSelectedForPCN = useCallback((): boolean => {
-    const selectedMes = phieuData.danhSachMe.filter((m) => selected.includes(m.id));
-
-    const daChotPCN = selectedMes.filter((m) => m.trangThaiChotPCN === true);
-    if (daChotPCN.length > 0) {
-      message.warning(`Mẻ đã chốt PCN, không thể sửa: ${daChotPCN.map((m) => m.maMe ?? m.id).join(", ")}`);
-      return false;
-    }
-
-    const invalid = selectedMes.filter((m) => !(m.isThuNghiem === true && !m.isChot));
-    if (invalid.length > 0) {
-      message.warning(`Chỉ áp dụng PCN cho mẻ thử nghiệm, chưa chốt — không hợp lệ: ${invalid.map((m) => m.maMe ?? m.id).join(", ")}`);
-      return false;
-    }
-    return true;
-  }, [selected, phieuData.danhSachMe]);
 
   const batchRef = useRef(batchAction);
   batchRef.current = batchAction;
@@ -1350,55 +1369,6 @@ export const DucPanel = ({
               </Button>
             </Popconfirm>
 
-          </>
-        )}
-        {canXacNhanPCN && (
-          <>
-            <Popconfirm
-              title={`Xác nhận PCN ${selected.length} mẻ?`}
-              disabled={selected.length === 0}
-              onConfirm={async () => {
-                if (!validateSelectedForPCN()) return;
-                await batchRef.current?.(async () => {
-                  await HRC1Api.xacNhanPCN(selected);
-                });
-                message.success("Đã xác nhận PCN");
-              }}
-            >
-              <Button type="primary" disabled={selected.length === 0}>
-                Xác nhận PCN ({selected.length})
-              </Button>
-            </Popconfirm>
-            <Popconfirm
-              title={`Không xác nhận PCN ${selected.length} mẻ?`}
-              disabled={selected.length === 0}
-              onConfirm={async () => {
-                if (!validateSelectedForPCN()) return;
-                await batchRef.current?.(async () => {
-                  await HRC1Api.khongXacNhanPCN(selected);
-                });
-                message.success("Đã đặt Không xác nhận PCN");
-              }}
-            >
-              <Button danger disabled={selected.length === 0}>
-                Không xác nhận PCN ({selected.length})
-              </Button>
-            </Popconfirm>
-            <Popconfirm
-              title={`Reset xác nhận PCN ${selected.length} mẻ?`}
-              disabled={selected.length === 0}
-              onConfirm={async () => {
-                if (!validateSelectedForPCN()) return;
-                await batchRef.current?.(async () => {
-                  await HRC1Api.resetXacNhanPCN(selected);
-                });
-                message.success("Đã reset xác nhận PCN");
-              }}
-            >
-              <Button disabled={selected.length === 0}>
-                Reset xác nhận PCN ({selected.length})
-              </Button>
-            </Popconfirm>
           </>
         )}
         {canChot && (
@@ -1463,7 +1433,7 @@ export const DucPanel = ({
         )}
       </Space>
     );
-  }, [onExtraChange, readOnly, canXacNhan, canChot, canXacNhanPCN, selected, validateSelectedForPCN, idMayDuc, phieuData.idPhieu]);
+  }, [onExtraChange, readOnly, canXacNhan, canChot, selected, idMayDuc, phieuData.idPhieu]);
 
   const columns: TableColumnsType<HRC1_MeThepVm> = [
     {
@@ -1503,10 +1473,6 @@ export const DucPanel = ({
       title: "Tình trạng PCN", key: "tinhTrangPCN", width: 90, fixed: "left",
       render: (_, me) => tinhTrangPCNTag(me),
     },
-    ...(canXacNhanPCN ? [{
-      title: "Tình trạng chốt PCN", key: "tinhTrangChotPCN", width: 110, fixed: "left" as const,
-      render: (_: unknown, me: HRC1_MeThepVm) => tinhTrangChotPCNTag(me),
-    }] : []),
     { title: "Mẻ thổi",  dataIndex: "maMe",         width: 90, fixed: "left", render: (v) => v ?? "" },
     { title: "Thùng số", dataIndex: "thungSo",      width: 50, render: (v) => v ?? "" },
     { title: "Thời gian",dataIndex: "thoiGian",     width: 65, render: fmtTime },
@@ -1561,13 +1527,6 @@ export const DucPanel = ({
           locked={readOnly || !!me.isChot || !(canXacNhan || canChot)} field="duc" />
       ),
     },
-    {
-      title: "Ghi chú PCN", key: "ghiChuPCN", width: 90,
-      render: (_, me) => (
-        <GhiChuInput meId={me.id} value={me.ghiChuPCN}
-          locked={readOnly || !!me.isChot || !canXacNhanPCN} field="pcn" />
-      ),
-    },
     { title: "Ghi chú LT", key: "ghiChuLo2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo ?? "" },
     { title: "Ghi chú TL", key: "ghiChuTL2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuTL ?? "" },
   ];
@@ -1583,28 +1542,25 @@ export const DucPanel = ({
         summary={(pageData) => {
           const total = Math.round(pageData.reduce((s, m) => s + (m.klThepLong ?? 0), 0) * 100) / 100;
           const totalChot = Math.round(pageData.reduce((s, m) => s + (m.klThepLongChot ?? 0), 0) * 100) / 100;
-          // Cột "Tình trạng chốt PCN" chỉ chèn thêm khi canXacNhanPCN — cộng offset vào
-          // colSpan/index để các cell tổng không bị lệch cột.
-          const extraCol = canXacNhanPCN ? 1 : 0;
           return (
             <Table.Summary fixed>
               <Table.Summary.Row>
-                {/* fixed-left: chk / STT / tinhTrang / tinhTrangPCN / (tinhTrangChotPCN) / maMe */}
-                <Table.Summary.Cell index={0} colSpan={5 + extraCol}>
+                {/* fixed-left: chk / STT / tinhTrang / tinhTrangPCN / maMe */}
+                <Table.Summary.Cell index={0} colSpan={5}>
                   <strong>Tổng</strong>
                 </Table.Summary.Cell>
                 {/* thungSo → klLan3 (6 cols) */}
-                <Table.Summary.Cell index={5 + extraCol} colSpan={6} />
+                <Table.Summary.Cell index={5} colSpan={6} />
                 {/* klThepLong */}
-                <Table.Summary.Cell index={11 + extraCol}>
+                <Table.Summary.Cell index={11}>
                   <strong>{total}</strong>
                 </Table.Summary.Cell>
                 {/* klThepLongChot */}
-                <Table.Summary.Cell index={12 + extraCol}>
+                <Table.Summary.Cell index={12}>
                   <strong>{totalChot > 0 ? totalChot : ""}</strong>
                 </Table.Summary.Cell>
-                {/* remaining 12 cols */}
-                <Table.Summary.Cell index={13 + extraCol} colSpan={12} />
+                {/* remaining 11 cols */}
+                <Table.Summary.Cell index={13} colSpan={11} />
               </Table.Summary.Row>
             </Table.Summary>
           );
@@ -1690,8 +1646,6 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
   );
   const hasQuyenXacNhanBBGN = hasQuyenForScope(2);
   const hasQuyenChotBBGN = hasQuyenForScope(3);
-  // Quyền riêng (extraQuyens) của HRC1_BBGN_ThepLong — value 6 = "Xác nhận PCN"
-  const hasQuyenXacNhanPCN = hasQuyenForScope(6);
 
   // ── Load nội dung 1 phiếu ────────────────────────────────────────────────────
   const loadPhieu = useCallback(async (
@@ -1942,7 +1896,6 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
                 onExtraChange={setCardExtra}
                 canXacNhan={hasQuyenXacNhanBBGN}
                 canChot={isPKHAdmin || hasQuyenChotBBGN}
-                canXacNhanPCN={hasQuyenXacNhanPCN}
               />
             )}
           </Card>

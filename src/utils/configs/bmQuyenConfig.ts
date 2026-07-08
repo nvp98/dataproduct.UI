@@ -152,9 +152,6 @@ export const bmQuyenConfig = {
         { khuVucPhu: "TL4", tenKhuVuc: "Tinh luyện 4", targetMaBm: "HRC1_TinhLuyen", targetScope: "4" },
         { khuVucPhu: "TL5", tenKhuVuc: "Tinh luyện 5", targetMaBm: "HRC1_TinhLuyen", targetScope: "5" },
       ],
-      extraQuyens: [
-        { value: 6, label: "Xác nhận PCN" , vung: SIDEBAR_CONST.VUNG_2 },
-      ]
     },
     {
       maBm: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
@@ -206,6 +203,9 @@ export const bmQuyenConfig = {
       scope: [
         { maKhuVuc: "TIEUHAO", tenKhuVuc: "Tab: Thống kê tiêu hao HRC1" },
         { maKhuVuc: "BBGN", tenKhuVuc: "Tab: Thống kê BBGN thép lỏng" },
+      ],
+      extraQuyens: [
+        { value: 6, label: "Xác nhận PCN" , vung: SIDEBAR_CONST.VUNG_3 },
       ]
     },
     {

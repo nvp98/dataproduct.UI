@@ -255,6 +255,7 @@ export interface HRC1_LoThoiUpdateRequest {
   isThuNghiem?: boolean | null;
   isTrungMeThoi?: boolean | null;
   ghiChuLo?: string | null;
+  chuyenVeMeId?: number | null;  // chỉ áp dụng khi len_thang; null = không chuyển
 }
 
 export interface HRC1_TinhLuyenUpdateRequest {
