@@ -212,6 +212,10 @@ export const LoThoiPanel = ({
   const [xoaBusy, setXoaBusy] = useState<Set<number>>(new Set());
   const [showChuyenMeCols, setShowChuyenMeCols] = useState(false);
 
+  // Mỗi lần phieuData được nạp lại từ server (mở lại phiếu, "Làm mới", đổi lò...) phải bỏ các
+  // edit cục bộ chưa lưu — nếu không, edits cũ sẽ tiếp tục đè lên dữ liệu mới nhất khi render.
+  useEffect(() => { setEdits({}); }, [phieuData]);
+
   const ghostCount = phieuData.danhSachMe.filter((m) => m.isGhost).length;
   const dirtyCount = Object.keys(edits).length;
 
@@ -237,13 +241,25 @@ export const LoThoiPanel = ({
     return undefined;
   };
 
-  const setDich = (meId: number, val: string | undefined) => {
+  const setDich = (me: HRC1_MeThepVm, val: string | undefined) => {
+    const meId = me.id;
     if (!val) return;
     if (val.startsWith("TL:")) {
       setEdits((p) => {
-        // Khi chuyển sang tinh_luyen: xóa idMayDucDich, reset thoiGian và klLan2 (chỉ dùng cho len_thang)
+        const wasLenThang = ((p[meId] && "dichChuyen" in p[meId]) ? p[meId].dichChuyen : me.dichChuyen) === "len_thang";
+        // Khi chuyển sang tinh_luyen: xóa idMayDucDich.
+        // Chỉ reset thoiGian/klLan2 nếu trước đó là len_thang (đó là dữ liệu lò thổi tự nhập khi lên thẳng);
+        // nếu mẻ đã ở tinh luyện từ trước thì đây là các cột TL đang lưu dữ liệu đã nhập, không được xóa.
         const { idMayDucDich: _removed, ...rest } = p[meId] ?? {};
-        return { ...p, [meId]: { ...rest, dichChuyen: "tinh_luyen", tlDichSo: Number(val.slice(3)), thoiGian: null, klLan2: null } };
+        return {
+          ...p,
+          [meId]: {
+            ...rest,
+            dichChuyen: "tinh_luyen",
+            tlDichSo: Number(val.slice(3)),
+            ...(wasLenThang ? { thoiGian: null, klLan2: null } : {}),
+          },
+        };
       });
     } else {
       setEdits((p) => ({ ...p, [meId]: { ...p[meId], dichChuyen: "len_thang", tlDichSo: null, idMayDucDich: Number(val.slice(3)) } }));
@@ -545,7 +561,7 @@ export const LoThoiPanel = ({
             value={getDichEncoded(me) ?? undefined}
             options={optsForMe}
             placeholder="Chọn đích..."
-            onChange={(v) => setDich(me.id, v)} />
+            onChange={(v) => setDich(me, v)} />
         );
       },
     },
@@ -631,7 +647,10 @@ export const LoThoiPanel = ({
     { title: "Ghi chú đúc", key: "ghiChuDuc", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
   ];
 
-  const isLocked = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiLo ?? 0) >= 1 || !!me.isGhost;
+  // Đúc "xác nhận" chỉ là trạng thái tạm (còn "Hủy xác nhận" được) — không khóa lò thổi ở bước này.
+  // Chỉ khi mẻ đã CHỐT (isChot, khóa vĩnh viễn) mới thực sự cấm nhập/lưu. Khớp với klLan3Locked bên dưới
+  // (readOnly || isChot) và với guard IsChot ở BE UpdateMeAsync.
+  const isLocked = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiLo ?? 0) >= 1 || !!me.isGhost || me.trangThaiDuc === 1;
   const columns = buildColumns(isLocked);
 
   // Merge edits vào từng row để rc-table nhận biết thay đổi và re-render cell klThepLong
@@ -699,6 +718,10 @@ export const TinhLuyenPanel = ({
 }) => {
   const [edits, setEdits] = useState<Record<number, Partial<HRC1_TinhLuyenUpdateRequest>>>({});
   const [saving, setSaving] = useState(false);
+
+  // Mỗi lần phieuData được nạp lại từ server (mở lại phiếu, "Làm mới", đổi TL...) phải bỏ các
+  // edit cục bộ chưa lưu — nếu không, edits cũ sẽ tiếp tục đè lên dữ liệu mới nhất khi render.
+  useEffect(() => { setEdits({}); }, [phieuData]);
   const [selectedHuyNhan, setSelectedHuyNhan] = useState<number[]>([]);
   const [huyNhanBusy, setHuyNhanBusy] = useState(false);
   const [choNhanRefreshKey, setChoNhanRefreshKey] = useState(0);
@@ -1195,7 +1218,6 @@ export const TinhLuyenPanel = ({
   if (!readOnly && !tlSo) return (
     <Empty description="Chọn tinh luyện để xem và nhận mẻ" style={{ padding: "40px 0" }} />
   );
-
   return (
     <Row gutter={16} align="top" style={{ flexWrap: "nowrap" }}>
       {/* Trái: Mẻ chờ nhận */}
@@ -1295,10 +1317,14 @@ export const DucPanel = ({
     [phieuData.danhSachMe, phieuData.ca, phieuData.ngaySX]
   );
 
-  const batchAction = useCallback(async (fn: () => Promise<unknown>) => {
-    if (selected.length === 0) { message.warning("Chưa chọn mẻ nào"); return; }
-    try { await fn(); setSelected([]); await onReload(); }
-    catch (e: any) { message.error(e?.message ?? "Lỗi thao tác"); }
+  const batchAction = useCallback(async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
+    if (selected.length === 0) { message.warning("Chưa chọn mẻ nào"); return undefined; }
+    try {
+      const res = await fn();
+      setSelected([]);
+      await onReload();
+      return res;
+    } catch (e: any) { message.error(e?.message ?? "Lỗi thao tác"); return undefined; }
   }, [selected, onReload]);
 
   // vùng 4 (chốt only): chọn mẻ đã xác nhận (trangThaiDuc >= 1), kể cả đã chốt (cho hủy chốt)
@@ -1342,11 +1368,20 @@ export const DucPanel = ({
               title={`Xác nhận ${selected.length} mẻ?`}
               disabled={selected.length === 0}
               onConfirm={async () => {
-              await batchRef.current?.(async () => {
-                await HRC1Api.xacNhanDuc(selected);
-              });
-
-              message.success("Đã xác nhận");
+              const result = await batchRef.current?.(() => HRC1Api.xacNhanDuc(selected));
+              if (!result) return;
+              // BE re-check điều kiện ngay lúc ghi DB — mẻ có thể vừa bị LT/TL xóa dữ liệu bắt buộc
+              // sau khi FE đã load, nên dù checkbox đang bật vẫn có thể rơi vào thatBai. onReload() ở
+              // batchAction đã tải lại dữ liệu mới nhất, chỉ cần báo cho user biết mẻ nào không xác nhận được.
+              if (result.thatBai.length > 0) {
+                message.warning(
+                  `Không xác nhận được ${result.thatBai.length} mẻ do thiếu dữ liệu (đã tải lại dữ liệu mới nhất): ` +
+                  result.thatBai.map((t) => `${t.maMe || "?"} (${t.lyDo.join(", ")})`).join("; ")
+                );
+              }
+              if (result.thanhCong.length > 0) {
+                message.success(`Đã xác nhận ${result.thanhCong.length} mẻ`);
+              }
             }}
             >
               <Button type="primary" disabled={selected.length === 0}>

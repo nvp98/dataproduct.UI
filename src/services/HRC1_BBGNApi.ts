@@ -135,6 +135,18 @@ export interface HRC1_ChotPhieuBatchResult {
   thatBai: HRC1_ChotPhieuBatchThatBai[];
 }
 
+// Mẻ không xác nhận đúc được vì BE re-check thấy thiếu dữ liệu (LT/TL vừa xóa field bắt buộc)
+export interface HRC1_DucXacNhanThatBai {
+  meId: number;
+  maMe: string;
+  lyDo: string[];
+}
+
+export interface HRC1_DucXacNhanResult {
+  thanhCong: number[];
+  thatBai: HRC1_DucXacNhanThatBai[];
+}
+
 // ── Thống kê types ──────────────────────────────────────────────────────────
 
 export interface HRC1_ExportQuery {
@@ -310,8 +322,8 @@ export const HRC1Api = {
     apiService.post("/api/hrc1/tinh-luyen/huy-nhan-me", { meId, idPhieu, scopePhieu }, { headers: userHeaders() }),
 
   // Máy đúc
-  xacNhanDuc: (meIds: number[]) =>
-    apiService.post("/api/hrc1/duc/xac-nhan", { meIds }, { headers: userHeaders() }),
+  xacNhanDuc: (meIds: number[]): Promise<HRC1_DucXacNhanResult> =>
+    apiService.post("/api/hrc1/duc/xac-nhan", { meIds }, { headers: userHeaders() }) as Promise<HRC1_DucXacNhanResult>,
   boXacNhanDuc: (meIds: number[]) =>
     apiService.post("/api/hrc1/duc/bo-xac-nhan", { meIds }, { headers: userHeaders() }),
   xacNhanPCN: (meIds: number[]) =>
