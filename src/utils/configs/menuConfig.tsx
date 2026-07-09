@@ -472,6 +472,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub2-7-5",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+            label: (
+              <Tooltip title="BM.14/QT.05.15 (BB Tiêu hao tinh luyện LF)">
+                <NavLink to="/hrc1_tieuhaotinhluyenlf">
+                  BM.14/QT.05.15 (BB Tiêu hao tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -791,6 +802,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub3-6-5",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+            label: (
+              <Tooltip title="BM.14/QT.05.15 (BB Tiêu hao tinh luyện LF)">
+                <NavLink to="/viecdentoi/hrc1_tieuhaotinhluyenlf">
+                  BM.14/QT.05.15 (BB Tiêu hao tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -926,7 +948,18 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
-          
+          {
+            key: "sub4-1-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+            label: (
+              <Tooltip title="BM.14/QT.05.15 (BB Tiêu hao tinh luyện LF)">
+                <NavLink to="/xemphieu/hrc1_tieuhaotinhluyenlf">
+                  BM.14/QT.05.15 (BB Tiêu hao tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+
         ],
       },
       {

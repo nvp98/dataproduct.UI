@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import HRC1_BB_TieuHao_BOF from "../../../utils/BM_config/HRC1_BB_TieuHao_BOF.json";
+import HRC1_BB_TieuHao_LF from "../../../utils/BM_config/HRC1_BB_TieuHao_LF.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
-import { FilterOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
+import { FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -10,36 +10,28 @@ import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import CustomTableHRC from "../../../components/CustomTableHRC";
 import type { HRCChildColumn, HRCTableRow, HRCParentColumn, CustomTableHRCHandle } from "../../../components/CustomTableHRC";
 import CustomFormTable from "../../../components/CustomFormTable";
-import { hrc1PhuLieuService } from "../../../services/HRC1PhuLieuService";
+import { hrc1LFPhuLieuService } from "../../../services/HRC1LFPhuLieuService";
 import { dlnmHRC1Api } from "../../../services/DLNMHRC1Api";
-import {
-  hrc2TableService,
-  type DynamicColumnMeta,
-  type AdjustColumnMeta,
-} from "../../../services/HRC2TableService";
-import { CommonAutocomplete, type AutocompleteSearchParams } from "../../../components/CommonAutocomplete";
-import { Hrc1PhuLieuNmServiceApi, type Hrc1PhuLieuNm } from "../../../services/Hrc1PhuLieuNmServiceApi";
+import { hrc2TableService, type DynamicColumnMeta } from "../../../services/HRC2TableService";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 
-const TaoTieuHaoLoThoi = () => {
+const TaoTieuHaoTinhLuyenLF = () => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } = usePhieuNavigation(
-    "phieu_hrc1_bof_id",
-    "/hrc1_tieuhaolothoi"
+    "phieu_hrc1_lf_id",
+    "/hrc1_tieuhaotinhluyenlf"
   );
   const hasExistingPhieu = Boolean(idphieu);
-  const config = HRC1_BB_TieuHao_BOF;
+  const config = HRC1_BB_TieuHao_LF;
   const [form] = Form.useForm();
 
   const table1Ref = useRef<CustomTableHRCHandle>(null);
   const [tableData, setTableData] = useState<HRCTableRow[]>([]);
   const [table2Data, setTable2Data] = useState<HRCTableRow[]>([]);
   const [table1LyDo, setTable1LyDo] = useState("");
-  const [phuGiaColumns, setPhuGiaColumns] = useState<HRCChildColumn[]>([]); // 13 phụ liệu cố định (HRC1_PhuLieuNM)
-  const [adjustColumnMetas, setAdjustColumnMetas] = useState<AdjustColumnMeta[]>([]);
+  const [phuGiaColumns, setPhuGiaColumns] = useState<HRCChildColumn[]>([]);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
-  const [showAdjustColumns, setShowAdjustColumns] = useState(false);
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
     nguoiTaoId?: number | null;
@@ -63,175 +55,9 @@ const TaoTieuHaoLoThoi = () => {
     currentTinhTrang === TrangThaiPhieuConst.HieuChinh
   );
 
-  // Thêm cột điều chỉnh mới — header là autocomplete chọn 1 phụ liệu trong danh mục HRC1_PhuLieuNM
-  // (cho phụ liệu đang bị ẩn vì không có dữ liệu tự động trong đúng Ngày/Ca/Lò này, cần nhập tay).
-  // Khi chọn xong, dataIndex đổi thành phuLieu_{PhuLieuID} — tái dùng đúng pipeline "sửa tay phụ liệu có sẵn"
-  // (Loại A, PhuLieuID) đã có sẵn ở BE, KHÔNG dùng Header_Key/manual_col_* (đó là bảng dùng chung với HRC2, sai ngữ cảnh ID).
-  const addAdjustColumn = useCallback(() => {
-    const dataIndex = `manual_col_${Date.now()}`;
-    setAdjustColumnMetas((prev) => [
-      ...prev,
-      {
-        key: dataIndex,
-        dataIndex,
-        headerKeyId: null,
-        headerKeyLabel: null,
-        width: 150,
-        isManuallyAdded: true,
-      },
-    ]);
-    setShowAdjustColumns(true);
-  }, []);
-
-  const handleRemoveAdjustColumn = useCallback((dataIndex: string) => {
-    setAdjustColumnMetas((prev) => prev.filter((m) => m.dataIndex !== dataIndex));
-    setTableData((prev) => prev.map((row) => hrc2TableService.removeRowColumnKey(row, dataIndex)));
-  }, []);
-
-  const handleColumnHeaderChange = useCallback(
-    (oldDataIndex: string, opt: Hrc1PhuLieuNm | null) => {
-      const phuLieuId = opt?.id ?? null;
-      const phuLieuLabel = opt?.tenPhuLieu ?? null;
-
-      if (!phuLieuId) {
-        setAdjustColumnMetas((prev) =>
-          prev.map((m) =>
-            m.dataIndex === oldDataIndex
-              ? { ...m, headerKeyId: null, headerKeyLabel: null }
-              : m
-          )
-        );
-        return;
-      }
-
-      const newDataIndex = `phuLieu_${phuLieuId}`;
-
-      setAdjustColumnMetas((prev) =>
-        prev.map((m) =>
-          m.dataIndex === oldDataIndex
-            ? { ...m, key: newDataIndex, dataIndex: newDataIndex, headerKeyId: phuLieuId, headerKeyLabel: phuLieuLabel }
-            : m
-        )
-      );
-
-      setTableData((prev) =>
-        prev.map((row) => {
-          if (!(oldDataIndex in row)) return row;
-          const next: HRCTableRow = { ...row };
-          next[newDataIndex] = row[oldDataIndex];
-
-          const oldOrigKey = `${oldDataIndex}__orig`;
-          const newOrigKey = `${newDataIndex}__orig`;
-          if (oldOrigKey in row) (next as any)[newOrigKey] = (row as any)[oldOrigKey];
-
-          const oldManualFlagKey = `${oldDataIndex}__IsManual`;
-          const newManualFlagKey = `${newDataIndex}__IsManual`;
-          if (oldManualFlagKey in row) (next as any)[newManualFlagKey] = (row as any)[oldManualFlagKey];
-
-          delete (next as any)[oldDataIndex];
-          delete (next as any)[oldOrigKey];
-          delete (next as any)[oldManualFlagKey];
-
-          return next;
-        })
-      );
-    },
-    []
-  );
-
-  // Render title cho các cột động (dùng khi restore từ jsonData.table1DynamicColumns) — không có nút Map (13 phụ liệu cố định)
+  // Render title cho cột phụ liệu khi restore từ jsonData.table1DynamicColumns — LF không có nút Map
+  // (danh mục HRC1_PhuLieuNM cố định theo BieuMau, không cần Header Mapping như HRC2).
   const renderDynamicColumnTitle = useCallback((label: string) => <span>{label}</span>, []);
-
-  const phanBoChildColumns = useMemo<HRCChildColumn[]>(() => {
-    return adjustColumnMetas
-      .filter((meta) => meta.dataIndex.startsWith("phanBo_"))
-      .map((meta) => ({
-        title: meta.headerKeyLabel ?? "Phân bổ",
-        dataIndex: meta.dataIndex,
-        width: meta.width ?? 100,
-        editable: false,
-        variant: "adjust" as const,
-        metaLabel: meta.headerKeyLabel ?? "Phân bổ",
-        headerKeyId: meta.headerKeyId ?? null,
-      }));
-  }, [adjustColumnMetas]);
-
-  // Các phụ liệu đã có cột hiển thị (tự động hoặc điều chỉnh khác) — loại khỏi danh sách chọn để tránh trùng dataIndex.
-  const usedPhuLieuIds = useMemo(() => {
-    const ids = new Set<number>();
-    phuGiaColumns.forEach((c) => {
-      if (typeof c.headerKeyId === "number") ids.add(c.headerKeyId);
-    });
-    adjustColumnMetas.forEach((m) => {
-      if (m.dataIndex.startsWith("phuLieu_") && typeof m.headerKeyId === "number") ids.add(m.headerKeyId);
-    });
-    return ids;
-  }, [phuGiaColumns, adjustColumnMetas]);
-
-  // Phụ liệu đang được quản lý ở cột "thêm tay" (Điều chỉnh số liệu) — loại khỏi nhóm phụ liệu tự động (BOF_PhuGia)
-  // để tránh render 2 cột cho cùng 1 phụ liệu. Cột thêm tay luôn đứng riêng, không gộp vào nhóm NM dù đã có dữ liệu.
-  const manuallyManagedPhuLieuIds = useMemo(() => {
-    const ids = new Set<number>();
-    adjustColumnMetas.forEach((m) => {
-      if (m.isManuallyAdded === true && m.dataIndex.startsWith("phuLieu_") && typeof m.headerKeyId === "number") {
-        ids.add(m.headerKeyId);
-      }
-    });
-    return ids;
-  }, [adjustColumnMetas]);
-
-  const effectivePhuGiaColumns = useMemo(() => {
-    if (manuallyManagedPhuLieuIds.size === 0) return phuGiaColumns;
-    return phuGiaColumns.filter(
-      (c) => !(typeof c.headerKeyId === "number" && manuallyManagedPhuLieuIds.has(c.headerKeyId))
-    );
-  }, [phuGiaColumns, manuallyManagedPhuLieuIds]);
-
-  const adjustChildColumns = useMemo<HRCChildColumn[]>(() => {
-    return adjustColumnMetas
-      .filter((meta) => !meta.dataIndex.startsWith("phanBo_"))
-      .map((meta) => {
-        const searchPhuLieu = async (params: AutocompleteSearchParams) => {
-          const list = await Hrc1PhuLieuNmServiceApi.getAll({
-            dangSuDung: true,
-            searchKey: params.searchKey,
-          });
-          const filtered = list.filter((pl) => pl.id === meta.headerKeyId || !usedPhuLieuIds.has(pl.id));
-          return { data: filtered, totalRecords: filtered.length };
-        };
-
-        return {
-          title: meta.isManuallyAdded ? (
-            <div style={{ position: "relative", minWidth: 140, paddingRight: 18 }}>
-              <CommonAutocomplete<Hrc1PhuLieuNm>
-                value={meta.headerKeyId ?? null}
-                onChange={(_value, opt) => handleColumnHeaderChange(meta.dataIndex, opt)}
-                searchApi={searchPhuLieu}
-                mapOption={(item) => ({ value: item.id, label: item.tenPhuLieu })}
-                fallbackLabelBuilder={() => meta.headerKeyLabel ?? "Phụ liệu"}
-                size="small"
-                placeholder="Chọn phụ liệu..."
-                style={{ minWidth: 120 }}
-                allowClear={false}
-              />
-              <Button
-                type="text"
-                size="small"
-                icon={<CloseOutlined />}
-                onClick={() => handleRemoveAdjustColumn(meta.dataIndex)}
-                style={{ position: "absolute", top: -6, right: -6, padding: 0, width: 18, height: 18 }}
-              />
-            </div>
-          ) : (meta.headerKeyLabel ?? "Điều chỉnh"),
-          dataIndex: meta.dataIndex,
-          width: meta.width ?? 150,
-          editable: meta.isManuallyAdded ? true : false,
-          variant: meta.isManuallyAdded ? undefined : ("adjust" as const),
-          metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
-          headerKeyId: meta.headerKeyId ?? null,
-        };
-      });
-  }, [adjustColumnMetas, usedPhuLieuIds, handleColumnHeaderChange, handleRemoveAdjustColumn]);
 
   const fetchPhuLieus = useCallback(async (paramsIn: { NgaySX?: string | null; Ca?: number | null; Scope?: number | null }) => {
     try {
@@ -268,76 +94,37 @@ const TaoTieuHaoLoThoi = () => {
           });
         }
       });
-      const editableFields = Array.from(editableFieldSet);
 
-      const result = await hrc1PhuLieuService.fetchAndProcessPhuLieus(
+      const result = await hrc1LFPhuLieuService.fetchAndProcessPhuLieus(
         { NgaySX: paramsIn.NgaySX, Ca: paramsIn.Ca, Scope: paramsIn.Scope },
         { baseColumns }
       );
+
+      // Cột phụ liệu LF luôn hiển thị đủ (lấy từ danh mục), kể cả khi chưa có mẻ nào — khác BOF
+      // (không early-return xóa cột khi trống, vì người dùng cần cột trống để bắt đầu nhập).
+      setPhuGiaColumns(result.phuGiaColumns);
 
       const isEmpty = !result.tableData ||
         result.tableData.length === 0 ||
         (result.tableData.length === 1 && result.tableData[0]?.key === "row-empty");
 
       if (isEmpty) {
-        message.info("Không có dữ liệu phù hợp với điều kiện lọc.");
-        setPhuGiaColumns([]);
-        setAdjustColumnMetas([]);
+        message.info("Chưa có dữ liệu đã lưu cho Ngày/Ca/Tinh luyện này — có thể bắt đầu thêm dòng mới.");
         setTableData([]);
         return;
       }
 
-      setPhuGiaColumns((result.phuGiaColumns ?? []).map((col) => ({ ...col, editable: false })));
+      const editableFields = [
+        ...Array.from(editableFieldSet),
+        ...result.phuGiaColumns.map((c) => c.dataIndex),
+      ];
 
-      // Cột "thêm tay" (phuLieu_*) luôn giữ nguyên trong nhóm điều chỉnh, không tự gộp/ẩn khi có dữ liệu —
-      // việc loại trùng với cột phụ liệu tự động (nếu id trùng) được xử lý riêng ở table1Columns (effectivePhuGiaColumns).
-      const keepManual = (m: AdjustColumnMeta) => m.isManuallyAdded === true;
-
-      const phanBoMetas = (result.phanBoColumns ?? []).map((col) => ({
-        key: col.dataIndex || `phanBo_${col.headerKeyId}`,
-        dataIndex: col.dataIndex || `phanBo_${col.headerKeyId}`,
-        headerKeyId: col.headerKeyId ?? null,
-        headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
-        width: col.width || 100,
-      }));
-      const manualMetas = (result.adjustColumns ?? []).map((col) => ({
-        key: col.dataIndex || `manual_col_${col.headerKeyId}`,
-        dataIndex: col.dataIndex || `manual_col_${col.headerKeyId}`,
-        headerKeyId: col.headerKeyId ?? null,
-        headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
-        width: col.width || 150,
-      }));
-      const incomingMetas = [...phanBoMetas, ...manualMetas];
-      if (incomingMetas.length > 0) {
-        setAdjustColumnMetas((prev) => {
-          const manual = (prev ?? []).filter(keepManual);
-          const merged = [...manual];
-          const seen = new Set(manual.map((m) => m.dataIndex));
-          incomingMetas.forEach((m) => {
-            if (!seen.has(m.dataIndex)) merged.push(m);
-          });
-          return hrc2TableService.dedupeAdjustMetas(merged);
-        });
-        setShowAdjustColumns(true);
-      } else {
-        setAdjustColumnMetas((prev) => (prev ?? []).filter(keepManual));
-      }
-
-      setTableData((prev) => {
-        const baseMerged = hrc2TableService.mergeServerRows(
-          result.tableData || [],
-          prev,
-          "meThoi",
-          editableFields
-        );
-        return hrc2TableService.applyManualOverrides(baseMerged, prev, {
-          rowIdField: "id",
-          fallbackKeyField: "meThoi",
-        });
-      });
+      setTableData((prev) =>
+        hrc2TableService.mergeServerRows(result.tableData || [], prev, "meThoi", editableFields)
+      );
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);
-      message.error("Không thể tải danh sách dữ liệu nhà máy");
+      message.error("Không thể tải danh sách dữ liệu đã lưu");
     } finally {
       setLoading(false);
     }
@@ -360,13 +147,11 @@ const TaoTieuHaoLoThoi = () => {
 
     return hrc2TableService.buildColumnsWithAdjust({
       baseColumns,
-      slotColumns: { BOF_PhuGia: effectivePhuGiaColumns },
-      showAdjustColumns,
-      manualAdjustColumns: adjustChildColumns,
-      phanBoColumns: phanBoChildColumns,
+      slotColumns: { LF_PhuGia: phuGiaColumns },
+      showAdjustColumns: false,
       generateAdjustColumnsFromBase: false,
     });
-  }, [config.layout, effectivePhuGiaColumns, showAdjustColumns, adjustChildColumns, phanBoChildColumns]);
+  }, [config.layout, phuGiaColumns]);
 
   const loadFromNM = useCallback(async () => {
     if (!ngaySX || !ca || !scope) return;
@@ -375,7 +160,7 @@ const TaoTieuHaoLoThoi = () => {
 
   const handleFilter = useCallback(() => {
     if (!ngaySX || !ca || !scope) {
-      message.warning("Vui lòng điền đầy đủ các thông tin: Ngày SX, Ca, và Lò thổi");
+      message.warning("Vui lòng điền đầy đủ các thông tin: Ngày SX, Ca, và Tinh luyện");
       return;
     }
     loadFromNM();
@@ -446,7 +231,7 @@ const TaoTieuHaoLoThoi = () => {
           if (formValues.table1) {
             const processedTable1 = (formValues.table1 as HRCTableRow[]).map((row) => ({
               ...row,
-              IsNM: row.IsNM !== undefined ? row.IsNM : true,
+              IsNM: false,
             }));
             setTableData(processedTable1);
           } else {
@@ -468,14 +253,7 @@ const TaoTieuHaoLoThoi = () => {
           if (formValues.table1DynamicColumns) {
             const dyn = formValues.table1DynamicColumns as Record<string, DynamicColumnMeta[]>;
             const restored = hrc2TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
-            setPhuGiaColumns(restored.BOF_PhuGia ?? []);
-            if (dyn.adjust) {
-              setAdjustColumnMetas(
-                hrc2TableService.dedupeAdjustMetas(hrc2TableService.adjustMetaFromDynamic(dyn.adjust))
-              );
-            } else {
-              setAdjustColumnMetas([]);
-            }
+            setPhuGiaColumns(restored.LF_PhuGia ?? []);
           }
 
           setPhieuInfo({
@@ -532,21 +310,9 @@ const TaoTieuHaoLoThoi = () => {
       });
     }
 
-    const manuallyAddedPhuLieuDataIndexes = new Set(
-      adjustColumnMetas
-        .filter((m) => m.isManuallyAdded === true && m.dataIndex.startsWith("phuLieu_"))
-        .map((m) => m.dataIndex)
-    );
-    const processedTable1 = hrc1PhuLieuService.sanitizeRowsBeforeSubmit(tableData, manuallyAddedPhuLieuDataIndexes);
+    const processedTable1 = hrc1LFPhuLieuService.sanitizeRowsBeforeSubmit(tableData);
 
-    // Dùng effectivePhuGiaColumns (đã loại các phụ liệu đang được quản lý ở nhóm "adjust") — nếu dùng phuGiaColumns
-    // thô, 1 phụ liệu thêm tay đã có dữ liệu sẽ bị lưu 2 lần (vừa ở BOF_PhuGia vừa ở adjust) → BE tạo 2 dòng insert
-    // trùng MeID+PhuLieuID trong cùng 1 lượt lưu → lỗi EF Core "temporary value" khi Update dòng vừa Add chưa persist.
-    const dynamicColumnMap = hrc2TableService.buildDynamicColumnMap({ BOF_PhuGia: effectivePhuGiaColumns });
-    dynamicColumnMap.adjust = hrc1PhuLieuService.buildAdjustDynamicWithValues(
-      adjustColumnMetas.filter((m) => m.isManuallyAdded === true),
-      tableData
-    );
+    const dynamicColumnMap = hrc2TableService.buildDynamicColumnMap({ LF_PhuGia: phuGiaColumns });
 
     const processedTable2 = table2Data.map((row) => {
       const processedRow = { ...row };
@@ -565,7 +331,7 @@ const TaoTieuHaoLoThoi = () => {
         phieuInfo.tinhTrang === TrangThaiPhieuConst.HieuChinh
           ? userInfo.iD_TaiKhoan ?? null
           : phieuInfo.nguoiTaoId ?? null,
-      tenScope: scope ? "Lò thổi " + scope : null,
+      tenScope: scope ? "Tinh luyện " + scope : null,
       xuongId: userInfo.iD_PhanXuong ?? null,
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: processedTable1,
@@ -576,7 +342,7 @@ const TaoTieuHaoLoThoi = () => {
     };
   }, [
     getUserInfo, form, config.headerFields, config.signatures, config.code, config.prefix,
-    idphieu, phieuInfo.nguoiTaoId, phieuInfo.tinhTrang, scope, effectivePhuGiaColumns, adjustColumnMetas, tableData, table1LyDo, table2Data,
+    idphieu, phieuInfo.nguoiTaoId, phieuInfo.tinhTrang, scope, phuGiaColumns, tableData, table1LyDo, table2Data,
   ]);
 
   const handleAutoSave = useCallback(async () => {
@@ -595,7 +361,7 @@ const TaoTieuHaoLoThoi = () => {
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
       if (context?.newPhieuId) {
-        navigateToDetail(context.newPhieuId, "/hrc1_taotieuhaolothoi");
+        navigateToDetail(context.newPhieuId, "/hrc1_taotieuhaotinhluyenlf");
         return;
       }
       await initData();
@@ -660,53 +426,39 @@ const TaoTieuHaoLoThoi = () => {
             <Button type="primary" icon={<FilterOutlined />} onClick={handleFilter} disabled={isFormLocked} loading={loading}>
               Làm mới dữ liệu
             </Button>
-            <Button
-              icon={showAdjustColumns ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-              onClick={() => setShowAdjustColumns(!showAdjustColumns)}
-            >
-              {showAdjustColumns ? "Ẩn" : "Hiện"} điều chỉnh số liệu
-            </Button>
-            <Button icon={<PlusOutlined />} onClick={addAdjustColumn} disabled={isFormLocked}>
-              Thêm cột điều chỉnh
-            </Button>
           </div>
 
           {config.layout.map((layout, idx) => (
             <div key={idx}>
               {layout.sectionType === "table" && layout.key === "table1" ? (
-                <>
-                  <CustomTableHRC
-                    maBm={config.code}
-                    ngaySX={ngaySX}
-                    ca={ca}
-                    scope={scope}
-                    bieuMau={"BOF"}
-                    isHasExistingPhieu={hasExistingPhieu}
-                    columns={table1Columns}
-                    initialData={tableData}
-                    onDataChange={setTableData}
-                    addRowButtonText="+ Thêm dòng"
-                    showAddButton={!isFormLocked}
-                    showDeleteButton={!isFormLocked}
-                    minRows={1}
-                    editable={!isFormLocked && (layout as any).editable !== false}
-                    loading={loading}
-                    stickyHeaders
-                    stickyFirstColumn
-                    stickyColumnKeys={["meThoi", "macThep"]}
-                    scrollX="1500px"
-                    lyDoLabel={(layout as any).lyDo?.label}
-                    lyDoValue={table1LyDo}
-                    onLyDoChange={setTable1LyDo}
-                    onSave={handleAutoSave}
-                    deleteApi={dlnmHRC1Api}
-                    chuyenMeThoiApi={dlnmHRC1Api}
-                    ref={table1Ref}
-                  />
-                  <div style={{ fontWeight: 600, marginTop: 12 }}>
-                    Phần điều chỉnh số liệu nằm ở cuối bảng (scroll ngang → cột "Điều chỉnh số liệu").
-                  </div>
-                </>
+                <CustomTableHRC
+                  maBm={config.code}
+                  ngaySX={ngaySX}
+                  ca={ca}
+                  scope={scope}
+                  bieuMau={"LF"}
+                  isHasExistingPhieu={hasExistingPhieu}
+                  columns={table1Columns}
+                  initialData={tableData}
+                  onDataChange={setTableData}
+                  addRowButtonText="+ Thêm dòng"
+                  showAddButton={!isFormLocked}
+                  showDeleteButton={!isFormLocked}
+                  minRows={1}
+                  editable={!isFormLocked && (layout as any).editable !== false}
+                  loading={loading}
+                  stickyHeaders
+                  stickyFirstColumn
+                  stickyColumnKeys={["meThoi", "macThep"]}
+                  scrollX="1500px"
+                  lyDoLabel={(layout as any).lyDo?.label}
+                  lyDoValue={table1LyDo}
+                  onLyDoChange={setTable1LyDo}
+                  onSave={handleAutoSave}
+                  deleteApi={dlnmHRC1Api}
+                  chuyenMeThoiApi={dlnmHRC1Api}
+                  ref={table1Ref}
+                />
               ) : (
                 layout.sectionType === "table" && (
                   <CustomFormTable
@@ -789,4 +541,4 @@ const TaoTieuHaoLoThoi = () => {
   );
 };
 
-export default TaoTieuHaoLoThoi;
+export default TaoTieuHaoTinhLuyenLF;

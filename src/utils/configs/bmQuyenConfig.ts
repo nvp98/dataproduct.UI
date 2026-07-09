@@ -119,6 +119,18 @@ export const bmQuyenConfig = {
       ]
     },
     {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+      tenBm: "Biên bản tiêu hao nấu luyện tinh luyện LF",
+      nhom: "NM.HRC1",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Tinh luyện 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Tinh luyện 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Tinh luyện 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Tinh luyện 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Tinh luyện 5" },
+      ]
+    },
+    {
       maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
       tenBm: "HRC2 -Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC2",

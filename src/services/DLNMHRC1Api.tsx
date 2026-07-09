@@ -1,10 +1,14 @@
 import apiService from "./ApiService";
+import type { ChuyenMeThoiRequest } from "../models/DLMN_HRC2Model";
 
 export const dlnmHRC1Api = {
   filter: (payload?: Record<string, unknown>) =>
     apiService.post("/api/DLNMHRC1/filter", payload),
   forceSync: (payload?: Record<string, unknown>) =>
     apiService.post("/api/DLNMHRC1/force-sync", payload),
+  // Chuyển 1 mẻ sang ca trước/sau — dùng bởi CustomTableHRC (prop chuyenMeThoiApi).
+  chuyenMeThoi: (payload: ChuyenMeThoiRequest) =>
+    apiService.post("/api/DLNMHRC1/chuyen-me-thoi", payload),
   searchThongKe: (payload?: Record<string, unknown>) =>
     apiService.post("/api/DLNMHRC1/search-thongke", payload),
   sumThongKe: (payload?: Record<string, unknown>) =>

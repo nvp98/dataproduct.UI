@@ -133,6 +133,10 @@ interface CustomTableHRCProps {
     deleteRowByKey: (rowKey: number) => Promise<unknown>;
     deleteRowNM: (rowKey: number) => Promise<unknown>;
   };
+  /** API chuyển mẻ sang ca khác — mặc định dùng dlnmHRC2Api (giữ hành vi cũ cho các trang HRC2 chưa truyền prop này). */
+  chuyenMeThoiApi?: {
+    chuyenMeThoi: (payload: ChuyenMeThoiRequest) => Promise<{ data: { message?: string } }>;
+  };
 }
 
 const CHUYEN_TOI_CA = {
@@ -215,6 +219,7 @@ const CustomTableHRC = forwardRef(({
   onLyDoChange,
   onSave,
   deleteApi = dlnmHRC2Api,
+  chuyenMeThoiApi = dlnmHRC2Api,
 }: CustomTableHRCProps, ref: React.ForwardedRef<CustomTableHRCHandle>) => {
   const [rows, setRows] = useState<HRCTableRow[]>(initialData as HRCTableRow[]);
   const rowsRef = useRef<HRCTableRow[]>(rows);
@@ -326,7 +331,7 @@ const CustomTableHRC = forwardRef(({
         MeThoi: meThoi,
         BieuMau: bieuMau,
       };
-      const response = await dlnmHRC2Api.chuyenMeThoi(payload);
+      const response = await chuyenMeThoiApi.chuyenMeThoi(payload);
       if(response.data.message){
         message.success(response.data.message);
         // Sau khi chuyển mẻ thành công, xóa luôn dòng tương ứng trong bảng

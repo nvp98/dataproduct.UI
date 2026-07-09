@@ -25,6 +25,9 @@ import ChiTietBangTheoDoiBenPhe from "../pages/NM.NL/BangTheoDoiBenPhe/ChiTietBa
 import TieuHaoLoThoi from "../pages/NM.HRC1/TieuHaoLoThoi/TieuHaoLoThoi";
 import TaoTieuHaoLoThoi from "../pages/NM.HRC1/TieuHaoLoThoi/TaoTieuHaoLoThoi";
 import ChiTietTieuHaoLoThoi_BOF from "../pages/NM.HRC1/TieuHaoLoThoi/ChiTietBOF";
+import TieuHaoTinhLuyenLF from "../pages/NM.HRC1/TieuHaoTinhLuyenLF/TieuHaoTinhLuyenLF";
+import TaoTieuHaoTinhLuyenLF from "../pages/NM.HRC1/TieuHaoTinhLuyenLF/TaoTieuHaoTinhLuyenLF";
+import ChiTietTieuHaoTinhLuyenLF from "../pages/NM.HRC1/TieuHaoTinhLuyenLF/ChiTietLF";
 import ChiTietPhieuPhoiNong from "../pages/NMCTD/BienBanPhoiNong/ChiTietPhieuPhoiNong";
 import SanLuongPhoi from "../pages/KhoDuLieu/NM.CTD/SanLuongPhoi";
 import BKNguyenLieu from "../pages/KhoDuLieu/NM.NL/BKNguyenLieu";
@@ -572,6 +575,56 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TieuHaoLoThoi type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1_tieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoTinhLuyenLF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1_taotieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoTieuHaoTinhLuyenLF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1_chitiettieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoTinhLuyenLF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/hrc1_tieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoTinhLuyenLF type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/hrc1_tieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoTinhLuyenLF type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
