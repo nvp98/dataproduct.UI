@@ -184,7 +184,7 @@ const ThongKeTieuHaoBOF = () => {
           PageSize: currentPageSize,
         });
 
-        const payload = res as Record<string, unknown>;
+        const payload = res as unknown as Record<string, unknown>;
 
         const headerListRaw = (getVal<unknown[]>(payload, "phuLieuHeaderTables", "PhuLieuHeaderTables") ?? []) as Record<
           string,
