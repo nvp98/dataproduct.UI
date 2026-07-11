@@ -1,5 +1,6 @@
 import { Menu } from "antd";
 import { menuConfig } from "../utils/configs/menuConfig";
+import { bmQuyenConfig } from "../utils/configs/bmQuyenConfig";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAdminUser } from "../utils/helpers/checkAdminRole";
 import {
@@ -129,6 +130,18 @@ const SidebarMenu = () => {
       3: new Set<string>(menuPermissions?.viewingForms ?? []),
       4: new Set<string>(menuPermissions?.chotPhieuForms ?? []),
     };
+
+    // Quyền mở rộng riêng theo BM (value >= 6, vd "Xác nhận PCN") — BE chỉ trả raw
+    // (maBm, quyenChucNang), FE tự tra `extraQuyens[].vung` trong bmQuyenConfig.ts
+    // để biết cộng maBm này vào đúng vungSets nào.
+    for (const eq of menuPermissions?.extraQuyens ?? []) {
+      const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === eq.maBm);
+      const def = bm?.extraQuyens?.find((q) => q.value === eq.quyenChucNang);
+      if (def?.vung != null) {
+        if (!vungSets[def.vung]) vungSets[def.vung] = new Set<string>();
+        vungSets[def.vung].add(eq.maBm);
+      }
+    }
 
     type Item = {
       key?: string;

@@ -1,6 +1,7 @@
-import { Button, Card, Checkbox, DatePicker, Form, Input, Select, Space, Table, Tag, message } from "antd";
+import { Button, Card, Checkbox, DatePicker, Form, Input, Popconfirm, Select, Space, Table, Tag, message } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Key } from "react";
 import dayjs from "dayjs";
 import type { TableColumnsType } from "antd";
 import {
@@ -12,12 +13,49 @@ import {
 } from "../../../services/HRC1_BBGNApi";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
 import { MacThepServiceApi } from "../../../services/MacThepServiceApi";
+import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
+import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
+import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
+import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 import Tooltip from "antd/es/tooltip";
 
 const { RangePicker } = DatePicker;
 
 const fmt = (v: number | null | undefined) =>
   v == null ? "" : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(v);
+
+// Ghi chú PCN — auto-save khi blur (dời từ form máy đúc sang, chỉ sửa được khi có quyền
+// Xác nhận PCN và mẻ chưa bị chốt PCN vĩnh viễn).
+const GhiChuPCNInput = ({
+  meId, value, locked, onSaved,
+}: {
+  meId: number;
+  value?: string | null;
+  locked: boolean;
+  onSaved: (v: string | null) => void;
+}) => {
+  const [local, setLocal] = useState(value ?? "");
+  useEffect(() => { setLocal(value ?? ""); }, [value]);
+  if (locked) return <>{value ?? ""}</>;
+  return (
+    <Input
+      size="small"
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={async () => {
+        const newVal = local.trim() || null;
+        if (newVal === (value ?? null)) return;
+        try {
+          await HRC1Api.updateGhiChu(meId, newVal, "pcn");
+          onSaved(newVal);
+        } catch {
+          message.error("Lỗi lưu ghi chú");
+          setLocal(value ?? "");
+        }
+      }}
+    />
+  );
+};
 
 const ThongKeBBGNThepLongHRC1 = () => {
   const [form] = Form.useForm();
@@ -34,6 +72,25 @@ const ThongKeBBGNThepLongHRC1 = () => {
   const [mayDucOpts, setMayDucOpts] = useState<{ label: string; value: number }[]>([]);
   const [nhomMacOpts, setNhomMacOpts] = useState<{ label: string; value: number }[]>([]);
   const [tongHopData, setTongHopData] = useState<HRC1_TongHopResult | null>(null);
+  const [canChotPCN, setCanChotPCN] = useState(false);
+  const [canXacNhanPCN, setCanXacNhanPCN] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+  const [chotPCNBusy, setChotPCNBusy] = useState(false);
+  const [xacNhanPCNBusy, setXacNhanPCNBusy] = useState(false);
+
+  useEffect(() => {
+    const user = getThongTinUser();
+    const isPKHAdmin = user.tenNgan === "P.KH" || user.iD_PhongBan === 70 || isAdminUser(user);
+    if (isPKHAdmin) { setCanChotPCN(true); return; }
+    const userId = user.iD_TaiKhoan;
+    if (!userId) return;
+    BmQuyenXlApi.getByTaiKhoan(userId).then((res: any) => {
+      const list: Array<{ maBm: string; quyenChucNang: number }> = Array.isArray(res) ? res : res?.data ?? [];
+      setCanChotPCN(list.some((r) => r.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong && Number(r.quyenChucNang) === 3));
+      // Quyền riêng (extraQuyens) của THONGKE_HRC1 — value 6 = "Xác nhận PCN" (dời từ form máy đúc sang)
+      setCanXacNhanPCN(list.some((r) => r.maBm === BM_CONFIG.HRC1.THONGKE_HRC1 && Number(r.quyenChucNang) === 6));
+    }).catch(() => {/* ignore permission load errors */});
+  }, []);
 
   useEffect(() => {
     MayDucServiceApi.search({ nhaMay: 1, isLock: false, page: 1, pageSize: 200 })
@@ -97,6 +154,12 @@ const ThongKeBBGNThepLongHRC1 = () => {
       isChuyenMe:           v.isChuyenMe === true ? true : undefined,
       chuaCoNhomPhanLoai:   v.chuaCoNhomPhanLoai === true ? true : undefined,
       idNhomPhanLoai:       v.idNhomPhanLoai != null ? Number(v.idNhomPhanLoai) : undefined,
+      isThuNghiem:          v.isThuNghiem === true ? true : undefined,
+      trangThaiPCN:         v.isThuNghiem === true && v.trangThaiPCN != null
+        ? v.trangThaiPCN === "true"
+        : undefined,
+      isLenThang:           v.isLenThang === true ? true : undefined,
+      chuaLenDuc:           v.chuaLenDuc === true ? true : undefined,
       trangThaiLo,
       trangThaiTL,
       trangThaiDuc,
@@ -132,6 +195,133 @@ const ThongKeBBGNThepLongHRC1 = () => {
     }
   }, [data, filters, fetchData]);
 
+  // Chốt PCN: khóa vĩnh viễn — chỉ áp dụng mẻ đã Xác nhận PCN (isThuNghiem && trangThaiPCN), chưa chốt.
+  // Hủy chốt PCN: chỉ áp dụng mẻ đang trangThaiChotPCN=true.
+  const validateChotPCN = useCallback(
+    (mode: "chot" | "bo-chot"): number[] | null => {
+      if (selectedRowKeys.length === 0) {
+        message.warning("Chưa chọn mẻ nào");
+        return null;
+      }
+      const ids = selectedRowKeys.map((k) => Number(k));
+      const selectedRows = data.filter((r) => ids.includes(r.meId));
+      const invalid = mode === "chot"
+        ? selectedRows.filter((r) => !(r.isThuNghiem === true && r.trangThaiPCN === true && r.trangThaiChotPCN !== true))
+        : selectedRows.filter((r) => r.trangThaiChotPCN !== true);
+      if (invalid.length > 0) {
+        const msg = mode === "chot"
+          ? `Chỉ chốt được mẻ đã Xác nhận PCN, chưa chốt — không hợp lệ: ${invalid.map((r) => r.maMe ?? r.meId).join(", ")}`
+          : `Mẻ chưa chốt PCN, không cần hủy: ${invalid.map((r) => r.maMe ?? r.meId).join(", ")}`;
+        message.warning(msg);
+        return null;
+      }
+      return ids;
+    },
+    [selectedRowKeys, data]
+  );
+
+  const handleChotPCN = useCallback(async () => {
+    const ids = validateChotPCN("chot");
+    if (!ids) return;
+    setChotPCNBusy(true);
+    try {
+      await HRC1Api.chotPCN(ids);
+      message.success("Đã chốt PCN");
+      setSelectedRowKeys([]);
+      void fetchData(filters);
+    } catch {
+      message.error("Chốt PCN thất bại");
+    } finally {
+      setChotPCNBusy(false);
+    }
+  }, [validateChotPCN, filters, fetchData]);
+
+  const handleBoChotPCN = useCallback(async () => {
+    const ids = validateChotPCN("bo-chot");
+    if (!ids) return;
+    setChotPCNBusy(true);
+    try {
+      await HRC1Api.boChotPCN(ids);
+      message.success("Đã hủy chốt PCN");
+      setSelectedRowKeys([]);
+      void fetchData(filters);
+    } catch {
+      message.error("Hủy chốt PCN thất bại");
+    } finally {
+      setChotPCNBusy(false);
+    }
+  }, [validateChotPCN, filters, fetchData]);
+
+  // Xác nhận/Không xác nhận/Reset PCN (dời từ form máy đúc sang) — chỉ áp dụng mẻ thử
+  // nghiệm, chưa chốt, chưa bị chốt PCN vĩnh viễn.
+  const validateXacNhanPCN = useCallback((): number[] | null => {
+    if (selectedRowKeys.length === 0) {
+      message.warning("Chưa chọn mẻ nào");
+      return null;
+    }
+    const ids = selectedRowKeys.map((k) => Number(k));
+    const selectedRows = data.filter((r) => ids.includes(r.meId));
+    const daChotPCN = selectedRows.filter((r) => r.trangThaiChotPCN === true);
+    if (daChotPCN.length > 0) {
+      message.warning(`Mẻ đã chốt PCN, không thể sửa: ${daChotPCN.map((r) => r.maMe ?? r.meId).join(", ")}`);
+      return null;
+    }
+    const invalid = selectedRows.filter((r) => !(r.isThuNghiem === true && !r.isChot));
+    if (invalid.length > 0) {
+      message.warning(`Chỉ áp dụng PCN cho mẻ thử nghiệm, chưa chốt — không hợp lệ: ${invalid.map((r) => r.maMe ?? r.meId).join(", ")}`);
+      return null;
+    }
+    return ids;
+  }, [selectedRowKeys, data]);
+
+  const handleXacNhanPCN = useCallback(async () => {
+    const ids = validateXacNhanPCN();
+    if (!ids) return;
+    setXacNhanPCNBusy(true);
+    try {
+      await HRC1Api.xacNhanPCN(ids);
+      message.success("Đã xác nhận PCN");
+      setSelectedRowKeys([]);
+      void fetchData(filters);
+    } catch {
+      message.error("Xác nhận PCN thất bại");
+    } finally {
+      setXacNhanPCNBusy(false);
+    }
+  }, [validateXacNhanPCN, filters, fetchData]);
+
+  const handleKhongXacNhanPCN = useCallback(async () => {
+    const ids = validateXacNhanPCN();
+    if (!ids) return;
+    setXacNhanPCNBusy(true);
+    try {
+      await HRC1Api.khongXacNhanPCN(ids);
+      message.success("Đã đặt Không xác nhận PCN");
+      setSelectedRowKeys([]);
+      void fetchData(filters);
+    } catch {
+      message.error("Không xác nhận PCN thất bại");
+    } finally {
+      setXacNhanPCNBusy(false);
+    }
+  }, [validateXacNhanPCN, filters, fetchData]);
+
+  const handleResetXacNhanPCN = useCallback(async () => {
+    const ids = validateXacNhanPCN();
+    if (!ids) return;
+    setXacNhanPCNBusy(true);
+    try {
+      await HRC1Api.resetXacNhanPCN(ids);
+      message.success("Đã reset xác nhận PCN");
+      setSelectedRowKeys([]);
+      void fetchData(filters);
+    } catch {
+      message.error("Reset xác nhận PCN thất bại");
+    } finally {
+      setXacNhanPCNBusy(false);
+    }
+  }, [validateXacNhanPCN, filters, fetchData]);
+
   const handleExport = useCallback(async () => {
     const v = form.getFieldsValue(true) as Record<string, unknown>;
     const dr = v.ngaySX as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
@@ -159,6 +349,12 @@ const ThongKeBBGNThepLongHRC1 = () => {
       isChuyenMe:           v.isChuyenMe === true ? true : undefined,
       chuaCoNhomPhanLoai:   v.chuaCoNhomPhanLoai === true ? true : undefined,
       idNhomPhanLoai:       v.idNhomPhanLoai != null ? Number(v.idNhomPhanLoai) : undefined,
+      isThuNghiem:          v.isThuNghiem === true ? true : undefined,
+      trangThaiPCN:         v.isThuNghiem === true && v.trangThaiPCN != null
+        ? v.trangThaiPCN === "true"
+        : undefined,
+      isLenThang:           v.isLenThang === true ? true : undefined,
+      chuaLenDuc:           v.chuaLenDuc === true ? true : undefined,
       trangThaiLo:   tt === "lo_0"  ? 0 : tt === "lo_1"  ? 1 : undefined,
       trangThaiTL:   tt === "tl_0"  ? 0 : tt === "tl_1"  ? 1 : undefined,
       trangThaiDuc:  tt === "duc_0" ? 0 : tt === "duc_1" ? 1 : undefined,
@@ -306,16 +502,39 @@ const ThongKeBBGNThepLongHRC1 = () => {
       render: (v: boolean) => v ? <Tag color="red">Trùng</Tag> : null,
     },
     {
-      title: "Thử nghiệm", dataIndex: "isThuNghiem", key: "isThuNghiem", width: 70, align: "center",  
+      title: "Thử nghiệm", dataIndex: "isThuNghiem", key: "isThuNghiem", width: 70, align: "center",
       render: (v: boolean) => v ? "✓" : "",
+    },
+    {
+      title: "Tình trạng PCN", key: "trangThaiPCN", width: 100, align: "center",
+      render: (_: unknown, r: HRC1_ThongKeRow) => {
+        if (r.isThuNghiem !== true) return "";
+        if (r.trangThaiChotPCN === true) return <Tag color="green">Đã chốt</Tag>;
+        return r.trangThaiPCN === true
+          ? <Tag color="cyan">Đã XN</Tag>
+          : r.trangThaiPCN === false
+            ? <Tag color="red">Không XN</Tag>
+          : <Tag color="default">Chờ</Tag>;
+      },
     },
     { title: "Ghi chú Lò", dataIndex: "ghiChuLo",  key: "ghiChuLo",  width: 140 },
     { title: "Ghi chú TL", dataIndex: "ghiChuTL",  key: "ghiChuTL",  width: 140 },
     { title: "Ghi chú đúc", dataIndex: "ghiChuDuc", key: "ghiChuDuc", width: 140 },
+    {
+      title: "Ghi chú PCN", key: "ghiChuPCN", width: 140,
+      render: (_: unknown, r: HRC1_ThongKeRow) => (
+        <GhiChuPCNInput
+          meId={r.meId}
+          value={r.ghiChuPCN}
+          locked={!canXacNhanPCN || r.isThuNghiem !== true || r.isChot === true || r.trangThaiChotPCN === true}
+          onSaved={(v) => setData((prev) => prev.map((row) => row.meId === r.meId ? { ...row, ghiChuPCN: v } : row))}
+        />
+      ),
+    },
     { title: "Người sửa lò",  dataIndex: "tenCapNhatBoiLo",  key: "tenCapNhatBoiLo",  width: 160 },
     { title: "Người sửa TL", dataIndex: "tenCapNhatBoiTL",  key: "tenCapNhatBoiTL",  width: 160 },
     { title: "Người XN đúc", dataIndex: "tenCapNhatBoiDuc", key: "tenCapNhatBoiDuc", width: 160 },
-  ], []);
+  ], [canXacNhanPCN]);
 
   // ── Tổng hợp ─────────────────────────────────────────────────────────────
   type SummaryRow = {
@@ -447,6 +666,28 @@ const ThongKeBBGNThepLongHRC1 = () => {
           <Form.Item name="chuaCoNhomPhanLoai" valuePropName="checked">
             <Checkbox>Chưa có nhóm PL</Checkbox>
           </Form.Item>
+          <Form.Item name="isLenThang" valuePropName="checked">
+            <Checkbox>Lên thẳng</Checkbox>
+          </Form.Item>
+          <Form.Item name="chuaLenDuc" valuePropName="checked">
+            <Checkbox>Chưa lên đúc</Checkbox>
+          </Form.Item>
+          <Form.Item name="isThuNghiem" valuePropName="checked">
+            <Checkbox>Thử nghiệm</Checkbox>
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.isThuNghiem !== cur.isThuNghiem}>
+            {() =>
+              form.getFieldValue("isThuNghiem") ? (
+                <Form.Item name="trangThaiPCN" label="Trạng thái PCN">
+                  <Select allowClear style={{ minWidth: 150 }} placeholder="Tất cả"
+                    options={[
+                      { label: "Đã xác nhận", value: "true" },
+                      { label: "Không xác nhận", value: "false" },
+                    ]} />
+                </Form.Item>
+              ) : null
+            }
+          </Form.Item>
           <Form.Item>
             <Space>
               <Button type="primary" loading={loading} onClick={() => void handleFilter()}>Tìm</Button>
@@ -466,6 +707,59 @@ const ThongKeBBGNThepLongHRC1 = () => {
                 >
                 </Button>
               </Tooltip>
+              {canXacNhanPCN && (
+                <>
+                  <Popconfirm
+                    title={`Xác nhận PCN ${selectedRowKeys.length} mẻ?`}
+                    disabled={selectedRowKeys.length === 0}
+                    onConfirm={() => void handleXacNhanPCN()}
+                  >
+                    <Button type="primary" loading={xacNhanPCNBusy} disabled={selectedRowKeys.length === 0}>
+                      Xác nhận PCN ({selectedRowKeys.length})
+                    </Button>
+                  </Popconfirm>
+                  <Popconfirm
+                    title={`Không xác nhận PCN ${selectedRowKeys.length} mẻ?`}
+                    disabled={selectedRowKeys.length === 0}
+                    onConfirm={() => void handleKhongXacNhanPCN()}
+                  >
+                    <Button danger loading={xacNhanPCNBusy} disabled={selectedRowKeys.length === 0}>
+                      Không xác nhận PCN ({selectedRowKeys.length})
+                    </Button>
+                  </Popconfirm>
+                  <Popconfirm
+                    title={`Reset xác nhận PCN ${selectedRowKeys.length} mẻ?`}
+                    disabled={selectedRowKeys.length === 0}
+                    onConfirm={() => void handleResetXacNhanPCN()}
+                  >
+                    <Button loading={xacNhanPCNBusy} disabled={selectedRowKeys.length === 0}>
+                      Reset xác nhận PCN ({selectedRowKeys.length})
+                    </Button>
+                  </Popconfirm>
+                </>
+              )}
+              {canChotPCN && (
+                <>
+                  <Popconfirm
+                    title={`Chốt PCN ${selectedRowKeys.length} mẻ?`}
+                    disabled={selectedRowKeys.length === 0}
+                    onConfirm={() => void handleChotPCN()}
+                  >
+                    <Button type="primary" loading={chotPCNBusy} disabled={selectedRowKeys.length === 0}>
+                      Chốt PCN ({selectedRowKeys.length})
+                    </Button>
+                  </Popconfirm>
+                  <Popconfirm
+                    title={`Hủy chốt PCN ${selectedRowKeys.length} mẻ?`}
+                    disabled={selectedRowKeys.length === 0}
+                    onConfirm={() => void handleBoChotPCN()}
+                  >
+                    <Button danger loading={chotPCNBusy} disabled={selectedRowKeys.length === 0}>
+                      Hủy chốt PCN ({selectedRowKeys.length})
+                    </Button>
+                  </Popconfirm>
+                </>
+              )}
             </Space>
           </Form.Item>
         </Space>
@@ -478,6 +772,7 @@ const ThongKeBBGNThepLongHRC1 = () => {
         dataSource={data}
         loading={loading}
         rowKey={(r) => String(r.meId)}
+        rowSelection={(canChotPCN || canXacNhanPCN) ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined}
         scroll={{ x: 1800, y: 520 }}
         onRow={(r) => (r.isManualTL ? { style: { backgroundColor: "#FFFFCC" } } : {})}
         pagination={{
@@ -490,28 +785,33 @@ const ThongKeBBGNThepLongHRC1 = () => {
           showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} dòng`,
           onChange: (page, pageSize) => void fetchData({ ...filters, page, pageSize }),
         }}
-        summary={() => (
-          <Table.Summary fixed>
-            <Table.Summary.Row style={{ background: "#fafafa", fontWeight: 600 }}>
-              <Table.Summary.Cell index={0} colSpan={9} align="right">
-                Tổng dòng: {totalRecords}
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={5} colSpan={8} />
-              <Table.Summary.Cell index={13} align="right">
-                <span style={{ fontWeight: 600, ...(Number(totalKl) < 0 ? { color: "red" } : {}) }}>
-                  {fmt(totalKl)}
-                </span>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={14} align="right">
-                <span style={{ fontWeight: 600 }}>{fmt(totalKlChot)}</span>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={15} align="right">
-                {fmt(totalKlPhanBo)}
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={16} colSpan={8} />
-            </Table.Summary.Row>
-          </Table.Summary>
-        )}
+        summary={() => {
+          // rowSelection (khi canChotPCN hoặc canXacNhanPCN) chèn thêm 1 cột checkbox ở đầu —
+          // cộng offset vào colSpan/index đầu tiên để các cell tổng không bị lệch cột.
+          const selCol = (canChotPCN || canXacNhanPCN) ? 1 : 0;
+          return (
+            <Table.Summary fixed>
+              <Table.Summary.Row style={{ background: "#fafafa", fontWeight: 600 }}>
+                <Table.Summary.Cell index={0} colSpan={9 + selCol} align="right">
+                  Tổng dòng: {totalRecords}
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={5 + selCol} colSpan={8} />
+                <Table.Summary.Cell index={13 + selCol} align="right">
+                  <span style={{ fontWeight: 600, ...(Number(totalKl) < 0 ? { color: "red" } : {}) }}>
+                    {fmt(totalKl)}
+                  </span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={14 + selCol} align="right">
+                  <span style={{ fontWeight: 600 }}>{fmt(totalKlChot)}</span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={15 + selCol} align="right">
+                  {fmt(totalKlPhanBo)}
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={16 + selCol} colSpan={8} />
+              </Table.Summary.Row>
+            </Table.Summary>
+          );
+        }}
       />
 
       {tongHopData && summaryRows.length > 0 && (

@@ -350,16 +350,26 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       }
 
       setTableData((prev) => {
-        const baseMerged = hrc2TableService.mergeServerRows(
+        // applyManualOverrides phải chạy TRƯỚC mergeServerRows, dùng NM gốc (result.tableData) làm base
+        // để so sánh với giá trị đã lưu ở phiếu (prev) — giống ChiTietRH.tsx.
+        // Lý do: nếu mergeServerRows chạy trước, nó sẽ ghi đè các field editable (vd klThepPhe) bằng
+        // giá trị đã lưu NGAY TRÊN dòng NM gốc, khiến applyManualOverrides so sánh nhầm
+        // serverAuto (đã bị ghi đè = giá trị đã sửa) với manualValue (cũng = giá trị đã sửa) →
+        // tưởng "không còn khác nhau" → tắt highlight dù giá trị NM và giá trị đã lưu thực sự khác nhau.
+        const rowsWithOverrides = hrc2TableService.applyManualOverrides(
           result.tableData || [],
+          prev,
+          {
+            rowIdField: "id",
+            fallbackKeyField: "meThoi",
+          }
+        );
+        return hrc2TableService.mergeServerRows(
+          rowsWithOverrides,
           prev,
           "meThoi",
           editableFields
         );
-        return hrc2TableService.applyManualOverrides(baseMerged, prev, {
-          rowIdField: "id",
-          fallbackKeyField: "meThoi",
-        });
       });
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);

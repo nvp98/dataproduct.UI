@@ -1,3 +1,4 @@
+import { SIDEBAR_CONST } from "../constants/sidebarConstant";
 import { BM_CONFIG } from "./BieuMauConst";
 
 export interface KhuVucQuyenItem {
@@ -13,12 +14,20 @@ export interface KhuVucPhuItem {
   targetScope?: string;
 }
 
+export interface ExtraQuyenChucNangItem {
+  value: number;
+  label: string;
+  vung: number;
+}
+
 export interface BieuMauQuyenItem {
   maBm: string;
   tenBm: string;
   nhom: string;
   scope?: KhuVucQuyenItem[];
   khuVucPhus?: KhuVucPhuItem[];
+  /** Quyền chức năng riêng của BM này (value >= 6), chỉ hiện khi đang chọn đúng BM — không dùng chung với BM khác */
+  extraQuyens?: ExtraQuyenChucNangItem[];
 }
 
 export const bmQuyenConfig = {
@@ -142,7 +151,7 @@ export const bmQuyenConfig = {
         { khuVucPhu: "TL3", tenKhuVuc: "Tinh luyện 3", targetMaBm: "HRC1_TinhLuyen", targetScope: "3" },
         { khuVucPhu: "TL4", tenKhuVuc: "Tinh luyện 4", targetMaBm: "HRC1_TinhLuyen", targetScope: "4" },
         { khuVucPhu: "TL5", tenKhuVuc: "Tinh luyện 5", targetMaBm: "HRC1_TinhLuyen", targetScope: "5" },
-      ]
+      ],
     },
     {
       maBm: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
@@ -194,6 +203,9 @@ export const bmQuyenConfig = {
       scope: [
         { maKhuVuc: "TIEUHAO", tenKhuVuc: "Tab: Thống kê tiêu hao HRC1" },
         { maKhuVuc: "BBGN", tenKhuVuc: "Tab: Thống kê BBGN thép lỏng" },
+      ],
+      extraQuyens: [
+        { value: 6, label: "Xác nhận PCN" , vung: SIDEBAR_CONST.VUNG_3 },
       ]
     },
     {
