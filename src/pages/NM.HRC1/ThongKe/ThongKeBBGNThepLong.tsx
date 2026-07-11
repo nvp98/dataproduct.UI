@@ -158,6 +158,8 @@ const ThongKeBBGNThepLongHRC1 = () => {
       trangThaiPCN:         v.isThuNghiem === true && v.trangThaiPCN != null
         ? v.trangThaiPCN === "true"
         : undefined,
+      isLenThang:           v.isLenThang === true ? true : undefined,
+      chuaLenDuc:           v.chuaLenDuc === true ? true : undefined,
       trangThaiLo,
       trangThaiTL,
       trangThaiDuc,
@@ -351,6 +353,8 @@ const ThongKeBBGNThepLongHRC1 = () => {
       trangThaiPCN:         v.isThuNghiem === true && v.trangThaiPCN != null
         ? v.trangThaiPCN === "true"
         : undefined,
+      isLenThang:           v.isLenThang === true ? true : undefined,
+      chuaLenDuc:           v.chuaLenDuc === true ? true : undefined,
       trangThaiLo:   tt === "lo_0"  ? 0 : tt === "lo_1"  ? 1 : undefined,
       trangThaiTL:   tt === "tl_0"  ? 0 : tt === "tl_1"  ? 1 : undefined,
       trangThaiDuc:  tt === "duc_0" ? 0 : tt === "duc_1" ? 1 : undefined,
@@ -508,6 +512,8 @@ const ThongKeBBGNThepLongHRC1 = () => {
         if (r.trangThaiChotPCN === true) return <Tag color="green">Đã chốt</Tag>;
         return r.trangThaiPCN === true
           ? <Tag color="cyan">Đã XN</Tag>
+          : r.trangThaiPCN === false
+            ? <Tag color="red">Không XN</Tag>
           : <Tag color="default">Chờ</Tag>;
       },
     },
@@ -659,6 +665,12 @@ const ThongKeBBGNThepLongHRC1 = () => {
           </Form.Item>
           <Form.Item name="chuaCoNhomPhanLoai" valuePropName="checked">
             <Checkbox>Chưa có nhóm PL</Checkbox>
+          </Form.Item>
+          <Form.Item name="isLenThang" valuePropName="checked">
+            <Checkbox>Lên thẳng</Checkbox>
+          </Form.Item>
+          <Form.Item name="chuaLenDuc" valuePropName="checked">
+            <Checkbox>Chưa lên đúc</Checkbox>
           </Form.Item>
           <Form.Item name="isThuNghiem" valuePropName="checked">
             <Checkbox>Thử nghiệm</Checkbox>

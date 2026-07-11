@@ -172,6 +172,8 @@ export interface HRC1_ExportQuery {
   maMeChuyenVe?: string | null;
   isThuNghiem?: boolean | null;
   trangThaiPCN?: boolean | null;
+  isLenThang?: boolean | null;
+  chuaLenDuc?: boolean | null;
 }
 
 export interface HRC1_ThongKeQuery extends HRC1_ExportQuery {
