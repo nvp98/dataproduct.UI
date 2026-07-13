@@ -1493,8 +1493,8 @@ export const DucPanel = ({
           return <Checkbox checked={selected.includes(me.id)} onChange={toggle} />;
         }
 
-        if (me.isChot)
-          return <Tooltip title="Mẻ đã chốt, không thể thao tác"><Checkbox disabled /></Tooltip>;
+        // if (me.isChot)
+        //   return <Tooltip title="Mẻ đã chốt, không thể thao tác"><Checkbox disabled /></Tooltip>;
         const missing = checkDucReady(me);
         if (missing.length > 0 && (me.trangThaiDuc ?? 0) < 1)
           return <Tooltip title={`Thiếu: ${missing.join(", ")}`} placement="right"><Checkbox disabled /></Tooltip>;
