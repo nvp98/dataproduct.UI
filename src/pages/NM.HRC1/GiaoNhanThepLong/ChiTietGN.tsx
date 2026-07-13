@@ -103,7 +103,7 @@ const ChiTietGN = () => {
     await loadData();
   }, [loadData, data]);
 
-  const effectiveCanChot = isPKHAdmin || hasQuyenChot;
+  const effectiveCanChot =  hasQuyenChot;
   const canDoAnything = effectiveCanChot || hasQuyenXacNhan;
 
   const congDoanLabel = data ? getGroupLabel(data.maBm ?? "") : "";

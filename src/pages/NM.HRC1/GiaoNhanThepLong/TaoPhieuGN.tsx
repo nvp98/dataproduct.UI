@@ -1437,6 +1437,8 @@ export const DucPanel = ({
                     idMayDuc
                   }).then(() => {
                     message.success("Đã chốt");
+                  }).catch((e: any) => { 
+                    message.error(e ?? "Lỗi chốt mẻ");
                   })
                 );
               }}
@@ -1930,7 +1932,7 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
                 onReload={handleReload}
                 onExtraChange={setCardExtra}
                 canXacNhan={hasQuyenXacNhanBBGN}
-                canChot={isPKHAdmin || hasQuyenChotBBGN}
+                canChot={hasQuyenChotBBGN}
               />
             )}
           </Card>
