@@ -202,6 +202,7 @@ const ChiTietGN = ({
         value={tableData}
         disabled={true}
         scopeValue={formData?.scope ?? null}
+        scopeLabel={formData?.tenScope ?? null}
         nhaMay={nhaMay}
       />
 
