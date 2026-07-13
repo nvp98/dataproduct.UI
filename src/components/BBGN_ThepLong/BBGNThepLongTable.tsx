@@ -628,7 +628,7 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
       render: (val: string | null) => <span>{val ?? "-"}</span>,
     },
     // Cột xóa – chỉ hiện khi đang chỉnh sửa
-    ...(!disabled
+    ...(disabled
       ? [
           {
             title: "",
