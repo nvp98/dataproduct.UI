@@ -1203,6 +1203,14 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "5-lg-tk",
+            label: (
+              <Tooltip title="Thống kê Phiếu LG">
+                <NavLink to="/thongkephieulg">Thống kê Phiếu LG</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
