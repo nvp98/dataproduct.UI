@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card, Form, Input, Typography, message } from "antd";
+import { Button, Card, Form, Input, Modal, Typography, message } from "antd";
 import CustomFormItem from "../CustomFormItem";
 import HRC1_BBGN_ThepLong from "../../utils/BM_config/HRC1_BBGN_ThepLong.json";
 import HRC2_BBGN_ThepLong from "../../utils/BM_config/HRC2_BBGN_ThepLong.json";
@@ -481,6 +481,20 @@ const TaoPhieuGN = ({
     [fetchBbgnTableFromServer, idphieu, loadDetail, navigateToDetail, routeCreate]
   );
 
+  // Dòng mới thêm (chưa có id) hoặc dòng đã sửa nhưng chưa Lưu — "Làm mới dữ liệu" sẽ ghi đè
+  // toàn bộ tableData bằng dữ liệu server, làm mất các dòng/thay đổi này. Nếu người dùng nhập
+  // lại sau khi mất, dòng cũ (đang được Lưu dở ở request trước, nếu có) và dòng nhập lại sẽ
+  // trở thành 2 record trùng nhau trong DB một khi cả hai request đều được lưu.
+  const hasUnsavedChanges = useMemo(
+    () =>
+      tableData.some((row) => {
+        if (row.id == null) return true;
+        const initial = initialTableDataRef.current.find((r) => r.id === row.id);
+        return !initial || hasRowChanged(row, initial);
+      }),
+    [tableData]
+  );
+
   const handleFetch = useCallback(async () => {
     const ngaySX = form.getFieldValue("NgaySX")?.format("YYYY-MM-DD");
     const ca = form.getFieldValue("ca");
@@ -488,13 +502,31 @@ const TaoPhieuGN = ({
       message.warning("Vui lòng chọn Ngày và Ca trước khi làm mới dữ liệu");
       return;
     }
-    try {
-      setLoading(true);
-      await fetchBbgnTableFromServer({ notify: true });
-    } finally {
-      setLoading(false);
+
+    const doFetch = async () => {
+      try {
+        setLoading(true);
+        await fetchBbgnTableFromServer({ notify: true });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (hasUnsavedChanges) {
+      Modal.confirm({
+        title: "Dữ liệu chưa lưu sẽ bị mất",
+        content:
+          "Bạn đang có dòng mới hoặc thay đổi chưa Lưu. Làm mới dữ liệu sẽ bỏ các thay đổi này. Bạn nên bấm Lưu trước. Vẫn tiếp tục làm mới?",
+        okText: "Làm mới (bỏ thay đổi)",
+        okButtonProps: { danger: true },
+        cancelText: "Hủy",
+        onOk: doFetch,
+      });
+      return;
     }
-  }, [fetchBbgnTableFromServer, form]);
+
+    await doFetch();
+  }, [fetchBbgnTableFromServer, form, hasUnsavedChanges]);
 
   const actionButtons = useMemo(() => {
     const userInfo = getUserInfo();
