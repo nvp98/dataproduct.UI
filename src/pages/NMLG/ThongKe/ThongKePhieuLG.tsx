@@ -12,7 +12,7 @@ import ThongKePhieuCommon, {
   type TableRecord,
 } from "../../../components/ThongKePhieuCommon";
 import { DEFAULT_TINH_TRANG_OPTIONS } from "../../../utils/ConfigDefault/thongKePhieuDefaults";
-import type { SearchPhieuByUserRequest } from "../../../models/Phieu";
+import type { SearchPhieuRequest } from "../../../models/Phieu";
 import type { PhieuFilterValues } from "../../../components/PhieuFilterCard";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
@@ -57,7 +57,7 @@ const ThongKePhieuLG = ({ type }: ThongKePhieuLGProps) => {
   const [checkLoading, setCheckLoading] = useState(false);
 
   const transformFilters = useCallback(
-    (filters: PhieuFilterValues): Partial<SearchPhieuByUserRequest> => {
+    (filters: PhieuFilterValues): Partial<SearchPhieuRequest> => {
       const loaiBMList = (filters.loaiBM as (string | number)[] | undefined) ?? [];
       const maBmList =
         loaiBMList.length > 0
