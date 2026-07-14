@@ -170,6 +170,11 @@ const TaoPhieuPhoiNong = () => {
       const ST_LoaiI = Number(item.loaiChatLuong == 1 ? item.soThanh : 0);
       const ST_LoaiII = Number(item.loaiChatLuong == 2 ? item.soThanh : 0);
       const ST_LoaiIII = Number(item.loaiChatLuong == 3 ? item.soThanh : 0);
+      const KL_LoaiI = Number(item.loaiChatLuong == 1 ? item.tongKhoiLuog : 0);
+      const KL_LoaiII = Number(item.loaiChatLuong == 2 ? item.tongKhoiLuog : 0);
+      const KL_LoaiIII = Number(
+        item.loaiChatLuong == 3 ? item.tongKhoiLuog : 0,
+      );
       const totalRowST = ST_LoaiI + ST_LoaiII + ST_LoaiIII; // dữ liệu BK mis
       const sT_DaChuyenSrc = Number(item.stDaChuyen ?? 0); // dữ liệu DB
       const tongSoThanh = Math.max(sT_DaChuyenSrc, 0);
@@ -190,11 +195,11 @@ const TaoPhieuPhoiNong = () => {
         kichThuoc: item.kichThuoc ?? "",
         idBkPhoiThep: item.idBkPhoiThep ?? item.IdBkPhoiThep ?? item.id ?? 0,
         ST_LoaiI,
-        KL_LoaiI: Number(item.tongKhoiLuong ?? item.tongKhoiLuog ?? 0),
+        KL_LoaiI: KL_LoaiI,
         ST_LoaiII,
-        KL_LoaiII: Number(item.LoaiII_BM ?? 0),
+        KL_LoaiII: KL_LoaiII,
         ST_LoaiIII,
-        KL_LoaiIII: Number(item.LoaiIII_BM ?? 0),
+        KL_LoaiIII: KL_LoaiIII,
         tongKhoi: Number(item.tongKhoiLuong ?? item.tongKhoiLuog ?? 0),
         tongSoThanh,
         stChuaChuyen,
