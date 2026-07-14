@@ -21,6 +21,15 @@ import {
 } from "../utils/constants/TrangThaiPhieuConstant";
 import { PhieuActionButtonKeys } from "../utils/constants/PhieuActionButtonKeys";
 
+// Các biên bản LGNL cho phép Xuất Excel ngay khi Đã gửi (trạng thái 1), không cần
+// đợi Hoàn thành/Đã chốt như các biên bản khác — theo yêu cầu nghiệp vụ riêng cho
+// Nạp liệu lò cao, Tồn silo lò cao, Phun than lò cao.
+const MABM_EXPORT_EXCEL_KHI_DA_GUI = [
+  "NMLG_BM_NapLieuLoCao",
+  "NMLG_BM_TonSiLoLoCao",
+  "NMLG_NK_VHPTLC",
+];
+
 export interface PhieuActionButton {
   key: string;
   label: string;
@@ -960,7 +969,7 @@ export const phieuActionService = {
     // Trạng thái 5 - Đã chốt: Không hiện button nào
     // }
 
-    // ========== NÚT XUẤT PDF / XUẤT EXCEL Phiếu (cho tất cả mọi người khi phiếu ở trạng thái Hoàn thành hoặc Đã chốt) ==========
+    // ========== NÚT XUẤT PDF Phiếu (cho tất cả mọi người khi phiếu ở trạng thái Hoàn thành hoặc Đã chốt) ==========
     if (
       tinhTrang === TrangThaiPhieuConst.HoanThanh ||
       tinhTrang === TrangThaiPhieuConst.DaChot
@@ -995,6 +1004,21 @@ export const phieuActionService = {
           }
         },
       });
+    }
+
+    // ========== NÚT XUẤT EXCEL Phiếu ==========
+    // Mặc định: chỉ Hoàn thành / Đã chốt (như Xuất PDF).
+    // Riêng 3 biên bản LGNL (Nạp liệu, Tồn silo, Phun than lò cao): cho xuất thêm ở
+    // trạng thái Đã gửi, theo yêu cầu nghiệp vụ riêng của nhóm biên bản này.
+    const choXuatExcelKhiDaGui =
+      tinhTrang === TrangThaiPhieuConst.DaGui &&
+      !!phieuMaBm &&
+      MABM_EXPORT_EXCEL_KHI_DA_GUI.includes(phieuMaBm);
+    if (
+      tinhTrang === TrangThaiPhieuConst.HoanThanh ||
+      tinhTrang === TrangThaiPhieuConst.DaChot ||
+      choXuatExcelKhiDaGui
+    ) {
       buttons.push({
         key: PhieuActionButtonKeys.ExportExcel,
         label: "Xuất Excel",

@@ -69,7 +69,7 @@
       "prefixColumns": [
         { "title": "Số mẻ", "dataIndex": "soMe", "width": 80, "align": "center" },
         { "title": "Mẻ/giờ", "dataIndex": "meGio", "width": 80, "align": "center" },
-        { "title": "Thời gian nạp liệu", "dataIndex": "thoiGianNapLieu", "width": 100, "align": "center" },
+        { "title": "Thời gian nạp liệu", "dataIndex": "thoiGianNapLieu", "width": 120, "align": "center", "type": "time" },
         { "title": "Chế độ nạp liệu", "dataIndex": "cheDoNapLieu", "width": 80, "align": "center" },
         { "title": "Thước thăm liệu 1 (m)", "dataIndex": "thuocThamLieu1", "width": 80, "align": "right" },
         { "title": "Thước thăm liệu 2 (m)", "dataIndex": "thuocThamLieu2", "width": 80, "align": "right" }
