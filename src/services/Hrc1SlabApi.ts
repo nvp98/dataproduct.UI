@@ -29,7 +29,7 @@ export interface Hrc1SlabSearchRequest {
   macThep?: string | null;
   isChot?: boolean | null;
   trangThaiDuc?: number | null;
-  trangThaiKho?: number | null;
+  trangThaiCan?: number | null;
   trangThaiPKH?: number | null;
   page?: number;
   pageSize?: number;
@@ -58,7 +58,7 @@ export interface Hrc1SlabItem {
   isChuyenCa: boolean;
   idPhieuGoc?: string | null;
   trangThaiDuc: number;
-  trangThaiKho: number;
+  trangThaiCan: number;
   trangThaiPKH: number;
   idPhieuBBSL?: string | null;
   soPhieuBBSL?: string | null;
@@ -69,7 +69,7 @@ export interface Hrc1SlabItem {
 
 export interface Hrc1TongHopGhiChuItem {
   macThep?: string | null;
-  kichThuoc?: string | null;
+  maVatTu?: string | null;
   ghiChu?: string | null;
 }
 
@@ -89,7 +89,7 @@ export interface Hrc1PhieuBBSLItem {
   tinhTrang?: number | null;
   soSlabDaChot: number;
   soSlabDuc: number;
-  soSlabKho: number;
+  soSlabCan: number;
   soSlabPKH: number;
 }
 
@@ -159,11 +159,11 @@ export const Hrc1SlabApi = {
     return (await apiService.post(`${BASE}/chuyen-phoi`, { idSlabs, idPhieuNguon, huong, nguoiChuyen })) as WorkflowResult;
   },
 
-  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho", nguoiThucHien: number): Promise<WorkflowResult> => {
+  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 
-  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Kho", nguoiThucHien: number): Promise<WorkflowResult> => {
+  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/huy-xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 
@@ -195,7 +195,7 @@ export const Hrc1SlabApi = {
     return (await apiService.get(`${BASE}/tonghop-ghi-chu/${idPhieu}`)) as Hrc1TongHopGhiChuItem[];
   },
 
-  saveTongHopGhiChu: async (req: { idPhieuBBSL: string; macThep?: string | null; kichThuoc?: string | null; ghiChu?: string | null }): Promise<WorkflowResult> => {
+  saveTongHopGhiChu: async (req: { idPhieuBBSL: string; macThep?: string | null; maVatTu?: string | null; ghiChu?: string | null }): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/tonghop-ghi-chu`, req)) as WorkflowResult;
   },
 

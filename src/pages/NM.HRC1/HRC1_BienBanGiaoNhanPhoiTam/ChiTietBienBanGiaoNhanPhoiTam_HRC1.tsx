@@ -141,21 +141,27 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     const edits: Record<number, RowEdit> = {};
     details.forEach((s) => { edits[s.id] = { ghiChu: s.ghiChu ?? "", maVatTu: s.maVatTu ?? "" }; });
     setRowEdits(edits);
-    const thEdits: Record<string, string> = {};
-    ghiChuList.forEach((g) => {
-      const key = `${g.macThep ?? ""}|${g.kichThuoc ?? ""}`;
-      thEdits[key] = g.ghiChu ?? "";
-    });
-    setThGhiChuEdits(thEdits);
-    // Init mã vật tư theo nhóm: lấy giá trị đầu tiên khác rỗng trong mỗi nhóm
+    // Init mã vật tư theo nhóm (macThep|kichThuoc): lấy giá trị đầu tiên khác rỗng trong mỗi nhóm.
+    // Ghi chú tổng hợp được BE lưu theo (macThep, maVatTu) — không có cột kích thước — nên cần
+    // dựng thêm map (macThep|maVatTu) → (macThep|kichThuoc) để khớp ghi chú về đúng nhóm hiển thị.
     const thMvt: Record<string, string> = {};
+    const mvtToDimsKey: Record<string, string> = {};
     details.forEach((s) => {
       const kt = [s.chieuDay, s.chieuRong, s.chieuDai].every((v) => v != null)
         ? `${s.chieuDay}x${s.chieuRong}x${s.chieuDai}` : "";
-      const key = `${s.macThep ?? ""}|${kt}`;
-      if (!thMvt[key] && s.maVatTu) thMvt[key] = s.maVatTu;
+      const dimsKey = `${s.macThep ?? ""}|${kt}`;
+      if (!thMvt[dimsKey] && s.maVatTu) thMvt[dimsKey] = s.maVatTu;
+      const mvtKey = `${s.macThep ?? ""}|${s.maVatTu ?? ""}`;
+      if (!mvtToDimsKey[mvtKey]) mvtToDimsKey[mvtKey] = dimsKey;
     });
     setTongHopMvt(thMvt);
+    const thEdits: Record<string, string> = {};
+    ghiChuList.forEach((g) => {
+      const mvtKey = `${g.macThep ?? ""}|${g.maVatTu ?? ""}`;
+      const dimsKey = mvtToDimsKey[mvtKey];
+      if (dimsKey) thEdits[dimsKey] = g.ghiChu ?? "";
+    });
+    setThGhiChuEdits(thEdits);
   }, [idphieu]);
 
   const loadData = useCallback(async () => {
@@ -241,10 +247,10 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
 
   const canXacNhanDuc = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 0 && r.trangThaiPKH === 0);
   const canHuyDuc     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiPKH === 0);
-  const canXacNhanKho = selectedCount > 0 && selectedRows.every((r) => r.trangThaiKho === 0 && r.trangThaiPKH === 0);
-  const canHuyKho     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiKho === 1 && r.trangThaiPKH === 0);
+  const canXacNhanCan = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 0 && r.trangThaiPKH === 0);
+  const canHuyCan     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 1 && r.trangThaiPKH === 0);
 
-  const handleXacNhan = async (loai: "Duc" | "Kho") => {
+  const handleXacNhan = async (loai: "Duc" | "Can") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -256,7 +262,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     } finally { setActionLoading(false); }
   };
 
-  const handleHuyXacNhan = async (loai: "Duc" | "Kho") => {
+  const handleHuyXacNhan = async (loai: "Duc" | "Can") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -347,19 +353,20 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     if (!idphieu) return;
     const key = `${macThep ?? ""}|${kichThuoc ?? ""}`;
     const ghiChu = thGhiChuEdits[key] ?? null;
-    const original = tongHopGhiChu.find((g) => g.macThep === macThep && g.kichThuoc === kichThuoc);
+    const maVatTu = tongHopMvt[key] || null;
+    const original = tongHopGhiChu.find((g) => g.macThep === macThep && g.maVatTu === maVatTu);
     if ((ghiChu || null) === (original?.ghiChu ?? null)) return;
     try {
-      await Hrc1SlabApi.saveTongHopGhiChu({ idPhieuBBSL: idphieu, macThep, kichThuoc, ghiChu: ghiChu || null });
+      await Hrc1SlabApi.saveTongHopGhiChu({ idPhieuBBSL: idphieu, macThep, maVatTu, ghiChu: ghiChu || null });
       setTongHopGhiChu((prev) => {
-        const idx = prev.findIndex((g) => g.macThep === macThep && g.kichThuoc === kichThuoc);
-        const updated = { macThep, kichThuoc, ghiChu: ghiChu || null };
+        const idx = prev.findIndex((g) => g.macThep === macThep && g.maVatTu === maVatTu);
+        const updated = { macThep, maVatTu, ghiChu: ghiChu || null };
         return idx >= 0 ? prev.map((g, i) => (i === idx ? updated : g)) : [...prev, updated];
       });
     } catch {
       message.error("Lỗi lưu ghi chú tổng hợp");
     }
-  }, [idphieu, thGhiChuEdits, tongHopGhiChu]);
+  }, [idphieu, thGhiChuEdits, tongHopGhiChu, tongHopMvt]);
 
   // ── rowSelection ──────────────────────────────────────────────────────────
   const rowSelection: TableRowSelection<Hrc1SlabItem> = {
@@ -448,8 +455,8 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>,
     }] : []),
     ...(isCan ? [{
-      title: "TT Kho",
-      dataIndex: "trangThaiKho",
+      title: "TT Cán",
+      dataIndex: "trangThaiCan",
       width: 85,
       align: "center" as const,
       render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>,
