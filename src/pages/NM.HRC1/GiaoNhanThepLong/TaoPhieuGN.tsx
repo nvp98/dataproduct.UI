@@ -27,7 +27,7 @@ import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 
 // ── Helper hiển thị ───────────────────────────────────────────────────────────
 
-// Ca 2 (20:00→08:00): thoiGian < "20:00" thuộc ngày hôm sau → cộng thêm 1 ngày vào sort key
+// Ca 2 (19:21→07:19): thoiGian < "19:21" thuộc ngày hôm sau → cộng thêm 1 ngày vào sort key
 const buildMeSortKey = (
   thoiGian: string | null | undefined,
   ca: number | null | undefined,
@@ -35,7 +35,7 @@ const buildMeSortKey = (
 ): string => {
   if (!thoiGian) return "9999-12-31 99:99";
   const base = ngaySX ?? "2000-01-01";
-  const isNextDay = ca === 2 && thoiGian < "20:00";
+  const isNextDay = ca === 2 && thoiGian < "19:21";
   const date = isNextDay ? dayjs(base).add(1, "day").format("YYYY-MM-DD") : base;
   return `${date} ${thoiGian}`;
 };
