@@ -121,7 +121,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
-      tenBm: "HRC2 -Biên bản giao nhận thép lỏng",
+      tenBm: "Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC2",
       scope: [
         { maKhuVuc: "6", tenKhuVuc: "CCM1", },
@@ -135,7 +135,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
-      tenBm: "HRC1 - Biên bản giao nhận thép lỏng",
+      tenBm: "Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC1",
       scope: [
         { maKhuVuc: "1", tenKhuVuc: "TSC 1" },
@@ -220,11 +220,12 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
-      tenBm: "HRC1 - Biên bản giao nhận phôi tấm",
+      tenBm: "Biên bản giao nhận phôi tấm",
       nhom: "NM.HRC1",
       khuVucPhus: [
         { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
         { khuVucPhu: "Can", tenKhuVuc: "Bộ phận Cán Tấm" },
+        { khuVucPhu: "C4", tenKhuVuc: "GĐ/PGĐ NM" },
       ]
     }
   ] as BieuMauQuyenItem[],

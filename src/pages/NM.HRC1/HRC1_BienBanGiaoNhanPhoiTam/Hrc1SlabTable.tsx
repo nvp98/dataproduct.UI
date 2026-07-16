@@ -149,6 +149,8 @@ const Hrc1SlabTable = () => {
       render: (v: number) => <Tag color={TT_COLOR[v]}>{TT_TEXT[v]}</Tag> },
     { title: "TT Cán", dataIndex: "trangThaiCan", width: 70, align: "center", fixed: "left",
       render: (v: number) => <Tag color={TT_COLOR[v]}>{TT_TEXT[v]}</Tag> },
+    { title: "TT GĐ/PGĐ NM", dataIndex: "trangThaiC4", width: 70, align: "center", fixed: "left",
+      render: (v: boolean) => <Tag color={v ? "green" : "default"}>{v ? "Đã XN" : "Chưa"}</Tag> },
     { title: "TT PKH", dataIndex: "trangThaiPKH", width: 70, align: "center", fixed: "left",
       render: (v: number) => <Tag color={v === 1 ? "blue" : "default"}>{v === 1 ? "Đã chốt" : "Chưa"}</Tag> },
     {

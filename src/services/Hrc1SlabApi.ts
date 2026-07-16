@@ -30,6 +30,7 @@ export interface Hrc1SlabSearchRequest {
   isChot?: boolean | null;
   trangThaiDuc?: number | null;
   trangThaiCan?: number | null;
+  trangThaiC4?: boolean | null;
   trangThaiPKH?: number | null;
   page?: number;
   pageSize?: number;
@@ -60,6 +61,7 @@ export interface Hrc1SlabItem {
   idPhieuGoc?: string | null;
   trangThaiDuc: number;
   trangThaiCan: number;
+  trangThaiC4: boolean;
   trangThaiPKH: number;
   idPhieuBBSL?: string | null;
   soPhieuBBSL?: string | null;
@@ -160,11 +162,11 @@ export const Hrc1SlabApi = {
     return (await apiService.post(`${BASE}/chuyen-phoi`, { idSlabs, idPhieuNguon, huong, nguoiChuyen })) as WorkflowResult;
   },
 
-  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
+  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "C4" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 
-  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
+  huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "C4" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/huy-xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
   },
 

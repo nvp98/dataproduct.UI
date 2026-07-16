@@ -90,6 +90,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   }, []);
   const isDuc = hasKhuVucPhu(userInfo, MA_BM, "Duc");
   const isCan = hasKhuVucPhu(userInfo, MA_BM, "Can");
+  const isC4 = hasKhuVucPhu(userInfo, MA_BM, "C4");
   const isPKH = canChotBm(userInfo, MA_BM);
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -211,16 +212,18 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   );
   const selectedCount = selectedRowKeys.length;
 
-  // Đúc và Cán đồng cấp (song song, không phụ thuộc lẫn nhau)
+  // Đúc, Cán và C4 đồng cấp (song song, không phụ thuộc lẫn nhau)
   const canXacNhanDuc = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 0 && r.trangThaiPKH === 0);
   const canHuyDuc     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiPKH === 0);
   const canXacNhanCan = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 0 && r.trangThaiPKH === 0);
   const canHuyCan     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 1 && r.trangThaiPKH === 0);
-  // PKH chỉ chốt được khi cả Đúc và Cán đã xác nhận
-  const canChotPKH    = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiCan === 1 && r.trangThaiPKH === 0);
+  const canXacNhanC4  = selectedCount > 0 && selectedRows.every((r) => !r.trangThaiC4 && r.trangThaiPKH === 0);
+  const canHuyC4      = selectedCount > 0 && selectedRows.every((r) => r.trangThaiC4 && r.trangThaiPKH === 0);
+  // PKH chỉ chốt được khi cả Đúc, Cán và C4 đã xác nhận
+  const canChotPKH    = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiCan === 1 && r.trangThaiC4 && r.trangThaiPKH === 0);
   const canHuyChotPKH = selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 1);
 
-  const handleXacNhan = async (loai: "Duc" | "Can" | "PKH") => {
+  const handleXacNhan = async (loai: "Duc" | "Can" | "C4" | "PKH") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -232,7 +235,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     } finally { setActionLoading(false); }
   };
 
-  const handleHuyXacNhan = async (loai: "Duc" | "Can" | "PKH") => {
+  const handleHuyXacNhan = async (loai: "Duc" | "Can" | "C4" | "PKH") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
@@ -244,7 +247,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     } finally { setActionLoading(false); }
   };
 
-  const canChuyen = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 0 && r.trangThaiPKH === 0);
+  const canChuyen = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 0 && !r.trangThaiC4 && r.trangThaiPKH === 0);
 
   // ── Chuyển phôi bulk (áp dụng cho tất cả slab đã chọn) ───────────────────
   const handleChuyenBulk = useCallback(async (huong: "truoc" | "sau") => {
@@ -311,6 +314,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       align: "center" as const,
       render: (_: unknown, __: unknown, idx: number) => idx + 1,
     },
+    
     {
       title: "Mã vật tư",
       key: "maVatTu",
@@ -359,29 +363,36 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
         />
       ),
     },
-    ...((isDuc || isCan || isPKH) ? [{
+    {
       title: "TT Đúc",
       dataIndex: "trangThaiDuc",
       width: 85,
       align: "center" as const,
       render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>,
-    }] : []),
-    ...((isCan || isPKH) ? [{
+    },
+    {
       title: "TT Cán",
       dataIndex: "trangThaiCan",
       width: 85,
       align: "center" as const,
       render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>,
-    }] : []),
-    ...(isPKH ? [{
+    },
+    {
+      title: "TT GĐ/PGĐ NM",
+      dataIndex: "trangThaiC4",
+      width: 85,
+      align: "center" as const,
+      render: (v: boolean) => <Tag color={v ? "green" : "default"}>{v ? "Đã XN" : "Chưa"}</Tag>,
+    },
+    {
       title: "TT PKH",
       dataIndex: "trangThaiPKH",
       width: 85,
       align: "center" as const,
       render: (v: number) => <Tag color={v === 1 ? "blue" : "default"}>{v === 1 ? "Đã chốt" : "Chưa"}</Tag>,
-    }] : []),
+    },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [isDuc, isCan, isPKH, rowEdits, saveRowEdit, data?.tinhTrang]);
+  ], [isDuc, isCan, isC4, isPKH, rowEdits, saveRowEdit, data?.tinhTrang]);
 
   // ── Tab tổng hợp rows ─────────────────────────────────────────────────────
   const tongHopRows = useMemo(() => {
@@ -645,6 +656,30 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                         </>
                       )}
 
+                      {/* C4 (GĐ/PGĐ NM): xác nhận C4, song song với Đúc/Cán */}
+                      {isC4 && (
+                        <>
+                          <Popconfirm
+                            title={`Xác nhận C4 ${selectedCount} slab?`}
+                            onConfirm={() => void handleXacNhan("C4")}
+                            disabled={!canXacNhanC4}
+                          >
+                            <Button size="small" icon={<CheckCircleOutlined />} disabled={!canXacNhanC4} loading={actionLoading} style={{ color: canXacNhanC4 ? "#fa8c16" : undefined }}>
+                              GĐ/PGĐ NM XN
+                            </Button>
+                          </Popconfirm>
+                          <Popconfirm
+                            title={`Hủy XN GĐ/PGĐ NM ${selectedCount} slab?`}
+                            onConfirm={() => void handleHuyXacNhan("C4")}
+                            disabled={!canHuyC4}
+                          >
+                            <Button size="small" icon={<CloseCircleOutlined />} disabled={!canHuyC4} loading={actionLoading} danger>
+                              GĐ/PGĐ NM Hủy XN
+                            </Button>
+                          </Popconfirm>
+                        </>
+                      )}
+
                       {/* PKH: chốt từng dòng (chỉ khi phiếu chưa chốt) */}
                       {isPKH && data?.tinhTrang !== 5 && (
                         <>
@@ -695,7 +730,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                     rowClassName={(r) => r.isChuyenCa ? "row-chuyen-ca" : ""}
                     summary={() => {
                       const totalKL = slabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
-                      const optColCount = ((isDuc || isCan || isPKH) ? 1 : 0) + ((isCan || isPKH) ? 1 : 0) + (isPKH ? 1 : 0);
+                      const optColCount = ((isDuc || isCan || isPKH) ? 1 : 0) + ((isCan || isPKH) ? 1 : 0) + ((isC4 || isPKH) ? 1 : 0) + (isPKH ? 1 : 0);
                       return (
                         <Table.Summary fixed>
                           <Table.Summary.Row>
