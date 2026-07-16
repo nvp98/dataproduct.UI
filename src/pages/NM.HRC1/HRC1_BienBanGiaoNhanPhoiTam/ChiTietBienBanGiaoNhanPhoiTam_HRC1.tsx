@@ -396,17 +396,32 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
 
   // ── Tab tổng hợp rows ─────────────────────────────────────────────────────
   const tongHopRows = useMemo(() => {
-    const map = new Map<string, { macThep: string | null; maVatTu: string | null; tenVatTu: string | null; soPhoi: number; tongKL: number }>();
+    const map = new Map<string, { macThep: string | null; maVatTu: string | null; tenVatTu: string | null; soPhoi: number; tongKL: number, trangThaiDuc: number;trangThaiCan: number; }>();
     slabDetails.forEach((r) => {
       const key = `${r.macThep ?? ""}|${r.maVatTu ?? ""}`;
       if (!map.has(key)) {
-        map.set(key, { macThep: r.macThep ?? null, maVatTu: r.maVatTu ?? null, tenVatTu: r.tenVatTu ?? null, soPhoi: 0, tongKL: 0 });
+        map.set(key, { macThep: r.macThep ?? null, maVatTu: r.maVatTu ?? null, tenVatTu: r.tenVatTu ?? null, soPhoi: 0, tongKL: 0, trangThaiDuc: 1, trangThaiCan: 1 });
       }
       const row = map.get(key)!;
       row.soPhoi += 1;
       row.tongKL += r.khoiLuong ?? 0;
+      // Chỉ cần có 1 phôi chưa xác nhận => cả nhóm chưa xác nhận
+      if (r.trangThaiDuc !== 1) {
+        row.trangThaiDuc = 0;
+      }
+
+      if (r.trangThaiCan !== 1) {
+        row.trangThaiCan = 0;
+      }
     });
-    return Array.from(map.values()).map((r, i) => ({ ...r, stt: i + 1 }));
+
+    console.log("tongHopRows", Array.from(map.values()));
+    return Array.from(map.values()).map((r, i) => ({
+      ...r,
+      stt: i + 1,
+      trangThaiDuc: r.trangThaiDuc ,
+      trangThaiCan: r.trangThaiCan,
+    }));
   }, [slabDetails]);
 
   const tongHopTotals = useMemo(() => ({
@@ -448,6 +463,20 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
 
   const tongHopColumns = useMemo(() => [
     { title: "STT", dataIndex: "stt", width: 60, align: "center" as const },
+    {
+      title: "TT Đúc",
+      dataIndex: "trangThaiDuc",
+      width: 100,
+      align: "center" as const,
+      render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã xác nhận" : "Chưa hoàn thành"}</Tag>,
+    },
+    {
+      title: "TT Cán",
+      dataIndex: "trangThaiCan",
+      width: 100,
+      align: "center" as const,
+      render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã xác nhận" : "Chưa hoàn thành"}</Tag>,
+    },
     {
       title: "Sản phẩm x Mác thép",
       key: "sanPham",
