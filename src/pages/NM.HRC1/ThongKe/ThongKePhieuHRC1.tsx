@@ -24,21 +24,18 @@ const MABM_DETAIL_ROUTE: Record<string, string> = {
   HRC1_BB_Lothoi: "/taotieuhaolothoi",
   HRC1_TinhLuyen: "/taophieugiaonhantheplong_hrc1",
   HRC1_BBGN_ThepLong: "/chitietgiaonhantheplong_hrc1",
-  HRC1_BBGN_PhoiTam: "/chitietbbgnphoitam_hrc1"
 };
 
 const MABM_LIST: string[] = [
   // BM_CONFIG.HRC1.HRC1_BB_Lothoi,
   // BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
-  BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
 ];
 
 const LOAI_BM_TO_MABM: Record<string, string> = {
   LoThoi: BM_CONFIG.HRC1.HRC1_BB_Lothoi,
   TinhLuyen: BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BBGN_ThepLong: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
-  BBGN_PhoiTam: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
 };
 
 const normalizeNum = (v: unknown): number | null => {
@@ -103,7 +100,6 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
           { label: "Lò thổi", value: "LoThoi" },
           { label: "Tinh luyện", value: "TinhLuyen" },
           { label: "Giao nhận thép lỏng", value: "BBGN_ThepLong" },
-          { label: "Biên bản giao nhận phôi tấm", value: "BBGN_PhoiTam" },
         ],
       },
       { key: "ngaySX", label: "Ngày sản xuất", type: "dateRange", placeholder: "Khoảng ngày" },

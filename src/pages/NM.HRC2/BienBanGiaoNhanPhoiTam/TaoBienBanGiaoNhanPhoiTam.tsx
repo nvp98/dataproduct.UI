@@ -1,6 +1,6 @@
 import HRC2_BBGN_PhoiTam from "../../../utils/BM_config/HRC2_BBGN_PhoiTam.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
-import CustomFormTable, { type FormColumnDef } from "../../../components/CustomFormTable";
+import CustomFormTable from "../../../components/CustomFormTable";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -16,34 +16,46 @@ const TaoBienBanGiaoNhanPhoiTam = () => {
 
   const [tableData, setTableData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-
+  // Hàm khởi tạo dữ liệu ban đầu
   const initData = async () => {
-    if (!idphieu) return;
     try {
       setLoading(true);
-      const res = await PhieuApi.getDetail(idphieu);
-      if (res) {
-        const data = (res as any)?.jsonData || {};
-        form.setFieldsValue({
-          ...data,
-          idphieu: (res as any)?.idphieu || "",
-          NgaySX: data.NgaySX ? dayjs(data.NgaySX, "YYYY-MM-DD") : null,
-        });
-        if (data.table1) setTableData(data.table1);
-        message.success("Đã tải dữ liệu phiếu!");
+      // Gọi API lấy phiếu theo số phiếu
+      const idPhieu = idphieu || ""; // Lấy từ state nếu có
+      if (idPhieu) {
+        const res = await PhieuApi.getDetail(idPhieu);
+
+        if (res) {
+          console.log("✅ Dữ liệu phiếu:", res);
+          // data.Data là phần JSON đã parse (form động)
+          const data = (res as any)?.jsonData || {};
+          // Chuyển chuỗi -> dayjs
+          const formValues = {
+            ...data,
+            idphieu: (res as any)?.idphieu || "",
+            NgaySX: data.NgaySX ? dayjs(data.NgaySX, "YYYY-MM-DD") : null,
+          };
+          console.log("➡️ Form values:", formValues);
+          form.setFieldsValue(formValues);
+          if (formValues.table1) {
+            setTableData(formValues.table1); //bảng dữ liệu 1
+          }
+
+          message.success("Đã tải dữ liệu phiếu!");
+        }
       }
     } catch (err: any) {
       console.error("Lỗi khởi tạo dữ liệu:", err);
-      message.error("Không thể tải dữ liệu phiếu!");
+      message.error("Không thể tải dữ liệu ban đầu!");
     } finally {
       setLoading(false);
     }
   };
 
+  /** Gọi khi load lần đầu */
   useEffect(() => {
     initData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [idphieu]);
 
   /** Theo dõi form → load lại bảng */
   // useEffect(() => {
@@ -183,7 +195,7 @@ const TaoBienBanGiaoNhanPhoiTam = () => {
           <div key={idx}>
             {layout.sectionType === "table" && (
               <CustomFormTable
-                columns={(layout.columns || []) as unknown as FormColumnDef[]}
+                columns={layout.columns || []}
                 initialData={tableData}
                 onDataChange={setTableData}
                 addRowButtonText="+ Thêm dòng"
