@@ -78,19 +78,6 @@ const useMergedScopeMode = (maBm?: string): boolean => {
   return (bm?.khuVucPhus ?? []).some((k) => !!k.targetMaBm);
 };
 
-// True nếu BM có khuVucPhus nhưng không có scope và không có targetMaBm
-// → đưa khuVucPhus vào scope select thay vì render select riêng
-const useKvpAsScopeMode = (maBm?: string): boolean => {
-  const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
-  const kvps = bm?.khuVucPhus ?? [];
-  return kvps.length > 0 && !(bm?.scope?.length) && !kvps.some((k) => k.targetMaBm);
-};
-
-const getKvpAsScopeOptions = (maBm?: string) => {
-  const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
-  return (bm?.khuVucPhus ?? []).map((k) => ({ value: makeKvpVal(k.khuVucPhu), label: k.tenKhuVuc }));
-};
-
 const getTargetBmLabel = (targetMaBm: string): string =>
   bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === targetMaBm)?.tenBm ?? targetMaBm;
 
@@ -163,9 +150,6 @@ function buildBmRowsFromRecords(records: any[]): BmRow[] {
     if (reverse) {
       // targetMaBm record → hiện lại là kvp value trong BmRow cha (merged mode)
       normalized.push({ parentMaBm: reverse.parentMaBm, displayVal: makeKvpVal(reverse.khuVucPhu), quyenChucNang });
-    } else if (useKvpAsScopeMode(maBm) && khuVucPhu) {
-      // kvpAsScope mode (vd HRC2_BBGN_PhoiTam): khuVucPhu → hiện trong scope select
-      normalized.push({ parentMaBm: maBm, displayVal: makeKvpVal(khuVucPhu), quyenChucNang });
     } else {
       normalized.push({ parentMaBm: maBm, displayVal: maKhuVuc || ALL_KHU_VUC, quyenChucNang, khuVucPhu });
     }
@@ -406,8 +390,6 @@ const PhanQuyenBieuMau = () => {
         const merged = useMergedScopeMode(bmRow.maBm);
         const items: any[] = [];
 
-        const kvpAsScope = useKvpAsScopeMode(bmRow.maBm);
-
         if (merged) {
           // Merged mode: maKhuVucs chứa cả scope thường lẫn "kvp:" items
           for (const subRow of bmRow.subRows) {
@@ -430,18 +412,8 @@ const PhanQuyenBieuMau = () => {
             for (const [targetMaBm, scopes] of byTarget)
               items.push({ maBm: targetMaBm, maKhuVucs: scopes, quyenChucNangs: subRow.quyenChucNangs, khuVucPhus: [] });
           }
-        } else if (kvpAsScope) {
-          // kvpAsScope mode: scope select chứa kvp values, lưu theo khuVucPhu field
-          for (const subRow of bmRow.subRows) {
-            if (subRow.quyenChucNangs.length === 0) continue;
-            const kvpVals = subRow.maKhuVucs
-              .filter((v) => v.startsWith(KVP_PREFIX))
-              .map((v) => v.slice(KVP_PREFIX.length));
-            if (kvpVals.length > 0)
-              items.push({ maBm: bmRow.maBm!, maKhuVucs: [ALL_KHU_VUC], quyenChucNangs: subRow.quyenChucNangs, khuVucPhus: kvpVals });
-          }
         } else {
-          // Old-style: khuVucPhus không có targetMaBm
+          // Old-style: khuVucPhus không có targetMaBm (HRC2, v.v.)
           const oldStyleKvps = bmRow.khuVucPhus.filter((v) => {
             const def = (bm?.khuVucPhus ?? []).find((k) => k.khuVucPhu === v);
             return !def?.targetMaBm;
@@ -696,7 +668,7 @@ const PhanQuyenBieuMau = () => {
                             title="Xóa biểu mẫu này"
                           />
                         </div>
-                        {hasKhuVucPhu(bmRow.maBm) && !useMergedScopeMode(bmRow.maBm) && !useKvpAsScopeMode(bmRow.maBm) && (
+                        {hasKhuVucPhu(bmRow.maBm) && !useMergedScopeMode(bmRow.maBm) && (
                           <Select
                             mode="multiple"
                             style={{ width: "100%", marginTop: 4 }}
@@ -717,11 +689,9 @@ const PhanQuyenBieuMau = () => {
                         disabled={!bmRow.maBm}
                         value={subRow.maKhuVucs}
                         options={
-                          (useKvpAsScopeMode(bmRow.maBm)
-                            ? getKvpAsScopeOptions(bmRow.maBm)
-                            : useMergedScopeMode(bmRow.maBm)
-                              ? getMergedScopeOptions(bmRow.maBm)
-                              : getScopeOptions(bmRow.maBm)
+                          (useMergedScopeMode(bmRow.maBm)
+                            ? getMergedScopeOptions(bmRow.maBm)
+                            : getScopeOptions(bmRow.maBm)
                           ) as { value: string; label: string }[]
                         }
                         onChange={(vals) => handleKhuVucChange(bmRow.key, subRow.key, vals)}

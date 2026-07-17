@@ -7,9 +7,9 @@
     "subCompany": "HÒA PHÁT GANG THÉP"
   },
   "isoInfo": {
-    "code": "",
-    "effectiveDate": "",
-    "revision": ""
+    "code": "BM.16/QT.05.155",
+    "effectiveDate": "10/011/2025",
+    "revision": "00"
   },
   "headerFields": [
     { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true },
