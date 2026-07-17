@@ -58,6 +58,11 @@ export const MenuDataDashboard = [
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
         maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
       },
+      {
+        code: "bbgnphoitam_hrc1",
+        title: "BM.16/QT.05.10 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
+        maBm: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+      }
     ],
   },
   {
@@ -85,6 +90,11 @@ export const MenuDataDashboard = [
         title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
         maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
       },
+      {
+        code: "bbgnphoitam",
+        title: "BM.16/QT.05.10 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
+        maBm: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+      }
     ],
   },
   {

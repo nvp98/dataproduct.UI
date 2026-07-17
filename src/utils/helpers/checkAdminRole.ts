@@ -141,6 +141,7 @@ export const QUYEN_CHUC_NANG_XEM = 5; // Xem
 export type BmQuyenXlItem = {
   maBm?: string | null;
   quyenChucNang?: number | null;
+  khuVucPhu?: string | null;
 };
 
 function readUserFromStorage(): unknown {
@@ -179,6 +180,20 @@ export const getBmQuyenRowsForMa = (maBm: string): BmQuyenXlItem[] => {
   if (!key) return [];
   return getBmQuyenXlList().filter(
     (r) => normalizeMaBm(String(r.maBm ?? "")) === key
+  );
+};
+
+/**
+ * Kiểm tra user thuộc khu vực phụ (bộ phận) cụ thể của một BM.
+ * Dùng để phân biệt KCS / Đúc / Kho trong cùng 1 maBM (HRC2_BBGN_PhoiTam).
+ * Admin luôn trả về true.
+ */
+export const hasKhuVucPhu = (user: any, maBm: string, khuVucPhu: string): boolean => {
+  if (!user || !maBm) return false;
+  if (isAdminUser(user)) return true;
+  const key = khuVucPhu.trim().toUpperCase();
+  return getBmQuyenRowsForMa(maBm).some(
+    (r) => (r.khuVucPhu ?? "").trim().toUpperCase() === key
   );
 };
 
