@@ -710,7 +710,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                       )}
 
                       {/* PKH: chốt từng dòng (chỉ khi phiếu chưa chốt) */}
-                      {isPKH && data?.tinhTrang !== 5 && (
+                      {/* {isPKH && data?.tinhTrang !== 5 && (
                         <>
                           <Popconfirm
                             title={`Chốt PKH ${selectedCount} slab?`}
@@ -731,7 +731,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                             </Button>
                           </Popconfirm>
                         </>
-                      )}
+                      )} */}
 
                       <Button
                         size="small"

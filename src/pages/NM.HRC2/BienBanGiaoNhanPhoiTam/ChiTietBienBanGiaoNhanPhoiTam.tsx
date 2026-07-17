@@ -659,7 +659,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                           </Popconfirm>
                         </>
                       )}
-                      {isPKH && (
+                      {/* {isPKH && (
                         <>
                           <Popconfirm
                             title={`Chốt PKH ${selectedCount} slab?`}
@@ -692,7 +692,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                             </Button>
                           </Popconfirm>
                         </>
-                      )}
+                      )} */}
                     </div>
                   }
                 >

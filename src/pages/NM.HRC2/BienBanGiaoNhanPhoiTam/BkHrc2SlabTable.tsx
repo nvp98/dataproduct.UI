@@ -409,6 +409,8 @@ const BkHrc2SlabTable = () => {
         v != null ? Number(v).toLocaleString("vi-VN", { minimumFractionDigits: 3 }) : "-",
     },
     { title: "Chất lượng", dataIndex: "chatLuong", width: 280 },
+    { title: "OrderID", dataIndex: "orderId", width: 150 },
+    { title: "LotName", dataIndex: "soLo", width: 150 },
   ], []);
 
   // Cột ẩn mặc định — bật/tắt bằng nút "Hiện cột phụ"
