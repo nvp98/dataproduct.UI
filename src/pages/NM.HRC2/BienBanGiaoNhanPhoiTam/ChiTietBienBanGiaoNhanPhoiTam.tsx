@@ -137,6 +137,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [chotLoading, setChotLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState<string | null>(null);
+  const [tongHopRefreshLoading, setTongHopRefreshLoading] = useState(false);
 
   // ── Chốt / Hủy chốt phiếu ────────────────────────────────────────────────
   const handleChotPhieu = async () => {
@@ -168,6 +169,17 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
   };
 
   // ── Load data ─────────────────────────────────────────────────────────────
+  const loadSlabRows = useCallback(async () => {
+    if (!idphieu) return;
+    const [slabs, details] = await Promise.all([
+      Hrc2SlabApi.getRuotPhieu(idphieu),
+      Hrc2SlabApi.getSlabsByPhieu(idphieu),
+    ]);
+    setSlabRows(slabs);
+    setSlabDetails(details);
+    setSelectedRowKeys([]);
+  }, [idphieu]);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -175,26 +187,37 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
       setSlabDetails([]);
       setSelectedRowKeys([]);
       if (!idphieu) return;
-      const [res, slabs, details] = await Promise.all([
+      const [res] = await Promise.all([
         safeGetDetail(() => PhieuApi.getDetail(idphieu)),
-        Hrc2SlabApi.getRuotPhieu(idphieu),
-        Hrc2SlabApi.getSlabsByPhieu(idphieu),
+        loadSlabRows(),
       ]);
       if (!res) return;
       setData((res as any)?.data ?? res);
-      setSlabRows(slabs);
-      setSlabDetails(details);
     } catch (error) {
       console.error("Lỗi tải dữ liệu phiếu:", error);
       message.error("Không thể tải dữ liệu phiếu");
     } finally {
       setLoading(false);
     }
-  }, [idphieu, safeGetDetail]);
+  }, [idphieu, safeGetDetail, loadSlabRows]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Chỉ làm mới dữ liệu slab cho tab "Tổng hợp slab" — không gọi loadData()
+  // vì loadData() bật Card loading, khiến Tabs (uncontrolled) unmount rồi
+  // remount về defaultActiveKey ("slab"), làm mất tab đang xem.
+  const handleRefreshTongHop = useCallback(async () => {
+    try {
+      setTongHopRefreshLoading(true);
+      await loadSlabRows();
+    } catch (err: any) {
+      message.error(err?.message ?? "Lỗi làm mới dữ liệu");
+    } finally {
+      setTongHopRefreshLoading(false);
+    }
+  }, [loadSlabRows]);
 
   const formData = data?.jsonData || {};
 
@@ -528,6 +551,29 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
 
   // const hasWorkflowButtons = isDuc || isKho || isPKH;
 
+  // ── Nút Chốt phiếu dùng chung cho cả 2 tab ────────────────────────────────
+  const chotPhieuButtons = (
+    <>
+      {isPKH && data?.tinhTrang !== 5 && (
+        <Popconfirm
+          title="Chốt phiếu này? Sau khi chốt sẽ không thể chuyển thêm slab vào."
+          onConfirm={handleChotPhieu}
+        >
+          <Button size="small" type="primary" icon={<LockOutlined />} loading={chotLoading}>
+            Chốt phiếu
+          </Button>
+        </Popconfirm>
+      )}
+      {isPKH && data?.tinhTrang === 5 && (
+        <Popconfirm title="Hủy chốt phiếu này?" onConfirm={handleHuyChotPhieu}>
+          <Button size="small" danger icon={<UnlockOutlined />} loading={chotLoading}>
+            Hủy chốt
+          </Button>
+        </Popconfirm>
+      )}
+    </>
+  );
+
   return (
     <Card
       bordered
@@ -578,6 +624,14 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                   bodyStyle={{ padding: "8px 12px" }}
                   extra={
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Button
+                        size="small"
+                        icon={<ReloadOutlined />}
+                        onClick={() => void loadData()}
+                        loading={loading}
+                      >
+                        Làm mới
+                      </Button>
                       <Button
                         size="small"
                         icon={<FileExcelOutlined />}
@@ -659,6 +713,8 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                           </Popconfirm>
                         </>
                       )}
+
+                      {chotPhieuButtons}
                       {/* {isPKH && (
                         <>
                           <Popconfirm
@@ -756,6 +812,14 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                 <div style={{ display: "flex", gap: 8, marginTop: 12, marginBottom: 8, justifyContent: "flex-end" }}>
                   <Button
                     size="small"
+                    icon={<ReloadOutlined />}
+                    onClick={() => void handleRefreshTongHop()}
+                    loading={tongHopRefreshLoading}
+                  >
+                    Làm mới
+                  </Button>
+                  <Button
+                    size="small"
                     icon={<FileExcelOutlined />}
                     loading={exportLoading === "tonghop-excel"}
                     onClick={() => void handleExportTongHopExcel()}
@@ -772,6 +836,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                   >
                     PDF
                   </Button>
+                  {chotPhieuButtons}
                 </div>
                 <div style={{ marginTop: 0, fontSize: 11, lineHeight: 1.4 }}>
                   <Table
@@ -862,49 +927,20 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
       </Row> */}
 
       {/* Action buttons phiếu */}
-      <div
-        style={{
-          textAlign: "center",
-          marginTop: 32,
-          display: "flex",
-          gap: 8,
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => void loadData()}
-          loading={loading}
+      {actionButtons && (
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 32,
+            display: "flex",
+            gap: 8,
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
         >
-          Làm mới
-        </Button>
-        {isPKH && data?.tinhTrang !== 5 && (
-          <Popconfirm
-            title="Chốt phiếu này? Sau khi chốt sẽ không thể chuyển thêm slab vào."
-            onConfirm={handleChotPhieu}
-          >
-            <Button
-              type="primary"
-              icon={<LockOutlined />}
-              loading={chotLoading}
-            >
-              Chốt phiếu
-            </Button>
-          </Popconfirm>
-        )}
-        {isPKH && data?.tinhTrang === 5 && (
-          <Popconfirm
-            title="Hủy chốt phiếu này?"
-            onConfirm={handleHuyChotPhieu}
-          >
-            <Button danger icon={<UnlockOutlined />} loading={chotLoading}>
-              Hủy chốt
-            </Button>
-          </Popconfirm>
-        )}
-        {actionButtons}
-      </div>
+          {actionButtons}
+        </div>
+      )}
     </Card>
   );
 };

@@ -149,6 +149,7 @@ const BkHrc2SlabTable = () => {
         isChot:         filters.isChot ?? null,
         isTrungIDSlab:  filters.isTrungIDSlab ? true : null,
         isDiffMacThep:  filters.isDiffMacThep ? true : null,
+        isSaiLotName:   filters.isSaiLotName ? true : null,
         trangThaiKCS:   filters.trangThaiKCS ?? null,
         page,
         pageSize,
@@ -164,16 +165,21 @@ const BkHrc2SlabTable = () => {
     }
   }, [form]);
 
-  useEffect(() => { fetchData(1, pagination.pageSize); }, []);
+  // Auto-sync BKMIS đúng 1 lần khi vào trang / load lại trang — KHÔNG sync
+  // lại mỗi lần bấm "Tìm" (nặng, mất thời gian).
+  useEffect(() => {
+    (async () => {
+      try {
+        const homNay = dayjs().format("YYYY-MM-DD");
+        await Hrc2SlabApi.sync(homNay, homNay);
+      } catch (err) {
+        console.error("Auto-sync BKMIS khi vào trang bị lỗi:", err);
+      }
+      await fetchData(1, pagination.pageSize);
+    })();
+  }, []);
 
   const handleSearch = async (values: any) => {
-    setLoading(true);
-    try {
-      const homNay = dayjs().format("YYYY-MM-DD");
-      await Hrc2SlabApi.sync(homNay, homNay);
-    } catch (err) {
-      console.error("Auto-sync BKMIS trước khi tìm bị lỗi:", err);
-    }
     await fetchData(1, pagination.pageSize, values);
   };
 
@@ -410,7 +416,18 @@ const BkHrc2SlabTable = () => {
     },
     { title: "Chất lượng", dataIndex: "chatLuong", width: 280 },
     { title: "OrderID", dataIndex: "orderId", width: 150 },
-    { title: "LotName", dataIndex: "soLo", width: 150 },
+    {
+      title: "LotName",
+      dataIndex: "soLo",
+      width: 150,
+      render: (v: string, r: HrcSlabItem) => (
+        <Tooltip title={r.isSaiLotName ? "Tháng trong LotName không khớp tháng trong Ca SX" : undefined}>
+          <span style={{ color: r.isSaiLotName ? "#ff4d4f" : undefined, fontWeight: r.isSaiLotName ? 600 : undefined }}>
+            {v ?? "-"}
+          </span>
+        </Tooltip>
+      ),
+    },
   ], []);
 
   // Cột ẩn mặc định — bật/tắt bằng nút "Hiện cột phụ"
@@ -468,7 +485,12 @@ const BkHrc2SlabTable = () => {
     <div>
       {/* Form search + Toolbar gộp chung */}
       <Card style={{ marginBottom: 8 }}>
-        <Form form={form} layout="vertical" onFinish={handleSearch}>
+        <Form form={form} layout="vertical" size="small" className="hrc2-search-form" onFinish={handleSearch}>
+          <style>{`
+            .hrc2-search-form .ant-form-item { margin-bottom: 8px; }
+            .hrc2-search-form .ant-form-item-label { padding-bottom: 2px; }
+            .hrc2-search-form .ant-form-item-label > label { font-size: 12px; height: 18px; }
+          `}</style>
           <Row gutter={[12, 0]}>
             <Col xs={24} sm={12} md={4}>
               <Form.Item name="dateRange" label="Khoảng ngày SX">
@@ -562,6 +584,11 @@ const BkHrc2SlabTable = () => {
             <Col xs={12} sm={6} md={2}>
               <Form.Item name="isDiffMacThep" valuePropName="checked" label=" ">
                 <Checkbox>Khác mác thép</Checkbox>
+              </Form.Item>
+            </Col>
+            <Col xs={12} sm={6} md={2}>
+              <Form.Item name="isSaiLotName" valuePropName="checked">
+                <Checkbox>Sai LotName</Checkbox>
               </Form.Item>
             </Col>
           </Row>

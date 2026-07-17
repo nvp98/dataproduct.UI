@@ -105,6 +105,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   const [syncLoading, setSyncLoading] = useState(false);
 
   const [chuyenLoading, setChuyenLoading] = useState<"truoc" | "sau" | null>(null);
+  const [tongHopRefreshLoading, setTongHopRefreshLoading] = useState(false);
 
   // inline edits per slab id
   const [rowEdits, setRowEdits] = useState<Record<number, RowEdit>>({});
@@ -142,18 +143,14 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
       setThGhiChuEdits({});
       if (!idphieu) return;
 
-      // Get phiếu detail trước để lấy ngaySX + ca cho sync
+      // Chỉ đọc dữ liệu local (nhanh) — KHÔNG đồng bộ TSC ở đây.
+      // Đồng bộ TSC (nặng, qua SP linked-server) chỉ chạy khi user chủ động
+      // bấm "Làm mới dữ liệu" (xem handleSyncData), tránh mọi lần reload
+      // (vào phiếu, sau XN/chuyển phôi/chốt phiếu) đều phải chờ sync.
       const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
       if (!res) return;
       const phieuData = (res as any)?.data ?? res;
       setData(phieuData);
-
-      // Auto-sync từ TSC khi vào trang
-      if (phieuData?.ngaySX && phieuData?.ca) {
-        try {
-          await Hrc1SlabApi.sync(dayjs(phieuData.ngaySX).format("YYYY-MM-DD"), phieuData.ca);
-        } catch { /* bỏ qua lỗi sync tự động */ }
-      }
 
       await loadSlabs();
     } catch (error) {
@@ -179,6 +176,20 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   }, [idphieu, data, loadSlabs]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Chỉ làm mới dữ liệu slab/ghi chú cho tab tổng hợp — không gọi loadData()
+  // vì loadData() bật Card loading, khiến Tabs (uncontrolled) unmount rồi
+  // remount về defaultActiveKey, làm mất tab đang xem.
+  const handleRefreshTongHop = useCallback(async () => {
+    try {
+      setTongHopRefreshLoading(true);
+      await loadSlabs();
+    } catch (err: any) {
+      message.error(err?.message ?? "Lỗi làm mới dữ liệu");
+    } finally {
+      setTongHopRefreshLoading(false);
+    }
+  }, [loadSlabs]);
 
   // ── Chốt / Hủy chốt ──────────────────────────────────────────────────────
   const handleChotPhieu = async () => {
@@ -220,8 +231,6 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   const canXacNhanC4  = selectedCount > 0 && selectedRows.every((r) => !r.trangThaiC4 && r.trangThaiPKH === 0);
   const canHuyC4      = selectedCount > 0 && selectedRows.every((r) => r.trangThaiC4 && r.trangThaiPKH === 0);
   // PKH chỉ chốt được khi cả Đúc, Cán và C4 đã xác nhận
-  const canChotPKH    = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiCan === 1 && r.trangThaiC4 && r.trangThaiPKH === 0);
-  const canHuyChotPKH = selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 1);
 
   const handleXacNhan = async (loai: "Duc" | "Can" | "C4" | "PKH") => {
     try {
@@ -567,6 +576,31 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     };
   }, [data]);
 
+  // ── Nút Chốt phiếu dùng chung cho cả 2 tab ────────────────────────────────
+  const chotPhieuButtons = (
+    <>
+      {isPKH && data?.tinhTrang !== 5 && (
+        <Tooltip title="Tự động chốt tất cả dòng chưa chốt và đóng phiếu">
+          <Popconfirm
+            title="Chốt phiếu? Tất cả slab chưa chốt sẽ được chốt tự động và phiếu sẽ bị khóa."
+            onConfirm={handleChotPhieu}
+          >
+            <Button size="small" type="primary" icon={<LockOutlined />} loading={chotLoading}>
+              Chốt phiếu
+            </Button>
+          </Popconfirm>
+        </Tooltip>
+      )}
+      {isPKH && data?.tinhTrang === 5 && (
+        <Popconfirm title="Hủy chốt phiếu này?" onConfirm={handleHuyChotPhieu}>
+          <Button size="small" danger icon={<UnlockOutlined />} loading={chotLoading}>
+            Hủy chốt
+          </Button>
+        </Popconfirm>
+      )}
+    </>
+  );
+
   // ── Info header dùng chung ────────────────────────────────────────────────
   const phieuInfo = (
     <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
@@ -742,6 +776,8 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                       >
                         Excel
                       </Button>
+
+                      {chotPhieuButtons}
                     </div>
                   }
                 >
@@ -788,6 +824,14 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                 <div style={{ display: "flex", gap: 8, marginBottom: 8, justifyContent: "flex-end" }}>
                   <Button
                     size="small"
+                    icon={<ReloadOutlined />}
+                    onClick={() => void handleRefreshTongHop()}
+                    loading={tongHopRefreshLoading}
+                  >
+                    Làm mới
+                  </Button>
+                  <Button
+                    size="small"
                     icon={<FileExcelOutlined />}
                     loading={exportLoading === "tonghop-excel"}
                     onClick={() => void handleExportTongHopExcel()}
@@ -804,6 +848,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                   >
                     PDF
                   </Button>
+                  {chotPhieuButtons}
                 </div>
                 <Table
                   rowKey={(r) => `${r.macThep ?? ""}|${r.maVatTu ?? ""}`}
@@ -839,40 +884,20 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
         ]}
       />
 
-      <div
-        style={{
-          textAlign: "center",
-          marginTop: 32,
-          display: "flex",
-          gap: 8,
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <Button icon={<ReloadOutlined />} onClick={() => void loadData()} loading={loading}>
-          Làm mới
-        </Button>
-        {isPKH && data?.tinhTrang !== 5 && (
-          <Tooltip title="Tự động chốt tất cả dòng chưa chốt và đóng phiếu">
-            <Popconfirm
-              title="Chốt phiếu? Tất cả slab chưa chốt sẽ được chốt tự động và phiếu sẽ bị khóa."
-              onConfirm={handleChotPhieu}
-            >
-              <Button type="primary" icon={<LockOutlined />} loading={chotLoading}>
-                Chốt phiếu
-              </Button>
-            </Popconfirm>
-          </Tooltip>
-        )}
-        {isPKH && data?.tinhTrang === 5 && (
-          <Popconfirm title="Hủy chốt phiếu này?" onConfirm={handleHuyChotPhieu}>
-            <Button danger icon={<UnlockOutlined />} loading={chotLoading}>
-              Hủy chốt
-            </Button>
-          </Popconfirm>
-        )}
-        {actionButtons}
-      </div>
+      {actionButtons && (
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 32,
+            display: "flex",
+            gap: 8,
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {actionButtons}
+        </div>
+      )}
 
       {/* CSS cho row được chuyển ca */}
       <style>{`

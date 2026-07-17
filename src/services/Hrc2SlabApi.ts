@@ -30,6 +30,7 @@ export interface HrcSlabSearchRequest {
   isChot?: boolean | null;
   isTrungIDSlab?: boolean | null;
   isDiffMacThep?: boolean | null;
+  isSaiLotName?: boolean | null;
   trangThaiKCS?: number | null;
   trangThaiDuc?: number | null;
   trangThaiKho?: number | null;
@@ -66,6 +67,7 @@ export interface HrcSlabItem {
   mayDuc?: number | null;
   isTrungIDSlab?: boolean | null;
   isDiffMacThep?: boolean | null;
+  isSaiLotName: boolean;
   line?: number | null;
   sapLastTime?: string | null;
   isChot: boolean;
