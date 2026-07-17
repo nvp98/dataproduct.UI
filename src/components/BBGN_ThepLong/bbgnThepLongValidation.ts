@@ -32,7 +32,6 @@ export const validateBBGNRows = (
     const mayDuc = !isEmpty(r.mayDuc) ? r.mayDuc : scopeDisplay;
     if (isEmpty(mayDuc)) return `Dòng ${line}: thiếu Máy đúc.`;
     if (isEmpty(r.me)) return `Dòng ${line}: thiếu Mẻ.`;
-    if (isEmpty(r.macThep)) return `Dòng ${line}: thiếu Mác thép.`;
     if (isEmpty(r.thungSo)) return `Dòng ${line}: thiếu Thùng số.`;
     if (isEmpty(r.thoiGian)) return `Dòng ${line}: thiếu Thời gian.`;
     if (r.klLan1 == null) return `Dòng ${line}: thiếu KL lần 1.`;

@@ -1,9 +1,17 @@
 import { Button, Card, Checkbox, message, Modal, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import "../styles/readonly.css";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import PhieuFilterCard, { type FilterFieldConfig, type PhieuFilterValues } from "./PhieuFilterCard";
-import type { SearchPhieuByUserRequest, SearchPhieuRequest, SearchPhieuResponseModel } from "../models/Phieu";
+import PhieuFilterCard, {
+  type FilterFieldConfig,
+  type PhieuFilterValues,
+} from "./PhieuFilterCard";
+import type {
+  SearchPhieuByUserRequest,
+  SearchPhieuRequest,
+  SearchPhieuResponseModel,
+} from "../models/Phieu";
 import { PhieuApi } from "../services/PhieuApi";
 import { TrangThaiPhieuConst } from "../utils/constants/TrangThaiPhieuConstant";
 import { usePhieuSearchListHRC } from "../hooks/usePhieuSearchListHRC";
@@ -51,15 +59,25 @@ export interface ThongKePhieuCommonProps {
   /** Cấu hình các field của form tìm kiếm. Không truyền sẽ dùng mặc định:
    *  Ngày sản xuất, Ca, Số phiếu, Tình trạng. */
   filterFields?: FilterFieldConfig[];
-  transformFilters?: (filters: PhieuFilterValues) => Partial<SearchPhieuRequest>;
-  computeFixedFilters?: (currentUserId: number | null) => Partial<SearchPhieuByUserRequest>;
+  transformFilters?: (
+    filters: PhieuFilterValues,
+  ) => Partial<SearchPhieuRequest>;
+  computeFixedFilters?: (
+    currentUserId: number | null,
+  ) => Partial<SearchPhieuByUserRequest>;
   mergeFilters?: PhieuFilterValues;
   persistKey?: boolean;
   /** Xử lý chốt phiếu tùy biến — trả về số phiếu thành công + danh sách thất bại.
    *  Không truyền sẽ dùng mặc định: PhieuApi.chotNhieuPhieu(ids, DaChot). */
-  onChotPhieu?: (ids: string[], dataMap: Map<string, TableRecord>) => Promise<ChotResult>;
+  onChotPhieu?: (
+    ids: string[],
+    dataMap: Map<string, TableRecord>,
+  ) => Promise<ChotResult>;
   /** Tương tự onChotPhieu nhưng cho hủy chốt. Mặc định chuyển trạng thái về HoanThanh. */
-  onHuyChotPhieu?: (ids: string[], dataMap: Map<string, TableRecord>) => Promise<ChotResult>;
+  onHuyChotPhieu?: (
+    ids: string[],
+    dataMap: Map<string, TableRecord>,
+  ) => Promise<ChotResult>;
   /** Render thêm các nút thao tác hàng loạt (vd: Export Excel, Làm mới dữ liệu...). */
   renderExtraActions?: (ctx: ExtraActionsCtx) => ReactNode;
   onFilterFieldChange?: (key: string, value: unknown) => void;
@@ -68,9 +86,15 @@ export interface ThongKePhieuCommonProps {
   scrollX?: number;
 }
 
-const showBatchResult = (successCount: number, failures: ChotBatchFailure[], action: "chốt" | "hủy chốt") => {
+const showBatchResult = (
+  successCount: number,
+  failures: ChotBatchFailure[],
+  action: "chốt" | "hủy chốt",
+) => {
   if (failures.length === 0) {
-    message.success(`${action === "chốt" ? "Chốt" : "Hủy chốt"} ${successCount} phiếu thành công`);
+    message.success(
+      `${action === "chốt" ? "Chốt" : "Hủy chốt"} ${successCount} phiếu thành công`,
+    );
     return;
   }
   Modal.warning({
@@ -88,10 +112,12 @@ const showBatchResult = (successCount: number, failures: ChotBatchFailure[], act
   });
 };
 
-const defaultChotHandler = (status: number) => async (ids: string[]): Promise<ChotResult> => {
-  await PhieuApi.chotNhieuPhieu(ids, status);
-  return { successCount: ids.length, failures: [] };
-};
+const defaultChotHandler =
+  (status: number) =>
+  async (ids: string[]): Promise<ChotResult> => {
+    await PhieuApi.chotNhieuPhieu(ids, status);
+    return { successCount: ids.length, failures: [] };
+  };
 
 const ThongKePhieuCommon = ({
   maBmList,
@@ -126,24 +152,33 @@ const ThongKePhieuCommon = ({
 
   const fixedFilters = useMemo(
     () => computeFixedFilters(currentUserId),
-    [computeFixedFilters, currentUserId]
+    [computeFixedFilters, currentUserId],
   );
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [chotLoading, setChotLoading] = useState(false);
 
-  const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange, refetch } =
-    usePhieuSearchListHRC({
-      maBmList,
-      fixedFilters,
-      transformFilters,
-      persistKey: persistKey ? true : undefined,
-    });
+  const {
+    data,
+    loading,
+    pagination,
+    handleFilter,
+    handleClearFilter,
+    onPageChange,
+    refetch,
+  } = usePhieuSearchListHRC({
+    maBmList,
+    fixedFilters,
+    transformFilters,
+    persistKey: persistKey ? true : undefined,
+  });
 
   const tableData = data as TableRecord[];
 
-  const isAllSelected = tableData.length > 0 && tableData.every((r) => selectedKeys.has(r.idphieu));
-  const isIndeterminate = !isAllSelected && tableData.some((r) => selectedKeys.has(r.idphieu));
+  const isAllSelected =
+    tableData.length > 0 && tableData.every((r) => selectedKeys.has(r.idphieu));
+  const isIndeterminate =
+    !isAllSelected && tableData.some((r) => selectedKeys.has(r.idphieu));
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedKeys((prev) => {
@@ -156,9 +191,11 @@ const ThongKePhieuCommon = ({
 
   const handleSelectAll = useCallback(
     (checked: boolean) => {
-      setSelectedKeys(checked ? new Set(tableData.map((r) => r.idphieu)) : new Set());
+      setSelectedKeys(
+        checked ? new Set(tableData.map((r) => r.idphieu)) : new Set(),
+      );
     },
-    [tableData]
+    [tableData],
   );
 
   const handlePageChange = useCallback(
@@ -166,14 +203,19 @@ const ThongKePhieuCommon = ({
       setSelectedKeys(new Set());
       onPageChange(page, pageSize);
     },
-    [onPageChange]
+    [onPageChange],
   );
 
   const runBatchAction = useCallback(
     (
-      handler: ((ids: string[], dataMap: Map<string, TableRecord>) => Promise<ChotResult>) | undefined,
+      handler:
+        | ((
+            ids: string[],
+            dataMap: Map<string, TableRecord>,
+          ) => Promise<ChotResult>)
+        | undefined,
       defaultHandler: (ids: string[]) => Promise<ChotResult>,
-      action: "chốt" | "hủy chốt"
+      action: "chốt" | "hủy chốt",
     ) => {
       if (selectedKeys.size === 0) return;
       Modal.confirm({
@@ -187,65 +229,116 @@ const ThongKePhieuCommon = ({
             setChotLoading(true);
             const dataMap = new Map(tableData.map((r) => [r.idphieu, r]));
             const ids = [...selectedKeys];
-            const result = handler ? await handler(ids, dataMap) : await defaultHandler(ids);
+            const result = handler
+              ? await handler(ids, dataMap)
+              : await defaultHandler(ids);
             setSelectedKeys(new Set());
             refetch();
             showBatchResult(result.successCount, result.failures, action);
           } catch {
-            message.error(`${action === "chốt" ? "Chốt" : "Hủy chốt"} phiếu thất bại. Vui lòng thử lại.`);
+            message.error(
+              `${action === "chốt" ? "Chốt" : "Hủy chốt"} phiếu thất bại. Vui lòng thử lại.`,
+            );
           } finally {
             setChotLoading(false);
           }
         },
       });
     },
-    [selectedKeys, tableData, refetch]
+    [selectedKeys, tableData, refetch],
   );
 
   const handleChotPhieu = useCallback(
-    () => runBatchAction(onChotPhieu, defaultChotHandler(TrangThaiPhieuConst.DaChot), "chốt"),
-    [runBatchAction, onChotPhieu]
+    () =>
+      runBatchAction(
+        onChotPhieu,
+        defaultChotHandler(TrangThaiPhieuConst.DaChot),
+        "chốt",
+      ),
+    [runBatchAction, onChotPhieu],
   );
 
   const handleHuyChotPhieu = useCallback(
-    () => runBatchAction(onHuyChotPhieu, defaultChotHandler(TrangThaiPhieuConst.HoanThanh), "hủy chốt"),
-    [runBatchAction, onHuyChotPhieu]
+    () =>
+      runBatchAction(
+        onHuyChotPhieu,
+        defaultChotHandler(TrangThaiPhieuConst.HoanThanh),
+        "hủy chốt",
+      ),
+    [runBatchAction, onHuyChotPhieu],
   );
 
   const selectedMaBm = useMemo(() => {
     if (selectedKeys.size === 0) return null;
-    const dataMap = new Map(tableData.map((r) => [r.idphieu, r.maBm as string]));
-    const maBms = new Set([...selectedKeys].map((id) => dataMap.get(id)).filter(Boolean) as string[]);
+    const dataMap = new Map(
+      tableData.map((r) => [r.idphieu, r.maBm as string]),
+    );
+    const maBms = new Set(
+      [...selectedKeys]
+        .map((id) => dataMap.get(id))
+        .filter(Boolean) as string[],
+    );
     return maBms.size === 1 ? [...maBms][0] : null;
   }, [selectedKeys, tableData]);
 
   const businessColumns = useMemo(
-    () => columns ?? buildDefaultColumns({ mabmDetailRoute, type, navigate, rowClickToggleSelect }),
-    [columns, mabmDetailRoute, type, navigate, rowClickToggleSelect]
+    () =>
+      columns ??
+      buildDefaultColumns({
+        mabmDetailRoute,
+        type,
+        navigate,
+        rowClickToggleSelect,
+      }),
+    [columns, mabmDetailRoute, type, navigate, rowClickToggleSelect],
   );
 
   const tableColumns = useMemo<ColumnsType<TableRecord>>(
     () => [
       {
         title: (
-          <Checkbox checked={isAllSelected} indeterminate={isIndeterminate} onChange={(e) => handleSelectAll(e.target.checked)} />
+          <Checkbox
+            checked={isAllSelected}
+            indeterminate={isIndeterminate}
+            onChange={(e) => handleSelectAll(e.target.checked)}
+          />
         ),
         dataIndex: "select",
         key: "select",
         width: 50,
         fixed: "left" as const,
         render: (_: unknown, record: TableRecord) => {
-          const checkbox = <Checkbox checked={selectedKeys.has(record.idphieu)} onChange={() => toggleSelect(record.idphieu)} />;
-          return rowClickToggleSelect ? <span onClick={(e) => e.stopPropagation()}>{checkbox}</span> : checkbox;
+          const checkbox = (
+            <Checkbox
+              checked={selectedKeys.has(record.idphieu)}
+              onChange={() => toggleSelect(record.idphieu)}
+            />
+          );
+          return rowClickToggleSelect ? (
+            <span onClick={(e) => e.stopPropagation()}>{checkbox}</span>
+          ) : (
+            checkbox
+          );
         },
       },
       ...businessColumns,
     ],
-    [isAllSelected, isIndeterminate, handleSelectAll, selectedKeys, toggleSelect, businessColumns, rowClickToggleSelect]
+    [
+      isAllSelected,
+      isIndeterminate,
+      handleSelectAll,
+      selectedKeys,
+      toggleSelect,
+      businessColumns,
+      rowClickToggleSelect,
+    ],
   );
 
   const effectiveFilterFields = filterFields ?? getDefaultFilterFields();
-  const effectiveMergeFilters = { usercode: userObj?.maNV || "", ...mergeFilters };
+  const effectiveMergeFilters = {
+    usercode: userObj?.maNV || "",
+    ...mergeFilters,
+  };
 
   return (
     <div>
@@ -262,23 +355,52 @@ const ThongKePhieuCommon = ({
         onFilterFieldChange={onFilterFieldChange}
       />
       <Card>
-        <div style={{ marginBottom: 12, display: "flex", gap: 12, justifyContent: "flex-start" }}>
-          <Button type="primary" disabled={selectedKeys.size === 0} loading={chotLoading} onClick={handleChotPhieu}>
+        <div
+          style={{
+            marginBottom: 12,
+            display: "flex",
+            gap: 12,
+            justifyContent: "flex-start",
+          }}
+        >
+          <Button
+            type="primary"
+            disabled={selectedKeys.size === 0}
+            loading={chotLoading}
+            onClick={handleChotPhieu}
+          >
             Chốt phiếu ({selectedKeys.size})
           </Button>
-          <Button type="primary" danger disabled={selectedKeys.size === 0} loading={chotLoading} onClick={handleHuyChotPhieu}>
+          <Button
+            type="primary"
+            danger
+            disabled={selectedKeys.size === 0}
+            loading={chotLoading}
+            onClick={handleHuyChotPhieu}
+          >
             Hủy chốt ({selectedKeys.size})
           </Button>
-          {renderExtraActions?.({ selectedKeys: [...selectedKeys], data: tableData, refetch, selectedMaBm })}
+          {renderExtraActions?.({
+            selectedKeys: [...selectedKeys],
+            data: tableData,
+            refetch,
+            selectedMaBm,
+          })}
         </div>
         <Table<TableRecord>
           columns={tableColumns}
+          rowClassName={(record: TableRecord) =>
+            (record.isCheck as number) === 1 ? "row-checked" : ""
+          }
           dataSource={tableData}
           loading={loading}
           rowKey="idphieu"
           onRow={
             rowClickToggleSelect
-              ? (record) => ({ onClick: () => toggleSelect(record.idphieu), style: { cursor: "pointer" } })
+              ? (record) => ({
+                  onClick: () => toggleSelect(record.idphieu),
+                  style: { cursor: "pointer" },
+                })
               : undefined
           }
           pagination={{
@@ -287,14 +409,21 @@ const ThongKePhieuCommon = ({
             total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} phiếu`,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: handlePageChange,
           }}
           scroll={{ x: scrollX }}
           summary={() => (
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={tableColumns.length} align="right">
-                <span style={{ fontWeight: 500 }}>Tổng: {pagination.total} Phiếu</span>
+              <Table.Summary.Cell
+                index={0}
+                colSpan={tableColumns.length}
+                align="right"
+              >
+                <span style={{ fontWeight: 500 }}>
+                  Tổng: {pagination.total} Phiếu
+                </span>
               </Table.Summary.Cell>
             </Table.Summary.Row>
           )}

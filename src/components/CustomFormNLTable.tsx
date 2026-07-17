@@ -16,9 +16,11 @@ import {
   Space,
   Spin,
   Tag,
+  TimePicker,
   Tooltip,
 } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 
 interface ColumnChild {
   title: string;
@@ -196,7 +198,9 @@ export default function CustomFormNLTable({
 
   const handleAddRow = () => {
     const fieldKeys = getAllFieldKeys(columns);
-    const newRow: any = { key: Date.now() };
+    // _isNewRow: đánh dấu dòng người dùng tự thêm tay, để nơi gọi (vd: "Tải dữ liệu")
+    // biết cần giữ lại dòng này khi làm mới bảng từ SCADA/DB thay vì ghi đè mất.
+    const newRow: any = { key: Date.now(), _isNewRow: true };
     fieldKeys.forEach((k: any) => { newRow[k] = ""; });
     const newRows = [...rows, newRow];
     setRows(newRows);
@@ -328,6 +332,26 @@ export default function CustomFormNLTable({
           value={formatIfNeeded(col.format, record[col.dataIndex || ""])}
           readOnly
           style={getCellStyle(col.dataIndex as string, record[col.dataIndex || ""], record, true)}
+        />,
+        col.dataIndex as string,
+        record
+      );
+    }
+
+    // Cột giờ: chọn qua TimePicker thay vì gõ tay, tránh sai định dạng
+    if (col.type === "time") {
+      const timeValue = record[col.dataIndex ?? ""];
+      return wrapManualCell(
+        <TimePicker
+          style={{ width: "100%" }}
+          format="HH:mm:ss"
+          value={timeValue ? dayjs(timeValue, "HH:mm:ss") : null}
+          onChange={(_, timeString) =>
+            handleCellChange(typeof timeString === "string" ? timeString : "", idx, col.dataIndex as string)
+          }
+          disabled={!editable}
+          allowClear
+          placeholder={col.title}
         />,
         col.dataIndex as string,
         record

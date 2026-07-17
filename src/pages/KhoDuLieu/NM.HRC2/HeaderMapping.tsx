@@ -17,7 +17,6 @@ import {
   Tabs,
   Tag,
   message,
-  DatePicker,
 } from "antd";
 import {
   PlusOutlined,
@@ -44,6 +43,8 @@ import type { AutocompleteSearchParams } from "../../../components/CommonAutocom
 import { headerNhomApi } from "../../../services/HeaderNhomApi";
 import type { HeaderNhom } from "../../../services/HeaderNhomApi";
 
+type ThuTuField = "thuTu_TK_BOF" | "thuTu_TK_LFRH" | "thuTu_Excel_BOF" | "thuTu_Excel_LFRH";
+
 type FilterState = {
   searchKey?: string;
   LoaiPhieu?: string;
@@ -52,10 +53,16 @@ type FilterState = {
   IsUsedThongKe?: boolean;
   FromDate?: string;
   ToDate?: string;
-  SortThuTu?: string;
   IdNhom?: number;
   chuaMappingNM?: boolean;
+  // Sort server-side theo 1 trong 4 cột TT — BE tự sort + phân trang lại toàn bộ dữ liệu
+  // (không chỉ sort trong trang đang xem).
+  SortBy?: ThuTuField;
+  SortOrder?: "ascend" | "descend";
 };
+
+const isThuTuField = (f: unknown): f is ThuTuField =>
+  f === "thuTu_TK_BOF" || f === "thuTu_TK_LFRH" || f === "thuTu_Excel_BOF" || f === "thuTu_Excel_LFRH";
 
 type ErrorLike = {
   message?: unknown;
@@ -191,9 +198,11 @@ const HeaderMapping = () => {
         typeof values.IsUsedThongKe === "boolean" ? values.IsUsedThongKe : undefined,
       FromDate: fromDate,
       ToDate: toDate,
-      SortThuTu: values.SortThuTu || undefined,
       IdNhom: typeof values.IdNhom === "number" ? values.IdNhom : undefined,
       chuaMappingNM: values.chuaMappingNM === true ? true : undefined,
+      // Giữ nguyên sort đang áp dụng (nếu có) khi lọc lại
+      SortBy: filters.SortBy,
+      SortOrder: filters.SortOrder,
     };
     fetchData(1, pagination.pageSize, appliedFilters);
   };
@@ -331,6 +340,24 @@ const HeaderMapping = () => {
     setMappingOpen(true);
   };
 
+  // Cảnh báo sớm trùng thứ tự ngay khi nhập, so với các dòng đang tải trên trang hiện tại
+  // (loại trừ chính bản ghi đang sửa). BE vẫn là nơi chốt chặn thật (kiểm tra toàn bộ dữ liệu,
+  // không chỉ trang đang xem) — xem HeaderKeyService.EnsureThuTuUniqueAsync.
+  const makeThuTuValidator = (field: ThuTuField, label: string) => ({
+    validator: (_: unknown, value: number | null | undefined) => {
+      if (value == null) return Promise.resolve();
+      const dup = data.find(
+        (r) => r[field] === value && r.iD_HeaderKey !== editingRecord?.iD_HeaderKey
+      );
+      if (dup) {
+        return Promise.reject(
+          new Error(`${label} = ${value} đã được dùng bởi "${dup.tenHienThi ?? "Header Key khác"}"`)
+        );
+      }
+      return Promise.resolve();
+    },
+  });
+
   const columns = useMemo(
     () => [
       {
@@ -448,6 +475,8 @@ const HeaderMapping = () => {
           dataIndex: "thuTu_TK_BOF",
           key: "thuTu_TK_BOF",
           width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_TK_BOF" ? filters.SortOrder : undefined,
           render: (value: number | null | undefined) => value ?? "-",
         },
         {
@@ -455,6 +484,8 @@ const HeaderMapping = () => {
           dataIndex: "thuTu_TK_LFRH",
           key: "thuTu_TK_LFRH",
           width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_TK_LFRH" ? filters.SortOrder : undefined,
           render: (value: number | null | undefined) => value ?? "-",
         },
         {
@@ -481,6 +512,8 @@ const HeaderMapping = () => {
           dataIndex: "thuTu_Excel_BOF",
           key: "thuTu_Excel_BOF",
           width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_Excel_BOF" ? filters.SortOrder : undefined,
           render: (value: number | null | undefined) => value ?? "-",
         },
         {
@@ -488,6 +521,8 @@ const HeaderMapping = () => {
           dataIndex: "thuTu_Excel_LFRH",
           key: "thuTu_Excel_LFRH",
           width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_Excel_LFRH" ? filters.SortOrder : undefined,
           render: (value: number | null | undefined) => value ?? "-",
         },
       ] as const : []),
@@ -543,7 +578,7 @@ const HeaderMapping = () => {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, showExtraColumns]
+    [data, showExtraColumns, filters.SortBy, filters.SortOrder]
   );
 
   return (
@@ -654,20 +689,26 @@ const HeaderMapping = () => {
           onChange={(
             pager: TablePaginationConfig,
             _tableFilters,
-            sorter:
-              | SorterResult<HeaderKeyMapping>
-              | SorterResult<HeaderKeyMapping>[]
+            sorter: SorterResult<HeaderKeyMapping> | SorterResult<HeaderKeyMapping>[]
           ) => {
-            const nextPage = pager?.current ?? 1;
             const nextPageSize = pager?.pageSize ?? pagination.pageSize;
+            const s = Array.isArray(sorter) ? sorter[0] : sorter;
 
             const nextFilters: FilterState = { ...filters };
-            const s = Array.isArray(sorter) ? sorter[0] : sorter;
-            if (s?.field === "thuTu") {
-              if (s.order === "ascend") nextFilters.SortThuTu = "asc";
-              else if (s.order === "descend") nextFilters.SortThuTu = "desc";
-              else delete nextFilters.SortThuTu;
+            if (s?.order && isThuTuField(s.field)) {
+              nextFilters.SortBy = s.field;
+              nextFilters.SortOrder = s.order;
+            } else {
+              delete nextFilters.SortBy;
+              delete nextFilters.SortOrder;
             }
+
+            // Đổi sort = sắp xếp lại toàn bộ dữ liệu (không chỉ trang đang xem) → luôn quay về
+            // trang 1, vì trang hiện tại không còn khớp với thứ tự mới.
+            const sortChanged =
+              nextFilters.SortBy !== filters.SortBy || nextFilters.SortOrder !== filters.SortOrder;
+            const nextPage = sortChanged ? 1 : (pager?.current ?? 1);
+
             fetchData(nextPage, nextPageSize, nextFilters);
           }}
           rowKey={(record) => {
@@ -835,7 +876,11 @@ const HeaderMapping = () => {
                         </Radio.Group>
                       </Form.Item>
                       {(loaiTK === 1 || loaiTK === 3) && (
-                        <Form.Item name="thuTu_TK_BOF" label="Thứ tự BOF">
+                        <Form.Item
+                          name="thuTu_TK_BOF"
+                          label="Thứ tự BOF"
+                          rules={[makeThuTuValidator("thuTu_TK_BOF", "Thứ tự BOF")]}
+                        >
                           <InputNumber
                             min={0}
                             placeholder="Nhập số thứ tự BOF"
@@ -844,7 +889,11 @@ const HeaderMapping = () => {
                         </Form.Item>
                       )}
                       {(loaiTK === 2 || loaiTK === 3) && (
-                        <Form.Item name="thuTu_TK_LFRH" label="Thứ tự LFRH">
+                        <Form.Item
+                          name="thuTu_TK_LFRH"
+                          label="Thứ tự LFRH"
+                          rules={[makeThuTuValidator("thuTu_TK_LFRH", "Thứ tự LFRH")]}
+                        >
                           <InputNumber
                             min={0}
                             placeholder="Nhập số thứ tự LFRH"
@@ -874,7 +923,11 @@ const HeaderMapping = () => {
                         </Radio.Group>
                       </Form.Item>
                       {(loaiEx === 1 || loaiEx === 3) && (
-                        <Form.Item name="thuTu_Excel_BOF" label="Thứ tự BOF">
+                        <Form.Item
+                          name="thuTu_Excel_BOF"
+                          label="Thứ tự BOF"
+                          rules={[makeThuTuValidator("thuTu_Excel_BOF", "Thứ tự Excel BOF")]}
+                        >
                           <InputNumber
                             min={0}
                             placeholder="Nhập số thứ tự BOF"
@@ -883,7 +936,11 @@ const HeaderMapping = () => {
                         </Form.Item>
                       )}
                       {(loaiEx === 2 || loaiEx === 3) && (
-                        <Form.Item name="thuTu_Excel_LFRH" label="Thứ tự LFRH">
+                        <Form.Item
+                          name="thuTu_Excel_LFRH"
+                          label="Thứ tự LFRH"
+                          rules={[makeThuTuValidator("thuTu_Excel_LFRH", "Thứ tự Excel LFRH")]}
+                        >
                           <InputNumber
                             min={0}
                             placeholder="Nhập số thứ tự LFRH"

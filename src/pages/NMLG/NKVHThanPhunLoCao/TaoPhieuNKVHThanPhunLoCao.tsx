@@ -681,6 +681,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
       currentUserTenNgan: userInfo.tenNgan ?? null,
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
+      phieuMaBm: config.code,
       pheDuyet: phieuInfo.pheDuyet ?? [],
       customPutApi: handleCustomPut,
       onStatusChange: handleStatusChange,
@@ -689,7 +690,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
     });
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, handleCustomPut]);
+  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, handleCustomPut, config.code]);
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -798,7 +799,11 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                           name={[prodSummarySection.key, record.key, "caNgay"]}
                           style={{ marginBottom: 0 }}
                         >
-                          <InputNumber style={{ width: "100%" }} disabled={isFormLocked} />
+                          <InputNumber
+                            style={{ width: "100%" }}
+                            disabled={isFormLocked}
+                            precision={record.key === "sanLuongPhun" ? 3 : undefined}
+                          />
                         </Form.Item>
                       ),
                     },
@@ -840,7 +845,11 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                           name={[prodSummarySection.key, record.key, "caDem"]}
                           style={{ marginBottom: 0 }}
                         >
-                          <InputNumber style={{ width: "100%" }} disabled={isFormLocked} />
+                          <InputNumber
+                            style={{ width: "100%" }}
+                            disabled={isFormLocked}
+                            precision={record.key === "sanLuongPhun" ? 3 : undefined}
+                          />
                         </Form.Item>
                       ),
                     },

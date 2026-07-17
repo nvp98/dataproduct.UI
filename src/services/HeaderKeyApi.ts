@@ -1,5 +1,5 @@
 import apiService from "./ApiService";
-import type { HeaderKey, HeaderKeyMapping, HeaderKeyPayload, HeaderKeySearchResponse } from "../models/HeaderKeyModel";
+import type { HeaderKeyMapping, HeaderKeyPayload, HeaderKeySearchResponse } from "../models/HeaderKeyModel";
 
 type RawHeaderKeySearchResponse = {
   data?: HeaderKeyMapping[];
@@ -37,9 +37,10 @@ type HeaderKeySearchParams = {
   IsUsedThongKe?: boolean;
   FromDate?: string; // ISO string
   ToDate?: string; // ISO string
-  SortThuTu?: string; // asc | desc
   IdNhom?: number;
   chuaMappingNM?: boolean;
+  SortBy?: string; // thuTu_TK_BOF | thuTu_TK_LFRH | thuTu_Excel_BOF | thuTu_Excel_LFRH
+  SortOrder?: string; // ascend | descend
   page?: number;
   pageSize?: number;
 };

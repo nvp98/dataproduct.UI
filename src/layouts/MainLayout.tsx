@@ -22,7 +22,7 @@ const MainLayout = () => {
   } = theme.useToken();
   return (
     <>
-      <Layout style={{ minHeight: "100vh" }}>
+      <Layout style={{ height: "100vh", overflow: "hidden" }}>
         <Sider
           trigger={null}
           collapsible
@@ -31,8 +31,9 @@ const MainLayout = () => {
           collapsedWidth={80}
           theme="light"
           style={{
-          borderRight: "1px solid #e5e5e5", 
-        }}
+            borderRight: "1px solid #e5e5e5",
+            overflowY: "auto",
+          }}
         >
           <div
             style={{
@@ -76,7 +77,7 @@ const MainLayout = () => {
           <SidebarMenu />
         </Sider>
 
-        <Layout>
+        <Layout style={{ overflow: "hidden" }}>
           {/* <Header
             style={{
               height: 70,
@@ -99,6 +100,7 @@ const MainLayout = () => {
               margin: "4px 8px",
               padding: "4px 8px",
               flex: 1,
+              minHeight: 0,
               overflowY: "auto",
               background: colorBgContainer,
               borderRadius: borderRadiusLG,

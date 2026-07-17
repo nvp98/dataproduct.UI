@@ -11,12 +11,20 @@ export interface BmQuyenXlModel {
   nguoiTao?: string;
 }
 
+/** 1 quyền mở rộng riêng theo BM (value >= 6, xem `bmQuyenConfig.ts` field `extraQuyens`). */
+export interface ExtraQuyenMenuItem {
+  maBm: string;
+  quyenChucNang: number;
+}
+
 /** Quyền menu: Việc tôi bắt đầu (chỉnh sửa) và Việc đến tôi (duyệt). */
 export interface MenuPermissionsResponse {
   processingForms: string[];
   approvingForms: string[];
   viewingForms: string[];
   chotPhieuForms?: string[];
+  /** Raw quyền mở rộng (>= 6) — FE tự tra `bmQuyenConfig.ts` để biết thuộc vùng nào. */
+  extraQuyens?: ExtraQuyenMenuItem[];
 }
 
 export const BmQuyenXlApi = {
@@ -34,17 +42,26 @@ export const BmQuyenXlApi = {
         ApprovingForms?: string[];
         ViewingForms?: string[];
         chotPhieuForms?: string[];
+        ExtraQuyens?: { MaBm?: string; QuyenChucNang?: number }[];
       }
     >(`/api/BmQuyenXl/menu-permissions?idTaiKhoan=${idTaiKhoan}`);
 
     // Axios trả về AxiosResponse; cần unwrap .data trước khi đọc trường business
-    const data = (res as any)?.data ?? res;
+    const data = (res as { data?: unknown })?.data ?? res;
+    const d = data as Record<string, unknown>;
+    const rawExtra = (d?.extraQuyens ?? d?.ExtraQuyens ?? []) as Array<
+      Record<string, unknown>
+    >;
 
     return {
-      processingForms: data?.processingForms ?? data?.ProcessingForms ?? [],
-      approvingForms: data?.approvingForms ?? data?.ApprovingForms ?? [],
-      viewingForms: data?.viewingForms ?? data?.ViewingForms ?? [],
-      chotPhieuForms: data?.chotPhieuForms ?? data?.ChotPhieuForms ?? [],
+      processingForms: (d?.processingForms ?? d?.ProcessingForms ?? []) as string[],
+      approvingForms: (d?.approvingForms ?? d?.ApprovingForms ?? []) as string[],
+      viewingForms: (d?.viewingForms ?? d?.ViewingForms ?? []) as string[],
+      chotPhieuForms: (d?.chotPhieuForms ?? d?.ChotPhieuForms ?? []) as string[],
+      extraQuyens: rawExtra.map((r) => ({
+        maBm: (r.maBm ?? r.MaBm ?? "") as string,
+        quyenChucNang: Number(r.quyenChucNang ?? r.QuyenChucNang ?? 0),
+      })),
     };
   },
 

@@ -41,6 +41,12 @@ export interface SearchPhieuByUserRequest {
   /** 1 = Việc tôi bắt đầu, 2 = Việc đến tôi, 3 = Chỉ xem, 4 = Thống kê (kèm isThongKeUser) */
   loaiVung?: number | null;
   isThongKeUser?: boolean | null;
+  /**
+   * Danh sách QuyenChucNang mở rộng (>= 6, khai báo trong bmQuyenConfig.ts field `extraQuyens`)
+   * khớp đúng `loaiVung` đang query — FE tự tính từ bmQuyenConfig.ts, BE chỉ dùng để lọc BmQuyenXl,
+   * không cần biết ý nghĩa cụ thể của từng giá trị.
+   */
+  extraQuyenChucNangs?: number[] | null;
 }
 export interface SearchPhieuResponseModel {
   idphieu: string;
