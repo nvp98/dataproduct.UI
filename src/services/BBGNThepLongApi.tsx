@@ -47,6 +47,16 @@ export interface TongHopBBGNThepLongResponse {
   nhomPhanLoaiMacThep: TongHopItem[];
 }
 
+export interface SyncPhanLoaiRequest {
+  bieuMau: string;   // HRC1_BBGN_ThepLong | HRC2_BBGN_ThepLong
+  maMes: string[];
+}
+
+export interface SyncPhanLoaiResponse {
+  totalFromMySQL: number;
+  totalUpdated: number;
+}
+
 export const bbgbThepLongApi = {
   fetch: (payload: FetchMeThoiRequest) => apiService.post("/api/BBGNThepLong/fetch", payload),
   searchMeThoi: (nhaMay: number, textStr?: string, idLoThois?: number[]) =>
@@ -98,6 +108,8 @@ export const bbgbThepLongApi = {
   },
   tongHop: (payload: SearchThongKeBBGNThepLongRequest) =>
     apiService.post("/api/BBGNThepLong/tong-hop", payload) as Promise<TongHopBBGNThepLongResponse>,
+  syncPhanLoai: (payload: SyncPhanLoaiRequest) =>
+    apiService.post("/api/BBGNThepLong/phan-loai/sync", payload) as Promise<SyncPhanLoaiResponse>,
   exportDetailExcel: (idPhieu: string) =>
     apiService.get(`/api/BBGNThepLong/export-excel?idPhieu=${idPhieu}`, { responseType: "blob" }),
   exportDetailPDF: (idPhieu: string) =>

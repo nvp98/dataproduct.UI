@@ -52,6 +52,12 @@ const hasKhuVucPhu = (maBm?: string) => {
   return (bm?.khuVucPhus?.length ?? 0) > 0;
 };
 
+// Quyền chức năng chung + quyền riêng của BM (extraQuyens) — chỉ hiện extra khi đang chọn đúng BM đó
+const getQuyenChucNangOptions = (maBm?: string) => {
+  const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
+  return [...bmQuyenConfig.danhSachQuyenChucNang, ...(bm?.extraQuyens ?? [])];
+};
+
 const getBmName = (maBm: string) =>
   bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm)?.tenBm ?? maBm;
 
@@ -731,7 +737,7 @@ const PhanQuyenBieuMau = () => {
                         onChange={(vals) =>
                           updateSubRow(bmRow.key, subRow.key, { quyenChucNangs: vals })
                         }
-                        options={bmQuyenConfig.danhSachQuyenChucNang}
+                        options={getQuyenChucNangOptions(bmRow.maBm)}
                       />
                     </td>
 

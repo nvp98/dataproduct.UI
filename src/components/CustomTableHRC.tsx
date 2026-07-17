@@ -415,11 +415,15 @@ const CustomTableHRC = forwardRef(({
             };
 
         // IsNM = false chỉ cho dòng thêm bằng tay (Thêm dòng). Sửa ô phụ liệu trên dòng từ NM (IsNM = true) không đổi IsNM.
-        // Với ô phụ liệu: set cờ manual theo từng ô để BE/FE nhận biết (không dùng IsManual ở cấp dòng).
+        // Set cờ __IsManual theo từng ô (không dùng IsManual ở cấp dòng) cho MỌI cột chỉnh sửa được
+        // (phụ liệu, klThepPhe, klGangLong trên dòng thêm tay, ...). mergeServerRows chỉ preserve
+        // đúng field gốc (không kèm __orig) khi merge lại dữ liệu NM, nên nếu không set __IsManual thì
+        // applyManualOverrides sẽ không khôi phục lại __orig → mất highlight "giá trị cũ/mới" sau khi
+        // lưu và reload, dù giá trị đã lưu đúng.
         if (isManualAddedColumn) {
           // manual_col_*: có giá trị thì coi là manual
           (next as HRCRowWithManualFlags)[manualKey] = String(value ?? "").trim() !== "";
-        } else if (dataIndex.startsWith("phuLieu_") || dataIndex.startsWith("others_")) {
+        } else {
           const isManualCell = String(value ?? "") !== String(origValueForComparison ?? "");
           (next as HRCRowWithManualFlags)[manualKey] = isManualCell;
         }

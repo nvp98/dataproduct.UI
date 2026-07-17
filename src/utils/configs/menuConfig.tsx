@@ -1123,6 +1123,14 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "5-1-tk",
+            label: (
+              <Tooltip title="Thống kê Phiếu CTD">
+                <NavLink to="/thongkephieuCTD">Thống kê Phiếu CTD</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -1225,6 +1233,14 @@ export const menuConfig = [
                 <NavLink to="/nkvhthanphunlocao">
                   BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)
                 </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "5-lg-tk",
+            label: (
+              <Tooltip title="Thống kê Phiếu LG">
+                <NavLink to="/thongkephieulg">Thống kê Phiếu LG</NavLink>
               </Tooltip>
             ),
           },

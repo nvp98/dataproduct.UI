@@ -239,6 +239,98 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }
   }, []);
 
+  // Lõi sao chép mapping từ ca liền kề trước (Ca2→Ca1 cùng ngày; Ca1→Ca2 ngày trước).
+  // - Silo chưa có trong ca hiện tại: tạo mới mapping.
+  // - Silo đã có: pre-fill draft NVL để người dùng xem lại và nhấn "Lưu map" nếu muốn cập nhật.
+  // Nhận currentList (thay vì đọc kiemTraData từ closure) để dùng được ngay cả khi
+  // gọi tự động ngay sau khi vừa fetch xong (tránh lệch do setState là bất đồng bộ).
+  const copyMappingFromPrevShift = useCallback(
+    async (ngay: string, caNum: number, scopeNum: number, currentList: LGTSLMappingDto[]) => {
+      const prevCa = caNum === 2 ? 1 : 2;
+      const prevNgay = caNum === 2 ? ngay : dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD");
+      const prevLabel = `Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`;
+
+      try {
+        setCopyingFromPrev(true);
+        const prevRes = await lgTSLMappingApi.getList({ ngay: prevNgay, ca: prevCa, idLoCao: scopeNum });
+        const prevList: LGTSLMappingDto[] = Array.isArray(prevRes) ? prevRes : [];
+
+        if (prevList.length === 0) {
+          message.warning(`Không tìm thấy dữ liệu mapping từ ${prevLabel}`);
+          return;
+        }
+
+        const currentSiloIds = new Set(currentList.map((r) => r.idSiLo));
+
+        // Silo chưa có trong ca hiện tại → tạo mới (chỉ silo đã được gán NVL ở ca trước)
+        const newSilos = prevList.filter((r) => !currentSiloIds.has(r.idSiLo));
+        const toCreate = newSilos.filter((r) => r.idNVL);
+        const noNvlCount = newSilos.length - toCreate.length;
+
+        let createdCount = 0;
+        let failedCount = 0;
+        for (const prev of toCreate) {
+          try {
+            await lgTSLMappingApi.create({
+              ngay,
+              ca: caNum,
+              idLoCao: scopeNum,
+              idSiLo: prev.idSiLo,
+              idNVL: prev.idNVL,
+              ghiChu: prev.ghiChu ?? null,
+            });
+            createdCount++;
+          } catch {
+            failedCount++;
+          }
+        }
+
+        // Silo đã có trong ca hiện tại → ghi nhớ pre-fill để giữ sau khi refresh
+        const draftUpdates: Record<number, number | null> = {};
+        prevList.forEach((r) => {
+          if (currentSiloIds.has(r.idSiLo) && r.idNVL) {
+            draftUpdates[r.idSiLo] = r.idNVL;
+          }
+        });
+
+        // Refresh danh sách mapping; ưu tiên pre-fill từ ca trước cho silo đã có mapping hiện tại
+        const refreshed = await refreshKiemTraData(ngay, caNum, scopeNum);
+        const newDrafts: Record<number, number | null> = {};
+        const newNotes: Record<number, string> = {};
+        refreshed.forEach((item) => {
+          newDrafts[item.idSiLo] = draftUpdates[item.idSiLo] ?? item.idNVL ?? null;
+          newNotes[item.idSiLo] = "";
+        });
+        setMapDraftBySilo(newDrafts);
+        setMapNoteBySilo(newNotes);
+
+        const preFillCount = Object.keys(draftUpdates).length;
+
+        if (failedCount > 0 && createdCount === 0 && preFillCount === 0) {
+          // Tất cả lệnh tạo đều thất bại — báo lỗi rõ ràng thay vì thông báo nhầm
+          message.error(`Không thể tạo mapping từ ${prevLabel}: ${failedCount} silo bị lỗi. Kiểm tra kết nối hoặc dữ liệu.`);
+        } else if (createdCount > 0 || preFillCount > 0) {
+          const parts: string[] = [];
+          if (createdCount > 0) parts.push(`tạo mới ${createdCount} silo`);
+          if (preFillCount > 0) parts.push(`cập nhật nháp ${preFillCount} silo`);
+          if (failedCount > 0) parts.push(`${failedCount} silo bị lỗi khi tạo`);
+          if (noNvlCount > 0) parts.push(`${noNvlCount} silo ca trước chưa có NVL`);
+          message.success(`Đã sao chép từ ${prevLabel}: ${parts.join(", ")}. Kiểm tra và nhấn "Lưu map" cho từng dòng nếu cần.`);
+        } else if (noNvlCount > 0 && toCreate.length === 0 && preFillCount === 0) {
+          // Ca trước có silo nhưng tất cả đều chưa được gán NVL
+          message.warning(`Ca trước (${prevLabel}) có ${noNvlCount} silo nhưng chưa được gán NVL nào. Hãy cấu hình mapping cho ca trước trước.`);
+        } else {
+          message.info(`Tất cả Silo của ca hiện tại đã có mapping hoặc ca trước không có NVL.`);
+        }
+      } catch {
+        message.error("Lỗi khi sao chép mapping từ ca trước");
+      } finally {
+        setCopyingFromPrev(false);
+      }
+    },
+    [refreshKiemTraData]
+  );
+
   // Mở modal Kiểm tra Silo và tải dữ liệu mapping + danh sách NVL/Silo song song
   const handleKiemTra = useCallback(async () => {
     const ngaySXValue = form.getFieldValue("NgaySX");
@@ -247,8 +339,9 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       return;
     }
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
+    const caNum = Number(ca);
     setKiemTraOpen(true);
-    const list = await refreshKiemTraData(ngay, Number(ca), Number(scope));
+    const list = await refreshKiemTraData(ngay, caNum, Number(scope));
     resetMappingDrafts(list);
     lgTSLNvlApi.getList({ idLoCao: Number(scope) })
       .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
@@ -256,7 +349,14 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     lgTSLSiLoApi.getList({ idLoCao: Number(scope) })
       .then((res) => setSiloOptions(Array.isArray(res) ? res : []))
       .catch(() => setSiloOptions([]));
-  }, [form, scope, ca, refreshKiemTraData, resetMappingDrafts]);
+
+    // Ngày/ca hiện tại chưa có mapping nào → tự động sao chép từ ca trước,
+    // không cần người dùng bấm nút "Sao chép từ ca trước". Nút bấm tay vẫn giữ
+    // nguyên để dùng lại khi luồng tự động gặp lỗi hoặc cần sao chép lại.
+    if (list.length === 0) {
+      await copyMappingFromPrevShift(ngay, caNum, Number(scope), list);
+    }
+  }, [form, scope, ca, refreshKiemTraData, resetMappingDrafts, copyMappingFromPrevShift]);
 
   // Mở modal Thêm NVL mới với lò cao đã chọn được pre-fill
   const handleOpenAddNvl = useCallback(() => {
@@ -393,103 +493,16 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }
   }, [addMappingForm, form, scope, ca, refreshKiemTraData, resetMappingDrafts]);
 
-  // ─── Sao chép mapping từ ca trước ────────────────────────────────────────
-
-  // Lấy mapping của ca liền kề trước (Ca2→Ca1 cùng ngày; Ca1→Ca2 ngày trước).
-  // - Silo chưa có trong ca hiện tại: tạo mới mapping.
-  // - Silo đã có: pre-fill draft NVL để người dùng xem lại và nhấn "Lưu map" nếu muốn cập nhật.
-  const handleCopyFromPrevShift = useCallback(async () => {
+  // ─── Sao chép mapping từ ca trước (nút bấm tay) ──────────────────────────
+  const handleCopyFromPrevShift = useCallback(() => {
     const ngaySXValue = form.getFieldValue("NgaySX");
     if (!scope || !ca || !ngaySXValue) {
       message.warning("Vui lòng chọn Lò cao, Ca và Ngày sản xuất trước");
       return;
     }
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
-    const caNum = Number(ca);
-
-    // Tính ca và ngày liền kề trước: Ca2 → Ca1 cùng ngày; Ca1 → Ca2 ngày trước
-    const prevCa = caNum === 2 ? 1 : 2;
-    const prevNgay = caNum === 2 ? ngay : dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD");
-    const prevLabel = `Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`;
-
-    try {
-      setCopyingFromPrev(true);
-      const prevRes = await lgTSLMappingApi.getList({ ngay: prevNgay, ca: prevCa, idLoCao: Number(scope) });
-      const prevList: LGTSLMappingDto[] = Array.isArray(prevRes) ? prevRes : [];
-
-      if (prevList.length === 0) {
-        message.warning(`Không tìm thấy dữ liệu mapping từ ${prevLabel}`);
-        return;
-      }
-
-      const currentSiloIds = new Set(kiemTraData.map((r) => r.idSiLo));
-
-      // Silo chưa có trong ca hiện tại → tạo mới (chỉ silo đã được gán NVL ở ca trước)
-      const newSilos = prevList.filter((r) => !currentSiloIds.has(r.idSiLo));
-      const toCreate = newSilos.filter((r) => r.idNVL);
-      const noNvlCount = newSilos.length - toCreate.length;
-
-      let createdCount = 0;
-      let failedCount = 0;
-      for (const prev of toCreate) {
-        try {
-          await lgTSLMappingApi.create({
-            ngay,
-            ca: caNum,
-            idLoCao: Number(scope),
-            idSiLo: prev.idSiLo,
-            idNVL: prev.idNVL,
-            ghiChu: prev.ghiChu ?? null,
-          });
-          createdCount++;
-        } catch {
-          failedCount++;
-        }
-      }
-
-      // Silo đã có trong ca hiện tại → ghi nhớ pre-fill để giữ sau khi refresh
-      const draftUpdates: Record<number, number | null> = {};
-      prevList.forEach((r) => {
-        if (currentSiloIds.has(r.idSiLo) && r.idNVL) {
-          draftUpdates[r.idSiLo] = r.idNVL;
-        }
-      });
-
-      // Refresh danh sách mapping; ưu tiên pre-fill từ ca trước cho silo đã có mapping hiện tại
-      const refreshed = await refreshKiemTraData(ngay, caNum, Number(scope));
-      const newDrafts: Record<number, number | null> = {};
-      const newNotes: Record<number, string> = {};
-      refreshed.forEach((item) => {
-        newDrafts[item.idSiLo] = draftUpdates[item.idSiLo] ?? item.idNVL ?? null;
-        newNotes[item.idSiLo] = "";
-      });
-      setMapDraftBySilo(newDrafts);
-      setMapNoteBySilo(newNotes);
-
-      const preFillCount = Object.keys(draftUpdates).length;
-
-      if (failedCount > 0 && createdCount === 0 && preFillCount === 0) {
-        // Tất cả lệnh tạo đều thất bại — báo lỗi rõ ràng thay vì thông báo nhầm
-        message.error(`Không thể tạo mapping từ ${prevLabel}: ${failedCount} silo bị lỗi. Kiểm tra kết nối hoặc dữ liệu.`);
-      } else if (createdCount > 0 || preFillCount > 0) {
-        const parts: string[] = [];
-        if (createdCount > 0) parts.push(`tạo mới ${createdCount} silo`);
-        if (preFillCount > 0) parts.push(`cập nhật nháp ${preFillCount} silo`);
-        if (failedCount > 0) parts.push(`${failedCount} silo bị lỗi khi tạo`);
-        if (noNvlCount > 0) parts.push(`${noNvlCount} silo ca trước chưa có NVL`);
-        message.success(`Đã sao chép từ ${prevLabel}: ${parts.join(", ")}. Kiểm tra và nhấn "Lưu map" cho từng dòng nếu cần.`);
-      } else if (noNvlCount > 0 && toCreate.length === 0 && preFillCount === 0) {
-        // Ca trước có silo nhưng tất cả đều chưa được gán NVL
-        message.warning(`Ca trước (${prevLabel}) có ${noNvlCount} silo nhưng chưa được gán NVL nào. Hãy cấu hình mapping cho ca trước trước.`);
-      } else {
-        message.info(`Tất cả Silo của ca hiện tại đã có mapping hoặc ca trước không có NVL.`);
-      }
-    } catch {
-      message.error("Lỗi khi sao chép mapping từ ca trước");
-    } finally {
-      setCopyingFromPrev(false);
-    }
-  }, [form, scope, ca, kiemTraData, refreshKiemTraData]);
+    return copyMappingFromPrevShift(ngay, Number(ca), Number(scope), kiemTraData);
+  }, [form, scope, ca, kiemTraData, copyMappingFromPrevShift]);
 
   // Lưu NVL đã chọn trong draft vào mapping của silo (PUT), sau đó refresh bảng
   // Lưu NVL đã chọn trong draft vào mapping của silo (PUT), sau đó refresh bảng.
@@ -747,6 +760,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       currentUserTenNgan: userInfo.tenNgan ?? null,
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
+      phieuMaBm: config.code,
       pheDuyet: phieuInfo.pheDuyet ?? [],
       onStatusChange: handleStatusChange,
       onSuccess: handleActionSuccess,
@@ -754,7 +768,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     });
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess]);
+  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, config.code]);
 
   // ─── Split Silo handlers ───────────────────────────────────────────────────
 

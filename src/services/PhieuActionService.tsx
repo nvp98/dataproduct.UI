@@ -21,6 +21,15 @@ import {
 } from "../utils/constants/TrangThaiPhieuConstant";
 import { PhieuActionButtonKeys } from "../utils/constants/PhieuActionButtonKeys";
 
+// Các biên bản LGNL cho phép Xuất Excel ngay khi Đã gửi (trạng thái 1), không cần
+// đợi Hoàn thành/Đã chốt như các biên bản khác — theo yêu cầu nghiệp vụ riêng cho
+// Nạp liệu lò cao, Tồn silo lò cao, Phun than lò cao.
+const MABM_EXPORT_EXCEL_KHI_DA_GUI = [
+  "NMLG_BM_NapLieuLoCao",
+  "NMLG_BM_TonSiLoLoCao",
+  "NMLG_NK_VHPTLC",
+];
+
 export interface PhieuActionButton {
   key: string;
   label: string;
@@ -303,10 +312,22 @@ const PreCheckPopconfirmButton: React.FC<{
     }
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleConfirm = async () => {
+    // Chặn double-submit: Popconfirm.onConfirm có thể bị gọi lại trước khi request trước hoàn tất
+    // (vd double-click nhanh) — nếu không chặn, mỗi lần gọi đều gửi 1 request lưu riêng, và với
+    // các dòng dữ liệu mới (chưa có id) thì mỗi request đều bị BE insert thành 1 record riêng
+    // biệt thay vì update, gây sinh nhiều dòng trùng nhau.
+    if (submitting) return;
     setOpen(false);
-    const formData = getFormData ? await getFormData(btn.key) : undefined;
-    await btn.onClick(phieuId, formData);
+    setSubmitting(true);
+    try {
+      const formData = getFormData ? await getFormData(btn.key) : undefined;
+      await btn.onClick(phieuId, formData);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -318,16 +339,104 @@ const PreCheckPopconfirmButton: React.FC<{
       onCancel={() => setOpen(false)}
       okText="Xác nhận"
       cancelText="Hủy"
-      okButtonProps={btn.danger ? { danger: true } : undefined}
+      okButtonProps={{ danger: btn.danger, loading: submitting }}
     >
       <Button
         type={btn.type}
         danger={btn.danger}
         icon={btn.icon}
-        disabled={btn.disabled}
-        loading={checking}
+        disabled={btn.disabled || submitting}
+        loading={checking || submitting}
         htmlType="button"
         onClick={handleButtonClick}
+      >
+        {btn.label}
+      </Button>
+    </Popconfirm>
+  );
+};
+
+/**
+ * Button hành động đơn giản (không có preConfirmCheck, không cần Popconfirm).
+ * Tự khóa (disabled + loading) trong lúc onClick đang chạy để chặn double-submit.
+ */
+const SimpleActionButton: React.FC<{
+  btn: PhieuActionButton;
+  phieuId: string;
+  getFormData?: (
+    actionKey?: string,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
+}> = ({ btn, phieuId, getFormData }) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleClick = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const formData = getFormData ? await getFormData(btn.key) : undefined;
+      await btn.onClick(phieuId, formData);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Button
+      type={btn.type}
+      danger={btn.danger}
+      icon={btn.icon}
+      disabled={btn.disabled || submitting}
+      loading={submitting}
+      style={btn.style}
+      htmlType="button"
+      onClick={handleClick}
+    >
+      {btn.label}
+    </Button>
+  );
+};
+
+/**
+ * Button hành động có Popconfirm nhưng không có preConfirmCheck.
+ * Tự khóa (disabled + loading) trong lúc onClick đang chạy để chặn double-submit.
+ */
+const SimpleConfirmActionButton: React.FC<{
+  btn: PhieuActionButton;
+  phieuId: string;
+  getFormData?: (
+    actionKey?: string,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
+}> = ({ btn, phieuId, getFormData }) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const formData = getFormData ? await getFormData(btn.key) : undefined;
+      await btn.onClick(phieuId, formData);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Popconfirm
+      title={btn.confirm!.title}
+      description={btn.confirm!.description}
+      onConfirm={handleConfirm}
+      okText="Xác nhận"
+      cancelText="Hủy"
+      okButtonProps={{ danger: btn.danger, loading: submitting }}
+    >
+      <Button
+        type={btn.type}
+        danger={btn.danger}
+        icon={btn.icon}
+        disabled={btn.disabled || submitting}
+        loading={submitting}
+        style={btn.style}
+        htmlType="button"
       >
         {btn.label}
       </Button>
@@ -960,7 +1069,7 @@ export const phieuActionService = {
     // Trạng thái 5 - Đã chốt: Không hiện button nào
     // }
 
-    // ========== NÚT XUẤT PDF / XUẤT EXCEL Phiếu (cho tất cả mọi người khi phiếu ở trạng thái Hoàn thành hoặc Đã chốt) ==========
+    // ========== NÚT XUẤT PDF Phiếu (cho tất cả mọi người khi phiếu ở trạng thái Hoàn thành hoặc Đã chốt) ==========
     if (
       tinhTrang === TrangThaiPhieuConst.HoanThanh ||
       tinhTrang === TrangThaiPhieuConst.DaChot
@@ -995,6 +1104,21 @@ export const phieuActionService = {
           }
         },
       });
+    }
+
+    // ========== NÚT XUẤT EXCEL Phiếu ==========
+    // Mặc định: chỉ Hoàn thành / Đã chốt (như Xuất PDF).
+    // Riêng 3 biên bản LGNL (Nạp liệu, Tồn silo, Phun than lò cao): cho xuất thêm ở
+    // trạng thái Đã gửi, theo yêu cầu nghiệp vụ riêng của nhóm biên bản này.
+    const choXuatExcelKhiDaGui =
+      tinhTrang === TrangThaiPhieuConst.DaGui &&
+      !!phieuMaBm &&
+      MABM_EXPORT_EXCEL_KHI_DA_GUI.includes(phieuMaBm);
+    if (
+      tinhTrang === TrangThaiPhieuConst.HoanThanh ||
+      tinhTrang === TrangThaiPhieuConst.DaChot ||
+      choXuatExcelKhiDaGui
+    ) {
       buttons.push({
         key: PhieuActionButtonKeys.ExportExcel,
         label: "Xuất Excel",
@@ -1126,26 +1250,6 @@ export const phieuActionService = {
     ) => Record<string, unknown> | Promise<Record<string, unknown>>,
   ): React.ReactNode[] {
     return buttons.map((btn) => {
-      const handleClick = async () => {
-        const formData = getFormData ? await getFormData(btn.key) : undefined;
-        await btn.onClick(phieuId, formData);
-      };
-
-      const buttonElement = (
-        <Button
-          key={btn.key}
-          type={btn.type}
-          danger={btn.danger}
-          icon={btn.icon}
-          disabled={btn.disabled}
-          style={btn.style}
-          htmlType="button"
-          onClick={handleClick}
-        >
-          {btn.label}
-        </Button>
-      );
-
       if (btn.confirm) {
         // Nếu có preConfirmCheck: dùng controlled Popconfirm, check API trước khi mở
         if (btn.preConfirmCheck) {
@@ -1160,30 +1264,23 @@ export const phieuActionService = {
         }
 
         return (
-          <Popconfirm
+          <SimpleConfirmActionButton
             key={btn.key}
-            title={btn.confirm.title}
-            description={btn.confirm.description}
-            onConfirm={handleClick}
-            okText="Xác nhận"
-            cancelText="Hủy"
-            okButtonProps={btn.danger ? { danger: true } : undefined}
-          >
-            <Button
-              type={btn.type}
-              danger={btn.danger}
-              icon={btn.icon}
-              disabled={btn.disabled}
-              style={btn.style}
-              htmlType="button"
-            >
-              {btn.label}
-            </Button>
-          </Popconfirm>
+            btn={btn}
+            phieuId={phieuId}
+            getFormData={getFormData}
+          />
         );
       }
 
-      return buttonElement;
+      return (
+        <SimpleActionButton
+          key={btn.key}
+          btn={btn}
+          phieuId={phieuId}
+          getFormData={getFormData}
+        />
+      );
     });
   },
 };
