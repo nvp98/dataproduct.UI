@@ -453,6 +453,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub2-7-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+            label: (
+              <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
+                <NavLink to="/bbgnphoitam_hrc1">
+                  BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -761,6 +772,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub3-6-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+            label: (
+              <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
+                <NavLink to="/viecdentoi/bbgnphoitam_hrc1">
+                  BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -871,6 +893,17 @@ export const menuConfig = [
               <Tooltip title="BM.16/QT.05.10 (Biên bản giao nhận thép lỏng)">
                 <NavLink to="/xemphieu/giaonhantheplong_hrc1">
                   BM.16/QT.05.10 (Biên bản giao nhận thép lỏng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-1-2",
+            maBM: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+            label: (
+              <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
+                <NavLink to="/xemphieu/bbgnphoitam_hrc1">
+                  BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)
                 </NavLink>
               </Tooltip>
             ),
@@ -1254,8 +1287,17 @@ export const menuConfig = [
           </Tooltip>
         ),
       },
+      {
+        key: "admin-4",
+        icon: <SettingOutlined />,
+        label: (
+          <Tooltip title="Quản lý mã vật tư HRC1">
+            <NavLink to="/ma-vat-tu-hrc1">Mã vật tư HRC1</NavLink>
+          </Tooltip>
+        ),
+      },
       // {
-      //   key: "admin-4",
+      //   key: "admin-5",
       //   icon: <UserOutlined />,
       //   label: (
       //     <Tooltip title="Quản lý tài khoản">
