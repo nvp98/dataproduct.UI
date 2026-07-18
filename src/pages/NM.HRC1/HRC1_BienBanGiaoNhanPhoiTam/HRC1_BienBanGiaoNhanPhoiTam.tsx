@@ -295,7 +295,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
-        showCreateButton={false}
+        showCreateButton={true}
         onCreateClick={() => setModalOpen(true)}
         createButtonText="Tạo phiếu mới"
       />
