@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Checkbox, Grid, Input, InputNumber, Popconfirm, Select, Table, message } from "antd";
+import { Button, Checkbox, ConfigProvider, Grid, Input, InputNumber, Popconfirm, Select, Table, message } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { bbgbThepLongApi } from "../../services/BBGNThepLongApi";
@@ -667,49 +667,51 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
 
   return (
     <div>
-      <Table
-        columns={columns}
-        dataSource={value.map((r, i) => ({ ...r, key: r.key ?? `row-${i}` }))}
-        rowKey="key"
-        onRow={(record) =>
-          record.isTrungMeThoi === true
-            ? {
-                style: { backgroundColor: "#fff1f0" },
-              }
-            : {}
-        }
-        pagination={false}
-        scroll={shouldScrollX ? { x: 1500 } : undefined}
-        size="small"
-        bordered
-        loading={loading}
-        summary={() => (
-          <Table.Summary.Row>
-            {columns.map((col, idx) => {
-              if (idx === 0) {
-                return (
-                  <Table.Summary.Cell key="sum-label" index={idx}>
-                    <b>Tổng</b>
-                  </Table.Summary.Cell>
-                );
-              }
+      <ConfigProvider theme={{ components: { Table: { rowHoverBg: "transparent" } } }}>
+        <Table
+          columns={columns}
+          dataSource={value.map((r, i) => ({ ...r, key: r.key ?? `row-${i}` }))}
+          rowKey="key"
+          onRow={(record) =>
+            record.isTrungMeThoi === true
+              ? {
+                  style: { backgroundColor: "#fff1f0" },
+                }
+              : {}
+          }
+          pagination={false}
+          scroll={shouldScrollX ? { x: 1500 } : undefined}
+          size="small"
+          bordered
+          loading={loading}
+          summary={() => (
+            <Table.Summary.Row>
+              {columns.map((col, idx) => {
+                if (idx === 0) {
+                  return (
+                    <Table.Summary.Cell key="sum-label" index={idx}>
+                      <b>Tổng</b>
+                    </Table.Summary.Cell>
+                  );
+                }
 
-              if (idx === klThepLongColIndex) {
-                const isNegTotal = hasKlThepLong && totalKlThepLong < 0;
-                return (
-                  <Table.Summary.Cell key="sum-klThepLong" index={idx}>
-                    <b style={isNegTotal ? { color: "red" } : undefined}>
-                      {hasKlThepLong ? totalKlThepLong.toFixed(3) : "-"}
-                    </b>
-                  </Table.Summary.Cell>
-                );
-              }
+                if (idx === klThepLongColIndex) {
+                  const isNegTotal = hasKlThepLong && totalKlThepLong < 0;
+                  return (
+                    <Table.Summary.Cell key="sum-klThepLong" index={idx}>
+                      <b style={isNegTotal ? { color: "red" } : undefined}>
+                        {hasKlThepLong ? totalKlThepLong.toFixed(3) : "-"}
+                      </b>
+                    </Table.Summary.Cell>
+                  );
+                }
 
-              return <Table.Summary.Cell key={`sum-empty-${col.key ?? idx}`} index={idx} />;
-            })}
-          </Table.Summary.Row>
-        )}
-      />
+                return <Table.Summary.Cell key={`sum-empty-${col.key ?? idx}`} index={idx} />;
+              })}
+            </Table.Summary.Row>
+          )}
+        />
+      </ConfigProvider>
       {!disabled && canEditOthers && (
         <Button
           type="dashed"
