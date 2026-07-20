@@ -273,7 +273,7 @@ const BkHrc2SlabTable = () => {
         xuongId: userInfo.iD_PhanXuong ?? null,
         idphongBan: userInfo.iD_PhongBan ?? null,
         tinhTrang: 0,
-        prefix: "BBGN_PhoiTam",
+        prefix: "HRC2_BBGN_PhoiTam",
       };
       const res = await PhieuApi.postData(payload as Record<string, unknown>);
       message.success(`Tạo phiếu thành công: ${(res as any)?.soPhieu ?? ""}`);
