@@ -58,7 +58,7 @@ const TaoPhieuModal = ({ open, onClose, onCreated }: TaoPhieuModalProps) => {
       xuongId: ui.iD_PhanXuong ?? null,
       idphongBan: ui.iD_PhongBan ?? null,
       tinhTrang: 1,
-      prefix: "BBGN_PhoiTam",
+      prefix: "HRC1_BBGN_PhoiTam",
       pheDuyet: [],
     });
 
