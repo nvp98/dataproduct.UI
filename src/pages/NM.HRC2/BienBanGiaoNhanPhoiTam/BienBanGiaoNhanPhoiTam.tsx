@@ -52,6 +52,8 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
     onPageChange,
   } = usePhieuSearchListHRC({ maBm: config.code as string, fixedFilters });
 
+  const detailPath = type === "xemphieu" ? "/xemphieu/chitietbbgnphoitam" : "/chitietbbgnphoitam";
+
   const statusConfig = PHIEU_STATUS_CONFIG;
 
   const columns = [
@@ -63,7 +65,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() =>
-            navigate("/chitietbbgnphoitam", {
+            navigate(detailPath, {
               state: { idphieu: record.idphieu, pheduyet: record?.pheDuyet?.[0] ?? null },
             })
           }
@@ -122,7 +124,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
             type="text"
             icon={<EyeOutlined />}
             onClick={() =>
-              navigate("/chitietbbgnphoitam", { state: { idphieu: record.idphieu } })
+              navigate(detailPath, { state: { idphieu: record.idphieu } })
             }
           />
         </Space>

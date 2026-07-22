@@ -81,7 +81,7 @@ export const MenuDataDashboard = [
         maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
       },
       {
-        code: "tieuhaonauluyen_rf",
+        code: "tieuhaonauluyen_rh",
         title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
         maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
       },

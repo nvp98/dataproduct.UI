@@ -77,21 +77,22 @@ const tinhCaDich = (phieuNgaySX: string, phieuCa: number, huong: "truoc" | "sau"
 // ── Row edit state ──────────────────────────────────────────────────────────
 type RowEdit = { ghiChu: string };
 
-const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
+const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: boolean }) => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } =
     usePhieuNavigation("phieu_bbgnphoitam_hrc1_id", "/viecdentoi/bbgnphoitam_hrc1");
 
   // ── Phân quyền ────────────────────────────────────────────────────────────
+  // Vào từ "Xem phiếu" (vùng 3) → luôn chỉ xem, không cho thao tác dù user có quyền chức năng.
   const userInfo = useMemo(() => {
     try {
       const s = localStorage.getItem("userinfo");
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   }, []);
-  const isDuc = hasKhuVucPhu(userInfo, MA_BM, "Duc");
-  const isCan = hasKhuVucPhu(userInfo, MA_BM, "Can");
-  const isC4 = hasKhuVucPhu(userInfo, MA_BM, "C4");
-  const isPKH = canChotBm(userInfo, MA_BM);
+  const isDuc = !readOnly && hasKhuVucPhu(userInfo, MA_BM, "Duc");
+  const isCan = !readOnly && hasKhuVucPhu(userInfo, MA_BM, "Can");
+  const isC4 = !readOnly && hasKhuVucPhu(userInfo, MA_BM, "C4");
+  const isPKH = !readOnly && canChotBm(userInfo, MA_BM);
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [data, setData] = useState<any>(null);
@@ -368,7 +369,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
           onBlur={() => void saveRowEdit(r.id)}
           size="small"
           placeholder="Nhập ghi chú..."
-          disabled={data?.tinhTrang === 5}
+          disabled={readOnly || data?.tinhTrang === 5}
         />
       ),
     },
@@ -519,6 +520,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
             onBlur={() => void saveTongHopGhiChu(r.macThep, r.maVatTu || null)}
             size="small"
             placeholder="Nhập ghi chú..."
+            disabled={readOnly}
           />
         );
       },
@@ -541,7 +543,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
   }, [loadData, navigateToDetail]);
 
   const actionButtons = useMemo(() => {
-    if (!data || !idphieu) return null;
+    if (readOnly || !data || !idphieu) return null;
     const ui = getUserInfo();
     if (getBmQuyenUiFlags(MA_BM, ui).isView) return null;
     const buttons = phieuActionService.getActionButtons({
@@ -564,7 +566,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
     const filtered = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
     if (filtered.length === 0) return null;
     return phieuActionService.renderActionButtons(filtered, idphieu);
-  }, [data, idphieu, getUserInfo, handleActionSuccess, redirectToList]);
+  }, [readOnly, data, idphieu, getUserInfo, handleActionSuccess, redirectToList]);
 
   const chuyenTargets = useMemo(() => {
     if (!data?.ngaySX || !data?.ca) return null;
@@ -641,17 +643,19 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                   styles={{ body: { padding: "8px 12px" } }}
                   extra={
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <Button
-                        size="small"
-                        icon={<SyncOutlined />}
-                        loading={syncLoading}
-                        onClick={() => void handleSyncData()}
-                        type="primary"
-                        ghost
-                        disabled={data?.tinhTrang === 5}
-                      >
-                        Làm mới dữ liệu
-                      </Button>
+                      {!readOnly && (
+                        <Button
+                          size="small"
+                          icon={<SyncOutlined />}
+                          loading={syncLoading}
+                          onClick={() => void handleSyncData()}
+                          type="primary"
+                          ghost
+                          disabled={data?.tinhTrang === 5}
+                        >
+                          Làm mới dữ liệu
+                        </Button>
+                      )}
 
                       {/* Đúc: chuyển ca + xác nhận Đúc */}
                       {isDuc && (
@@ -783,7 +787,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = () => {
                 >
                   <Table<Hrc1SlabItem>
                     rowKey="id"
-                    rowSelection={rowSelection}
+                    rowSelection={readOnly ? undefined : rowSelection}
                     size="small"
                     bordered
                     virtual
