@@ -108,13 +108,15 @@ function buildAntCols(cols: any[]): any[] {
   });
 }
 
-const ChiTietBienBanGiaoNhanPhoiTam = () => {
+const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolean }) => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } =
     usePhieuNavigation("phieu_bbgnphoitam_id", "/viecdentoi/bbgnphoitam");
 
   const config = HRC2_BBGN_PhoiTam;
 
   // ── Phân quyền ────────────────────────────────────────────────────────────
+  // isXxx: quyền thực tế của user, vẫn dùng để hiển thị các cột trạng thái (TT Đúc/Kho/PKH).
+  // canAct: false khi vào từ "Xem phiếu" (vùng 3) — dùng để ẩn nút thao tác + cột tick chọn dù user có quyền chức năng.
   const userInfo = useMemo(() => {
     try {
       const s = localStorage.getItem("userinfo");
@@ -127,6 +129,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
   const isDuc = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, "Duc");
   const isKho = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, "Kho");
   const isPKH = canChotBm(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam);
+  const canAct = !readOnly;
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [data, setData] = useState<any>(null);
@@ -510,7 +513,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
   );
 
   const actionButtons = useMemo(() => {
-    if (!data || !idphieu) return null;
+    if (readOnly || !data || !idphieu) return null;
     const ui = getUserInfo();
     if (getBmQuyenUiFlags(config.code, ui).isView) return null;
     const buttons = phieuActionService.getActionButtons({
@@ -541,6 +544,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
       idphieu || "",
     );
   }, [
+    readOnly,
     data,
     idphieu,
     config.code,
@@ -554,7 +558,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
   // ── Nút Chốt phiếu dùng chung cho cả 2 tab ────────────────────────────────
   const chotPhieuButtons = (
     <>
-      {isPKH && data?.tinhTrang !== 5 && (
+      {canAct && isPKH && data?.tinhTrang !== 5 && (
         <Popconfirm
           title="Chốt phiếu này? Sau khi chốt sẽ không thể chuyển thêm slab vào."
           onConfirm={handleChotPhieu}
@@ -564,7 +568,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
           </Button>
         </Popconfirm>
       )}
-      {isPKH && data?.tinhTrang === 5 && (
+      {canAct && isPKH && data?.tinhTrang === 5 && (
         <Popconfirm title="Hủy chốt phiếu này?" onConfirm={handleHuyChotPhieu}>
           <Button size="small" danger icon={<UnlockOutlined />} loading={chotLoading}>
             Hủy chốt
@@ -641,7 +645,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                       >
                         Excel
                       </Button>
-                      {isDuc && (
+                      {canAct && isDuc && (
                         <>
                           <Popconfirm
                             title={`Xác nhận Đúc ${selectedCount} slab?`}
@@ -677,7 +681,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                           </Popconfirm>
                         </>
                       )}
-                      {isKho && (
+                      {canAct && isKho && (
                         <>
                           <Popconfirm
                             title={`Xác nhận Kho ${selectedCount} slab?`}
@@ -754,7 +758,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = () => {
                 >
                   <Table<HrcSlabItem>
                     rowKey="id"
-                    rowSelection={rowSelection}
+                    rowSelection={readOnly ? undefined : rowSelection}
                     size="small"
                     bordered
                     columns={detailColumns}

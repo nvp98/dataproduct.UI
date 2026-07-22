@@ -182,6 +182,9 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
   const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange } =
     usePhieuSearchListHRC({ maBm: MA_BM, fixedFilters });
 
+  const detailPath =
+    type === "xemphieu" ? "/xemphieu/chitietbbgnphoitam_hrc1" : "/chitietbbgnphoitam_hrc1";
+
   // Modal tạo phiếu
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -203,7 +206,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() =>
-            navigate("/chitietbbgnphoitam_hrc1", {
+            navigate(detailPath, {
               state: { idphieu: record.idphieu, pheduyet: record?.pheDuyet?.[0] ?? null },
             })
           }
@@ -262,7 +265,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
             type="text"
             icon={<EyeOutlined />}
             onClick={() =>
-              navigate("/chitietbbgnphoitam_hrc1", { state: { idphieu: record.idphieu } })
+              navigate(detailPath, { state: { idphieu: record.idphieu } })
             }
           />
         </Space>

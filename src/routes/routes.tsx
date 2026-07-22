@@ -601,6 +601,16 @@ export const routes = [
         ),
       },
       {
+        path: "xemphieu/chitietbbgnphoitam",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietBienBanGiaoNhanPhoiTam readOnly />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
         path: "header-mapping",
         element: (
           <RequireAuth>
@@ -1479,6 +1489,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <ChiTietBienBanGiaoNhanPhoiTam_HRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/chitietbbgnphoitam_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietBienBanGiaoNhanPhoiTam_HRC1 readOnly />
             </RequireRole>
           </RequireAuth>
         ),
