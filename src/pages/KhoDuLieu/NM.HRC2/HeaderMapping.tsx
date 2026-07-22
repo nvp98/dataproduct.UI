@@ -238,6 +238,7 @@ const HeaderMapping = () => {
       thuTu_Excel_BOF: record.thuTu_Excel_BOF,
       thuTu_Excel_LFRH: record.thuTu_Excel_LFRH,
       iD_NhomKey: record.iD_NhomKey ?? undefined,
+      maVatTuChiPhi: record.maVatTuChiPhi ?? undefined,
     });
     setModalVisible(true);
   };
@@ -267,6 +268,7 @@ const HeaderMapping = () => {
         thuTu_Excel_BOF: values.isUsed_Excel ? (values.thuTu_Excel_BOF ?? null) : null,
         thuTu_Excel_LFRH: values.isUsed_Excel ? (values.thuTu_Excel_LFRH ?? null) : null,
         iD_NhomKey: values.iD_NhomKey ?? null,
+        maVatTuChiPhi: values.maVatTuChiPhi?.trim() || null,
       };
       if (editingRecord?.keyGuid) {
         payload.keyGuid = editingRecord.keyGuid;
@@ -404,6 +406,13 @@ const HeaderMapping = () => {
       //       .join("; ");
       //   },
       // },
+      {
+        title: "Mã VT chi phí",
+        dataIndex: "maVatTuChiPhi",
+        key: "maVatTuChiPhi",
+        width: 120,
+        render: (value: string | null | undefined) => value || "-",
+      },
       {
         title: "Loại phiếu",
         dataIndex: "loaiPhieu",
@@ -794,6 +803,13 @@ const HeaderMapping = () => {
               placeholder="Nhập tỷ trọng"
               style={{ width: "100%" }}
             />
+          </Form.Item>
+          <Form.Item
+            name="maVatTuChiPhi"
+            label="Mã vật tư chi phí"
+            tooltip="Mã vật tư bên hệ thống chi phí (ChiPhi_ProductionData). Để trống nếu phụ liệu này không cần feed sang hệ thống chi phí."
+          >
+            <Input placeholder="Nhập mã vật tư chi phí" allowClear maxLength={100} />
           </Form.Item>
           <Form.Item
             name="isActive"
