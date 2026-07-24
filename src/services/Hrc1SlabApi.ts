@@ -198,25 +198,25 @@ export const Hrc1SlabApi = {
     return (await apiService.post(`${BASE}/tonghop-ghi-chu`, req)) as WorkflowResult;
   },
 
-  exportExcel: async (idPhieu: string, tab: "chitiet" | "tonghop"): Promise<void> => {
+  exportExcel: async (idPhieu: string, tab: "chitiet" | "tonghop", ngay: string, ca: number, kip?: string | null): Promise<void> => {
     const token = localStorage.getItem("token");
     const apiUrl = (import.meta.env.VITE_API_URL as string).replace(/\/$/, "");
     const res = await fetch(
-      `${apiUrl}${BASE}/export/excel?idPhieu=${encodeURIComponent(idPhieu)}&tab=${tab}`,
+      `${apiUrl}${BASE}/export/excel?idPhieu=${encodeURIComponent(idPhieu)}&tab=${tab}&ngay=${encodeURIComponent(ngay)}&ca=${ca}${kip ? `&kip=${encodeURIComponent(kip)}` : ""}`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     );
     if (!res.ok) throw new Error("Lỗi xuất Excel");
-    await downloadBlob(res, `HRC1_PhoiTam_${tab}_${idPhieu}.xlsx`);
+    await downloadBlob(res, `HRC1_PhoiTam_${tab}_${ngay}_${ca}${kip}.xlsx`);
   },
 
-  exportPdf: async (idPhieu: string): Promise<void> => {
+  exportPdf: async (idPhieu: string, ngay: string, ca: number, kip?: string | null): Promise<void> => {
     const token = localStorage.getItem("token");
     const apiUrl = (import.meta.env.VITE_API_URL as string).replace(/\/$/, "");
     const res = await fetch(
-      `${apiUrl}${BASE}/export/pdf?idPhieu=${encodeURIComponent(idPhieu)}`,
+      `${apiUrl}${BASE}/export/pdf?idPhieu=${encodeURIComponent(idPhieu)}&ngay=${encodeURIComponent(ngay)}&ca=${ca}${kip ? `&kip=${encodeURIComponent(kip)}` : ""}`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     );
     if (!res.ok) throw new Error("Lỗi xuất PDF");
-    await downloadBlob(res, `HRC1_BBXNSL_PhoiTam_${idPhieu}.pdf`);
+    await downloadBlob(res, `HRC1_BBXNSL_PhoiTam_${ngay}_${ca}${kip}.pdf`);
   },
 };
