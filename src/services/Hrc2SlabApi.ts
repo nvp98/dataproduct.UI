@@ -84,6 +84,11 @@ export interface HrcSlabItem {
   trangThaiPKH: number;
   idPhieuBBSL?: string | null;
   soPhieuBBSL?: string | null;
+  // Người xử lý từng bước
+  nguoiChuyenBBSL?: string | null;
+  nguoiXacNhanDuc?: string | null;
+  nguoiXacNhanKho?: string | null;
+  nguoiXacNhanPKH?: string | null;
 }
 
 export interface HrcSlabSearchResponse {

@@ -197,6 +197,15 @@ const BkHrc2SlabTable = () => {
 
   // ── Validate trước khi thao tác ──────────────────────────────────────────
 
+  // Thu hồi chỉ hợp lệ khi slab đã chuyển BBSL nhưng chưa bên nào (Đúc/Kho/PKH)
+  // xác nhận và phiếu BBSL chứa nó chưa bị chốt — 1 bên đã xác nhận/chốt là khóa thu hồi.
+  const canThuHoiRow = (r: HrcSlabItem): boolean =>
+    r.trangThaiKCS === 1 &&
+    r.trangThaiDuc === 0 &&
+    r.trangThaiKho === 0 &&
+    r.trangThaiPKH === 0 &&
+    !r.isChot;
+
   const validateSameCaSanXuat = (): boolean => {
     const caValues = [...new Set(selectedRows.map((r) => r.caSanXuat ?? ""))];
     if (caValues.length > 1) {
@@ -224,6 +233,25 @@ const BkHrc2SlabTable = () => {
 
     const hasChuyenRoi = selectedRows.some((r) => r.trangThaiKCS === 1);
     if (hasChuyenRoi) { message.warning("Một số mẻ đã được chuyển BBSL, vui lòng bỏ chọn chúng!"); return; }
+
+    const invalidRows = selectedRows.filter(
+      (r) => r.isSaiLotName || r.isTrungIDSlab || r.isDiffMacThep
+    );
+    if (invalidRows.length > 0) {
+      const lines = invalidRows.map((r) => {
+        const reasons: string[] = [];
+        if (r.isSaiLotName) reasons.push("LotName");
+        if (r.isTrungIDSlab) reasons.push("ID Slab (trùng)");
+        if (r.isDiffMacThep) reasons.push("Mác thép (khác)");
+        return `Không thể chuyển BBSL ID ${r.idSlab} vì đang sai ${reasons.join(", ")}`;
+      });
+      message.error(
+        <div style={{ textAlign: "left" }}>
+          {lines.map((line, idx) => <div key={idx}>{line}</div>)}
+        </div>
+      );
+      return;
+    }
 
     try {
       setPhieuLoading(true);
@@ -301,8 +329,11 @@ const BkHrc2SlabTable = () => {
   // ── Thu hồi ──────────────────────────────────────────────────────────────
 
   const handleThuHoi = async () => {
-    const canThuHoi = selectedRows.every((r) => r.trangThaiKCS === 1 && r.trangThaiPKH === 0);
-    if (!canThuHoi) { message.warning("Chỉ có thể thu hồi slab đã chuyển và chưa chốt PKH!"); return; }
+    const canThuHoi = selectedRows.every(canThuHoiRow);
+    if (!canThuHoi) {
+      message.warning("Chỉ có thể thu hồi slab đã chuyển, chưa được Đúc/Kho xác nhận và chưa chốt PKH!");
+      return;
+    }
     try {
       setActionLoading(true);
       await Hrc2SlabApi.thuHoi(selectedRows.map((r) => r.id), getUserId());
@@ -370,7 +401,7 @@ const BkHrc2SlabTable = () => {
       align: "center" as const,
       fixed: "left" as const,
       render: (v: number) => (
-        <Tag color={v === 1 ? "blue" : "default"}>{v === 1 ? "Đã chốt" : "Chưa"}</Tag>
+        <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã chốt" : "Chưa"}</Tag>
       ),
     },
     {
@@ -447,6 +478,10 @@ const BkHrc2SlabTable = () => {
       render: (v: number) => (v === 1 ? "Ca Ngày" : v === 2 ? "Ca Đêm" : (v ?? "-")),
     },
     { title: "Kíp (phiếu)", dataIndex: "kipBBSL", width: 85, render: (v: string) => v ?? "-" },
+    { title: "Người Chuyển BBSL (KCS)", dataIndex: "nguoiChuyenBBSL", width: 200, render: (v: string) => v ?? "-" },
+    { title: "Người xác nhận Đúc", dataIndex: "nguoiXacNhanDuc", width: 200, render: (v: string) => v ?? "-" },
+    { title: "Người xác nhận Kho", dataIndex: "nguoiXacNhanKho", width: 200, render: (v: string) => v ?? "-" },
+    { title: "Người xác nhận PKH", dataIndex: "nguoiXacNhanPKH", width: 200, render: (v: string) => v ?? "-" },
   ], []);
 
   const columns = useMemo((): ColumnsType<HrcSlabItem> => {
@@ -459,7 +494,7 @@ const BkHrc2SlabTable = () => {
 
   const selectedCount = selectedRowKeys.length;
   const canChuyenBBSL = selectedCount > 0 && selectedRows.every((r) => r.trangThaiKCS === 0);
-  const canThuHoi     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiKCS === 1 && r.trangThaiPKH === 0);
+  const canThuHoi     = selectedCount > 0 && selectedRows.every(canThuHoiRow);
 
   // Cột phiếu BBSL trong modal
   const phieuColumns = [
@@ -514,14 +549,14 @@ const BkHrc2SlabTable = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={12} sm={6} md={2}>
+            {/* <Col xs={12} sm={6} md={2}>
               <Form.Item name="mayDuc" label="Lò">
                 <Select allowClear placeholder="Chọn lò">
                   <Select.Option value={6}>Lò 6</Select.Option>
                   <Select.Option value={7}>Lò 7</Select.Option>
                 </Select>
               </Form.Item>
-            </Col>
+            </Col> */}
             <Col xs={12} sm={6} md={2}>
               <Form.Item name="meThep" label="Tên mẻ">
                 <Input placeholder="Tên mẻ..." allowClear />

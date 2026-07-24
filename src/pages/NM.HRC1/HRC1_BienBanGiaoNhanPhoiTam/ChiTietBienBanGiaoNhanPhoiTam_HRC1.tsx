@@ -442,34 +442,34 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
   // ── Export handlers ───────────────────────────────────────────────────────
 
   const handleExportChiTietExcel = useCallback(async () => {
-    if (!idphieu) return;
+    if (!idphieu || !data?.ngaySX || !data?.ca) return;
     setExportLoading("chitiet-excel");
     try {
-      await Hrc1SlabApi.exportExcel(idphieu, "chitiet");
+      await Hrc1SlabApi.exportExcel(idphieu, "chitiet", dayjs(data.ngaySX).format("YYYY-MM-DD"), data.ca, data.kip);
     } catch (e: any) {
       message.error(e?.message ?? "Lỗi xuất Excel");
     } finally { setExportLoading(null); }
-  }, [idphieu]);
+  }, [idphieu, data]);
 
   const handleExportTongHopExcel = useCallback(async () => {
-    if (!idphieu) return;
+    if (!idphieu || !data?.ngaySX || !data?.ca) return;
     setExportLoading("tonghop-excel");
     try {
-      await Hrc1SlabApi.exportExcel(idphieu, "tonghop");
+      await Hrc1SlabApi.exportExcel(idphieu, "tonghop", dayjs(data.ngaySX).format("YYYY-MM-DD"), data.ca, data.kip);
     } catch (e: any) {
       message.error(e?.message ?? "Lỗi xuất Excel");
     } finally { setExportLoading(null); }
-  }, [idphieu]);
+  }, [idphieu, data]);
 
   const handleExportTongHopPdf = useCallback(async () => {
-    if (!idphieu) return;
+    if (!idphieu || !data?.ngaySX || !data?.ca) return;
     setExportLoading("tonghop-pdf");
     try {
-      await Hrc1SlabApi.exportPdf(idphieu);
+      await Hrc1SlabApi.exportPdf(idphieu, dayjs(data.ngaySX).format("YYYY-MM-DD"), data.ca, data.kip);
     } catch (e: any) {
       message.error(e?.message ?? "Lỗi xuất PDF");
     } finally { setExportLoading(null); }
-  }, [idphieu]);
+  }, [idphieu, data]);
 
   const tongHopColumns = useMemo(() => [
     { title: "STT", dataIndex: "stt", width: 60, align: "center" as const },

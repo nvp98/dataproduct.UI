@@ -450,47 +450,43 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
             : "-",
       },
       { title: "Chất lượng", dataIndex: "chatLuong", width: 160 },
-      ...(isDuc
-        ? [
-            {
-              title: "TT Đúc",
-              dataIndex: "trangThaiDuc",
-              width: 90,
-              align: "center" as const,
-              render: (v: number) => (
-                <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>
-              ),
-            },
-          ]
-        : []),
-      ...(isKho
-        ? [
-            {
-              title: "TT Kho",
-              dataIndex: "trangThaiKho",
-              width: 90,
-              align: "center" as const,
-              render: (v: number) => (
-                <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>
-              ),
-            },
-          ]
-        : []),
-      ...(isPKH
-        ? [
-            {
-              title: "TT PKH",
-              dataIndex: "trangThaiPKH",
-              width: 90,
-              align: "center" as const,
-              render: (v: number) => (
-                <Tag color={v === 1 ? "blue" : "default"}>
-                  {v === 1 ? "Đã chốt" : "Chưa"}
-                </Tag>
-              ),
-            },
-          ]
-        : []),
+      {
+        title: "TT KCS",
+        dataIndex: "trangThaiKCS",
+        width: 90,
+        align: "center" as const,
+        render: (v: number) => (
+          <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>
+        ),
+      },
+      {
+        title: "TT Đúc",
+        dataIndex: "trangThaiDuc",
+        width: 90,
+        align: "center" as const,
+        render: (v: number) => (
+          <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>
+        ),
+      },
+      {
+        title: "TT Kho",
+        dataIndex: "trangThaiKho",
+        width: 90,
+        align: "center" as const,
+        render: (v: number) => (
+          <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>
+        ),
+      },
+      {
+        title: "TT PKH",
+        dataIndex: "trangThaiPKH",
+        width: 90,
+        align: "center" as const,
+        render: (v: number) => (
+          // 
+          <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã Chốt" : "Chưa"}</Tag>
+        ),
+      },
     ],
     [isKCS, isDuc, isKho, isPKH],
   );

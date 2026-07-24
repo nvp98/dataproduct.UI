@@ -6,11 +6,17 @@ import { useNavigate } from "react-router-dom";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
 import { useMemo } from "react";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
-import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import BkHrc2SlabTable from "./BkHrc2SlabTable";
 
 const config = HRC2_BBGN_PhoiTam;
+
+/** Trạng thái tổng hợp BBGN Phôi tấm (BE trả 1 | 2 | 3, xem Hrc2BbgnPhoiTamEnricher) */
+const BBGN_PHOI_TAM_STATUS: Record<string, { text: string; color: string }> = {
+  "1": { text: "Chưa hoàn thành", color: "orange" },
+  "2": { text: "Đã hoàn thành", color: "success" },
+  "3": { text: "Đã chốt", color: "blue" },
+};
 
 type TableRecord = SearchPhieuResponseModel & {
   pheDuyet?: Array<Record<string, unknown>>;
@@ -53,8 +59,6 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
   } = usePhieuSearchListHRC({ maBm: config.code as string, fixedFilters });
 
   const detailPath = type === "xemphieu" ? "/xemphieu/chitietbbgnphoitam" : "/chitietbbgnphoitam";
-
-  const statusConfig = PHIEU_STATUS_CONFIG;
 
   const columns = [
     {
@@ -104,15 +108,19 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
       ellipsis: true,
     },
     {
-      title: "Trạng thái",
+      title: "Tình trạng",
       dataIndex: "tinhTrang",
       key: "tinhTrang",
-      width: 130,
-      render: (status: string) => (
-        <Tag color={statusConfig[status]?.color || "default"}>
-          {statusConfig[status]?.text || status}
-        </Tag>
-      ),
+      width: 150,
+      render: (status: number | string | null | undefined) => {
+        const key = String(status ?? "");
+        const cfg = BBGN_PHOI_TAM_STATUS[key];
+        return (
+          <Tag color={cfg?.color ?? "default"}>
+            {cfg?.text ?? (status !== null && status !== undefined && status !== "" ? String(status) : "-")}
+          </Tag>
+        );
+      },
     },
     {
       title: "Thao tác",
