@@ -30,8 +30,8 @@ const readonlyCellStyle: React.CSSProperties = {
   textAlign: "right",
 };
 
-function formatSo(n: number) {
-  return n.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
+function formatSo(n: number | null | undefined) {
+  return (n ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 3 });
 }
 
 function rowKeyOf(row: DisplayRow) {
@@ -163,7 +163,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
         tyLe: percent / 100,
         idNguoiNhap,
       });
-      await handleTinhLai();
+      message.success("Đã lưu tỷ lệ. Bấm \"Tính lại\" để cập nhật kết quả phân bổ.");
     } catch (err: any) {
       message.error(err?.message || "Lưu tỷ lệ thất bại.");
     } finally {
@@ -222,6 +222,14 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
       },
     },
     {
+      title: "CVH (Lấy từ biểu nạp liệu)",
+      dataIndex: "khoiLuongNhanVeCvh",
+      width: 150,
+      align: "right" as const,
+      onCell: (_row: DisplayRow, index?: number) => ({ rowSpan: index === 0 ? displayData.length : 0 }),
+      render: (v: number) => <div style={readonlyCellStyle}>{formatSo(v)}</div>,
+    },
+    {
       title: "Phân bổ CVH",
       dataIndex: "khoiLuongPhanBoCvh",
       width: 130,
@@ -231,6 +239,14 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
           {formatSo(v)}
         </div>
       ),
+    },
+    {
+      title: "Than cốc <10mm (Lấy từ biên bản giao nhận)",
+      dataIndex: "khoiLuongNhanVeThanCoc10",
+      width: 170,
+      align: "right" as const,
+      onCell: (_row: DisplayRow, index?: number) => ({ rowSpan: index === 0 ? displayData.length : 0 }),
+      render: (v: number) => <div style={readonlyCellStyle}>{formatSo(v)}</div>,
     },
     {
       title: "Phân bổ Than cốc <10mm",

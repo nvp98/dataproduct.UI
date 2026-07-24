@@ -30,8 +30,8 @@ const readonlyCellStyle: React.CSSProperties = {
   textAlign: "right",
 };
 
-function formatSo(n: number) {
-  return n.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
+function formatSo(n: number | null | undefined) {
+  return (n ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 3 });
 }
 
 // Chèn 1 dòng tổng sau mỗi nhóm phân bổ (thay vì lặp cột "Tổng nhóm" trên mọi dòng)
@@ -156,7 +156,7 @@ export default function PhanBoNhomTab({ loaiPhanBo, ngay, ca, idLoCao }: PhanBoN
         tyLe: percent / 100,
         idNguoiNhap,
       });
-      await handleTinhLai();
+      message.success("Đã lưu tỷ lệ. Bấm \"Tính lại\" để cập nhật kết quả phân bổ.");
     } catch (err: any) {
       message.error(err?.message || "Lưu tỷ lệ thất bại.");
     } finally {

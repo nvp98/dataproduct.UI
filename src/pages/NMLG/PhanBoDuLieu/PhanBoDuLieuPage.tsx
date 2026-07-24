@@ -30,7 +30,7 @@ export default function PhanBoDuLieuPage() {
     {
       key: TAB_QUAN_LY_NHOM,
       label: "Quản lý nhóm",
-      children: <QuanLyNhomPhanBoTab idLoCao={idLoCao} />,
+      children: <QuanLyNhomPhanBoTab ngay={ngay} ca={ca} idLoCao={idLoCao} />,
     },
   ];
 

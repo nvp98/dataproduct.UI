@@ -19,15 +19,22 @@ export interface CreateNhomPhanBoDto {
 
 export interface UpdateNhomPhanBoDto extends CreateNhomPhanBoDto {}
 
+// NVL thành viên của nhóm — cấu hình RIÊNG cho từng (Ngày, Ca, Lò cao), không kế thừa từ ca/ngày khác
 export interface NvlNhomPhanBoDto {
   id: number;
   idNvl: number;
   tenNvl: string | null;
   idNhomPhanBo: number;
+  ngay: string; // "YYYY-MM-DD"
+  ca: number;
+  idLoCao: number;
 }
 
 export interface AddNvlNhomPhanBoDto {
   idNvl: number;
+  ngay: string;
+  ca: number;
+  idLoCao: number;
 }
 
 export const nhomPhanBoApi = {
@@ -42,14 +49,14 @@ export const nhomPhanBoApi = {
 
   delete: (id: number) => apiService.delete(`/api/NhomPhanBo/delete/${id}`),
 
-  getNvl: (idNhomPhanBo: number): Promise<NvlNhomPhanBoDto[]> =>
-    apiService.get(`/api/NhomPhanBo/${idNhomPhanBo}/get-nvl`),
+  getNvl: (idNhomPhanBo: number, ngay: string, ca: number): Promise<NvlNhomPhanBoDto[]> =>
+    apiService.get(`/api/NhomPhanBo/${idNhomPhanBo}/get-nvl`, { params: { ngay, ca } }),
 
   addNvl: (idNhomPhanBo: number, dto: AddNvlNhomPhanBoDto): Promise<NvlNhomPhanBoDto> =>
     apiService.post(`/api/NhomPhanBo/${idNhomPhanBo}/add-nvl`, dto),
 
-  removeNvl: (idNhomPhanBo: number, idNvl: number) =>
-    apiService.delete(`/api/NhomPhanBo/${idNhomPhanBo}/remove-nvl/${idNvl}`),
+  removeNvl: (idNhomPhanBo: number, idNvl: number, ngay: string, ca: number) =>
+    apiService.delete(`/api/NhomPhanBo/${idNhomPhanBo}/remove-nvl/${idNvl}`, { params: { ngay, ca } }),
 };
 
 // ─── Tỷ lệ phân bổ (LG_TyLePhanBo — PP2, nhập tay) ──────────────────────────
@@ -131,7 +138,9 @@ export interface KetQuaThanCocDto {
   khoiLuongNapLieu: number; // E (dùng chung)
   khoiLuongNapLieuNhom: number; // Tổng E của cả nhóm
   tyLePhanBo: number; // % (dùng chung)
+  khoiLuongNhanVeCvh: number; // G_CVH — dùng chung cho cả bảng
   khoiLuongPhanBoCvh: number; // H_CVH
+  khoiLuongNhanVeThanCoc10: number; // G_ThanCoc10 — dùng chung cho cả bảng
   khoiLuongPhanBoThanCoc10: number; // H_ThanCoc10
   khoiLuongChotCuoi: number; // I = E + H_CVH + H_ThanCoc10
   laDongConLai: boolean;

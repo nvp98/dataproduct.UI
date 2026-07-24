@@ -6,6 +6,7 @@ import {
 } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { Dayjs } from "dayjs";
 import {
   nhomPhanBoApi,
   type NhomPhanBoDto,
@@ -27,10 +28,12 @@ const PHUONG_THUC_OPTIONS = [
 ];
 
 interface QuanLyNhomPhanBoTabProps {
+  ngay: Dayjs;
+  ca: number;
   idLoCao: number;
 }
 
-export default function QuanLyNhomPhanBoTab({ idLoCao }: QuanLyNhomPhanBoTabProps) {
+export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPhanBoTabProps) {
   const [loaiPhanBo, setLoaiPhanBo] = useState(1);
   const [nhomList, setNhomList] = useState<NhomPhanBoDto[]>([]);
   const [loadingNhom, setLoadingNhom] = useState(false);
@@ -180,10 +183,11 @@ export default function QuanLyNhomPhanBoTab({ idLoCao }: QuanLyNhomPhanBoTabProp
         </Col>
         <Col span={12}>
           <Title level={5}>
-            NVL trong nhóm {selectedNhom ? `— ${selectedNhom.tenNhom}` : ""} (Lò cao {idLoCao})
+            NVL trong nhóm {selectedNhom ? `— ${selectedNhom.tenNhom}` : ""} (Lò cao {idLoCao}, Ngày{" "}
+            {ngay.format("DD/MM/YYYY")}, Ca {ca})
           </Title>
           {selectedNhom ? (
-            <NvlNhomPanel nhom={selectedNhom} nvlOptions={nvlList} />
+            <NvlNhomPanel nhom={selectedNhom} nvlOptions={nvlList} ngay={ngay} ca={ca} idLoCao={idLoCao} />
           ) : (
             <div className="text-gray-400">Chọn 1 nhóm bên trái để quản lý NVL thành viên.</div>
           )}
@@ -226,25 +230,29 @@ export default function QuanLyNhomPhanBoTab({ idLoCao }: QuanLyNhomPhanBoTabProp
 interface NvlNhomPanelProps {
   nhom: NhomPhanBoDto;
   nvlOptions: LGNLNvlDto[];
+  ngay: Dayjs;
+  ca: number;
+  idLoCao: number;
 }
 
-function NvlNhomPanel({ nhom, nvlOptions }: NvlNhomPanelProps) {
+function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao }: NvlNhomPanelProps) {
   const [data, setData] = useState<NvlNhomPhanBoDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [addForm] = Form.useForm();
   const [adding, setAdding] = useState(false);
+  const ngayStr = ngay.format("YYYY-MM-DD");
 
   const fetchNvl = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await nhomPhanBoApi.getNvl(nhom.id);
+      const res = await nhomPhanBoApi.getNvl(nhom.id, ngayStr, ca);
       setData(Array.isArray(res) ? res : []);
     } catch {
       message.error("Lỗi khi tải NVL của nhóm");
     } finally {
       setLoading(false);
     }
-  }, [nhom.id]);
+  }, [nhom.id, ngayStr, ca]);
 
   useEffect(() => {
     fetchNvl();
@@ -255,7 +263,7 @@ function NvlNhomPanel({ nhom, nvlOptions }: NvlNhomPanelProps) {
     try {
       const values = await addForm.validateFields();
       setAdding(true);
-      await nhomPhanBoApi.addNvl(nhom.id, values);
+      await nhomPhanBoApi.addNvl(nhom.id, { idNvl: values.idNvl, ngay: ngayStr, ca, idLoCao });
       message.success("Đã thêm NVL vào nhóm");
       addForm.resetFields();
       fetchNvl();
@@ -269,7 +277,7 @@ function NvlNhomPanel({ nhom, nvlOptions }: NvlNhomPanelProps) {
 
   const handleRemove = async (idNvl: number) => {
     try {
-      await nhomPhanBoApi.removeNvl(nhom.id, idNvl);
+      await nhomPhanBoApi.removeNvl(nhom.id, idNvl, ngayStr, ca);
       message.success("Đã xóa NVL khỏi nhóm");
       fetchNvl();
     } catch (err: any) {
@@ -333,8 +341,10 @@ function NvlNhomPanel({ nhom, nvlOptions }: NvlNhomPanelProps) {
         </Form.Item>
       </Form>
       <div className="text-gray-400 mt-1">
-        Ghi chú: với phương thức "Tỷ trọng nội bộ + dòng dư", NVL nào nhận phần bù trừ (dòng dư) được{" "}
-        <b>hệ thống tự động chọn</b> theo khối lượng nạp liệu lớn nhất mỗi lần tính — không cần cấu hình tay ở đây.
+        Cấu hình này chỉ áp dụng cho đúng Ngày/Ca/Lò cao đang chọn ở filter bar — đổi ngày/ca khác sẽ cần
+        thêm NVL lại từ đầu, không kế thừa. Ghi chú: với phương thức "Tỷ trọng nội bộ + dòng dư", NVL nào
+        nhận phần bù trừ (dòng dư) được <b>hệ thống tự động chọn</b> theo khối lượng nạp liệu lớn nhất mỗi
+        lần tính — không cần cấu hình tay ở đây.
       </div>
     </>
   );
