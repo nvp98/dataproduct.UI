@@ -43,6 +43,7 @@ export interface HrcSlabItem {
   id: number;
   bkmisId?: number | null;
   ngaySanXuat?: string | null;
+  ngaySXTheoCa?: string | null;
   shiftName?: string | null;
   caSanXuat?: string | null;
   kipSanXuat?: string | null;
