@@ -130,7 +130,32 @@ export const lgTSLMappingApi = {
 
   delete: (id: number) =>
     apiService.delete(`/api/LGTSL/delete-tonsilo-mapping/${id}`),
+
+  copyFromPreviousShift: (dto: {
+    idLoCao: number;
+    ngay: string;
+    ca: number;
+  }): Promise<CopyLGTSLMappingFromPreviousShiftResultDto> =>
+    apiService.post("/api/LGTSL/post-tonsilo-mapping-copy-from-previous-shift", dto),
 };
+
+// Kết quả sao chép mapping từ ca gần nhất có dữ liệu — BE tự lùi qua các ca
+// nếu ca liền kề chưa có mapping (xem CopyLGTSMappingFromPreviousShiftResultDto ở BE).
+// draftPrefill: idSiLo -> idNVL cho silo ĐÃ có mapping ở ca hiện tại (chỉ gợi ý nháp,
+// không ghi đè DB) — key là số nhưng System.Text.Json serialize Dictionary<int,int> thành
+// object với key dạng string, nên FE nhận Record<string, number>.
+export interface CopyLGTSLMappingFromPreviousShiftResultDto {
+  found: boolean;
+  sourceNgay: string | null;
+  sourceCa: number | null;
+  shiftsSearched: number;
+  createdCount: number;
+  failedCount: number;
+  noNvlCount: number;
+  draftPrefill: Record<string, number>;
+  messageType: "success" | "info" | "warning" | "error";
+  message: string;
+}
 
 // ─── View: SiLo + NVL theo Ngày/Ca/LoCao ─────────────────────────────────────
 

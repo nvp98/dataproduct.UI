@@ -215,7 +215,7 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
               if (colIndex === 0) {
                 return (
                   <Table.Summary.Cell key="doam-label" index={0} align="center">
-                    <b>Độ ẩm</b>
+                    <b style={{ fontSize: 15 }}>Độ ẩm</b>
                   </Table.Summary.Cell>
                 );
               }
@@ -227,16 +227,17 @@ const CustomTableLG = forwardRef<unknown, CustomTableLGProps>(
                       min={0}
                       max={100}
                       precision={2}
+                      controls={false}
                       value={doAmMap[di] ?? undefined}
                       onChange={(val) => {
-                        const next = { ...doAmMap, [di]: val ?? 0 };
-                        setDoAmMap(next);
-                        onDoAmChange?.(next);
+                          const next = { ...doAmMap, [di]: val ?? 0 };
+                          setDoAmMap(next);
+                          onDoAmChange?.(next);
                       }}
-                      style={{ width: "100%" }}
-                      size="small"
-                      addonAfter="%"
-                    />
+                      style={{ width: "100%", fontSize: 15 }}
+                      size="large"
+                      addonAfter={<span style={{ fontSize: 11 }}>%</span>}
+                      />
                   </Table.Summary.Cell>
                 );
               }
