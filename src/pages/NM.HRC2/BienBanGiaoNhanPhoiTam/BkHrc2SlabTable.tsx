@@ -369,7 +369,7 @@ const BkHrc2SlabTable = () => {
     {
       title: "TT KCS",
       dataIndex: "trangThaiKCS",
-      width: 70,
+      width: 60,
       align: "center" as const,
       fixed: "left" as const,
       render: (v: number, r: HrcSlabItem) => (
@@ -381,7 +381,7 @@ const BkHrc2SlabTable = () => {
     {
       title: "TT Đúc",
       dataIndex: "trangThaiDuc",
-      width: 70,
+      width: 60,
       align: "center" as const,
       fixed: "left" as const,
       render: (v: number) => <Tag color={TT_COLOR[v]}>{TT_TEXT[v]}</Tag>,
@@ -389,7 +389,7 @@ const BkHrc2SlabTable = () => {
     {
       title: "TT Kho",
       dataIndex: "trangThaiKho",
-      width: 70,
+      width: 60,
       align: "center" as const,
       fixed: "left" as const,
       render: (v: number) => <Tag color={TT_COLOR[v]}>{TT_TEXT[v]}</Tag>,
@@ -397,7 +397,7 @@ const BkHrc2SlabTable = () => {
     {
       title: "TT PKH",
       dataIndex: "trangThaiPKH",
-      width: 70,
+      width: 60,
       align: "center" as const,
       fixed: "left" as const,
       render: (v: number) => (
@@ -406,13 +406,13 @@ const BkHrc2SlabTable = () => {
     },
     {
       title: "Ngày SX",
-      dataIndex: "ngaySanXuat",
+      dataIndex: "ngaySXTheoCa",
       width: 95,
       fixed: "left" as const,
       render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
     },
     { title: "Ca SX", dataIndex: "shiftName", width: 150, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
-    { title: "Kíp", dataIndex: "kipSanXuat", width: 60, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
+    { title: "Kíp", dataIndex: "kipSanXuat", width: 40, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
     { title: "Mẻ thép", dataIndex: "meThep", width: 100, align: "center" as const, fixed: "left" as const },
     {
       title: "ID Slab",
@@ -430,7 +430,7 @@ const BkHrc2SlabTable = () => {
     {
       title: "Kích thước (mm)",
       key: "kichThuoc",
-      width: 170,
+      width: 190,
       align: "center",
       render: (_: unknown, r: HrcSlabItem) => {
         const parts = [r.chieuDay, r.chieuRong, r.chieuDai];
@@ -618,11 +618,11 @@ const BkHrc2SlabTable = () => {
             </Col>
             <Col xs={12} sm={6} md={2}>
               <Form.Item name="isDiffMacThep" valuePropName="checked" label=" ">
-                <Checkbox>Khác mác thép</Checkbox>
+                <Checkbox>Khác mác</Checkbox>
               </Form.Item>
             </Col>
             <Col xs={12} sm={6} md={2}>
-              <Form.Item name="isSaiLotName" valuePropName="checked">
+              <Form.Item name="isSaiLotName" valuePropName="checked" label=" ">
                 <Checkbox>Sai LotName</Checkbox>
               </Form.Item>
             </Col>
