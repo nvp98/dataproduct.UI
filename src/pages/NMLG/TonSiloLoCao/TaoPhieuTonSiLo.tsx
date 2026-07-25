@@ -813,11 +813,19 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     });
   }, []);
 
-  // Cập nhật một ô trong tableData; đánh dấu _manualKL=true nếu người dùng chỉnh sửa KL
+  // Cập nhật một ô trong tableData; đánh dấu _manualKL=true nếu người dùng chỉnh sửa KL.
+  // Chỉ gắn cờ khi giá trị THỰC SỰ đổi — InputNumber của antd tự bắn onChange lúc blur
+  // (changeOnBlur mặc định true) kể cả khi người dùng chỉ bấm vào ô rồi bấm ra mà không
+  // gõ gì, nên so sánh giá trị cũ/mới ở đây để tránh gắn nhầm cờ manual.
   const handleSiloCellChange = useCallback((rowKey: string, field: string, value: any) => {
     setTableData((prev) => prev.map((r) => {
       if (r.key !== rowKey) return r;
-      if (field === "klTonCuoiKip") return { ...r, [field]: value, _manualKL: true };
+      if (field === "klTonCuoiKip") {
+        const oldVal = r[field] === "" || r[field] == null ? null : Number(r[field]);
+        const newVal = value === "" || value == null ? null : Number(value);
+        if (oldVal === newVal) return { ...r, [field]: value };
+        return { ...r, [field]: value, _manualKL: true };
+      }
       return { ...r, [field]: value };
     }));
   }, []);
@@ -1317,6 +1325,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                         precision={3}
                         disabled={false}
                         placeholder="0"
+                        changeOnBlur={false}
                         onChange={(v) => handleSiloCellChange(row.key!, "klTonCuoiKip", v)}
                       />
                     </Tooltip>
