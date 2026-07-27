@@ -303,58 +303,31 @@ const TaoPhieuNapLieuLoCao = () => {
     }
   }, []);
 
-  // Lõi sao chép mapping từ ca trước — dùng chung cho nút bấm tay và luồng tự động
+  // Lõi sao chép mapping — dùng chung cho nút bấm tay và luồng tự động
   // (khi Kiểm tra Silo phát hiện ngày/ca hiện tại chưa có mapping nào).
+  // BE tự lùi qua các ca trước cho đến khi tìm được ca gần nhất có mapping
+  // (không chỉ đúng 1 ca liền kề) — xem LGNLController.CopyMappingFromPreviousShift.
   const copyMappingFromPreviousShift = useCallback(
     async (ngay: string, caNum: number, scopeNum: number) => {
-      const prevCa = caNum === 1 ? 2 : 1;
-      const prevNgay = caNum === 1 ? dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD") : ngay;
-
       try {
         setCopyMappingLoading(true);
-        const prevSnapshotRaw = await lgnlMappingApi.getSnapshotSilo({
-          ngay: prevNgay,
-          idCa: prevCa,
+
+        const result = await lgnlMappingApi.copyFromPreviousShift({
           idLoCao: scopeNum,
-        });
-        const prevSnapshot: LGNLSiloSnapshotDto[] = Array.isArray(prevSnapshotRaw) ? prevSnapshotRaw : [];
-        const mappedPrev = prevSnapshot.filter((item: LGNLSiloSnapshotDto) => item.idNVL != null);
-        if (mappedPrev.length === 0) {
-          message.info(`Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")} chưa có mapping nào để sao chép`);
-          return;
-        }
-        // Lấy snapshot ca hiện tại để biết Silo nào đã map rồi
-        const currentSnapshotRaw = await lgnlMappingApi.getSnapshotSilo({
           ngay,
           idCa: caNum,
-          idLoCao: scopeNum,
         });
-        const currentSnapshot: LGNLSiloSnapshotDto[] = Array.isArray(currentSnapshotRaw) ? currentSnapshotRaw : [];
-        const alreadyMappedIds = new Set(
-          currentSnapshot.filter((item: LGNLSiloSnapshotDto) => item.idNVL != null).map((item: LGNLSiloSnapshotDto) => item.idSiLo)
-        );
-        const toCreate = mappedPrev.filter((item: LGNLSiloSnapshotDto) => !alreadyMappedIds.has(item.idSiLo));
-        if (toCreate.length === 0) {
-          message.info("Tất cả Silo đã được map ở ca hiện tại, không cần sao chép");
+
+        if (!result.found) {
+          message.info(result.message);
           return;
         }
-        let successCount = 0;
-        for (const item of toCreate) {
-          try {
-            await lgnlMappingApi.create({
-              ngay,
-              idCa: caNum,
-              idLoCao: scopeNum,
-              idSiLo: item.idSiLo,
-              idNVL: item.idNVL!,
-              ghiChu: null,
-            });
-            successCount++;
-          } catch {
-            // bỏ qua lỗi từng item, tiếp tục
-          }
+        if (result.totalToCreate === 0) {
+          message.info(result.message);
+          return;
         }
-        message.success(`Đã sao chép ${successCount}/${toCreate.length} mapping từ Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`);
+        message.success(result.message);
+
         const refreshed = await refreshSnapshotData(ngay, caNum, scopeNum);
         const nextDrafts: Record<number, number | null> = {};
         const nextNotes: Record<number, string> = {};
@@ -470,12 +443,10 @@ const TaoPhieuNapLieuLoCao = () => {
     }
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     const caNum = Number(ca);
-    const prevCa = caNum === 1 ? 2 : 1;
-    const prevNgay = caNum === 1 ? dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD") : ngay;
 
     Modal.confirm({
       title: "Sao chép mapping ca trước",
-      content: `Sao chép toàn bộ mapping từ Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")} (cùng Lò cao) sang Ca ${caNum}? Các Silo đã map ở ca hiện tại sẽ bị bỏ qua.`,
+      content: `Sao chép toàn bộ mapping từ ca liền kề (cùng Lò cao) sang Ca ${caNum}? Nếu ca liền kề chưa có mapping, hệ thống sẽ tự động lùi về ca gần nhất đã có mapping. Các Silo đã map ở ca hiện tại sẽ bị bỏ qua.`,
       okText: "Xác nhận",
       cancelText: "Hủy",
       onOk: () => copyMappingFromPreviousShift(ngay, caNum, Number(scope)),

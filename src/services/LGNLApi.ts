@@ -141,7 +141,26 @@ export const lgnlMappingApi = {
 
   getSnapshotSilo: (params: { ngay: string; idCa: number; idLoCao: number }) =>
     apiService.get<LGNLSiloSnapshotDto[]>("/api/LGNL/get-snapshot-silo", { params }),
+
+  copyFromPreviousShift: (dto: {
+    idLoCao: number;
+    ngay: string;
+    idCa: number;
+  }): Promise<CopyMappingFromPreviousShiftResultDto> =>
+    apiService.post("/api/LGNL/copy-mapping-from-previous-shift", dto),
 };
+
+// Kết quả sao chép mapping từ ca gần nhất có dữ liệu — BE tự lùi qua các ca
+// nếu ca liền kề chưa có mapping (xem CopyMappingFromPreviousShiftResultDto ở BE).
+export interface CopyMappingFromPreviousShiftResultDto {
+  found: boolean;
+  sourceNgay: string | null;
+  sourceCa: number | null;
+  shiftsSearched: number;
+  createdCount: number;
+  totalToCreate: number;
+  message: string;
+}
 
 // ─── Nhóm NVL (LG_NL_NhomNVL) ────────────────────────────────────────────────
 

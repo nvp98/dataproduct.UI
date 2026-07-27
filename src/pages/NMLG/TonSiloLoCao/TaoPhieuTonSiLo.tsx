@@ -239,89 +239,43 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     }
   }, []);
 
-  // Lõi sao chép mapping từ ca liền kề trước (Ca2→Ca1 cùng ngày; Ca1→Ca2 ngày trước).
-  // - Silo chưa có trong ca hiện tại: tạo mới mapping.
-  // - Silo đã có: pre-fill draft NVL để người dùng xem lại và nhấn "Lưu map" nếu muốn cập nhật.
-  // Nhận currentList (thay vì đọc kiemTraData từ closure) để dùng được ngay cả khi
-  // gọi tự động ngay sau khi vừa fetch xong (tránh lệch do setState là bất đồng bộ).
+  // Lõi sao chép mapping — dùng chung cho nút bấm tay và luồng tự động.
+  // BE tự lùi qua các ca trước cho đến khi tìm được ca gần nhất có mapping (không chỉ
+  // đúng 1 ca liền kề) — xem LGTSLService.CopyMappingFromPreviousShiftAsync.
+  // - Silo chưa có trong ca hiện tại: BE tạo mới mapping.
+  // - Silo đã có: BE trả về draftPrefill để FE gợi ý NVL trong bảng nháp, người dùng tự
+  //   xem lại và nhấn "Lưu map" nếu muốn cập nhật (không ghi đè DB tự động).
   const copyMappingFromPrevShift = useCallback(
-    async (ngay: string, caNum: number, scopeNum: number, currentList: LGTSLMappingDto[]) => {
-      const prevCa = caNum === 2 ? 1 : 2;
-      const prevNgay = caNum === 2 ? ngay : dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD");
-      const prevLabel = `Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`;
-
+    async (ngay: string, caNum: number, scopeNum: number) => {
       try {
         setCopyingFromPrev(true);
-        const prevRes = await lgTSLMappingApi.getList({ ngay: prevNgay, ca: prevCa, idLoCao: scopeNum });
-        const prevList: LGTSLMappingDto[] = Array.isArray(prevRes) ? prevRes : [];
-
-        if (prevList.length === 0) {
-          message.warning(`Không tìm thấy dữ liệu mapping từ ${prevLabel}`);
-          return;
-        }
-
-        const currentSiloIds = new Set(currentList.map((r) => r.idSiLo));
-
-        // Silo chưa có trong ca hiện tại → tạo mới (chỉ silo đã được gán NVL ở ca trước)
-        const newSilos = prevList.filter((r) => !currentSiloIds.has(r.idSiLo));
-        const toCreate = newSilos.filter((r) => r.idNVL);
-        const noNvlCount = newSilos.length - toCreate.length;
-
-        let createdCount = 0;
-        let failedCount = 0;
-        for (const prev of toCreate) {
-          try {
-            await lgTSLMappingApi.create({
-              ngay,
-              ca: caNum,
-              idLoCao: scopeNum,
-              idSiLo: prev.idSiLo,
-              idNVL: prev.idNVL,
-              ghiChu: prev.ghiChu ?? null,
-            });
-            createdCount++;
-          } catch {
-            failedCount++;
-          }
-        }
-
-        // Silo đã có trong ca hiện tại → ghi nhớ pre-fill để giữ sau khi refresh
-        const draftUpdates: Record<number, number | null> = {};
-        prevList.forEach((r) => {
-          if (currentSiloIds.has(r.idSiLo) && r.idNVL) {
-            draftUpdates[r.idSiLo] = r.idNVL;
-          }
+        const result = await lgTSLMappingApi.copyFromPreviousShift({
+          idLoCao: scopeNum,
+          ngay,
+          ca: caNum,
         });
 
-        // Refresh danh sách mapping; ưu tiên pre-fill từ ca trước cho silo đã có mapping hiện tại
+        switch (result.messageType) {
+          case "success": message.success(result.message); break;
+          case "warning": message.warning(result.message); break;
+          case "error": message.error(result.message); break;
+          default: message.info(result.message); break;
+        }
+
+        if (!result.found) return;
+
+        // Refresh danh sách mapping; áp draftPrefill (idSiLo -> idNVL) cho silo đã có
+        // mapping ở ca hiện tại — chỉ cập nhật nháp, giữ nguyên bản ghi đã lưu trong DB.
         const refreshed = await refreshKiemTraData(ngay, caNum, scopeNum);
         const newDrafts: Record<number, number | null> = {};
         const newNotes: Record<number, string> = {};
         refreshed.forEach((item) => {
-          newDrafts[item.idSiLo] = draftUpdates[item.idSiLo] ?? item.idNVL ?? null;
+          const prefillNVL = result.draftPrefill[String(item.idSiLo)];
+          newDrafts[item.idSiLo] = prefillNVL ?? item.idNVL ?? null;
           newNotes[item.idSiLo] = "";
         });
         setMapDraftBySilo(newDrafts);
         setMapNoteBySilo(newNotes);
-
-        const preFillCount = Object.keys(draftUpdates).length;
-
-        if (failedCount > 0 && createdCount === 0 && preFillCount === 0) {
-          // Tất cả lệnh tạo đều thất bại — báo lỗi rõ ràng thay vì thông báo nhầm
-          message.error(`Không thể tạo mapping từ ${prevLabel}: ${failedCount} silo bị lỗi. Kiểm tra kết nối hoặc dữ liệu.`);
-        } else if (createdCount > 0 || preFillCount > 0) {
-          const parts: string[] = [];
-          if (createdCount > 0) parts.push(`tạo mới ${createdCount} silo`);
-          if (preFillCount > 0) parts.push(`cập nhật nháp ${preFillCount} silo`);
-          if (failedCount > 0) parts.push(`${failedCount} silo bị lỗi khi tạo`);
-          if (noNvlCount > 0) parts.push(`${noNvlCount} silo ca trước chưa có NVL`);
-          message.success(`Đã sao chép từ ${prevLabel}: ${parts.join(", ")}. Kiểm tra và nhấn "Lưu map" cho từng dòng nếu cần.`);
-        } else if (noNvlCount > 0 && toCreate.length === 0 && preFillCount === 0) {
-          // Ca trước có silo nhưng tất cả đều chưa được gán NVL
-          message.warning(`Ca trước (${prevLabel}) có ${noNvlCount} silo nhưng chưa được gán NVL nào. Hãy cấu hình mapping cho ca trước trước.`);
-        } else {
-          message.info(`Tất cả Silo của ca hiện tại đã có mapping hoặc ca trước không có NVL.`);
-        }
       } catch {
         message.error("Lỗi khi sao chép mapping từ ca trước");
       } finally {
@@ -354,7 +308,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     // không cần người dùng bấm nút "Sao chép từ ca trước". Nút bấm tay vẫn giữ
     // nguyên để dùng lại khi luồng tự động gặp lỗi hoặc cần sao chép lại.
     if (list.length === 0) {
-      await copyMappingFromPrevShift(ngay, caNum, Number(scope), list);
+      await copyMappingFromPrevShift(ngay, caNum, Number(scope));
     }
   }, [form, scope, ca, refreshKiemTraData, resetMappingDrafts, copyMappingFromPrevShift]);
 
@@ -501,8 +455,8 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       return;
     }
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
-    return copyMappingFromPrevShift(ngay, Number(ca), Number(scope), kiemTraData);
-  }, [form, scope, ca, kiemTraData, copyMappingFromPrevShift]);
+    return copyMappingFromPrevShift(ngay, Number(ca), Number(scope));
+  }, [form, scope, ca, copyMappingFromPrevShift]);
 
   // Lưu NVL đã chọn trong draft vào mapping của silo (PUT), sau đó refresh bảng
   // Lưu NVL đã chọn trong draft vào mapping của silo (PUT), sau đó refresh bảng.
@@ -859,11 +813,19 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     });
   }, []);
 
-  // Cập nhật một ô trong tableData; đánh dấu _manualKL=true nếu người dùng chỉnh sửa KL
+  // Cập nhật một ô trong tableData; đánh dấu _manualKL=true nếu người dùng chỉnh sửa KL.
+  // Chỉ gắn cờ khi giá trị THỰC SỰ đổi — InputNumber của antd tự bắn onChange lúc blur
+  // (changeOnBlur mặc định true) kể cả khi người dùng chỉ bấm vào ô rồi bấm ra mà không
+  // gõ gì, nên so sánh giá trị cũ/mới ở đây để tránh gắn nhầm cờ manual.
   const handleSiloCellChange = useCallback((rowKey: string, field: string, value: any) => {
     setTableData((prev) => prev.map((r) => {
       if (r.key !== rowKey) return r;
-      if (field === "klTonCuoiKip") return { ...r, [field]: value, _manualKL: true };
+      if (field === "klTonCuoiKip") {
+        const oldVal = r[field] === "" || r[field] == null ? null : Number(r[field]);
+        const newVal = value === "" || value == null ? null : Number(value);
+        if (oldVal === newVal) return { ...r, [field]: value };
+        return { ...r, [field]: value, _manualKL: true };
+      }
       return { ...r, [field]: value };
     }));
   }, []);
@@ -1363,6 +1325,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                         precision={3}
                         disabled={false}
                         placeholder="0"
+                        changeOnBlur={false}
                         onChange={(v) => handleSiloCellChange(row.key!, "klTonCuoiKip", v)}
                       />
                     </Tooltip>
