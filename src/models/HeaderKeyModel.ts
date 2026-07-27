@@ -9,6 +9,7 @@ export interface HeaderKey {
   thuTu?: number | null;
   isUsedNXT?: boolean | null;
   tyTrong?: number | null;
+  maVatTuChiPhi?: string | null;
 }
 
 export interface HeaderKeyPayload {
@@ -29,6 +30,7 @@ export interface HeaderKeyPayload {
   thuTu_Excel_BOF?: number | null;
   thuTu_Excel_LFRH?: number | null;
   iD_NhomKey?: number | null;       // FK → Header_Nhom.Id
+  maVatTuChiPhi?: string | null;    // Mã vật tư bên hệ thống chi phí (ChiPhi_ProductionData)
 }
 
 export interface HeaderKeySearchResponse {
@@ -70,4 +72,5 @@ export interface HeaderKeyMapping {
   thuTu_Excel_LFRH?: number | null;
   iD_NhomKey?: number | null;       // FK → Header_Nhom.Id
   tenNhom?: string | null;          // TenHienThi của Header_Nhom (enriched)
+  maVatTuChiPhi?: string | null;    // Mã vật tư bên hệ thống chi phí (ChiPhi_ProductionData)
 }
