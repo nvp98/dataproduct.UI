@@ -4,9 +4,9 @@ import {
   Button, Col, Form, Input, InputNumber, Modal, Popconfirm,
   Row, Select, Space, Table, Tabs, Tag, Typography, message,
 } from "antd";
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import type { Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import {
   nhomPhanBoApi,
   type NhomPhanBoDto,
@@ -27,6 +27,19 @@ const PHUONG_THUC_OPTIONS = [
   { label: "Tỷ lệ nhập tay", value: 2 },
 ];
 
+const PHUONG_THUC_TY_LE_NHAP_TAY = 2;
+
+function getCurrentUserId(): number | null {
+  const userInfoStr = localStorage.getItem("userinfo");
+  const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
+  return (
+    userInfoObj?.iD_TaiKhoan ??
+    userInfoObj?.ID_TaiKhoan ??
+    userInfoObj?.idTaiKhoan ??
+    null
+  );
+}
+
 interface QuanLyNhomPhanBoTabProps {
   ngay: Dayjs;
   ca: number;
@@ -45,6 +58,8 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
 
   const [selectedNhom, setSelectedNhom] = useState<NhomPhanBoDto | null>(null);
   const [nvlList, setNvlList] = useState<LGNLNvlDto[]>([]);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const [copyLoading, setCopyLoading] = useState(false);
 
   const fetchNhom = useCallback(async () => {
     setLoadingNhom(true);
@@ -121,6 +136,34 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
     }
   };
 
+  const handleCopy = async () => {
+    const idNguoiThucHien = getCurrentUserId();
+    if (!idNguoiThucHien) {
+      message.error("Không xác định được người dùng hiện tại.");
+      return;
+    }
+    setCopyLoading(true);
+    try {
+      const res = await nhomPhanBoApi.saoChep({
+        loaiPhanBo,
+        ngayDich: ngay.format("YYYY-MM-DD"),
+        caDich: ca,
+        idLoCaoDich: idLoCao,
+        idNguoiThucHien,
+      });
+      message.success(
+        `Đã sao chép ${res.soNvlDaCopy} NVL và ${res.soTyLeDaCopy} tỷ lệ từ Ngày ` +
+          `${dayjs(res.ngayNguon).format("DD/MM/YYYY")}, Ca ${res.caNguon} vào cấu hình hiện tại.`
+      );
+      fetchNhom();
+      setRefreshToken((t) => t + 1);
+    } catch (err: any) {
+      message.error(err?.message || "Lỗi khi sao chép cấu hình");
+    } finally {
+      setCopyLoading(false);
+    }
+  };
+
   const nhomColumns: ColumnsType<NhomPhanBoDto> = [
     { title: "Tên nhóm", dataIndex: "tenNhom", key: "tenNhom" },
     {
@@ -166,6 +209,24 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
               Thêm nhóm
             </Button>
+            <Popconfirm
+              title="Sao chép cấu hình từ ca gần nhất"
+              description={
+                <>
+                  Tự động lấy cấu hình nhóm/NVL/% từ ca liền kề gần nhất (cùng Lò cao {idLoCao}) có dữ liệu,
+                  <br />
+                  gộp vào Ngày {ngay.format("DD/MM/YYYY")}, Ca {ca} hiện tại. NVL đã có sẵn sẽ được giữ
+                  nguyên, không bị trùng.
+                </>
+              }
+              okText="Sao chép"
+              cancelText="Hủy"
+              onConfirm={handleCopy}
+            >
+              <Button icon={<CopyOutlined />} loading={copyLoading}>
+                Sao chép cấu hình
+              </Button>
+            </Popconfirm>
           </Space>
           <Table
             size="small"
@@ -187,7 +248,14 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
             {ngay.format("DD/MM/YYYY")}, Ca {ca})
           </Title>
           {selectedNhom ? (
-            <NvlNhomPanel nhom={selectedNhom} nvlOptions={nvlList} ngay={ngay} ca={ca} idLoCao={idLoCao} />
+            <NvlNhomPanel
+              nhom={selectedNhom}
+              nvlOptions={nvlList}
+              ngay={ngay}
+              ca={ca}
+              idLoCao={idLoCao}
+              refreshToken={refreshToken}
+            />
           ) : (
             <div className="text-gray-400">Chọn 1 nhóm bên trái để quản lý NVL thành viên.</div>
           )}
@@ -233,14 +301,20 @@ interface NvlNhomPanelProps {
   ngay: Dayjs;
   ca: number;
   idLoCao: number;
+  refreshToken: number;
 }
 
-function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao }: NvlNhomPanelProps) {
+function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: NvlNhomPanelProps) {
   const [data, setData] = useState<NvlNhomPhanBoDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [addForm] = Form.useForm();
   const [adding, setAdding] = useState(false);
   const ngayStr = ngay.format("YYYY-MM-DD");
+
+  const laPp2 = nhom.phuongThucPhanBo === PHUONG_THUC_TY_LE_NHAP_TAY;
+  const [tyLeNhom, setTyLeNhom] = useState<number | null>(null);
+  const [tyLeNhomInput, setTyLeNhomInput] = useState<number | null>(null);
+  const [savingTyLeNhom, setSavingTyLeNhom] = useState(false);
 
   const fetchNvl = useCallback(async () => {
     setLoading(true);
@@ -254,10 +328,50 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao }: NvlNhomPanelProps
     }
   }, [nhom.id, ngayStr, ca]);
 
+  const fetchTyLeNhom = useCallback(async () => {
+    if (!laPp2) { setTyLeNhom(null); setTyLeNhomInput(null); return; }
+    try {
+      const res = await nhomPhanBoApi.getTyLeNhom({ idNhomPhanBo: nhom.id, ngay: ngayStr, ca, idLoCao });
+      const percent = res == null ? null : res * 100;
+      setTyLeNhom(percent);
+      setTyLeNhomInput(percent);
+    } catch {
+      message.error("Lỗi khi tải % nhóm");
+    }
+  }, [laPp2, nhom.id, ngayStr, ca, idLoCao]);
+
   useEffect(() => {
     fetchNvl();
+    fetchTyLeNhom();
     addForm.resetFields();
-  }, [fetchNvl, addForm]);
+  }, [fetchNvl, fetchTyLeNhom, addForm, refreshToken]);
+
+  const handleSaveTyLeNhom = async () => {
+    if (tyLeNhomInput == null) return;
+    const idNguoiNhap = getCurrentUserId();
+    if (!idNguoiNhap) {
+      message.error("Không xác định được người dùng hiện tại.");
+      return;
+    }
+    setSavingTyLeNhom(true);
+    try {
+      const res = await nhomPhanBoApi.createTyLeNhom({
+        idNhomPhanBo: nhom.id,
+        ngay: ngayStr,
+        ca,
+        idLoCao,
+        tyLe: tyLeNhomInput / 100,
+        idNguoiNhap,
+      });
+      setTyLeNhom(tyLeNhomInput);
+      message.success(res.message);
+      fetchNvl();
+    } catch (err: any) {
+      message.error(err?.message || "Lưu % nhóm thất bại.");
+    } finally {
+      setSavingTyLeNhom(false);
+    }
+  };
 
   const handleAdd = async () => {
     try {
@@ -312,6 +426,29 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao }: NvlNhomPanelProps
 
   return (
     <>
+      {laPp2 && (
+        <Space className="mb-3" align="start">
+          <InputNumber
+            style={{ width: 160 }}
+            min={0}
+            max={100}
+            precision={3}
+            addonAfter="%"
+            placeholder="% cho cả nhóm"
+            value={tyLeNhomInput}
+            onChange={(v) => setTyLeNhomInput(v)}
+          />
+          <Button
+            type="primary"
+            loading={savingTyLeNhom}
+            disabled={tyLeNhomInput == null || tyLeNhomInput === tyLeNhom}
+            onClick={handleSaveTyLeNhom}
+          >
+            Áp dụng % cho cả nhóm
+          </Button>
+        </Space>
+      )}
+
       <Table
         size="small"
         bordered
@@ -342,9 +479,16 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao }: NvlNhomPanelProps
       </Form>
       <div className="text-gray-400 mt-1">
         Cấu hình này chỉ áp dụng cho đúng Ngày/Ca/Lò cao đang chọn ở filter bar — đổi ngày/ca khác sẽ cần
-        thêm NVL lại từ đầu, không kế thừa. Ghi chú: với phương thức "Tỷ trọng nội bộ + dòng dư", NVL nào
+        thêm NVL lại từ đầu, không kế thừa (dùng nút "Sao chép cấu hình" ở trên để copy nhanh từ ngày/ca
+        khác). Ghi chú: với phương thức "Tỷ trọng nội bộ + dòng dư" (như nhóm Quặng thiêu kết), NVL nào
         nhận phần bù trừ (dòng dư) được <b>hệ thống tự động chọn</b> theo khối lượng nạp liệu lớn nhất mỗi
-        lần tính — không cần cấu hình tay ở đây.
+        lần tính — không cần cấu hình tay, và không dùng % nhóm.
+        {laPp2 && (
+          <>
+            {" "}Với phương thức "Tỷ lệ nhập tay": bấm "Áp dụng % cho cả nhóm" để gán cùng 1 % cho mọi NVL
+            đang có trong nhóm; NVL thêm sau đó cũng tự động lấy % này.
+          </>
+        )}
       </div>
     </>
   );

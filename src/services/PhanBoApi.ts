@@ -39,25 +39,61 @@ export interface AddNvlNhomPhanBoDto {
 
 export const nhomPhanBoApi = {
   getList: (loaiPhanBo?: number): Promise<NhomPhanBoDto[]> =>
-    apiService.get("/api/NhomPhanBo/get-list", { params: { loaiPhanBo } }),
+    apiService.get("/api/LG_PhanBo/nhom/get-list", { params: { loaiPhanBo } }),
 
   create: (dto: CreateNhomPhanBoDto): Promise<NhomPhanBoDto> =>
-    apiService.post("/api/NhomPhanBo/create", dto),
+    apiService.post("/api/LG_PhanBo/nhom/create", dto),
 
   update: (id: number, dto: UpdateNhomPhanBoDto): Promise<NhomPhanBoDto> =>
-    apiService.put(`/api/NhomPhanBo/update/${id}`, dto),
+    apiService.put(`/api/LG_PhanBo/nhom/update/${id}`, dto),
 
-  delete: (id: number) => apiService.delete(`/api/NhomPhanBo/delete/${id}`),
+  delete: (id: number) => apiService.delete(`/api/LG_PhanBo/nhom/delete/${id}`),
 
   getNvl: (idNhomPhanBo: number, ngay: string, ca: number): Promise<NvlNhomPhanBoDto[]> =>
-    apiService.get(`/api/NhomPhanBo/${idNhomPhanBo}/get-nvl`, { params: { ngay, ca } }),
+    apiService.get(`/api/LG_PhanBo/nhom/${idNhomPhanBo}/get-nvl`, { params: { ngay, ca } }),
 
   addNvl: (idNhomPhanBo: number, dto: AddNvlNhomPhanBoDto): Promise<NvlNhomPhanBoDto> =>
-    apiService.post(`/api/NhomPhanBo/${idNhomPhanBo}/add-nvl`, dto),
+    apiService.post(`/api/LG_PhanBo/nhom/${idNhomPhanBo}/add-nvl`, dto),
 
   removeNvl: (idNhomPhanBo: number, idNvl: number, ngay: string, ca: number) =>
-    apiService.delete(`/api/NhomPhanBo/${idNhomPhanBo}/remove-nvl/${idNvl}`, { params: { ngay, ca } }),
+    apiService.delete(`/api/LG_PhanBo/nhom/${idNhomPhanBo}/remove-nvl/${idNvl}`, { params: { ngay, ca } }),
+
+  getTyLeNhom: (params: { idNhomPhanBo: number; ngay: string; ca: number; idLoCao: number }): Promise<number | null> =>
+    apiService.get("/api/LG_PhanBo/nhom/ty-le", { params }),
+
+  createTyLeNhom: (dto: CreateTyLeNhomDto): Promise<{ message: string }> =>
+    apiService.post("/api/LG_PhanBo/nhom/ty-le", dto),
+
+  saoChep: (dto: SaoChepNhomPhanBoRequestDto): Promise<SaoChepNhomPhanBoResultDto> =>
+    apiService.post("/api/LG_PhanBo/nhom/sao-chep", dto),
 };
+
+// % theo nhóm — chỉ áp dụng cho nhóm PhuongThucPhanBo=2 (Tỷ lệ nhập tay), cascade xuống từng NVL thành viên
+export interface CreateTyLeNhomDto {
+  idNhomPhanBo: number;
+  ngay: string;
+  ca: number;
+  idLoCao: number;
+  tyLe: number;
+  ghiChu?: string | null;
+  idNguoiNhap: number;
+}
+
+// Sao chép cấu hình nhóm/NVL/% từ ca liền kề gần nhất có cấu hình (cùng lò cao đích) sang đích
+export interface SaoChepNhomPhanBoRequestDto {
+  loaiPhanBo: number;
+  ngayDich: string;
+  caDich: number;
+  idLoCaoDich: number;
+  idNguoiThucHien: number;
+}
+
+export interface SaoChepNhomPhanBoResultDto {
+  soNvlDaCopy: number;
+  soTyLeDaCopy: number;
+  ngayNguon: string;
+  caNguon: number;
+}
 
 // ─── Tỷ lệ phân bổ (LG_TyLePhanBo — PP2, nhập tay) ──────────────────────────
 
@@ -84,10 +120,10 @@ export interface CreateTyLePhanBoDto {
 
 export const tyLePhanBoApi = {
   getHistory: (params: { idNvl: number; tuNgay?: string; denNgay?: string }): Promise<TyLePhanBoDto[]> =>
-    apiService.get("/api/TyLePhanBo/get-history", { params }),
+    apiService.get("/api/LG_PhanBo/ty-le/get-history", { params }),
 
   create: (dto: CreateTyLePhanBoDto): Promise<TyLePhanBoDto> =>
-    apiService.post("/api/TyLePhanBo/create", dto),
+    apiService.post("/api/LG_PhanBo/ty-le/create", dto),
 };
 
 // ─── Tính / chốt / xem kết quả phân bổ (LG_KetQuaPhanBo) ────────────────────
@@ -100,6 +136,7 @@ export interface KetQuaPhanBoDto {
   loaiPhanBo: number;
   idNvl: number;
   tenNvl: string | null;
+  maCongDoanChiPhi: string | null; // DQ1 / DQ2
   idNhomPhanBo: number;
   tenNhomPhanBo: string | null;
   phuongThucPhanBo: number;
@@ -132,6 +169,7 @@ export interface KetQuaThanCocDto {
   ca: number | null;
   idNvl: number;
   tenNvl: string | null;
+  maCongDoanChiPhi: string | null; // DQ1 / DQ2
   idNhomPhanBo: number;
   tenNhomPhanBo: string | null;
   phuongThucPhanBo: number;
@@ -155,17 +193,20 @@ export interface KetQuaThanCocQueryResultDto {
 
 export const phanBoApi = {
   tinh: (dto: { ngay: string; idNguoiThucThi: number }): Promise<{ message: string }> =>
-    apiService.post("/api/PhanBo/tinh", dto),
+    apiService.post("/api/LG_PhanBo/tinh", dto),
 
   getKetQua: (params: { ngay: string; loaiPhanBo: number; idLoCao: number; ca?: number }): Promise<KetQuaPhanBoQueryResultDto> =>
-    apiService.get("/api/PhanBo/get-ket-qua", { params }),
+    apiService.get("/api/LG_PhanBo/get-ket-qua", { params }),
 
   getKetQuaThanCoc: (params: { ngay: string; idLoCao: number; ca?: number }): Promise<KetQuaThanCocQueryResultDto> =>
-    apiService.get("/api/PhanBo/get-ket-qua-than-coc", { params }),
+    apiService.get("/api/LG_PhanBo/get-ket-qua-than-coc", { params }),
 
   chot: (dto: { ngay: string; idNguoiXacNhan: number }): Promise<{ message: string }> =>
-    apiService.post("/api/PhanBo/chot", dto),
+    apiService.post("/api/LG_PhanBo/chot", dto),
 
   baoCao: (params: { tuNgay: string; denNgay: string; idLoCao?: number; loaiPhanBo?: number }): Promise<KetQuaPhanBoDto[]> =>
-    apiService.get("/api/PhanBo/bao-cao", { params }),
+    apiService.get("/api/LG_PhanBo/bao-cao", { params }),
+
+  updateMaCongDoanChiPhi: (dto: { ngay: string; idNvl: number; maCongDoanChiPhi: string | null }): Promise<{ message: string }> =>
+    apiService.put("/api/LG_PhanBo/ket-qua/ma-cong-doan-chi-phi", dto),
 };

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, InputNumber, message, Popconfirm, Space, Table } from "antd";
+import { Button, InputNumber, message, Popconfirm, Select, Space, Table } from "antd";
 import type { Dayjs } from "dayjs";
 import {
   phanBoApi,
@@ -11,6 +11,10 @@ import ValidateBanner from "./ValidateBanner";
 
 const PHUONG_THUC_TY_LE_NHAP_TAY = 2;
 const TRANG_THAI_DA_CHOT = 1;
+const CONG_DOAN_CHI_PHI_OPTIONS = [
+  { value: "DQ1", label: "DQ1" },
+  { value: "DQ2", label: "DQ2" },
+];
 
 type DisplayRow = KetQuaThanCocDto & { _isTong?: boolean };
 
@@ -84,6 +88,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
   const [tinhLoading, setTinhLoading] = useState(false);
   const [chotLoading, setChotLoading] = useState(false);
   const [savingRowKey, setSavingRowKey] = useState<string | null>(null);
+  const [savingMaCongDoanKey, setSavingMaCongDoanKey] = useState<string | null>(null);
 
   const daChot = data.length > 0 && data.every((r) => r.trangThai === TRANG_THAI_DA_CHOT);
   const isMatched = !!validateCvh?.isMatched && !!validateThanCoc10?.isMatched;
@@ -171,6 +176,23 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
     }
   };
 
+  const handleSaveMaCongDoanChiPhi = async (row: KetQuaThanCocDto, value: string | null) => {
+    setSavingMaCongDoanKey(rowKeyOf(row));
+    try {
+      await phanBoApi.updateMaCongDoanChiPhi({
+        ngay: ngay.format("YYYY-MM-DD"),
+        idNvl: row.idNvl,
+        maCongDoanChiPhi: value,
+      });
+      setData((prev) => prev.map((r) => (r.idNvl === row.idNvl ? { ...r, maCongDoanChiPhi: value } : r)));
+      message.success("Đã cập nhật mã công đoạn chi phí.");
+    } catch (err: any) {
+      message.error(err?.message || "Cập nhật thất bại.");
+    } finally {
+      setSavingMaCongDoanKey(null);
+    }
+  };
+
   const columns = [
     {
       title: "Nhóm",
@@ -184,6 +206,27 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
       render: (v: string | null, row: DisplayRow) => (
         <span style={row._isTong ? { fontWeight: 600 } : undefined}>{v}</span>
       ),
+    },
+    {
+      title: "Mã công đoạn chi phí",
+      dataIndex: "maCongDoanChiPhi",
+      width: 150,
+      align: "center" as const,
+      render: (v: string | null, row: DisplayRow) => {
+        if (row._isTong) return "";
+        return (
+          <Select
+            style={{ width: "100%" }}
+            size="small"
+            allowClear
+            placeholder="Chọn"
+            options={CONG_DOAN_CHI_PHI_OPTIONS}
+            value={v ?? undefined}
+            disabled={daChot || savingMaCongDoanKey === rowKeyOf(row)}
+            onChange={(value) => handleSaveMaCongDoanChiPhi(row, value ?? null)}
+          />
+        );
+      },
     },
     {
       title: "Khối lượng nạp liệu (E)",
@@ -212,7 +255,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
             style={{ width: "100%" }}
             min={0}
             max={100}
-            precision={4}
+            precision={3}
             defaultValue={v * 100}
             disabled={savingRowKey === rowKeyOf(row)}
             onPressEnter={(e) => handleSaveTyLe(row, Number((e.target as HTMLInputElement).value))}
