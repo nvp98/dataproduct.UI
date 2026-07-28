@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC1_BB_TieuHao_LF from "../../../utils/BM_config/HRC1_BB_TieuHao_LF.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
-import { FilterOutlined } from "@ant-design/icons";
+import { FilterOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -11,8 +11,15 @@ import CustomTableHRC from "../../../components/CustomTableHRC";
 import type { HRCChildColumn, HRCTableRow, HRCParentColumn, CustomTableHRCHandle } from "../../../components/CustomTableHRC";
 import CustomFormTable from "../../../components/CustomFormTable";
 import { hrc1LFPhuLieuService } from "../../../services/HRC1LFPhuLieuService";
+import { hrc1PhuLieuService } from "../../../services/HRC1PhuLieuService";
 import { dlnmHRC1Api } from "../../../services/DLNMHRC1Api";
-import { hrc2TableService, type DynamicColumnMeta } from "../../../services/HRC2TableService";
+import {
+  hrc1TableService,
+  type DynamicColumnMeta,
+  type AdjustColumnMeta,
+} from "../../../services/HRC1TableService";
+import { CommonAutocomplete, type AutocompleteSearchParams } from "../../../components/CommonAutocomplete";
+import { Hrc1PhuLieuNmServiceApi, type Hrc1PhuLieuNm } from "../../../services/Hrc1PhuLieuNmServiceApi";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 
@@ -30,8 +37,10 @@ const TaoTieuHaoTinhLuyenLF = () => {
   const [table2Data, setTable2Data] = useState<HRCTableRow[]>([]);
   const [table1LyDo, setTable1LyDo] = useState("");
   const [phuGiaColumns, setPhuGiaColumns] = useState<HRCChildColumn[]>([]);
+  const [adjustColumnMetas, setAdjustColumnMetas] = useState<AdjustColumnMeta[]>([]);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
+  const [showAdjustColumns, setShowAdjustColumns] = useState(false);
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
     nguoiTaoId?: number | null;
@@ -59,6 +68,159 @@ const TaoTieuHaoTinhLuyenLF = () => {
   // (danh mục HRC1_PhuLieuNM cố định theo BieuMau, không cần Header Mapping như HRC2).
   const renderDynamicColumnTitle = useCallback((label: string) => <span>{label}</span>, []);
 
+  // Thêm cột điều chỉnh mới — header là autocomplete chọn (hoặc TẠO MỚI) 1 phụ liệu trong danh mục
+  // HRC1_PhuLieuNM. Khác BOF (nơi phần lớn phụ liệu đã ẩn sẵn chờ chọn lại): ở LF toàn bộ danh mục
+  // active đã hiển thị mặc định, nên "Thêm cột điều chỉnh" chủ yếu dùng để TẠO phụ liệu mới chưa có
+  // trong danh mục (autocomplete cho phép gõ tên mới → POST /api/Hrc1PhuLieuNm, giống HeaderKeyAutocomplete
+  // bên HRC2). Khi chọn/tạo xong, dataIndex đổi thành phuLieu_{PhuLieuID} — tái dùng đúng pipeline Loại A
+  // (đã có sẵn ở BuildLFPhuLieus, đọc gộp cả nhóm LF_PhuGia lẫn adjust).
+  const addAdjustColumn = useCallback(() => {
+    const dataIndex = `manual_col_${Date.now()}`;
+    setAdjustColumnMetas((prev) => [
+      ...prev,
+      {
+        key: dataIndex,
+        dataIndex,
+        headerKeyId: null,
+        headerKeyLabel: null,
+        width: 150,
+        isManuallyAdded: true,
+      },
+    ]);
+    setShowAdjustColumns(true);
+  }, []);
+
+  const handleRemoveAdjustColumn = useCallback((dataIndex: string) => {
+    setAdjustColumnMetas((prev) => prev.filter((m) => m.dataIndex !== dataIndex));
+    setTableData((prev) => prev.map((row) => hrc1TableService.removeRowColumnKey(row, dataIndex)));
+  }, []);
+
+  const handleColumnHeaderChange = useCallback(
+    (oldDataIndex: string, opt: Hrc1PhuLieuNm | null) => {
+      const phuLieuId = opt?.id ?? null;
+      const phuLieuLabel = opt?.tenPhuLieu ?? null;
+
+      if (!phuLieuId) {
+        setAdjustColumnMetas((prev) =>
+          prev.map((m) =>
+            m.dataIndex === oldDataIndex
+              ? { ...m, headerKeyId: null, headerKeyLabel: null }
+              : m
+          )
+        );
+        return;
+      }
+
+      const newDataIndex = `phuLieu_${phuLieuId}`;
+
+      setAdjustColumnMetas((prev) =>
+        prev.map((m) =>
+          m.dataIndex === oldDataIndex
+            ? { ...m, key: newDataIndex, dataIndex: newDataIndex, headerKeyId: phuLieuId, headerKeyLabel: phuLieuLabel }
+            : m
+        )
+      );
+
+      setTableData((prev) =>
+        prev.map((row) => hrc1TableService.renameRowColumnKey(row, oldDataIndex, newDataIndex))
+      );
+    },
+    []
+  );
+
+  // Phụ liệu đã có cột hiển thị (danh mục mặc định hoặc cột điều chỉnh khác) — loại khỏi danh sách
+  // chọn để tránh trùng dataIndex.
+  const usedPhuLieuIds = useMemo(() => {
+    const ids = new Set<number>();
+    phuGiaColumns.forEach((c) => {
+      if (typeof c.headerKeyId === "number") ids.add(c.headerKeyId);
+    });
+    adjustColumnMetas.forEach((m) => {
+      if (m.dataIndex.startsWith("phuLieu_") && typeof m.headerKeyId === "number") ids.add(m.headerKeyId);
+    });
+    return ids;
+  }, [phuGiaColumns, adjustColumnMetas]);
+
+  // Phụ liệu đang được quản lý ở cột "thêm tay" (Điều chỉnh số liệu) — loại khỏi nhóm danh mục mặc
+  // định để tránh render 2 cột cho cùng 1 phụ liệu (vd sau khi tạo mới, lần "Làm mới dữ liệu" kế tiếp
+  // sẽ thấy phụ liệu đó xuất hiện lại trong danh mục active).
+  const manuallyManagedPhuLieuIds = useMemo(() => {
+    const ids = new Set<number>();
+    adjustColumnMetas.forEach((m) => {
+      if (m.isManuallyAdded === true && m.dataIndex.startsWith("phuLieu_") && typeof m.headerKeyId === "number") {
+        ids.add(m.headerKeyId);
+      }
+    });
+    return ids;
+  }, [adjustColumnMetas]);
+
+  const effectivePhuGiaColumns = useMemo(() => {
+    if (manuallyManagedPhuLieuIds.size === 0) return phuGiaColumns;
+    return phuGiaColumns.filter(
+      (c) => !(typeof c.headerKeyId === "number" && manuallyManagedPhuLieuIds.has(c.headerKeyId))
+    );
+  }, [phuGiaColumns, manuallyManagedPhuLieuIds]);
+
+  const adjustChildColumns = useMemo<HRCChildColumn[]>(() => {
+    return adjustColumnMetas.map((meta) => {
+      const searchPhuLieu = async (params: AutocompleteSearchParams) => {
+        const list = await Hrc1PhuLieuNmServiceApi.getAll({
+          dangSuDung: true,
+          searchKey: params.searchKey,
+        });
+        const filtered = list.filter((pl) => pl.id === meta.headerKeyId || !usedPhuLieuIds.has(pl.id));
+        return { data: filtered, totalRecords: filtered.length };
+      };
+
+      return {
+        title: meta.isManuallyAdded ? (
+          <div style={{ position: "relative", minWidth: 140, paddingRight: 18 }}>
+            <CommonAutocomplete<Hrc1PhuLieuNm>
+              value={meta.headerKeyId ?? null}
+              onChange={(_value, opt) => handleColumnHeaderChange(meta.dataIndex, opt)}
+              searchApi={searchPhuLieu}
+              mapOption={(item) => ({ value: item.id, label: item.tenPhuLieu })}
+              fallbackLabelBuilder={() => meta.headerKeyLabel ?? "Phụ liệu"}
+              allowCreate
+              onCreate={async (name) => {
+                try {
+                  return await Hrc1PhuLieuNmServiceApi.create({ tenPhuLieu: name });
+                } catch (e: unknown) {
+                  // apiService reject bằng error.response.data ({message}) thay vì Error instance
+                  const msg =
+                    typeof e === "object" && e !== null && "message" in e &&
+                    typeof (e as { message?: unknown }).message === "string"
+                      ? (e as { message: string }).message
+                      : "Không tạo được phụ liệu mới";
+                  message.error(msg);
+                  return null;
+                }
+              }}
+              createOptionLabel={(text) => `+ Tạo phụ liệu mới: "${text}"`}
+              size="small"
+              placeholder="Chọn hoặc tạo phụ liệu..."
+              style={{ minWidth: 120 }}
+              allowClear={false}
+            />
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() => handleRemoveAdjustColumn(meta.dataIndex)}
+              style={{ position: "absolute", top: -6, right: -6, padding: 0, width: 18, height: 18 }}
+            />
+          </div>
+        ) : (meta.headerKeyLabel ?? "Điều chỉnh"),
+        dataIndex: meta.dataIndex,
+        width: meta.width ?? 150,
+        editable: meta.isManuallyAdded ? true : false,
+        variant: meta.isManuallyAdded ? undefined : ("adjust" as const),
+        metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
+        headerKeyId: meta.headerKeyId ?? null,
+      };
+    });
+  }, [adjustColumnMetas, usedPhuLieuIds, handleColumnHeaderChange, handleRemoveAdjustColumn]);
+
   const fetchPhuLieus = useCallback(async (paramsIn: { NgaySX?: string | null; Ca?: number | null; Scope?: number | null }) => {
     try {
       setLoading(true);
@@ -79,22 +241,6 @@ const TaoTieuHaoTinhLuyenLF = () => {
         return { ...col, align: alignType(col.align) };
       });
 
-      const editableFieldSet = new Set<string>();
-      baseColumns.forEach((col: any) => {
-        if (col.dataIndex && !col.children && col.isLabel !== true) {
-          const editable = col.editable !== false;
-          if (editable) editableFieldSet.add(col.dataIndex);
-        }
-        if (Array.isArray(col.children)) {
-          col.children.forEach((child: any) => {
-            if (!child.dataIndex) return;
-            const editableParent = col.editable !== false;
-            const editableChild = child.editable !== false;
-            if (editableParent && editableChild) editableFieldSet.add(child.dataIndex);
-          });
-        }
-      });
-
       const result = await hrc1LFPhuLieuService.fetchAndProcessPhuLieus(
         { NgaySX: paramsIn.NgaySX, Ca: paramsIn.Ca, Scope: paramsIn.Scope },
         { baseColumns }
@@ -104,24 +250,26 @@ const TaoTieuHaoTinhLuyenLF = () => {
       // (không early-return xóa cột khi trống, vì người dùng cần cột trống để bắt đầu nhập).
       setPhuGiaColumns(result.phuGiaColumns);
 
+      // Bảng CHỈ render từ live api/DLNMHRC1/filter — không dùng hrc1TableService.mergeServerRows
+      // (hàm đó coi mọi dòng IsNM=false trong state cũ là "thêm tay cần giữ lại" khi không thấy trên
+      // server; nhưng ở LF MỌI dòng đều IsNM=false theo quy ước riêng — nếu dùng chung sẽ khiến mẻ đã
+      // bị xóa thật (vd TL hủy nhận bên BBGN_ThepLong) bị "hồi sinh" lại mỗi lần Làm mới dữ liệu).
+      // Chỉ giữ lại đúng những dòng user vừa "+ Thêm dòng" nhưng CHƯA lưu (chưa có id thật từ DB),
+      // để không mất draft đang gõ dở khi bấm Làm mới.
       const isEmpty = !result.tableData ||
         result.tableData.length === 0 ||
         (result.tableData.length === 1 && result.tableData[0]?.key === "row-empty");
 
       if (isEmpty) {
         message.info("Chưa có dữ liệu đã lưu cho Ngày/Ca/Tinh luyện này — có thể bắt đầu thêm dòng mới.");
-        setTableData([]);
+        setTableData((prev) => prev.filter((row) => typeof row.id !== "number"));
         return;
       }
 
-      const editableFields = [
-        ...Array.from(editableFieldSet),
-        ...result.phuGiaColumns.map((c) => c.dataIndex),
-      ];
-
-      setTableData((prev) =>
-        hrc2TableService.mergeServerRows(result.tableData || [], prev, "meThoi", editableFields)
-      );
+      setTableData((prev) => {
+        const unsavedNewRows = prev.filter((row) => typeof row.id !== "number");
+        return [...(result.tableData || []), ...unsavedNewRows];
+      });
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);
       message.error("Không thể tải danh sách dữ liệu đã lưu");
@@ -145,13 +293,14 @@ const TaoTieuHaoTinhLuyenLF = () => {
       });
     const baseColumns: HRCParentColumn[] = tableLayout?.columns ? normalizeAlign(tableLayout.columns as any[]) : [];
 
-    return hrc2TableService.buildColumnsWithAdjust({
+    return hrc1TableService.buildColumnsWithAdjust({
       baseColumns,
-      slotColumns: { LF_PhuGia: phuGiaColumns },
-      showAdjustColumns: false,
+      slotColumns: { LF_PhuGia: effectivePhuGiaColumns },
+      showAdjustColumns,
+      manualAdjustColumns: adjustChildColumns,
       generateAdjustColumnsFromBase: false,
     });
-  }, [config.layout, phuGiaColumns]);
+  }, [config.layout, effectivePhuGiaColumns, showAdjustColumns, adjustChildColumns]);
 
   const loadFromNM = useCallback(async () => {
     if (!ngaySX || !ca || !scope) return;
@@ -228,15 +377,10 @@ const TaoTieuHaoTinhLuyenLF = () => {
             if (Object.keys(overrideFields).length > 0) form.setFieldsValue(overrideFields);
           }
 
-          if (formValues.table1) {
-            const processedTable1 = (formValues.table1 as HRCTableRow[]).map((row) => ({
-              ...row,
-              IsNM: false,
-            }));
-            setTableData(processedTable1);
-          } else {
-            setTableData([]);
-          }
+          // KHÔNG seed tableData từ snapshot jsonData.table1 — bảng chỉ render từ live
+          // api/DLNMHRC1/filter (gọi ngay sau ở loadFromNM() trong finally bên dưới). Seed từ snapshot
+          // ở đây chỉ gây hiện chớp nhoáng dữ liệu cũ, và nếu quên bỏ merge thì mẻ đã xóa (vd TL hủy
+          // nhận bên BBGN_ThepLong) sẽ hiện lại — xem comment trong fetchPhuLieus.
 
           if (formValues.table2) {
             const processedTable2 = (formValues.table2 as HRCTableRow[]).map((row) => ({
@@ -252,8 +396,15 @@ const TaoTieuHaoTinhLuyenLF = () => {
 
           if (formValues.table1DynamicColumns) {
             const dyn = formValues.table1DynamicColumns as Record<string, DynamicColumnMeta[]>;
-            const restored = hrc2TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
+            const restored = hrc1TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
             setPhuGiaColumns(restored.LF_PhuGia ?? []);
+            if (dyn.adjust) {
+              setAdjustColumnMetas(
+                hrc1TableService.dedupeAdjustMetas(hrc1TableService.adjustMetaFromDynamic(dyn.adjust))
+              );
+            } else {
+              setAdjustColumnMetas([]);
+            }
           }
 
           setPhieuInfo({
@@ -312,7 +463,13 @@ const TaoTieuHaoTinhLuyenLF = () => {
 
     const processedTable1 = hrc1LFPhuLieuService.sanitizeRowsBeforeSubmit(tableData);
 
-    const dynamicColumnMap = hrc2TableService.buildDynamicColumnMap({ LF_PhuGia: phuGiaColumns });
+    // Dùng effectivePhuGiaColumns (đã loại phụ liệu đang được quản lý ở nhóm "adjust") — tránh 1 phụ
+    // liệu vừa tạo/chọn qua "Thêm cột điều chỉnh" bị lưu trùng 2 lần (vừa ở LF_PhuGia vừa ở adjust).
+    const dynamicColumnMap = hrc1TableService.buildDynamicColumnMap({ LF_PhuGia: effectivePhuGiaColumns });
+    dynamicColumnMap.adjust = hrc1PhuLieuService.buildAdjustDynamicWithValues(
+      adjustColumnMetas.filter((m) => m.isManuallyAdded === true),
+      tableData
+    );
 
     const processedTable2 = table2Data.map((row) => {
       const processedRow = { ...row };
@@ -342,7 +499,7 @@ const TaoTieuHaoTinhLuyenLF = () => {
     };
   }, [
     getUserInfo, form, config.headerFields, config.signatures, config.code, config.prefix,
-    idphieu, phieuInfo.nguoiTaoId, phieuInfo.tinhTrang, scope, phuGiaColumns, tableData, table1LyDo, table2Data,
+    idphieu, phieuInfo.nguoiTaoId, phieuInfo.tinhTrang, scope, effectivePhuGiaColumns, adjustColumnMetas, tableData, table1LyDo, table2Data,
   ]);
 
   const handleAutoSave = useCallback(async () => {
@@ -426,11 +583,21 @@ const TaoTieuHaoTinhLuyenLF = () => {
             <Button type="primary" icon={<FilterOutlined />} onClick={handleFilter} disabled={isFormLocked} loading={loading}>
               Làm mới dữ liệu
             </Button>
+            <Button
+              icon={showAdjustColumns ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              onClick={() => setShowAdjustColumns(!showAdjustColumns)}
+            >
+              {showAdjustColumns ? "Ẩn" : "Hiện"} điều chỉnh số liệu
+            </Button>
+            <Button icon={<PlusOutlined />} onClick={addAdjustColumn} disabled={isFormLocked}>
+              Thêm cột điều chỉnh
+            </Button>
           </div>
 
           {config.layout.map((layout, idx) => (
             <div key={idx}>
               {layout.sectionType === "table" && layout.key === "table1" ? (
+                <>
                 <CustomTableHRC
                   maBm={config.code}
                   ngaySX={ngaySX}
@@ -459,6 +626,10 @@ const TaoTieuHaoTinhLuyenLF = () => {
                   chuyenMeThoiApi={dlnmHRC1Api}
                   ref={table1Ref}
                 />
+                <div style={{ fontWeight: 600, marginTop: 12 }}>
+                  Phần điều chỉnh số liệu nằm ở cuối bảng (scroll ngang → cột "Điều chỉnh số liệu").
+                </div>
+                </>
               ) : (
                 layout.sectionType === "table" && (
                   <CustomFormTable

@@ -376,8 +376,19 @@ const CustomTableHRC = forwardRef(({
         });
         await onSave?.();
         return;
-      } catch (error) {
+      } catch (error: any) {
         console.error("Delete row error:", error);
+        // 404 = dòng đã bị xóa từ nơi khác trước đó (vd HRC1 LF: mẻ TL hủy nhận đã tự xóa dòng
+        // tiêu hao liên kết) — kết quả mong muốn (dòng biến mất) đã đúng, không nên báo lỗi.
+        if (error?.status === 404 || error?.response?.status === 404) {
+          message.info("Dòng này đã bị xóa từ trước, đang cập nhật lại bảng.");
+          setRows((prev) => {
+            const newRows = prev.filter((row) => row.key !== record.key);
+            emitDataChange(newRows);
+            return newRows;
+          });
+          return;
+        }
         message.error("Không thể xóa dòng trên server");
         return;
       }

@@ -78,7 +78,7 @@
           "children": [
             {
               "title": "Gang lỏng",
-              "dataIndex": "klGang",
+              "dataIndex": "klGangLongCCT",
               "editable": false,
               "width": 90,
               "format": "number-group",

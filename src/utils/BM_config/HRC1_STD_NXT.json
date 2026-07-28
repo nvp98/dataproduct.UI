@@ -1,0 +1,142 @@
+{
+  "code": "HRC1_STD_NXT",
+  "prefix": "STD_NXT_HRC1",
+  "title": "SỔ THEO DÕI XUẤT - NHẬP - TỒN NGUYÊN LIỆU HRC1",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.16/QT.05.155",
+    "effectiveDate": "10/011/2025",
+    "revision": "00"
+  },
+  "headerFields": [
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true },
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca Ngày", "value": 1 },
+        { "label": "Ca Đêm", "value": 2 }
+      ]
+    }
+  ],
+  "layout1": [
+    {
+      "sectionType": "groupedTable",
+      "title": "1. Số liệu kiểm kê",
+      "key": "table1",
+      "columns": [
+        { "title": "Khu vực", "dataIndex": "khuVuc", "isLabel": true },
+        { "title": "Vị trí", "dataIndex": "viTri", "hidden": true },
+        { "title": "Nguyên nhiên liệu", "dataIndex": "nguyenNhienLieu" },
+        { "title": "Silo", "dataIndex": "tenSilo" },
+        {
+          "title": "Tồn đầu ca",
+          "children": [
+            { "title": "Khối lượng (Kg)", "dataIndex": "tonDauCa" ,"readOnly": true},
+            { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanDauCa" , "hidden": true}
+          ]
+        },
+        { "title": "Nhập vào trong ca (Kg)", "dataIndex": "nhapTrongCa"},
+        { "title": "Mức liệu", "dataIndex": "mucLieu", "hidden": true },
+        { "title": "Thể tích", "dataIndex": "theTich", "readOnly": true, "hidden": true },
+        { "title": "Tỷ trọng", "dataIndex": "tyTrong", "readOnly": true, "hidden": true },
+        {
+          "title": "Tồn cuối ca thực tế",
+          "children": [
+            { "title": "Khối lượng (Kg)", "dataIndex": "tonCuoiCa" },
+            { "title": "Tương quan (bao, kiện, mức...)", "dataIndex": "tuongQuanCuoiCa", "hidden": true }
+          ]
+        },
+        { "title": "Lượng sử dụng kiểm kê", "dataIndex": "luongSuDungKiemKe" },
+        { "title": "Lượng sử dụng thực tế theo cân", "dataIndex": "tongThucTe","readOnly": true }
+      ],
+      "khuVucList": [
+        {"label": "BOF 1", "value": "1", "bieuMau":"BOF", "scope": 1},
+        {"label": "BOF 2", "value": "2", "bieuMau":"BOF", "scope": 2},
+        {"label": "BOF 3", "value": "3", "bieuMau":"BOF", "scope": 3},
+        {"label": "BOF 4", "value": "4", "bieuMau":"BOF", "scope": 4},
+        {"label": "BOF 5", "value": "5", "bieuMau":"BOF", "scope": 5},
+        {"label": "LF 1", "value": "6", "bieuMau":"LF", "scope": 1},
+        {"label": "LF 2", "value": "7", "bieuMau":"LF", "scope": 2},
+        {"label": "LF 3", "value": "8", "bieuMau":"LF", "scope": 3},
+        {"label": "LF 4", "value": "9", "bieuMau":"LF", "scope": 4},
+        {"label": "LF 5", "value": "10", "bieuMau":"LF", "scope": 5}
+      ],
+
+      "defaultViTri": 1
+    }
+  ],
+
+  "layout2": [
+    {
+      "sectionType": "summaryTable",
+      "title": "1. Tổng hợp kiểm kê",
+      "key": "table2",
+      "columns": [
+        {
+          "title": "",
+          "dataIndex": "totalText",
+          "isLabel": true, "readOnly": true
+        },
+        {
+          "title": "Nguyên nhiên liệu",
+          "dataIndex": "totalNguyenNhienLieu", "readOnly": true
+        },
+        {
+          "title": "Khối lượng tồn đầu ca (kg)",
+          "dataIndex": "totalTonDauCa", "readOnly": true
+        },
+        {
+          "title": "Khối lượng nhập trong ca (kg)",
+          "dataIndex": "totalNhapTrongCa", "readOnly": true
+        },
+        {
+          "title": "Khối lượng tồn cuối ca (kg)",
+          "dataIndex": "totalTonCuoiCa", "readOnly": true
+        },
+        {
+          "title": "Tổng sử dụng",
+          "dataIndex": "totalSuDung", "readOnly": true
+        },
+        {
+          "title": "Tổng sử dụng trên sổ sách",
+          "dataIndex": "totalSDTrongSoSach", "readOnly": true
+        },
+        {
+          "title": "Chênh lệch",
+          "dataIndex": "totalChenhLech", "readOnly": true
+        },
+        {
+          "title": "Tỷ lệ PB BOF %",
+          "dataIndex": "tyLeBOF"
+        },
+        {
+          "title": "Tỷ lệ PB LF %",
+          "dataIndex": "tyLeLF"
+        }
+      ],
+      "initialData": [
+        {
+          "totalText": "Tổng cộng (cả trong và ngoài silo)"
+        }
+      ]
+    }
+  ],
+
+  "signatures": [
+    {
+      "label": "Người lập",
+      "type": "selectNguoiKy",
+      "key": "nguoiLap_HRC1",
+      "maphongBan": "NM.HRC1",
+      "capduyet": 0,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

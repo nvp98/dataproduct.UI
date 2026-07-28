@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { HRCChildColumn, HRCParentColumn } from "../../../components/CustomTableHRC";
-import { hrc2TableService, type DynamicColumnMeta } from "../../../services/HRC2TableService";
+import { hrc1TableService, type DynamicColumnMeta } from "../../../services/HRC1TableService";
+import { hrc1LFPhuLieuService } from "../../../services/HRC1LFPhuLieuService";
 import { Button, Card, Descriptions, Table, Typography, Row, Col, message } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -41,29 +42,66 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  // Dữ liệu Tiêu hao LF hiện tại (live) khớp Ngày/Ca/Tinh luyện của phiếu — khác snapshot jsonData.table1
+  // (chỉ là ảnh chụp lúc Lưu). LF có thể bị mất/thêm dòng sau đó do liên kết 1 chiều từ BBGN_ThepLong
+  // (TL nhận/hủy nhận mẻ), nên trang xem chi tiết PHẢI đọc lại dữ liệu sống mỗi lần load/Làm mới —
+  // nếu chỉ đọc snapshot sẽ hiển thị nhầm mẻ đã bị hủy nhận (đã xóa khỏi Hrc1TieuHao) là còn tồn tại.
+  const [table1DisplayRows, setTable1DisplayRows] = useState<any[]>([]);
+  const [livePhuGiaColumns, setLivePhuGiaColumns] = useState<HRCChildColumn[] | null>(null);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setTable1DisplayRows([]);
+      setLivePhuGiaColumns(null);
       if (!idphieu) return;
       const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
       if (!res) return;
       const payload = (res as any)?.data ?? res;
       setData(payload);
+
+      const fd = payload?.jsonData || {};
+      const savedRows = fd.table1 || [];
+
+      const ngay = fd.NgaySX;
+      const ca = fd.ca;
+      const scope = fd.scope;
+      if (!ngay || ca == null || scope == null) {
+        setTable1DisplayRows(savedRows);
+        return;
+      }
+
+      try {
+        const tableLayout = config.layout.find((l: any) => l.sectionType === "table" && l.key === "table1");
+        const baseColumns = (tableLayout?.columns || []) as any[];
+        const result = await hrc1LFPhuLieuService.fetchAndProcessPhuLieus(
+          { NgaySX: dayjs(ngay).format("YYYY-MM-DD"), Ca: Number(ca), Scope: Number(scope) },
+          { baseColumns }
+        );
+
+        // Live trả rỗng (mọi mẻ đã bị hủy nhận/xóa) LÀ trạng thái thật, không phải lỗi — phải hiển thị
+        // đúng là rỗng, KHÔNG fallback về snapshot cũ (nếu không sẽ hiện lại mẻ đã xóa, đúng bug đã gặp).
+        // Chỉ fallback về snapshot khi bản thân lệnh gọi live thất bại (lỗi mạng/API — xem catch bên dưới).
+        const liveRows = (result.tableData || []).filter((r) => r?.key !== "row-empty");
+        setTable1DisplayRows(liveRows);
+        setLivePhuGiaColumns(result.phuGiaColumns);
+      } catch (liveErr) {
+        console.error("Lỗi tải dữ liệu Tiêu hao LF hiện tại (live):", liveErr);
+        setTable1DisplayRows(savedRows);
+      }
     } catch (error) {
       console.error("Lỗi tải dữ liệu phiếu:", error);
       message.error("Không thể tải dữ liệu phiếu");
     } finally {
       setLoading(false);
     }
-  }, [idphieu, safeGetDetail]);
+  }, [idphieu, safeGetDetail, config]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   const formData = data?.jsonData || {};
-  const table1Data: any[] = formData?.table1 || [];
   const table2Data = formData?.table2 || [];
 
   const tableSection = config.layout.find((section: any) => section.sectionType === "table" && section.key === "table1");
@@ -71,9 +109,14 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
   const renderDynamicColumnTitle = useCallback((label: string) => label, []);
 
   const tableColumns = useMemo(() => {
-    const dyn = (formData?.table1DynamicColumns as Record<string, DynamicColumnMeta[]> | undefined) || {};
-    const restored = hrc2TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
-    const phuGiaCols: HRCChildColumn[] = restored.LF_PhuGia ?? [];
+    let phuGiaCols: HRCChildColumn[];
+    if (livePhuGiaColumns) {
+      phuGiaCols = livePhuGiaColumns;
+    } else {
+      const dyn = (formData?.table1DynamicColumns as Record<string, DynamicColumnMeta[]> | undefined) || {};
+      const restored = hrc1TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
+      phuGiaCols = restored.LF_PhuGia ?? [];
+    }
 
     const tableLayout = config.layout.find((l: any) => l.sectionType === "table" && l.key === "table1");
     const alignType = (a: unknown): "left" | "center" | "right" | undefined =>
@@ -87,7 +130,7 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
       });
     const baseColumns: HRCParentColumn[] = normalizeAlign((tableLayout?.columns || []) as any[]);
 
-    const built = hrc2TableService.buildColumnsWithAdjust({
+    const built = hrc1TableService.buildColumnsWithAdjust({
       baseColumns,
       slotColumns: { LF_PhuGia: phuGiaCols },
       showAdjustColumns: false,
@@ -118,7 +161,7 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
       });
 
     return mapColumnsWithHighlight(built as any[]);
-  }, [formData?.table1DynamicColumns, renderDynamicColumnTitle, config.layout]);
+  }, [formData?.table1DynamicColumns, livePhuGiaColumns, renderDynamicColumnTitle, config.layout]);
 
   const leafColumns = useMemo(() => {
     const result: Array<{ dataIndex: string; sum?: boolean; align?: string }> = [];
@@ -138,13 +181,13 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
     const sums: Record<string, number> = {};
     leafColumns.forEach(({ dataIndex, sum }) => {
       if (!sum || isSttDataIndex(dataIndex)) return;
-      sums[dataIndex] = table1Data.reduce((acc: number, row: any) => {
+      sums[dataIndex] = table1DisplayRows.reduce((acc: number, row: any) => {
         const val = parseFloat(String(row[dataIndex] ?? "").replace(/,/g, ""));
         return acc + (isNaN(val) ? 0 : val);
       }, 0);
     });
     return sums;
-  }, [leafColumns, table1Data]);
+  }, [leafColumns, table1DisplayRows]);
 
   const tableSection2 = config.layout2.find((section: any) => section.sectionType === "table" && section.key === "table2");
 
@@ -245,7 +288,7 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
       <Table
         bordered
         columns={tableColumns}
-        dataSource={table1Data?.map((r: any, i: number) => ({ key: i, stt: i + 1, ...r }))}
+        dataSource={table1DisplayRows?.map((r: any, i: number) => ({ key: i, stt: i + 1, ...r }))}
         pagination={false}
         size="small"
         scroll={{ x: "max-content" }}

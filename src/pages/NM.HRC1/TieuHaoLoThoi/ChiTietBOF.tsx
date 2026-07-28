@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { HRCChildColumn, HRCParentColumn } from "../../../components/CustomTableHRC";
 import {
-  hrc2TableService,
+  hrc1TableService,
   type AdjustColumnMeta,
   type DynamicColumnMeta,
-} from "../../../services/HRC2TableService";
+} from "../../../services/HRC1TableService";
 import { Button, Card, Descriptions, Table, Tooltip, Typography, Row, Col, message } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -186,12 +186,12 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
           return;
         }
 
-        const rowsWithOverrides = hrc2TableService.applyManualOverrides(
+        const rowsWithOverrides = hrc1TableService.applyManualOverrides(
           result.tableData || [],
           savedWithAdjust,
           { rowIdField: "id", fallbackKeyField: "meThoi" }
         );
-        const finalRows = hrc2TableService.mergeServerRows(rowsWithOverrides, savedWithAdjust, "meThoi", editableFields);
+        const finalRows = hrc1TableService.mergeServerRows(rowsWithOverrides, savedWithAdjust, "meThoi", editableFields);
 
         const phanBoMetas: AdjustColumnMeta[] = (result.phanBoColumns ?? []).map((col: any) => ({
           key: col.dataIndex || `phanBo_${col.headerKeyId}`,
@@ -213,10 +213,10 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
         // Cột "thêm tay" (phuLieu_*) đã lưu luôn giữ nguyên trong nhóm điều chỉnh, không tự gộp/ẩn khi có dữ liệu —
         // loại trùng với cột phụ liệu tự động (nếu id trùng) được xử lý riêng ở tableColumns (effectivePhuGiaCols).
         const dynAdjust = fd.table1DynamicColumns?.adjust as DynamicColumnMeta[] | undefined;
-        const fromSavedAdjust = dynAdjust?.length ? hrc2TableService.adjustMetaFromDynamic(dynAdjust) : [];
+        const fromSavedAdjust = dynAdjust?.length ? hrc1TableService.adjustMetaFromDynamic(dynAdjust) : [];
         const manualOnlyFromSaved = fromSavedAdjust.filter((m) => m.isManuallyAdded);
-        const mergedAdjustMetas = hrc2TableService.dedupeAdjustMetas(
-          hrc2TableService.mergeAdjustMetas([...phanBoMetas, ...manualMetasFromApi], manualOnlyFromSaved)
+        const mergedAdjustMetas = hrc1TableService.dedupeAdjustMetas(
+          hrc1TableService.mergeAdjustMetas([...phanBoMetas, ...manualMetasFromApi], manualOnlyFromSaved)
         );
 
         setTable1DisplayRows(finalRows);
@@ -259,18 +259,18 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
       phuGiaCols = nmColumnsPack.phuGiaColumns;
       adjustMetas = nmColumnsPack.adjustMetas;
     } else {
-      const restored = hrc2TableService.restoreDynamicGroups(
+      const restored = hrc1TableService.restoreDynamicGroups(
         Object.keys(restDyn).length ? restDyn : undefined,
         renderDynamicColumnTitle
       );
       phuGiaCols = restored.BOF_PhuGia ?? [];
 
       adjustMetas = adjustFromDyn?.length
-        ? hrc2TableService.dedupeAdjustMetas(hrc2TableService.adjustMetaFromDynamic(adjustFromDyn))
+        ? hrc1TableService.dedupeAdjustMetas(hrc1TableService.adjustMetaFromDynamic(adjustFromDyn))
         : [];
 
-      adjustMetas = hrc2TableService.dedupeAdjustMetas(
-        hrc2TableService.mergeAdjustMetas(adjustMetas, inferPhanBoMetasFromRows(table1DisplayRows))
+      adjustMetas = hrc1TableService.dedupeAdjustMetas(
+        hrc1TableService.mergeAdjustMetas(adjustMetas, inferPhanBoMetasFromRows(table1DisplayRows))
       );
     }
 
@@ -324,7 +324,7 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
         ? phuGiaCols
         : phuGiaCols.filter((c) => !(typeof c.headerKeyId === "number" && manuallyManagedPhuLieuIds.has(c.headerKeyId)));
 
-    const built = hrc2TableService.buildColumnsWithAdjust({
+    const built = hrc1TableService.buildColumnsWithAdjust({
       baseColumns,
       slotColumns: { BOF_PhuGia: effectivePhuGiaCols },
       showAdjustColumns,

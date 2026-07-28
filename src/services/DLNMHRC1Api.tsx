@@ -13,6 +13,13 @@ export const dlnmHRC1Api = {
     apiService.post("/api/DLNMHRC1/search-thongke", payload),
   sumThongKe: (payload?: Record<string, unknown>) =>
     apiService.post("/api/DLNMHRC1/sum-thongke", payload),
+  // "Làm mới" trên trang Sổ Xuất-Nhập-Tồn HRC1 — sync BOF từ NM rồi group theo (BieuMau, Scope, PhuLieuID).
+  filterSTD_NXT: (payload: {
+    NgaySX: string;
+    Ca: number;
+    idPhieu?: string;
+    PhuLieuIds?: number[];
+  }) => apiService.post("/api/DLNMHRC1/filterSTD_NXT", payload),
   exportThongKe: (payload?: Record<string, unknown>) =>
     apiService.post("/api/DLNMHRC1/export-thongke", payload, {
       responseType: "blob",

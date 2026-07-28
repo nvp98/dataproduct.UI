@@ -428,6 +428,7 @@ export const menuConfig = [
         key: "sub2-7",
         label: "NM.HRC1",
         children: [
+          
           {
             key: "sub2-7-1",
             maBM: BM_CONFIG.HRC1.HRC1_BB_Sanluongphoi,
@@ -479,6 +480,17 @@ export const menuConfig = [
               <Tooltip title="BM.14/QT.05.15 (BB Tiêu hao tinh luyện LF)">
                 <NavLink to="/hrc1_tieuhaotinhluyenlf">
                   BM.14/QT.05.15 (BB Tiêu hao tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-7-6",
+            maBM: BM_CONFIG.HRC1.HRC1_STD_NXT,
+            label: (
+              <Tooltip title="STD Nhập xuất tồn HRC1">
+                <NavLink to="/hrc1_std_nhapxuatton">
+                  STD Nhập xuất tồn HRC1
                 </NavLink>
               </Tooltip>
             ),

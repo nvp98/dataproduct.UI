@@ -1,5 +1,5 @@
-import { Button, Card, Form, Input, InputNumber, Modal, Space, Switch, Table, Tag, message } from "antd";
-import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined } from "@ant-design/icons";
+import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Space, Switch, Table, Tag, message } from "antd";
+import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnType } from "antd/es/table";
 import { Hrc1PhuLieuNmServiceApi,
@@ -16,6 +16,8 @@ const PhuLieuHRC1 = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Hrc1PhuLieuNm | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [togglingNXTId, setTogglingNXTId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const fetchData = async (appliedSearchKey = searchKey) => {
     setLoading(true);
@@ -104,6 +106,36 @@ const PhuLieuHRC1 = () => {
     }
   };
 
+  // Bật/tắt danh sách mặc định cho Sổ Xuất-Nhập-Tồn HRC1 (HRC1_PhuLieuNM.IsUsedNXT) — dùng khi
+  // khởi tạo phiếu HRC1_STD_NXT đầu tiên, xem .claude/hrc1_xnt.md mục 2.2.
+  const handleToggleIsUsedNXT = async (record: Hrc1PhuLieuNm) => {
+    setTogglingNXTId(record.id);
+    const prev = record.isUsedNXT ?? false;
+    setData((d) => d.map((r) => (r.id === record.id ? { ...r, isUsedNXT: !prev } : r)));
+    try {
+      const res = await Hrc1PhuLieuNmServiceApi.toggleIsUsedNXT(record.id);
+      setData((d) => d.map((r) => (r.id === record.id ? { ...r, isUsedNXT: res.isUsedNXT } : r)));
+    } catch {
+      setData((d) => d.map((r) => (r.id === record.id ? { ...r, isUsedNXT: prev } : r)));
+      message.error("Không thể cập nhật cờ Sổ Xuất-Nhập-Tồn");
+    } finally {
+      setTogglingNXTId(null);
+    }
+  };
+
+  const handleDelete = async (record: Hrc1PhuLieuNm) => {
+    setDeletingId(record.id);
+    try {
+      await Hrc1PhuLieuNmServiceApi.delete(record.id);
+      message.success("Đã xóa phụ liệu");
+      fetchData();
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : "Không thể xóa phụ liệu");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const columns = useMemo<ColumnType<Hrc1PhuLieuNm>[]>(
     () => [
       {
@@ -153,20 +185,48 @@ const PhuLieuHRC1 = () => {
         ),
       },
       {
+        title: "Mặc định Sổ XNT",
+        dataIndex: "isUsedNXT",
+        key: "isUsedNXT",
+        width: 150,
+        align: "center",
+        render: (v: boolean | null | undefined, record: Hrc1PhuLieuNm) => (
+          <Switch
+            checked={v === true}
+            loading={togglingNXTId === record.id}
+            onChange={() => void handleToggleIsUsedNXT(record)}
+            checkedChildren="Có"
+            unCheckedChildren="Không"
+          />
+        ),
+      },
+      {
         title: "Thao tác",
         key: "actions",
-        width: 100,
+        width: 160,
         align: "center",
         render: (_: unknown, record: Hrc1PhuLieuNm) => (
           <Space>
             <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openEditModal(record)}>
               Sửa
             </Button>
+            <Popconfirm
+              title="Xóa phụ liệu?"
+              description="Không thể xóa nếu phụ liệu đã được sử dụng."
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => handleDelete(record)}
+            >
+              <Button size="small" type="link" danger loading={deletingId === record.id} icon={<DeleteOutlined />}>
+                Xóa
+              </Button>
+            </Popconfirm>
           </Space>
         ),
       },
     ],
-    [togglingId]
+    [togglingId, togglingNXTId, deletingId]
   );
 
   return (

@@ -6,6 +6,7 @@ export interface Hrc1PhuLieuNm {
   tenPhuLieuNM?: string | null;
   dangSuDung: boolean;
   isNM: boolean;
+  isUsedNXT?: boolean | null;
   thuTu?: number | null;
   ngayTao?: string;
   nguoiTao?: string | null;
@@ -35,5 +36,15 @@ export const Hrc1PhuLieuNmServiceApi = {
 
   toggleXacNhan: async (id: number): Promise<{ id: number; dangSuDung: boolean }> => {
     return (await apiService.patch(`/api/Hrc1PhuLieuNm/${id}/xac-nhan`)) as { id: number; dangSuDung: boolean };
+  },
+
+  /** Bật/tắt danh sách mặc định cho Sổ Xuất-Nhập-Tồn HRC1 (dùng khi khởi tạo phiếu đầu tiên). */
+  toggleIsUsedNXT: async (id: number): Promise<{ id: number; isUsedNXT: boolean }> => {
+    return (await apiService.patch(`/api/Hrc1PhuLieuNm/${id}/toggle-isusednxt`)) as { id: number; isUsedNXT: boolean };
+  },
+
+  /** Xóa phụ liệu — BE trả lỗi 400 kèm message nếu phụ liệu đã được dùng (mẻ tiêu hao / Sổ Xuất-Nhập-Tồn). */
+  delete: async (id: number): Promise<void> => {
+    await apiService.delete(`/api/Hrc1PhuLieuNm/${id}`);
   },
 };

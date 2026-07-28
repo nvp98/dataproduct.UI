@@ -240,7 +240,12 @@ export const bmQuyenConfig = {
         { maKhuVuc: "4", tenKhuVuc: "Lò thổi 4" },
         { maKhuVuc: "5", tenKhuVuc: "Lò thổi 5" },
       ]
-    }
+    },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_STD_NXT,
+      tenBm: "STD - Nhập xuất tồn HRC1",
+      nhom: "NM.HRC1",
+    },
 
   ] as BieuMauQuyenItem[],
 };

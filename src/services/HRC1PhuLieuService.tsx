@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { HRCChildColumn, HRCTableRow, HRCParentColumn } from "../components/CustomTableHRC";
 import { dlnmHRC1Api } from "./DLNMHRC1Api";
-import { hrc2TableService, type AdjustColumnMeta } from "./HRC2TableService";
+import { hrc1TableService, type AdjustColumnMeta } from "./HRC1TableService";
 
 export interface FetchHrc1PhuLieusParams {
   NgaySX?: string | null;
@@ -294,7 +294,7 @@ export const hrc1PhuLieuService = {
     adjustMetas: AdjustColumnMeta[],
     rows: HRCTableRow[]
   ) {
-    const dynamic = hrc2TableService.adjustMetaToDynamic(adjustMetas);
+    const dynamic = hrc1TableService.adjustMetaToDynamic(adjustMetas);
     return dynamic.map((meta) => {
       const values = rows
         .map((row) => ({

@@ -4,7 +4,7 @@ import {
   AutoComplete, Button, Card, Checkbox, Col, Divider, InputNumber, Modal,
   Popconfirm, Row, Select, Space, Spin, Table, Tag, Tooltip, Typography, Input, message, Empty,
 } from "antd";
-import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined, FilePdfOutlined, SyncOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ArrowRightOutlined, DeleteOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined, FilePdfOutlined, SyncOutlined, UndoOutlined } from "@ant-design/icons";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { TableColumnsType } from "antd";
 import dayjs from "dayjs";
@@ -809,6 +809,36 @@ export const TinhLuyenPanel = ({
     }
   };
 
+  const [chuyenCaBusy, setChuyenCaBusy] = useState<Set<number>>(new Set());
+
+  // Chuyển routing mẻ sang phiếu Đúc ca trước/sau — mẻ luyện xong sát ranh giới ca (vẫn đúng ca
+  // tinh luyện), nhưng lúc đem đúc thực tế đã rơi vào ca khác. Không đổi Ca của chính TL/tiêu hao LF.
+  const handleChuyenCaDuc = async (meId: number, huong: "truoc" | "sau") => {
+    setChuyenCaBusy((prev) => new Set(prev).add(meId));
+    try {
+      await HRC1Api.chuyenCaDuc(meId, huong);
+      message.success(`Đã chuyển mẻ sang phiếu Đúc ca ${huong}`);
+      await onReload();
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi chuyển ca");
+    } finally {
+      setChuyenCaBusy((prev) => { const s = new Set(prev); s.delete(meId); return s; });
+    }
+  };
+
+  const handleHuyChuyenCaDuc = async (meId: number) => {
+    setChuyenCaBusy((prev) => new Set(prev).add(meId));
+    try {
+      await HRC1Api.huyChuyenCaDuc(meId);
+      message.success("Đã hủy chuyển ca");
+      await onReload();
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi hủy chuyển ca");
+    } finally {
+      setChuyenCaBusy((prev) => { const s = new Set(prev); s.delete(meId); return s; });
+    }
+  };
+
   const handleXoaMeTay = async (mePhanCongId: number) => {
     setXoaMeTayBusy((prev) => new Set(prev).add(mePhanCongId));
     try {
@@ -1079,6 +1109,44 @@ export const TinhLuyenPanel = ({
     { title: "Ghi chú LT",  key: "ghiChuLo",  width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo  ?? "" },
     { title: "Ghi chú đúc", key: "ghiChuDuc2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
     {
+      title: "Chuyển ca", key: "chuyenCaDuc", width: 110,
+      render: (_, me) => {
+        if (readOnly || me.isChot || (me.trangThaiTL ?? 0) < 1 || (me.trangThaiDuc ?? 0) >= 1) return null;
+        const busy = chuyenCaBusy.has(me.id);
+        if (me.isChuyenCaDuc) {
+          return (
+            <Popconfirm
+              title="Hủy chuyển ca đúc của mẻ này?"
+              okText="Hủy chuyển" cancelText="Không"
+              onConfirm={() => handleHuyChuyenCaDuc(me.id)}>
+              <Button size="small" type="link" icon={<UndoOutlined />} loading={busy}>Đã chuyển ca</Button>
+            </Popconfirm>
+          );
+        }
+        if (!me.idMayDucDich) return null;
+        return (
+          <Space size={2}>
+            <Popconfirm
+              title="Chuyển mẻ này sang phiếu Đúc ca trước? (Ca tinh luyện giữ nguyên)"
+              okText="Chuyển ca trước" cancelText="Không"
+              onConfirm={() => handleChuyenCaDuc(me.id, "truoc")}>
+              <Tooltip title="Chuyển sang phiếu Đúc ca trước">
+                <Button size="small" icon={<ArrowLeftOutlined />} loading={busy} />
+              </Tooltip>
+            </Popconfirm>
+            <Popconfirm
+              title="Chuyển mẻ này sang phiếu Đúc ca sau? (Ca tinh luyện giữ nguyên)"
+              okText="Chuyển ca sau" cancelText="Không"
+              onConfirm={() => handleChuyenCaDuc(me.id, "sau")}>
+              <Tooltip title="Chuyển sang phiếu Đúc ca sau">
+                <Button size="small" icon={<ArrowRightOutlined />} loading={busy} />
+              </Tooltip>
+            </Popconfirm>
+          </Space>
+        );
+      },
+    },
+    {
       title: "", key: "xoaTay", width: 36, fixed: "right",
       render: (_, me) => {
         if (readOnly || !me.isManualTL) return null;
@@ -1142,7 +1210,7 @@ export const TinhLuyenPanel = ({
           columns={mainCols}
           dataSource={tlDisplayData}
           rowKey={(r) => `${r.id}-${r.mePhanCongId}`}
-          scrollX={showChuyenMeCols ? 2010 : 1750}
+          scrollX={showChuyenMeCols ? 2110 : 1850}
           scrollY="calc(100vh - 258px)"
           onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
         />
@@ -1382,8 +1450,17 @@ export const DucPanel = ({
     },
     { title: "STT",       key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
     {
-      title: "Tình trạng", key: "tinhTrang", width: 100, fixed: "left",
-      render: (_, me) => tinhTrangTag(me.trangThaiDuc, me.isChot),
+      title: "Tình trạng", key: "tinhTrang", width: 130, fixed: "left",
+      render: (_, me) => (
+        <Space size={4}>
+          {tinhTrangTag(me.trangThaiDuc, me.isChot)}
+          {me.isChuyenCaDuc && (
+            <Tooltip title="TL đã chuyển mẻ này từ ca trước sang phiếu đúc ca này">
+              <Tag color="blue" style={{ fontSize: 11 }}>Chuyển ca</Tag>
+            </Tooltip>
+          )}
+        </Space>
+      ),
     },
     { title: "Mẻ thổi",  dataIndex: "maMe",         width: 90, fixed: "left", render: (v) => v ?? "" },
     { title: "Thùng số", dataIndex: "thungSo",      width: 50, render: (v) => v ?? "" },

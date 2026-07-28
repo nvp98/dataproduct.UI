@@ -13,10 +13,10 @@ import CustomFormTable from "../../../components/CustomFormTable";
 import { hrc1PhuLieuService } from "../../../services/HRC1PhuLieuService";
 import { dlnmHRC1Api } from "../../../services/DLNMHRC1Api";
 import {
-  hrc2TableService,
+  hrc1TableService,
   type DynamicColumnMeta,
   type AdjustColumnMeta,
-} from "../../../services/HRC2TableService";
+} from "../../../services/HRC1TableService";
 import { CommonAutocomplete, type AutocompleteSearchParams } from "../../../components/CommonAutocomplete";
 import { Hrc1PhuLieuNmServiceApi, type Hrc1PhuLieuNm } from "../../../services/Hrc1PhuLieuNmServiceApi";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
@@ -85,7 +85,7 @@ const TaoTieuHaoLoThoi = () => {
 
   const handleRemoveAdjustColumn = useCallback((dataIndex: string) => {
     setAdjustColumnMetas((prev) => prev.filter((m) => m.dataIndex !== dataIndex));
-    setTableData((prev) => prev.map((row) => hrc2TableService.removeRowColumnKey(row, dataIndex)));
+    setTableData((prev) => prev.map((row) => hrc1TableService.removeRowColumnKey(row, dataIndex)));
   }, []);
 
   const handleColumnHeaderChange = useCallback(
@@ -316,7 +316,7 @@ const TaoTieuHaoLoThoi = () => {
           incomingMetas.forEach((m) => {
             if (!seen.has(m.dataIndex)) merged.push(m);
           });
-          return hrc2TableService.dedupeAdjustMetas(merged);
+          return hrc1TableService.dedupeAdjustMetas(merged);
         });
         setShowAdjustColumns(true);
       } else {
@@ -324,13 +324,13 @@ const TaoTieuHaoLoThoi = () => {
       }
 
       setTableData((prev) => {
-        const baseMerged = hrc2TableService.mergeServerRows(
+        const baseMerged = hrc1TableService.mergeServerRows(
           result.tableData || [],
           prev,
           "meThoi",
           editableFields
         );
-        return hrc2TableService.applyManualOverrides(baseMerged, prev, {
+        return hrc1TableService.applyManualOverrides(baseMerged, prev, {
           rowIdField: "id",
           fallbackKeyField: "meThoi",
         });
@@ -358,7 +358,7 @@ const TaoTieuHaoLoThoi = () => {
       });
     const baseColumns: HRCParentColumn[] = tableLayout?.columns ? normalizeAlign(tableLayout.columns as any[]) : [];
 
-    return hrc2TableService.buildColumnsWithAdjust({
+    return hrc1TableService.buildColumnsWithAdjust({
       baseColumns,
       slotColumns: { BOF_PhuGia: effectivePhuGiaColumns },
       showAdjustColumns,
@@ -467,11 +467,11 @@ const TaoTieuHaoLoThoi = () => {
 
           if (formValues.table1DynamicColumns) {
             const dyn = formValues.table1DynamicColumns as Record<string, DynamicColumnMeta[]>;
-            const restored = hrc2TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
+            const restored = hrc1TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
             setPhuGiaColumns(restored.BOF_PhuGia ?? []);
             if (dyn.adjust) {
               setAdjustColumnMetas(
-                hrc2TableService.dedupeAdjustMetas(hrc2TableService.adjustMetaFromDynamic(dyn.adjust))
+                hrc1TableService.dedupeAdjustMetas(hrc1TableService.adjustMetaFromDynamic(dyn.adjust))
               );
             } else {
               setAdjustColumnMetas([]);
@@ -542,7 +542,7 @@ const TaoTieuHaoLoThoi = () => {
     // Dùng effectivePhuGiaColumns (đã loại các phụ liệu đang được quản lý ở nhóm "adjust") — nếu dùng phuGiaColumns
     // thô, 1 phụ liệu thêm tay đã có dữ liệu sẽ bị lưu 2 lần (vừa ở BOF_PhuGia vừa ở adjust) → BE tạo 2 dòng insert
     // trùng MeID+PhuLieuID trong cùng 1 lượt lưu → lỗi EF Core "temporary value" khi Update dòng vừa Add chưa persist.
-    const dynamicColumnMap = hrc2TableService.buildDynamicColumnMap({ BOF_PhuGia: effectivePhuGiaColumns });
+    const dynamicColumnMap = hrc1TableService.buildDynamicColumnMap({ BOF_PhuGia: effectivePhuGiaColumns });
     dynamicColumnMap.adjust = hrc1PhuLieuService.buildAdjustDynamicWithValues(
       adjustColumnMetas.filter((m) => m.isManuallyAdded === true),
       tableData
