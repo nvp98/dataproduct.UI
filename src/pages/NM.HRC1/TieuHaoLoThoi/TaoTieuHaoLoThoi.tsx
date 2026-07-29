@@ -209,8 +209,24 @@ const TaoTieuHaoLoThoi = () => {
                 searchApi={searchPhuLieu}
                 mapOption={(item) => ({ value: item.id, label: item.tenPhuLieu })}
                 fallbackLabelBuilder={() => meta.headerKeyLabel ?? "Phụ liệu"}
+                allowCreate
+                onCreate={async (name) => {
+                  try {
+                    return await Hrc1PhuLieuNmServiceApi.create({ tenPhuLieu: name });
+                  } catch (e: unknown) {
+                    // apiService reject bằng error.response.data ({message}) thay vì Error instance
+                    const msg =
+                      typeof e === "object" && e !== null && "message" in e &&
+                      typeof (e as { message?: unknown }).message === "string"
+                        ? (e as { message: string }).message
+                        : "Không tạo được phụ liệu mới";
+                    message.error(msg);
+                    return null;
+                  }
+                }}
+                createOptionLabel={(text) => `+ Tạo phụ liệu mới: "${text}"`}
                 size="small"
-                placeholder="Chọn phụ liệu..."
+                placeholder="Chọn hoặc tạo phụ liệu..."
                 style={{ minWidth: 120 }}
                 allowClear={false}
               />
@@ -694,6 +710,7 @@ const TaoTieuHaoLoThoi = () => {
                     stickyHeaders
                     stickyFirstColumn
                     stickyColumnKeys={["meThoi", "macThep"]}
+                    disableRowHover
                     scrollX="1500px"
                     lyDoLabel={(layout as any).lyDo?.label}
                     lyDoValue={table1LyDo}

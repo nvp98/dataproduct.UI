@@ -57,24 +57,31 @@
           "dataIndex": "stt",
           "width": 60,
           "editable": false,
-          "readonly": true
+          "readonly": true,
+          "alwaysReadonly": true
         },
         {
           "title": "Mẻ nấu số",
           "dataIndex": "meThoi",
           "width": 115,
-          "editable": true
+          "editable": false,
+          "readonly": true,
+          "alwaysReadonly": true
         },
         {
           "title": "Mác thép",
           "dataIndex": "macThep",
           "width": 130,
-          "editable": true
+          "editable": false,
+          "readonly": true,
+          "alwaysReadonly": true
         },
         {
           "title": "Khối lượng thép lỏng (tấn)",
           "dataIndex": "klThepLong",
-          "editable": true,
+          "editable": false,
+          "readonly": true,
+          "alwaysReadonly": true,
           "width": 110,
           "format": "number-group",
           "align": "right",
@@ -85,6 +92,9 @@
           "dataIndex": "LF_PhuGia",
           "editable": true,
           "sum": true
+        },
+        {
+          "dataIndex": "dieuChinh"
         },
         {
           "title": "Khí (nhập tay)",

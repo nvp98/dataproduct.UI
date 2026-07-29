@@ -8,6 +8,7 @@ import { dlnmHRC2Api } from "../services/DLNMHRC2Api";
 import type { ChuyenMeThoiRequest } from "../models/DLMN_HRC2Model";
 import dayjs from "dayjs";
 import { formatByKind } from "../utils/formatters/numberFormat";
+import "../styles/customTableHrc.css";
 
 type MappingPayload = HeaderMappingRecord;
 
@@ -71,6 +72,10 @@ export interface HRCChildColumn {
   thuTu?: number | null; // Thứ tự để sắp xếp
   sum?: boolean; // true: tính tổng cột này trong dòng summary
   readonly?: boolean; // true: không cho sửa, bất kể editable của bảng
+  // true: khoá cứng, không cho sửa dù dòng là IsNM=false (isManualRow) — khác `readonly` (vốn vẫn
+  // cho sửa ở dòng thêm tay/manual). Dùng cho các cột như meThoi/macThep ở LF, nơi MỌI dòng đều bị
+  // ép IsNM=false nên `readonly` thường bị "mở khoá" nhầm bởi điều kiện isManualRow.
+  alwaysReadonly?: boolean;
 }
 
 export interface HRCParentColumn {
@@ -89,6 +94,7 @@ export interface HRCParentColumn {
   variant?: "source" | "adjust" | "default";
   sum?: boolean; // true: tính tổng cột này trong dòng summary
   readonly?: boolean; // true: không cho sửa, bất kể editable của bảng
+  alwaysReadonly?: boolean; // xem giải thích ở HRCChildColumn
 }
 
 export interface HRCTableRow {
@@ -119,6 +125,8 @@ interface CustomTableHRCProps {
   stickyHeaders?: boolean;
   stickyFirstColumn?: boolean;
   stickyColumnKeys?: string[];
+  /** Tắt hiệu ứng hover đổi màu dòng — dùng khi màu hover mặc định đè lên các màu highlight riêng của ô/dòng. */
+  disableRowHover?: boolean;
   maBm?: string;
   ngaySX?: Date;
   ca?: number;
@@ -209,6 +217,7 @@ const CustomTableHRC = forwardRef(({
   stickyHeaders = true,
   stickyFirstColumn = false,
   stickyColumnKeys = [],
+  disableRowHover = false,
   maBm = "",
   ngaySX = new Date(),
   ca = 0,
@@ -549,6 +558,7 @@ const CustomTableHRC = forwardRef(({
                 const isManualRow = !isNMRow;
                 const canEditThisCell =
                   !isAdjustColumn &&
+                  !child.alwaysReadonly &&
                   (!child.readonly || isManualRow) &&
                   editable &&
                   (!isNMRow || (!isMeThoiColumn && !isMacThepColumn));
@@ -691,6 +701,7 @@ const CustomTableHRC = forwardRef(({
           const isManualRow = !isNMRow;
           const canEditThisCell =
             !isAdjustColumn &&
+            !col.alwaysReadonly &&
             (!col.readonly || isManualRow) &&
             editable &&
             (!isNMRow || (!isMeThoiColumn && !isMacThepColumn));
@@ -871,7 +882,7 @@ const CustomTableHRC = forwardRef(({
           <Table
             bordered
             pagination={false}
-            className={className}
+            className={`${className} ${disableRowHover ? "hrc-table-no-hover" : ""}`.trim()}
             size="small"
             columns={tableColumns}
             dataSource={sortedRows}

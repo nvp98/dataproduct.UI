@@ -88,6 +88,9 @@ function CommonAutocompleteInner<T>({
   const [fetching, setFetching] = useState(false);
   const [creating, setCreating] = useState(false);
   const [pendingSearch, setPendingSearch] = useState("");
+  const [selectedValue, setSelectedValue] = useState<
+    { value: number | string; label: string } | undefined
+  >(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialOptionsRef = useRef<InternalOption<T>[]>([]);
   const fallbackLabelBuilderRef = useRef(fallbackLabelBuilder);
@@ -107,6 +110,13 @@ function CommonAutocompleteInner<T>({
     return { value, label: String(value) };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, options]);
+
+  // Đồng bộ qua state nội bộ (thay vì bind thẳng useMemo vào Select) — cùng cách làm với
+  // HeaderKeyAutocomplete (đã chạy ổn định trong header bảng HRC2). Bind trực tiếp mappedValue +
+  // controlled searchValue khiến dropdown mở rồi tự đóng ngay khi đang nằm trong header sticky table.
+  useEffect(() => {
+    setSelectedValue(mappedValue);
+  }, [mappedValue]);
 
   const fetchOptions = useCallback(
     async (searchKey?: string) => {
@@ -201,6 +211,7 @@ function CommonAutocompleteInner<T>({
 
   const handleChange = (val: { value: number | string; label: string } | { value: number | string; label: string }[] | null) => {
     if (!val) {
+      setSelectedValue(undefined);
       onChange?.(null, null);
       setPendingSearch("");
       return;
@@ -222,6 +233,7 @@ function CommonAutocompleteInner<T>({
               if (prev.some((p) => p.value === mapped.value)) return prev;
               return [newOpt, ...prev];
             });
+            setSelectedValue({ value: mapped.value, label: mapped.label });
             onChange?.(mapped.value, newItem);
             setPendingSearch("");
           }
@@ -238,6 +250,12 @@ function CommonAutocompleteInner<T>({
         : Number(rawValue);
 
     const matched = options.find((opt) => opt.value === numericOrStringValue);
+    const label = optionValue?.label ?? matched?.label ?? String(numericOrStringValue);
+    setSelectedValue(
+      typeof numericOrStringValue === "number" && Number.isNaN(numericOrStringValue)
+        ? undefined
+        : { value: numericOrStringValue, label }
+    );
     onChange?.(
       typeof numericOrStringValue === "number" && Number.isNaN(numericOrStringValue)
         ? null
@@ -265,7 +283,7 @@ function CommonAutocompleteInner<T>({
     <Select
       showSearch
       labelInValue
-      value={mappedValue}
+      value={selectedValue}
       placeholder={placeholder}
       allowClear={allowClear}
       disabled={disabled || creating}
@@ -273,8 +291,17 @@ function CommonAutocompleteInner<T>({
       size={size}
       filterOption={false}
       options={selectOptions}
-      loading={creating}
-      notFoundContent={fetching || creating ? <Spin size="small" /> : null}
+      loading={fetching || creating}
+      // Không dùng `null` khi rỗng — rc-select render popup không nội dung (cao 0px), trông như
+      // "vừa mở đã đóng lại". Luôn có nội dung để dropdown thực sự hiển thị (đặc biệt quan trọng
+      // với LF: usedPhuLieuIds gần như luôn chứa hết danh mục nên list lọc ra thường rỗng).
+      notFoundContent={
+        fetching || creating
+          ? <Spin size="small" />
+          : allowCreate
+            ? "Không có phụ liệu khả dụng — gõ tên để tạo mới"
+            : "Không có dữ liệu"
+      }
       dropdownMatchSelectWidth={selectProps?.dropdownMatchSelectWidth ?? 260}
       onDropdownVisibleChange={(open) => {
         if (open && !options.length) {
@@ -282,7 +309,6 @@ function CommonAutocompleteInner<T>({
         }
         selectProps?.onDropdownVisibleChange?.(open);
       }}
-      searchValue={pendingSearch}
       onSearch={handleSearch}
       onChange={handleChange}
       onBlur={handleBlur}
@@ -293,6 +319,7 @@ function CommonAutocompleteInner<T>({
 
 // Wrapper để giữ generic props khi import
 export function CommonAutocomplete<T>(props: CommonAutocompleteProps<T>) {
+  console.log("CommonAutocomplete props:", props);
   return <CommonAutocompleteInner {...props} />;
 }
 

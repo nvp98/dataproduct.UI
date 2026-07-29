@@ -69,11 +69,14 @@ const TaoTieuHaoTinhLuyenLF = () => {
   const renderDynamicColumnTitle = useCallback((label: string) => <span>{label}</span>, []);
 
   // Thêm cột điều chỉnh mới — header là autocomplete chọn (hoặc TẠO MỚI) 1 phụ liệu trong danh mục
-  // HRC1_PhuLieuNM. Khác BOF (nơi phần lớn phụ liệu đã ẩn sẵn chờ chọn lại): ở LF toàn bộ danh mục
-  // active đã hiển thị mặc định, nên "Thêm cột điều chỉnh" chủ yếu dùng để TẠO phụ liệu mới chưa có
-  // trong danh mục (autocomplete cho phép gõ tên mới → POST /api/Hrc1PhuLieuNm, giống HeaderKeyAutocomplete
-  // bên HRC2). Khi chọn/tạo xong, dataIndex đổi thành phuLieu_{PhuLieuID} — tái dùng đúng pipeline Loại A
-  // (đã có sẵn ở BuildLFPhuLieus, đọc gộp cả nhóm LF_PhuGia lẫn adjust).
+  // HRC1_PhuLieuNM. Khác BOF (hrc1PhuLieuService chỉ hiện cột nào có dữ liệu khác 0 trong ca/lò đang
+  // lọc, nên luôn còn phụ liệu "chưa dùng" để autocomplete chọn): ở LF, hrc1LFPhuLieuService luôn lấy
+  // TOÀN BỘ danh mục active làm cột mặc định (không lọc theo "đã có dữ liệu") — nghĩa là mọi phụ liệu
+  // hiện có ĐỀU đã có cột sẵn, danh sách "chưa dùng" luôn rỗng. Vì vậy allowCreate là bắt buộc: đây là
+  // cách DUY NHẤT để thêm 1 phụ liệu MỚI (autocomplete cho gõ tên → POST /api/Hrc1PhuLieuNm). Xoá
+  // allowCreate sẽ khiến nút này vô dụng với LF (dropdown luôn rỗng, không có gì để chọn).
+  // Khi chọn/tạo xong, dataIndex đổi thành phuLieu_{PhuLieuID} — tái dùng đúng pipeline Loại A (đã có
+  // sẵn ở BuildLFPhuLieus, đọc gộp cả nhóm LF_PhuGia lẫn adjust).
   const addAdjustColumn = useCallback(() => {
     const dataIndex = `manual_col_${Date.now()}`;
     setAdjustColumnMetas((prev) => [
@@ -198,7 +201,7 @@ const TaoTieuHaoTinhLuyenLF = () => {
               }}
               createOptionLabel={(text) => `+ Tạo phụ liệu mới: "${text}"`}
               size="small"
-              placeholder="Chọn hoặc tạo phụ liệu..."
+              placeholder="Gõ tên để tạo phụ liệu mới..."
               style={{ minWidth: 120 }}
               allowClear={false}
             />
@@ -617,6 +620,7 @@ const TaoTieuHaoTinhLuyenLF = () => {
                   stickyHeaders
                   stickyFirstColumn
                   stickyColumnKeys={["meThoi", "macThep"]}
+                  disableRowHover
                   scrollX="1500px"
                   lyDoLabel={(layout as any).lyDo?.label}
                   lyDoValue={table1LyDo}

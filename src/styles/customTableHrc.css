@@ -1,0 +1,6 @@
+/* Tắt hiệu ứng hover đổi màu dòng của antd Table — màu hover mặc định (xám nhạt) đè lên các màu
+   highlight riêng của ô/dòng (vàng ô đã sửa, đỏ mẻ trùng, vàng dòng thêm tay), gây rối mắt. */
+.hrc-table-no-hover .ant-table-tbody > tr:hover > td,
+.hrc-table-no-hover .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+  background: transparent !important;
+}
