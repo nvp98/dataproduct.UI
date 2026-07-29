@@ -33,6 +33,7 @@ export const BM_CONFIG = {
         NMLG_BM_NapLieuLoCao: 'NMLG_BM_NapLieuLoCao',
         NMLG_BM_TonSiloLoCao: 'NMLG_BM_TonSiloLoCao',
         NMLG_NK_VHPTLC: 'NMLG_NK_VHPTLC',
+        NMLG_BM_PhanBoDuLieu: 'NMLG_BM_PhanBoDuLieu',
     },
     NL: {
         NL_BB_TheoDoiBenPhe: 'NL_BB_TheoDoiBenPhe',

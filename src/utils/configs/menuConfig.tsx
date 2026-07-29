@@ -1244,6 +1244,15 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "5-lg-phanbo",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_PhanBoDuLieu,
+            label: (
+              <Tooltip title="Phân bổ dữ liệu (QHLC / CVH / Than cốc <10mm)">
+                <NavLink to="/phanbodulieu">Phân bổ dữ liệu</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
