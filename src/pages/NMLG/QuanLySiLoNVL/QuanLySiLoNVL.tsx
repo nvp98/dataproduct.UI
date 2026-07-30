@@ -794,6 +794,7 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
       ghiChu: row.ghiChu,
       idNhomNVL: row.idNhomNVL, thuTuNhom: row.thuTuNhom,
       tenNVL_TK: row.tenNVL_TK,
+      maVatTu: row.maVatTu,
       xacNhan: row.xacNhan,
       ngaySanXuat: row.ngaySanXuat ? dayjs(row.ngaySanXuat) : null,
       idCaSanXuat: row.idCaSanXuat ?? null,
@@ -838,6 +839,7 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
         ghiChu: values.ghiChu ?? null,
         thuTuNhom: values.thuTuNhom ?? null,
         tenNVL_TK: values.tenNVL_TK ?? null,
+        maVatTu: values.maVatTu ?? null,
         xacNhan: values.xacNhan ?? null,
         ngaySanXuat: values.ngaySanXuat ? (values.ngaySanXuat as any).format("YYYY-MM-DD") : null,
         idCaSanXuat: values.idCaSanXuat ?? null,
@@ -872,6 +874,7 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
     { title: "Nhóm hiển thị", dataIndex: "nhomHienThi", key: "nhomHienThi", render: (v) => v ?? "—" },
     { title: "Thứ tự", dataIndex: "thuTu", key: "thuTu", width: 90, align: "center", render: (v) => v ?? "—" },
     { title: "Thứ tự nhóm", dataIndex: "thuTuNhom", key: "thuTuNhom", width: 100, align: "center", render: (v) => v ?? "—" },
+    { title: "Mã vật tư", dataIndex: "maVatTu", key: "maVatTu", width: 120, render: (v) => v ?? "—" },
     { title: "Ghi chú", dataIndex: "ghiChu", key: "ghiChu" },
     {
       title: "Thao tác", key: "action", width: 100, align: "center",
@@ -950,6 +953,14 @@ const NvlTab = ({ loCaoOptions, nhomOptions, onDataChange }: NvlTabProps) => {
             <Col span={12}>
               <Form.Item name="tenNVL_TK" label="Tên NVL P.KH">
                 <Input maxLength={200} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="maVatTu" label="Mã vật tư">
+                <Input maxLength={50} />
               </Form.Item>
             </Col>
           </Row>
