@@ -70,8 +70,8 @@ const getUserId = (): number => {
 const BkHrc2SlabTable = () => {
   // ── Phân quyền theo bộ phận ──────────────────────────────────────────────
   const userInfo = (() => { try { const s = localStorage.getItem("userinfo"); return s ? JSON.parse(s) : null; } catch { return null; } })();
-  const isView    = getBmQuyenUiFlags(BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, userInfo).isView;
-  const isKCS     = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, 'KCS');
+  const isView    = getBmQuyenUiFlags(BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam, userInfo).isView;
+  const isKCS     = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam, 'KCS');
 
   const [form] = Form.useForm();
   const [data, setData] = useState<HrcSlabItem[]>([]);
@@ -206,6 +206,9 @@ const BkHrc2SlabTable = () => {
     r.trangThaiPKH === 0 &&
     !r.isChot;
 
+  const canChuyenBBSLRow = (r: HrcSlabItem): boolean =>
+    r.trangThaiKCS === 0 && r.isSaiLotName === false && r.isTrungIDSlab === false && r.isDiffMacThep === false;
+
   const validateSameCaSanXuat = (): boolean => {
     const caValues = [...new Set(selectedRows.map((r) => r.caSanXuat ?? ""))];
     if (caValues.length > 1) {
@@ -293,7 +296,7 @@ const BkHrc2SlabTable = () => {
       const stored = localStorage.getItem("userinfo");
       const userInfo = stored ? JSON.parse(stored) : {};
       const payload = {
-        maBm: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+        maBm: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
         NgaySX: values.ngaySX ? dayjs(values.ngaySX).format("YYYY-MM-DD") : null,
         ca: values.ca,
         // kip: values.kip || null,
@@ -301,7 +304,7 @@ const BkHrc2SlabTable = () => {
         xuongId: userInfo.iD_PhanXuong ?? null,
         idphongBan: userInfo.iD_PhongBan ?? null,
         tinhTrang: 0,
-        prefix: "HRC2_BBGN_PhoiTam",
+        prefix: "HRC2_BBSL_PhoiTam",
       };
       const res = await PhieuApi.postData(payload as Record<string, unknown>);
       message.success(`Tạo phiếu thành công: ${(res as any)?.soPhieu ?? ""}`);
@@ -493,7 +496,7 @@ const BkHrc2SlabTable = () => {
   }, [showExtraColumns, visibleCols, extraCols]);
 
   const selectedCount = selectedRowKeys.length;
-  const canChuyenBBSL = selectedCount > 0 && selectedRows.every((r) => r.trangThaiKCS === 0);
+  const canChuyenBBSL = selectedCount > 0 && selectedRows.every(canChuyenBBSLRow);
   const canThuHoi     = selectedCount > 0 && selectedRows.every(canThuHoiRow);
 
   // Cột phiếu BBSL trong modal

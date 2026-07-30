@@ -1,14 +1,14 @@
 {
-  "code": "HRC2_BBGN_PhoiTam",
-  "prefix": "BBGN_SLAB",
-  "loaiBm": "BBGN_SLAB",
-  "title": "BIÊN BẢN GIAO NHẬN PHÔI TẤM",
+  "code": "HRC2_BBSL_PhoiTam",
+  "prefix": "BBSL_SLAB",
+  "loaiBm": "BBSL_SLAB",
+  "title": "BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
   "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
     "subCompany": "HÒA PHÁT GANG THÉP"
   },
   "isoInfo": {
-    "code": "BM.40/QT.05.15",
+    "code": "BM.36/QT.05.15",
     "effectiveDate": "01/04/2025",
     "revision": "01"
   },

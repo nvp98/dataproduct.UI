@@ -45,7 +45,7 @@ import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 
 const { Title } = Typography;
 
-const MA_BM = BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam as string;
+const MA_BM = BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam as string;
 const TT_COLOR: Record<number, string> = { 0: "default", 1: "green" };
 
 const getUserId = (): number => {

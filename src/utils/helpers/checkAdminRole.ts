@@ -185,7 +185,7 @@ export const getBmQuyenRowsForMa = (maBm: string): BmQuyenXlItem[] => {
 
 /**
  * Kiểm tra user thuộc khu vực phụ (bộ phận) cụ thể của một BM.
- * Dùng để phân biệt KCS / Đúc / Kho trong cùng 1 maBM (HRC2_BBGN_PhoiTam).
+ * Dùng để phân biệt KCS / Đúc / Kho trong cùng 1 maBM (HRC2_BBSL_PhoiTam).
  * Admin luôn trả về true.
  */
 export const hasKhuVucPhu = (user: any, maBm: string, khuVucPhu: string): boolean => {

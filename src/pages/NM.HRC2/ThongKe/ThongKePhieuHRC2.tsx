@@ -23,7 +23,7 @@ const MABM_DETAIL_ROUTE: Record<string, string> = {
   HRC2_BB_NauLuyen_RH: "/chitiettieuhaonauluyen_rh",
   HRC2_STD_NXT: "/tao-std",
   HRC2_BBGN_ThepLong: "/chitietgiaonhantheplong",
-  HRC2_BBGN_PhoiTam: "/chitietbbgnphoitam",
+  HRC2_BBSL_PhoiTam: "/chitietbbgnphoitam",
 };
 
 const MABM_LIST: string[] = [
@@ -32,7 +32,7 @@ const MABM_LIST: string[] = [
   BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
   // BM_CONFIG.HRC2.HRC2_STD_NXT,
   BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
-  BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+  BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
 ];
 
 const LOAI_BM_TO_MABM: Record<string, string> = {
@@ -40,7 +40,7 @@ const LOAI_BM_TO_MABM: Record<string, string> = {
   LF: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_LF,
   RH: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
   BBGN_ThepLong: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
-  BBGN_PhoiTam: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+  BBGN_PhoiTam: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
 };
 
 const SCOPE_OPTIONS: Record<string, { label: string; value: number }[]> = {

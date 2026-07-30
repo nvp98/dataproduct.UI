@@ -1,4 +1,4 @@
-import HRC2_BBGN_PhoiTam from "../../../utils/BM_config/HRC2_BBGN_PhoiTam.json";
+import HRC2_BBSL_PhoiTam from "../../../utils/BM_config/HRC2_BBSL_PhoiTam.json";
 import { Button, Card, Space, Table, Tabs, Tag } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -9,7 +9,7 @@ import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import BkHrc2SlabTable from "./BkHrc2SlabTable";
 
-const config = HRC2_BBGN_PhoiTam;
+const config = HRC2_BBSL_PhoiTam;
 
 /** Trạng thái tổng hợp BBGN Phôi tấm (BE trả 1 | 2 | 3, xem Hrc2BbgnPhoiTamEnricher) */
 const BBGN_PHOI_TAM_STATUS: Record<string, { text: string; color: string }> = {

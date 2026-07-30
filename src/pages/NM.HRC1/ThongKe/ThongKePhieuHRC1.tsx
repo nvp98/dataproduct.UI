@@ -24,21 +24,21 @@ const MABM_DETAIL_ROUTE: Record<string, string> = {
   HRC1_BB_Lothoi: "/taotieuhaolothoi",
   HRC1_TinhLuyen: "/taophieugiaonhantheplong_hrc1",
   HRC1_BBGN_ThepLong: "/chitietgiaonhantheplong_hrc1",
-  HRC1_BBGN_PhoiTam: "/chitietbbgnphoitam_hrc1"
+  HRC1_BBSL_PhoiTam: "/chitietbbgnphoitam_hrc1"
 };
 
 const MABM_LIST: string[] = [
   // BM_CONFIG.HRC1.HRC1_BB_Lothoi,
   // BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
-  BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+  BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
 ];
 
 const LOAI_BM_TO_MABM: Record<string, string> = {
   LoThoi: BM_CONFIG.HRC1.HRC1_BB_Lothoi,
   TinhLuyen: BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BBGN_ThepLong: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
-  BBGN_PhoiTam: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+  BBGN_PhoiTam: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
 };
 
 const normalizeNum = (v: unknown): number | null => {

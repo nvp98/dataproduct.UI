@@ -61,7 +61,7 @@ export const MenuDataDashboard = [
       {
         code: "bbgnphoitam_hrc1",
         title: "BM.29/QT.05.12 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
-        maBm: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+        maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
       }
     ],
   },
@@ -93,7 +93,7 @@ export const MenuDataDashboard = [
       {
         code: "bbgnphoitam",
         title: "BM.40/QT.05.15 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
-        maBm: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+        maBm: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
       }
     ],
   },

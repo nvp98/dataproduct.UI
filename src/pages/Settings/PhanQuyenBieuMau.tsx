@@ -164,7 +164,7 @@ function buildBmRowsFromRecords(records: any[]): BmRow[] {
       // targetMaBm record → hiện lại là kvp value trong BmRow cha (merged mode)
       normalized.push({ parentMaBm: reverse.parentMaBm, displayVal: makeKvpVal(reverse.khuVucPhu), quyenChucNang });
     } else if (useKvpAsScopeMode(maBm) && khuVucPhu) {
-      // kvpAsScope mode (vd HRC2_BBGN_PhoiTam): khuVucPhu → hiện trong scope select
+      // kvpAsScope mode (vd HRC2_BBSL_PhoiTam): khuVucPhu → hiện trong scope select
       normalized.push({ parentMaBm: maBm, displayVal: makeKvpVal(khuVucPhu), quyenChucNang });
     } else {
       normalized.push({ parentMaBm: maBm, displayVal: maKhuVuc || ALL_KHU_VUC, quyenChucNang, khuVucPhu });
