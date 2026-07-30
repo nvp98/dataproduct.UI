@@ -10,7 +10,7 @@ import ThongKePhieuCommon, {
 import { DEFAULT_TINH_TRANG_OPTIONS } from "../../../utils/ConfigDefault/thongKePhieuDefaults";
 import type { SearchPhieuRequest } from "../../../models/Phieu";
 import type { PhieuFilterValues } from "../../../components/PhieuFilterCard";
-import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { getPhieuStatusConfig } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
 import type { NhaMayEnum } from "../../../models/SiloModel";
@@ -226,11 +226,10 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
       dataIndex: "tinhTrang",
       key: "tinhTrang",
       width: 200,
-      render: (status: number) => (
-        <Tag color={PHIEU_STATUS_CONFIG[status]?.color || "default"}>
-          {PHIEU_STATUS_CONFIG[status]?.text || status}
-        </Tag>
-      ),
+      render: (status: number, record: TableRecord) => {
+        const cfg = getPhieuStatusConfig(record.maBm, status);
+        return <Tag color={cfg?.color || "default"}>{cfg?.text || status}</Tag>;
+      },
     },
   ], [navigate, type]);
 

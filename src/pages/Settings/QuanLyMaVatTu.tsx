@@ -27,7 +27,13 @@ import { MaVatTuApi, type MaVatTuItem } from "../../services/MaVatTuApi";
 
 const { Text } = Typography;
 
-const NHA_MAY_OPTIONS = ["HRC1", "HRC2"];
+// Danh sách nhà máy - cập nhật thủ công khi có nhà máy mới.
+const NHA_MAY_OPTIONS = [
+  { value: "HRC1", label: "HRC1" },
+  { value: "HRC2", label: "HRC2" },
+  { value: "NM.CTD", label: "NM.CTD" },
+  { value: "NM.LG", label: "NM.LG" }
+];
 
 const CONG_DOAN_OPTIONS = [
   { value: "COCDQ1", label: "Cốc - DQ1" },
@@ -329,7 +335,9 @@ const QuanLyMaVatTu = () => {
                 <Select
                   placeholder="Tất cả"
                   allowClear
-                  options={NHA_MAY_OPTIONS.map((v) => ({ value: v, label: v }))}
+                  showSearch
+                  optionFilterProp="label"
+                  options={NHA_MAY_OPTIONS}
                 />
               </Form.Item>
             </Col>
@@ -383,7 +391,9 @@ const QuanLyMaVatTu = () => {
           >
             <Select
               placeholder="Chọn nhà máy"
-              options={NHA_MAY_OPTIONS.map((v) => ({ value: v, label: v }))}
+              showSearch
+              optionFilterProp="label"
+              options={NHA_MAY_OPTIONS}
               disabled={!!editingRecord}
             />
           </Form.Item>
@@ -458,9 +468,11 @@ const QuanLyMaVatTu = () => {
             <Select
               style={{ width: 140 }}
               placeholder="Chọn nhà máy"
+              showSearch
+              optionFilterProp="label"
               value={pasteNhaMay}
               onChange={setPasteNhaMay}
-              options={NHA_MAY_OPTIONS.map((v) => ({ value: v, label: v }))}
+              options={NHA_MAY_OPTIONS}
             />
           </div>
           <Text type="secondary">

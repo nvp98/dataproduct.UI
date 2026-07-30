@@ -8,14 +8,14 @@ import { useMemo } from "react";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import BkHrc2SlabTable from "./BkHrc2SlabTable";
+import { PHOI_TAM_STATUS_CONFIG, PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 
 const config = HRC2_BBSL_PhoiTam;
 
-/** Trạng thái tổng hợp BBGN Phôi tấm (BE trả 1 | 2 | 3, xem Hrc2BbgnPhoiTamEnricher) */
+/** Trạng thái tổng hợp BBGN Phôi tấm (BE trả 11 | 12 | 5, xem Hrc2BbgnPhoiTamEnricher) */
 const BBGN_PHOI_TAM_STATUS: Record<string, { text: string; color: string }> = {
-  "1": { text: "Chưa hoàn thành", color: "orange" },
-  "2": { text: "Đã hoàn thành", color: "success" },
-  "3": { text: "Đã chốt", color: "blue" },
+  ...PHOI_TAM_STATUS_CONFIG,
+  "5": PHIEU_STATUS_CONFIG[5],
 };
 
 type TableRecord = SearchPhieuResponseModel & {
