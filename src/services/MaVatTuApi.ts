@@ -3,16 +3,19 @@ import apiService from "./ApiService";
 export interface MaVatTuItem {
   id: number;
   nhaMay: string;
-  macThep: string;
+  macThep?: string | null;
   vatTuCode: string;
   tenVatTu?: string | null;
   isLock?: boolean | null;
+  congDoan?: string | null;
+  kichThuoc?: string | null;
 }
 
 export interface MaVatTuSearchRequest {
   searchKey?: string | null;
   nhaMay?: string | null;
   macThep?: string | null;
+  congDoan?: string | null;
   page?: number;
   pageSize?: number;
 }
@@ -34,20 +37,24 @@ export const MaVatTuApi = {
 
   create: async (payload: {
     nhaMay: string;
-    macThep: string;
+    macThep?: string | null;
     vatTuCode: string;
     tenVatTu?: string | null;
     isLock?: boolean | null;
+    congDoan?: string | null;
+    kichThuoc?: string | null;
   }): Promise<MaVatTuItem> => {
     return (await apiService.post(BASE, payload)) as MaVatTuItem;
   },
 
   update: async (id: number, payload: {
     nhaMay: string;
-    macThep: string;
+    macThep?: string | null;
     vatTuCode: string;
     tenVatTu?: string | null;
     isLock?: boolean | null;
+    congDoan?: string | null;
+    kichThuoc?: string | null;
   }): Promise<void> => {
     await apiService.put(`${BASE}/${id}`, payload);
   },
@@ -58,9 +65,10 @@ export const MaVatTuApi = {
 
   bulkCreate: async (items: {
     nhaMay: string;
-    macThep: string;
+    macThep?: string | null;
     vatTuCode: string;
     tenVatTu?: string | null;
+    congDoan?: string | null;
   }[]): Promise<{
     created: number;
     skipped: number;

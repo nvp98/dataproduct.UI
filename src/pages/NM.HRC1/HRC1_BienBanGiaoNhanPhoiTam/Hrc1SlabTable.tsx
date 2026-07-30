@@ -30,7 +30,7 @@ const TT_TEXT: Record<number, string>  = { 0: "Chưa", 1: "Đã XN" };
 
 const Hrc1SlabTable = () => {
   const userInfo = (() => { try { const s = localStorage.getItem("userinfo"); return s ? JSON.parse(s) : null; } catch { return null; } })();
-  const maBm = BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam;
+  const maBm = BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam;
   const isDuc = hasKhuVucPhu(userInfo, maBm, "Duc");
 
   const [form] = Form.useForm();

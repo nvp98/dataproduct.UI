@@ -75,12 +75,12 @@ export const bmQuyenConfig = {
       nhom: "NM.CTD",
     },
     {
-      maBm: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+      maBm: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
       tenBm: "Biên bản giao nhận phôi tấm",
       nhom: "NM.HRC2",
       // Không có scope vùng máy — workflow thống nhất 1 bảng
       // khuVucPhus tạo record BM_QuyenXL riêng cho từng bộ phận
-      // PKH được cấp quyền Chốt (3) trực tiếp trên maBm HRC2_BBGN_PhoiTam
+      // PKH được cấp quyền Chốt (3) trực tiếp trên maBm HRC2_BBSL_PhoiTam
       khuVucPhus: [
         { khuVucPhu: "KCS", tenKhuVuc: "Bộ phận KCS" },
         { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
@@ -231,7 +231,7 @@ export const bmQuyenConfig = {
       ]
     },
     {
-      maBm: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+      maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
       tenBm: "Biên bản giao nhận phôi tấm",
       nhom: "NM.HRC1",
       khuVucPhus: [

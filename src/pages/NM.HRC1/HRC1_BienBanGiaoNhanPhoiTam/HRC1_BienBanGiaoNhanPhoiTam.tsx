@@ -22,7 +22,7 @@ import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { PhieuApi } from "../../../services/PhieuApi";
 
-const MA_BM = BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam as string;
+const MA_BM = BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam as string;
 
 /** Trạng thái tổng hợp BBGN Phôi tấm (BE trả 1 | 2 | 3, xem Hrc1BbgnPhoiTamEnricher) */
 const BBGN_PHOI_TAM_STATUS: Record<string, { text: string; color: string }> = {
@@ -64,7 +64,7 @@ const TaoPhieuModal = ({ open, onClose, onCreated }: TaoPhieuModalProps) => {
       xuongId: ui.iD_PhanXuong ?? null,
       idphongBan: ui.iD_PhongBan ?? null,
       tinhTrang: 1,
-      prefix: "HRC1_BBGN_PhoiTam",
+      prefix: "HRC1_BBSL_PhoiTam",
       pheDuyet: [],
     });
 

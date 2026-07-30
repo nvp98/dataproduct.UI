@@ -394,7 +394,7 @@ export const menuConfig = [
           },
           {
             key: "sub2-6-4",
-            maBM: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
               <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/bbgnphoitam">
@@ -455,7 +455,7 @@ export const menuConfig = [
           },
           {
             key: "sub2-7-4",
-            maBM: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
             label: (
               <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
                 <NavLink to="/bbgnphoitam_hrc1">
@@ -674,7 +674,7 @@ export const menuConfig = [
           },
           {
             key: "sub4-5-4",
-            maBM: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
               <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/viecdentoi/bbgnphoitam">
@@ -774,7 +774,7 @@ export const menuConfig = [
           },
           {
             key: "sub3-6-4",
-            maBM: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
             label: (
               <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
                 <NavLink to="/viecdentoi/bbgnphoitam_hrc1">
@@ -899,7 +899,7 @@ export const menuConfig = [
           },
           {
             key: "sub4-1-2",
-            maBM: BM_CONFIG.HRC1.HRC1_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
             label: (
               <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
                 <NavLink to="/xemphieu/bbgnphoitam_hrc1">
@@ -970,7 +970,7 @@ export const menuConfig = [
           },
           {
             key: "sub4-22-4",
-            maBM: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
               <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/xemphieu/bbgnphoitam">
@@ -1300,8 +1300,8 @@ export const menuConfig = [
         key: "admin-4",
         icon: <SettingOutlined />,
         label: (
-          <Tooltip title="Quản lý mã vật tư HRC1">
-            <NavLink to="/ma-vat-tu-hrc1">Mã vật tư HRC1</NavLink>
+          <Tooltip title="Quản lý mã vật tư">
+            <NavLink to="/ma-vat-tu-hrc1">Mã vật tư</NavLink>
           </Tooltip>
         ),
       },

@@ -29,7 +29,51 @@ const { Text } = Typography;
 
 const NHA_MAY_OPTIONS = ["HRC1", "HRC2"];
 
-type PasteRow = { macThep: string; vatTuCode: string; tenVatTu: string };
+const CONG_DOAN_OPTIONS = [
+  { value: "COCDQ1", label: "Cốc - DQ1" },
+  { value: "COCDQ2", label: "Cốc - DQ2" },
+  { value: "DOLOMITDQ1", label: "Dolomit - DQ1" },
+  { value: "DOLOMITDQ2", label: "Dolomit - DQ2" },
+  { value: "THIEUKETDQ1", label: "Thiêu kết - DQ1" },
+  { value: "THIEUKETDQ2", label: "Thiêu kết - DQ2" },
+  { value: "VIATHEP", label: "Vỉa thép >10mm" },
+  { value: "VOINUNGLVDDQ1", label: "Vôi nung LVD - DQ1" },
+  { value: "VOINUNGLVDDQ2", label: "Vôi nung LVD - DQ2" },
+  { value: "VOINUNGLVQ", label: "Vôi nung LVQ" },
+  { value: "VEVIENDQ1", label: "Vê viên - DQ1" },
+  { value: "VEVIENDQ2", label: "Vê viên - DQ2" },
+  { value: "XIHATLOCAOS95", label: "Xi hạt lò cao nghiền mịn - S95" },
+  { value: "METHEPHOPCACH", label: "Mẻ thép hợp cách" },
+  { value: "DIENDQ1", label: "Điện - DQ1" },
+  { value: "DIENDQ2", label: "Điện - DQ2" },
+  { value: "GANGDQ1", label: "Gang - DQ1" },
+  { value: "GANGDQ2", label: "Gang - DQ2" },
+  { value: "HRCDQ1", label: "HRC - DQ1" },
+  { value: "HRCDQ2", label: "HRC - DQ2" },
+  { value: "PHOIVUONG", label: "Phôi vuông" },
+  { value: "PHOITAMDQ1", label: "Phôi tấm - DQ1" },
+  { value: "PHOITAMDQ2", label: "Phôi tấm - DQ2" },
+  { value: "THEPDAI", label: "Thép dài" },
+];
+
+const CONG_DOAN_LABEL_BY_VALUE = new Map(CONG_DOAN_OPTIONS.map((o) => [o.value.toUpperCase(), o.label]));
+const CONG_DOAN_VALUE_BY_LABEL = new Map(CONG_DOAN_OPTIONS.map((o) => [o.label.toUpperCase(), o.value]));
+
+const getCongDoanLabel = (value?: string | null) => {
+  if (!value) return "";
+  return CONG_DOAN_LABEL_BY_VALUE.get(value.toUpperCase()) ?? value;
+};
+
+// Khớp text paste (có thể là mã Work Center hoặc tên công đoạn tiếng Việt) về đúng mã lưu trong CongDoan.
+const resolveCongDoanValue = (raw: string) => {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  const key = trimmed.toUpperCase();
+  if (CONG_DOAN_LABEL_BY_VALUE.has(key)) return key;
+  return CONG_DOAN_VALUE_BY_LABEL.get(key) ?? trimmed;
+};
+
+type PasteRow = { congDoan: string; vatTuCode: string; tenVatTu: string; macThep: string };
 
 const parsePasteText = (text: string): PasteRow[] =>
   text
@@ -37,12 +81,13 @@ const parsePasteText = (text: string): PasteRow[] =>
     .map((line) => {
       const cols = line.split("\t");
       return {
-        macThep: (cols[0] ?? "").trim(),
+        congDoan: resolveCongDoanValue(cols[0] ?? ""),
         vatTuCode: (cols[1] ?? "").trim(),
         tenVatTu: (cols[2] ?? "").trim(),
+        macThep: (cols[3] ?? "").trim(),
       };
     })
-    .filter((item) => item.macThep !== "" && item.vatTuCode !== "");
+    .filter((item) => item.vatTuCode !== "");
 
 const QuanLyMaVatTu = () => {
   const [searchForm] = Form.useForm();
@@ -99,10 +144,12 @@ const QuanLyMaVatTu = () => {
     setEditingRecord(record);
     modalForm.setFieldsValue({
       nhaMay: record.nhaMay,
-      macThep: record.macThep,
+      macThep: record.macThep ?? "",
       vatTuCode: record.vatTuCode,
       tenVatTu: record.tenVatTu ?? "",
       isLock: record.isLock ?? false,
+      congDoan: record.congDoan ?? "",
+      kichThuoc: record.kichThuoc ?? "",
     });
     setModalVisible(true);
   };
@@ -119,10 +166,12 @@ const QuanLyMaVatTu = () => {
       setModalLoading(true);
       const payload = {
         nhaMay: values.nhaMay as string,
-        macThep: (values.macThep as string).trim(),
+        macThep: (values.macThep as string | undefined)?.trim() || null,
         vatTuCode: (values.vatTuCode as string).trim(),
         tenVatTu: (values.tenVatTu as string | undefined)?.trim() || null,
         isLock: (values.isLock as boolean | undefined) ?? false,
+        congDoan: (values.congDoan as string | undefined)?.trim() || null,
+        kichThuoc: (values.kichThuoc as string | undefined)?.trim() || null,
       };
       if (editingRecord) {
         await MaVatTuApi.update(editingRecord.id, payload);
@@ -157,10 +206,12 @@ const QuanLyMaVatTu = () => {
     try {
       await MaVatTuApi.update(record.id, {
         nhaMay: record.nhaMay,
-        macThep: record.macThep,
+        macThep: record.macThep ?? null,
         vatTuCode: record.vatTuCode,
         tenVatTu: record.tenVatTu ?? null,
         isLock: checked,
+        congDoan: record.congDoan ?? null,
+        kichThuoc: record.kichThuoc ?? null,
       });
       setData((prev) => prev.map((r) => r.id === record.id ? { ...r, isLock: checked } : r));
     } catch {
@@ -191,9 +242,10 @@ const QuanLyMaVatTu = () => {
       const res = await MaVatTuApi.bulkCreate(
         items.map((r) => ({
           nhaMay: pasteNhaMay,
-          macThep: r.macThep,
+          macThep: r.macThep || null,
           vatTuCode: r.vatTuCode,
           tenVatTu: r.tenVatTu || null,
+          congDoan: r.congDoan || null,
         }))
       );
       const parts: string[] = [];
@@ -213,9 +265,17 @@ const QuanLyMaVatTu = () => {
 
   const columns = [
     { title: "Nhà máy", dataIndex: "nhaMay", key: "nhaMay", width: 90 },
-    { title: "Mác thép", dataIndex: "macThep", key: "macThep", width: 160 },
+    {
+      title: "Công đoạn",
+      dataIndex: "congDoan",
+      key: "congDoan",
+      width: 200,
+      render: (v: string | null | undefined) => getCongDoanLabel(v),
+    },
     { title: "Mã vật tư", dataIndex: "vatTuCode", key: "vatTuCode", width: 150 },
     { title: "Tên vật tư", dataIndex: "tenVatTu", key: "tenVatTu" },
+    { title: "Mác thép", dataIndex: "macThep", key: "macThep", width: 160 },
+    { title: "Kích thước", dataIndex: "kichThuoc", key: "kichThuoc", width: 150 },
     {
       title: "Trạng thái",
       dataIndex: "isLock",
@@ -331,12 +391,21 @@ const QuanLyMaVatTu = () => {
             name="macThep"
             label="Mác thép"
             rules={[
-              { required: true, message: "Vui lòng nhập mác thép" },
               { max: 100, message: "Tối đa 100 ký tự" },
               { whitespace: true, message: "Không được chỉ có khoảng trắng" },
             ]}
           >
             <Input placeholder="Nhập mác thép" disabled={!!editingRecord} />
+          </Form.Item>
+          <Form.Item name="congDoan" label="Công đoạn">
+            <Select
+              placeholder="Chọn công đoạn"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              options={CONG_DOAN_OPTIONS}
+              disabled={!!editingRecord}
+            />
           </Form.Item>
           <Form.Item
             name="vatTuCode"
@@ -351,6 +420,13 @@ const QuanLyMaVatTu = () => {
           </Form.Item>
           <Form.Item name="tenVatTu" label="Tên vật tư">
             <Input placeholder="Nhập tên vật tư" />
+          </Form.Item>
+          <Form.Item
+            name="kichThuoc"
+            label="Kích thước"
+            rules={[{ max: 150, message: "Tối đa 150 ký tự" }]}
+          >
+            <Input placeholder="Nhập kích thước" />
           </Form.Item>
           <Form.Item
             name="isLock"
@@ -388,13 +464,13 @@ const QuanLyMaVatTu = () => {
             />
           </div>
           <Text type="secondary">
-            Paste từ Excel — 3 cột: <strong>Mác thép</strong> (A) | <strong>Mã vật tư</strong> (B) | <strong>Tên vật tư</strong> (C).
+            Paste từ Excel — 3 hoặc 4 cột: <strong>Công đoạn</strong> (A, mã Work Center hoặc tên) | <strong>Mã vật tư</strong> (B) | <strong>Tên vật tư</strong> (C) | <strong>Mác thép</strong> (D, tùy chọn).
           </Text>
           <Input.TextArea
             autoFocus
             value={pasteText}
             onChange={(e) => handlePasteTextChange(e.target.value)}
-            placeholder={"SS400\tVT001\tThép cuộn SS400\nQ235B\tVT002\tThép cuộn Q235B"}
+            placeholder={"COCDQ1\tVT001\tThan cốc DQ1\nHRCDQ2\tVT002\tThép cuộn Q235B\tQ235B"}
             rows={8}
             style={{ fontFamily: "monospace" }}
           />
@@ -404,12 +480,13 @@ const QuanLyMaVatTu = () => {
               <Table<PasteRow>
                 size="small"
                 dataSource={pastePreview.slice(0, 10)}
-                rowKey={(r) => `${r.macThep}|${r.vatTuCode}`}
+                rowKey={(r) => `${r.congDoan}|${r.vatTuCode}`}
                 pagination={false}
                 columns={[
-                  { title: "Mác thép", dataIndex: "macThep", width: 140 },
+                  { title: "Công đoạn", dataIndex: "congDoan", width: 160, render: (v: string) => getCongDoanLabel(v) },
                   { title: "Mã vật tư", dataIndex: "vatTuCode", width: 130 },
                   { title: "Tên vật tư", dataIndex: "tenVatTu" },
+                  { title: "Mác thép", dataIndex: "macThep", width: 120 },
                 ]}
                 footer={
                   pastePreview.length > 10

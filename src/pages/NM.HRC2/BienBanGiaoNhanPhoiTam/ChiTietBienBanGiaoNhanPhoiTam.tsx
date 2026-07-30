@@ -30,7 +30,7 @@ import {
   type SlabTongHopItem,
 } from "../../../services/Hrc2SlabApi";
 import { HRC2_PHAN_LOAI_ORDER } from "../../../utils/enums/Hrc2PhanLoaiEnum";
-import HRC2_BBGN_PhoiTam from "../../../utils/BM_config/HRC2_BBGN_PhoiTam.json";
+import HRC2_BBSL_PhoiTam from "../../../utils/BM_config/HRC2_BBSL_PhoiTam.json";
 import {
   getBmQuyenUiFlags,
   hasKhuVucPhu,
@@ -112,7 +112,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } =
     usePhieuNavigation("phieu_bbgnphoitam_id", "/viecdentoi/bbgnphoitam");
 
-  const config = HRC2_BBGN_PhoiTam;
+  const config = HRC2_BBSL_PhoiTam;
 
   // ── Phân quyền ────────────────────────────────────────────────────────────
   // isXxx: quyền thực tế của user, vẫn dùng để hiển thị các cột trạng thái (TT Đúc/Kho/PKH).
@@ -125,10 +125,10 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
       return null;
     }
   }, []);
-  const isKCS = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, "KCS");
-  const isDuc = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, "Duc");
-  const isKho = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam, "Kho");
-  const isPKH = canChotBm(userInfo, BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam);
+  const isKCS = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam, "KCS");
+  const isDuc = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam, "Duc");
+  const isKho = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam, "Kho");
+  const isPKH = canChotBm(userInfo, BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam);
   const canAct = !readOnly;
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -226,11 +226,11 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
 
   // ── Bảng tổng hợp: build columns từ JSON config ───────────────────────────
   const tongHopColumns = useMemo(
-    () => buildAntCols(HRC2_BBGN_PhoiTam.layout[0].columns),
+    () => buildAntCols(HRC2_BBSL_PhoiTam.layout[0].columns),
     [],
   );
   const leafCols = useMemo(
-    () => getLeafCols(HRC2_BBGN_PhoiTam.layout[0].columns),
+    () => getLeafCols(HRC2_BBSL_PhoiTam.layout[0].columns),
     [],
   );
   const sumKeys = useMemo(

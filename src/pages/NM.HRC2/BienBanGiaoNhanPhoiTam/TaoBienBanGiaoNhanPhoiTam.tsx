@@ -1,4 +1,4 @@
-import HRC2_BBGN_PhoiTam from "../../../utils/BM_config/HRC2_BBGN_PhoiTam.json";
+import HRC2_BBSL_PhoiTam from "../../../utils/BM_config/HRC2_BBSL_PhoiTam.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
 import CustomFormTable, { type FormColumnDef } from "../../../components/CustomFormTable";
 import dayjs from "dayjs";
@@ -11,7 +11,7 @@ const TaoBienBanGiaoNhanPhoiTam = () => {
   const location = useLocation();
   const { idphieu } = location.state || {};
 
-  const config = HRC2_BBGN_PhoiTam;
+  const config = HRC2_BBSL_PhoiTam;
   const [form] = Form.useForm();
 
   const [tableData, setTableData] = useState<any[]>([]);
