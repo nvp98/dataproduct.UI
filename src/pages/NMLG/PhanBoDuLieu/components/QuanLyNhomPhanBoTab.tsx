@@ -98,6 +98,7 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
       tenNhom: row.tenNhom,
       loaiPhanBo: row.loaiPhanBo,
       phuongThucPhanBo: row.phuongThucPhanBo,
+      maVatTu: row.maVatTu,
       thuTu: row.thuTu,
     });
     setEditingNhom(row);
@@ -177,6 +178,7 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
         </Tag>
       ),
     },
+    { title: "Mã vật tư", dataIndex: "maVatTu", key: "maVatTu", width: 120, render: (v) => v ?? "—" },
     { title: "Thứ tự", dataIndex: "thuTu", key: "thuTu", width: 80, align: "center" },
     {
       title: "Thao tác",
@@ -283,6 +285,9 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
           </Form.Item>
           <Form.Item name="phuongThucPhanBo" label="Phương thức phân bổ" rules={[{ required: true }]}>
             <Select options={PHUONG_THUC_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="maVatTu" label="Mã vật tư">
+            <Input maxLength={50} />
           </Form.Item>
           <Form.Item name="thuTu" label="Thứ tự hiển thị">
             <InputNumber style={{ width: "100%" }} min={0} />

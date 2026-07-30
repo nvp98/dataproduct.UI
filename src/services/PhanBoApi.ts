@@ -7,6 +7,7 @@ export interface NhomPhanBoDto {
   tenNhom: string;
   loaiPhanBo: number; // 1=QHLC, 2=CVH, 3=Than cốc <10mm
   phuongThucPhanBo: number; // 1=tỷ trọng+dòng dư, 2=tỷ lệ nhập tay
+  maVatTu: string | null;
   thuTu: number | null;
 }
 
@@ -14,6 +15,7 @@ export interface CreateNhomPhanBoDto {
   tenNhom: string;
   loaiPhanBo: number;
   phuongThucPhanBo: number;
+  maVatTu?: string | null;
   thuTu?: number | null;
 }
 

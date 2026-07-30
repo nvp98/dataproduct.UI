@@ -209,7 +209,6 @@ export interface LGNLNvlDto {
   nhomHienThi: string | null;
   thuTuNhom: number | null;
   tenNVL_TK: string | null;
-  maVatTu: string | null;
   xacNhan: boolean | null;
   ngaySanXuat: string | null;
   idCaSanXuat: number | null;
@@ -223,7 +222,6 @@ export interface CreateLGNLNvlDto {
   ghiChu?: string | null;
   thuTuNhom?: number | null;
   tenNVL_TK?: string | null;
-  maVatTu?: string | null;
   xacNhan?: boolean | null;
   ngaySanXuat?: string | null;
   idCaSanXuat?: number | null;
