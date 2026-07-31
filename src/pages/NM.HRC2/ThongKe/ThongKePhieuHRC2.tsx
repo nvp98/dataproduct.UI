@@ -115,7 +115,7 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
           { label: "Tinh luyện LF", value: "LF" },
           { label: "Tinh luyện RH", value: "RH" },
           { label: "Giao nhận thép lỏng", value: "BBGN_ThepLong" },
-          { label: "Biên bản giao nhận phôi tấm", value: "BBGN_PhoiTam" },
+          { label: "Biên bản sản lượng phôi tấm", value: "BBGN_PhoiTam" },
         ],
       },
       { key: "ngaySX", label: "Ngày sản xuất", type: "dateRange", placeholder: "Khoảng ngày" },

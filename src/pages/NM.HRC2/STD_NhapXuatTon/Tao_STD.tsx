@@ -22,7 +22,6 @@ import type {
 import { STD_NXT_HRC2ServiceApi } from "../../../services/STD_NXT_HRC2ServiceApi";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
-import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { FileExcelOutlined } from "@ant-design/icons";
 
 const Tao_STD = () => {
@@ -160,15 +159,11 @@ const Tao_STD = () => {
   const initData = useCallback(async () => {
     try {
       setLoading(true);
-      let tinhTrangFromRes: number = TrangThaiPhieuConst.DangLuu;
-      let nguoiTaoIdFromRes: number | null = null;
       if (idphieu) {
         const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
         if (!res) return;
 
         const phieuPayload = (res as any)?.data ?? res;
-        tinhTrangFromRes = (phieuPayload as any)?.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
-        nguoiTaoIdFromRes = (phieuPayload as any)?.nguoiTaoId ?? null;
         const formData = phieuPayload?.jsonData || {};
 
         // Khôi phục form values (ưu tiên jsonData). Tách NgaySX/ca để tránh bị override bởi spread.
@@ -249,21 +244,12 @@ const Tao_STD = () => {
 
       }
 
-      // Set chữ ký capduyet=0: DangLuu/DaThuHoi/HieuChinh → currentUser; trạng thái khác → nguoiTaoId cũ
-      const shouldUseCurrentUser =
-        !idphieu ||
-        tinhTrangFromRes === TrangThaiPhieuConst.DangLuu ||
-        tinhTrangFromRes === TrangThaiPhieuConst.DaThuHoi ||
-        tinhTrangFromRes === TrangThaiPhieuConst.HieuChinh;
-      const hasNguoiTaoId = nguoiTaoIdFromRes != null && Number(nguoiTaoIdFromRes) > 0;
+      // Chữ ký capduyet=0: luôn mặc định current user mỗi lần vào phiếu, để lưu lại đúng người sửa cuối cùng khi lưu
       const sigOverrides: Record<string, any> = {};
       config.signatures
         .filter((sig: any) => sig.isChon && sig.capduyet === 0)
         .forEach((sig: any) => {
-          if (shouldUseCurrentUser)
-            sigOverrides[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
-          else if (hasNguoiTaoId)
-            sigOverrides[sig.key] = nguoiTaoIdFromRes;
+          sigOverrides[sig.key] = currentUserInfo?.iD_TaiKhoan ?? null;
         });
       if (Object.keys(sigOverrides).length > 0) form.setFieldsValue(sigOverrides);
     } catch (err: any) {
@@ -1084,20 +1070,19 @@ const Tao_STD = () => {
               : []),
             // Tab per khuVuc
             ...(layout1 && layout1.sectionType === "groupedTable"
-              ? kvLabels.map((kvLabel) => ({
+              ? kvLabels.map((kvLabel) => {
+                  const statusItem = relatedStatusMap[`kv_${kvLabel}`];
+                  const kvStatus =
+                    statusItem?.tinhTrang ?? (statusItem as any)?.TinhTrang;
+                  return {
                   key: `kv_${kvLabel}`,
                   label: (
                     <span>
                       {kvLabel}
                       {(() => {
-                        const key = `kv_${kvLabel}`;
-                        const statusItem = relatedStatusMap[key];
-                        const status =
-                          statusItem?.tinhTrang ??
-                          (statusItem as any)?.TinhTrang;
                         const statusKey =
-                          status !== undefined && status !== null
-                            ? String(status)
+                          kvStatus !== undefined && kvStatus !== null
+                            ? String(kvStatus)
                             : undefined;
                         const cfg = statusKey
                           ? PHIEU_STATUS_CONFIG[statusKey]
@@ -1117,7 +1102,7 @@ const Tao_STD = () => {
                               opacity: 0.85,
                             }}
                           >
-                            ({tinhTrangLabel(status)})
+                            ({tinhTrangLabel(kvStatus)})
                           </span>
                         );
                       })()}
@@ -1143,9 +1128,11 @@ const Tao_STD = () => {
                       ngaySX={form.getFieldValue("NgaySX")}
                       khuVucConfig={kvList}
                       nhaMay={2}
+                      khuVucStatusMap={{ [kvLabel]: kvStatus }}
                     />
                   ),
-                }))
+                  };
+                })
               : []),
           ];
 
@@ -1175,6 +1162,7 @@ const Tao_STD = () => {
                   <CustomFormItem
                     field={sig}
                     idx={i}
+                    maBm={config.code}
                   />
                 </div>
               );

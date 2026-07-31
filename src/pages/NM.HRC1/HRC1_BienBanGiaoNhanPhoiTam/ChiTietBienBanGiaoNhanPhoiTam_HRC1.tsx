@@ -108,6 +108,12 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
   const [chuyenLoading, setChuyenLoading] = useState<"truoc" | "sau" | null>(null);
   const [tongHopRefreshLoading, setTongHopRefreshLoading] = useState(false);
 
+  const TAB_TITLES: Record<string, string> = {
+    chitiet: "BIÊN BẢN GIAO NHẬN PHÔI TẤM",
+    tonghop: "BIÊN BẢN XÁC NHẬN SẢN LƯỢNG PHÔI TẤM",
+  };
+  const [activeTabKey, setActiveTabKey] = useState<string>("chitiet");
+
   // inline edits per slab id
   const [rowEdits, setRowEdits] = useState<Record<number, RowEdit>>({});
   // tonghop ghi chu local edits: key = "macThep|maVatTu"
@@ -621,13 +627,14 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
     <Card bordered style={{ padding: 24, background: "#fff" }} loading={loading}>
       <div style={{ textAlign: "center", marginBottom: 16 }}>
         <Title level={4} style={{ marginBottom: 4 }}>
-          Biên Bản Giao Nhận Phôi Tấm HRC1
+          {TAB_TITLES[activeTabKey] ?? TAB_TITLES.chitiet}
         </Title>
         {idphieu && <b>Số phiếu: {data?.soPhieu}</b>}
       </div>
 
       <Tabs
         defaultActiveKey="chitiet"
+        onChange={setActiveTabKey}
         type="card"
         style={{ padding: "0 8px" }}
         items={[
@@ -888,7 +895,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
         ]}
       />
 
-      {actionButtons && (
+      {/* {actionButtons && (
         <div
           style={{
             textAlign: "center",
@@ -901,7 +908,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
         >
           {actionButtons}
         </div>
-      )}
+      )} */}
 
       {/* CSS cho row được chuyển ca */}
       <style>{`
