@@ -102,7 +102,10 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
     return user.tenNgan === "P.KH" || user.iD_PhongBan === 70;
   }, []);
 
-  const { key: locationKey } = useLocation();
+  const { key: locationKey, pathname } = useLocation();
+
+  // Vùng 3 (xem phiếu, chỉ xem — route "/xemphieu/...") không được tạo phiếu mới hay check phiếu
+  const isXemPhieuZone = pathname.includes("/xemphieu/");
 
   const buildFreshStates = (): Record<string, FilterStateValue> => {
     const states: Record<string, FilterStateValue> = {};
@@ -427,7 +430,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
         <Col>
           <Button onClick={handleClearFilter}>Xóa bộ lọc</Button>
         </Col>
-        {showCreateButton && onCreateClick && (
+        {showCreateButton && onCreateClick && !isXemPhieuZone && (
           <Col>
             <Button
               type="primary"
@@ -438,7 +441,7 @@ const PhieuFilterCard: React.FC<PhieuFilterCardProps> = ({
             </Button>
           </Col>
         )}
-        {isPKH && (
+        {(isPKH && !isXemPhieuZone) && (
           <>
             <Col>
               <Button

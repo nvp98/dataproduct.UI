@@ -121,11 +121,12 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
       },
     },
     {
-      title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
-      width: 270,  
+      title: "Người sửa cuối",
+      dataIndex: "tenNguoiTao",
+      key: "tenNguoiTao",
+      width: 270,
       ellipsis: true,
+      render: (value: string | null | undefined) => value || "-",
     },
    
     {

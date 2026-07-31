@@ -114,6 +114,12 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
 
   const config = HRC2_BBSL_PhoiTam;
 
+  const TAB_TITLES: Record<string, string> = {
+    slab: "BIÊN BẢN GIAO NHẬN PHÔI TẤM",
+    tonghop: config.title,
+  };
+  const [activeTabKey, setActiveTabKey] = useState<string>("slab");
+
   // ── Phân quyền ────────────────────────────────────────────────────────────
   // isXxx: quyền thực tế của user, vẫn dùng để hiển thị các cột trạng thái (TT Đúc/Kho/PKH).
   // canAct: false khi vào từ "Xem phiếu" (vùng 3) — dùng để ẩn nút thao tác + cột tick chọn dù user có quyền chức năng.
@@ -400,26 +406,32 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
       {
         title: "Ca SX",
         dataIndex: "shiftName",
-        width: 100,
+        width: 120,
         align: "center" as const,
         render: (v: string) => v ?? "-",
       },
       {
         title: "ID Slab",
         dataIndex: "idSlab",
-        width: 130,
+        width: 100,
+        align: "center" as const,
+      },
+      {
+        title: "OrderID",
+        dataIndex: "orderId",
+        width: 100,
         align: "center" as const,
       },
       {
         title: "Mẻ thép",
         dataIndex: "meThep",
-        width: 100,
+        width: 80,
         align: "center" as const,
       },
       {
         title: "Máy đúc",
         dataIndex: "mayDuc",
-        width: 80,
+        width: 70,
         align: "center" as const,
         render: (v: number) => v != null ? `Đúc ${v}` : "-",
       },
@@ -449,7 +461,12 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
             ? Number(v).toLocaleString("vi-VN", { minimumFractionDigits: 3 })
             : "-",
       },
-      { title: "Chất lượng", dataIndex: "chatLuong", width: 160 },
+      { title: "Chất lượng", dataIndex: "chatLuong", width: 90 },
+      {
+        title: "KCS",
+        dataIndex: "nguoiChuyenBBSL",
+        width: 120,
+      },
       {
         title: "TT KCS",
         dataIndex: "trangThaiKCS",
@@ -460,6 +477,11 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
         ),
       },
       {
+        title: "Đúc",
+        dataIndex: "nguoiXacNhanDuc",
+        width: 120,
+      },
+      {
         title: "TT Đúc",
         dataIndex: "trangThaiDuc",
         width: 90,
@@ -467,6 +489,11 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
         render: (v: number) => (
           <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>
         ),
+      },
+      {
+        title: "Kho",
+        dataIndex: "nguoiXacNhanKho",
+        width: 120,
       },
       {
         title: "TT Kho",
@@ -582,13 +609,14 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
     >
       <div style={{ textAlign: "center", marginBottom: 16 }}>
         <Title level={4} style={{ marginBottom: 0 }}>
-          {config.title}
+          {TAB_TITLES[activeTabKey] ?? config.title}
         </Title>
         {idphieu && <b>Số phiếu: {data?.soPhieu}</b>}
       </div>
 
       <Tabs
         defaultActiveKey="slab"
+        onChange={setActiveTabKey}
         type="card"
         style={{ padding: "0 8px" }}
         items={[
@@ -927,7 +955,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
       </Row> */}
 
       {/* Action buttons phiếu */}
-      {actionButtons && (
+      {/* {actionButtons && (
         <div
           style={{
             textAlign: "center",
@@ -940,7 +968,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
         >
           {actionButtons}
         </div>
-      )}
+      )} */}
     </Card>
   );
 };

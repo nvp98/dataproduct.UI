@@ -396,9 +396,9 @@ export const menuConfig = [
             key: "sub2-6-4",
             maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
-              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+              <Tooltip title="BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/bbgnphoitam">
-                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                  BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),
@@ -676,9 +676,9 @@ export const menuConfig = [
             key: "sub4-5-4",
             maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
-              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+              <Tooltip title="BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/viecdentoi/bbgnphoitam">
-                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                  BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),
@@ -972,9 +972,9 @@ export const menuConfig = [
             key: "sub4-22-4",
             maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
-              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+              <Tooltip title="BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/xemphieu/bbgnphoitam">
-                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                  BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),

@@ -112,6 +112,7 @@ export default function GroupedTableSTD({
   ngaySX, // Ngày sản xuất để load silo
   khuVucConfig, // Config khu vực để lấy BieuMau: [{label, bieuMau, scope}]
   nhaMay = 2, // HRC2 = 2, HRC1 = 1
+  khuVucStatusMap = {}, // { [khuVuc]: tinhTrang } — tinhTrang=5 (đã chốt) ẩn cột thao tác & không cho thêm dòng
 }: any) {
   const [rows, setRows] = useState<any[]>(initialData);
   const rowsRef = useRef<any[]>(initialData);
@@ -801,6 +802,7 @@ export default function GroupedTableSTD({
     if (editable) {
       base.push({
         title: "Xóa",
+        dataIndex: "__actions",
         width: 60,
         fixed: "right" as const,
         render: (_: any, r: any) => (
@@ -838,10 +840,14 @@ export default function GroupedTableSTD({
           const isFirst = idx === 0;
           const isLast = idx === khuVucList.length - 1;
           const kvRows = grouped.get(kv) || [];
+          // Phiếu của khu vực này đã chốt (tinhTrang=5) → ẩn cột thao tác, không cho thêm dòng
+          const isKvChot = Number(khuVucStatusMap?.[kv]) === 5;
 
           // Mỗi table chỉ có 1 khu vực, hiển thị label ở tất cả các dòng
 
-          const columnsForThisTable = tableColumns.map((col: any) => {
+          const columnsForThisTable = tableColumns
+            .filter((col: any) => !(isKvChot && col.dataIndex === "__actions"))
+            .map((col: any) => {
             if (col.dataIndex === "khuVuc") {
               return {
                 ...col,
@@ -880,7 +886,7 @@ export default function GroupedTableSTD({
                 }}
               />
 
-              {editable && (
+              {editable && !isKvChot && (
                 <div
                   style={{
                     padding: "8px 16px",
