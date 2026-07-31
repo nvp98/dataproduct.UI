@@ -52,6 +52,48 @@ const getUserInfo = () => {
   return stored ? JSON.parse(stored) : {};
 };
 
+// Đánh lại STT: 1 số cho mỗi Silo/nhóm tách liệu (không đếm từng dòng con vật lý
+// bị ẩn bởi rowSpan), để STT hiển thị không bị nhảy số khi 1 Silo được "Tách liệu"
+// thành nhiều dòng. Đồng thời set luôn "thuTu" = "stt" để lúc lưu phiếu, backend
+// không lấy nhầm giá trị thuTu cũ (xem TryGetInt(row, "thuTu", "ThuTu", "stt") ở BE).
+const renumberStt = (rows: TableRow[]): TableRow[] => {
+  let counter = 0;
+  const seenGroups = new Set<string>();
+  return rows.map((r) => {
+    if (r._splitGroupId) {
+      if (!seenGroups.has(r._splitGroupId)) {
+        seenGroups.add(r._splitGroupId);
+        counter += 1;
+      }
+    } else {
+      counter += 1;
+    }
+    return { ...r, stt: counter, thuTu: counter };
+  });
+};
+
+// Dòng con CUỐI CÙNG của 1 nhóm tách liệu luôn tự động nhận phần KL còn lại
+// (KL gốc của Silo - tổng các dòng con phía trên nó), và vẫn đánh dấu _manualKL=true
+// để hiển thị highlight cam giống các ô nhập tay khác. Được gọi lại mỗi khi 1 dòng con
+// phía trên thay đổi KL, khi thêm/xóa dòng con — nên nếu người dùng từng gõ đè tay lên
+// dòng cuối, giá trị đó sẽ bị tính lại đè lên ngay khi có thay đổi ở dòng khác trong nhóm.
+const recalcLastChildKL = (rows: TableRow[], gid: string): TableRow[] => {
+  const childIdxs = rows.reduce<number[]>((acc, r, i) => {
+    if (r._splitGroupId === gid && !r._isSplitParent) acc.push(i);
+    return acc;
+  }, []);
+  if (childIdxs.length < 2) return rows;
+  const lastIdx = childIdxs[childIdxs.length - 1];
+  const parent = rows.find((r) => r._splitGroupId === gid && r._isSplitParent);
+  const parentKL = Number(parent?.klTonCuoiKip) || 0;
+  const othersSum = childIdxs
+    .filter((i) => i !== lastIdx)
+    .reduce((s, i) => s + (Number(rows[i].klTonCuoiKip) || 0), 0);
+  const next = [...rows];
+  next[lastIdx] = { ...next[lastIdx], klTonCuoiKip: parentKL - othersSum, _manualKL: true };
+  return next;
+};
+
 const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -622,6 +664,17 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
   useEffect(() => { initData(); }, [initData]);
   useEffect(() => { loadDsLoCao(); }, [loadDsLoCao]);
 
+  // Tải danh mục NVL theo lò cao ngay khi biết scope — trước đây chỉ tải khi mở modal
+  // "Kiểm tra Silo" hoặc lúc bấm "Tách liệu", nên nếu người dùng tách liệu trước khi
+  // scopeNvlOptions kịp tải xong, Select hiển thị ID thô (VD "4") thay vì tên NVL vì
+  // không tìm được Option khớp value để lấy label.
+  useEffect(() => {
+    if (!scope) return;
+    lgTSLNvlApi.getList({ idLoCao: Number(scope) })
+      .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
+      .catch(() => {});
+  }, [scope]);
+
   // Inject options lò cao động vào config headerFields (thay thế options tĩnh từ JSON)
   const headerFields = useMemo(() => {
     return config.headerFields.map((field: any) => {
@@ -641,15 +694,15 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       tinhTrang: 0,
       ghiChu: "",
     }));
-    // Bỏ qua hàng parent (tham chiếu tổng); chỉ lưu hàng con và hàng bình thường
-    const processedTable1 = tableData
-      .filter((row) => !row._isSplitParent)
-      .map((row, index) => {
+    // Bỏ qua hàng parent (tham chiếu tổng); chỉ lưu hàng con và hàng bình thường.
+    // renumberStt đánh 1 số STT cho mỗi Silo/nhóm tách liệu (không đếm lặp dòng con)
+    // để giá trị lưu xuống khớp với những gì đang hiển thị trên bảng.
+    const processedTable1 = renumberStt(tableData.filter((row) => !row._isSplitParent))
+      .map((row) => {
         const r = { ...row };
         delete r._isNewRow;
         delete r.key;
         delete r._isSplitParent;
-        r.stt = index + 1;
         return r;
       });
     const dateFields = config.headerFields.filter((f: any) => f.type === "date").map((f: any) => f.key);
@@ -752,14 +805,8 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
     };
     const next = [...tableData];
     next.splice(idx, 1, parent, { ...childBase, key: `${gid}_0` }, { ...childBase, key: `${gid}_1` });
-    setTableData(next.map((r, i) => ({ ...r, stt: i + 1 })));
-    // Tự động tải danh sách NVL nếu chưa có (để dropdown tách liệu có thể chọn)
-    if (scope && nvlOptions.filter((n) => n.idLoCao === Number(scope)).length === 0) {
-      lgTSLNvlApi.getList({ idLoCao: Number(scope) })
-        .then((res) => setNvlOptions(Array.isArray(res) ? res : []))
-        .catch(() => { });
-    }
-  }, [tableData, scope, nvlOptions]);
+    setTableData(renumberStt(next));
+  }, [tableData]);
 
   // Gộp lại nhóm tách liệu: xóa tất cả hàng con, giữ lại hàng parent và làm nó thành dòng bình thường
   const handleMergeGroup = useCallback((gid: string) => {
@@ -774,13 +821,18 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
         next.push(r);
       }
     });
-    setTableData(next.map((r, i) => ({ ...r, stt: i + 1 })));
+    setTableData(renumberStt(next));
   }, [tableData]);
 
-  // Thêm một hàng con mới vào cuối nhóm tách liệu
+  // Thêm một hàng con mới vào nhóm tách liệu — chèn TRƯỚC dòng con cuối cùng để dòng
+  // cuối luôn giữ vai trò "nhận phần còn lại" và được tính lại ngay sau khi chèn.
   const handleAddChildToGroup = useCallback((gid: string) => {
     const parent = tableData.find((r) => r._splitGroupId === gid && r._isSplitParent)!;
-    const lastIdx = tableData.reduce((last, r, i) => (r._splitGroupId === gid ? i : last), -1);
+    const childIdxs = tableData.reduce<number[]>((acc, r, i) => {
+      if (r._splitGroupId === gid && !r._isSplitParent) acc.push(i);
+      return acc;
+    }, []);
+    const lastChildIdx = childIdxs[childIdxs.length - 1];
     const newChild: TableRow = {
       key: `${gid}_${Date.now()}`,
       idSiLo: parent.idSiLo, idMapping: parent.idMapping, silo: parent.silo, thuTu: parent.thuTu,
@@ -788,8 +840,8 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       loaiNguyenNhienLieu: "", idNVL: null, klTonCuoiKip: null, ghiChu: "",
     };
     const next = [...tableData];
-    next.splice(lastIdx + 1, 0, newChild);
-    setTableData(next.map((r, i) => ({ ...r, stt: i + 1 })));
+    next.splice(lastChildIdx, 0, newChild);
+    setTableData(renumberStt(recalcLastChildKL(next, gid)));
   }, [tableData]);
 
   // Xóa một hàng con khỏi nhóm tách liệu (nhóm phải còn ít nhất 1 hàng con)
@@ -802,14 +854,17 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
       message.warning("Dùng 'Gộp lại' để hủy tách liệu.");
       return;
     }
-    setTableData((prev) => prev.filter((_, i) => i !== idx).map((r, i) => ({ ...r, stt: i + 1 })));
+    setTableData((prev) => {
+      const filtered = prev.filter((_, i) => i !== idx);
+      return renumberStt(recalcLastChildKL(filtered, gid));
+    });
   }, [tableData]);
 
   // Xóa một dòng bình thường (không phải dòng tách liệu); không cho xóa nếu chỉ còn 1 dòng
   const handleDeleteNormalRow = useCallback((rowKey: string) => {
     setTableData((prev) => {
       if (prev.length <= 1) return prev;
-      return prev.filter((r) => r.key !== rowKey).map((r, i) => ({ ...r, stt: i + 1 }));
+      return renumberStt(prev.filter((r) => r.key !== rowKey));
     });
   }, []);
 
@@ -818,16 +873,35 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
   // (changeOnBlur mặc định true) kể cả khi người dùng chỉ bấm vào ô rồi bấm ra mà không
   // gõ gì, nên so sánh giá trị cũ/mới ở đây để tránh gắn nhầm cờ manual.
   const handleSiloCellChange = useCallback((rowKey: string, field: string, value: any) => {
-    setTableData((prev) => prev.map((r) => {
-      if (r.key !== rowKey) return r;
-      if (field === "klTonCuoiKip") {
-        const oldVal = r[field] === "" || r[field] == null ? null : Number(r[field]);
-        const newVal = value === "" || value == null ? null : Number(value);
-        if (oldVal === newVal) return { ...r, [field]: value };
-        return { ...r, [field]: value, _manualKL: true };
-      }
-      return { ...r, [field]: value };
-    }));
+    setTableData((prev) => {
+      const next = prev.map((r) => {
+        if (r.key !== rowKey) return r;
+        if (field === "klTonCuoiKip") {
+          const oldVal = r[field] === "" || r[field] == null ? null : Number(r[field]);
+          const newVal = value === "" || value == null ? null : Number(value);
+          if (oldVal === newVal) return { ...r, [field]: value };
+          return { ...r, [field]: value, _manualKL: true };
+        }
+        return { ...r, [field]: value };
+      });
+
+      // Nếu vừa sửa KL của 1 dòng con tách liệu (không phải dòng cuối), tự động
+      // tính lại dòng con cuối cùng = KL gốc - tổng các dòng con còn lại.
+      if (field !== "klTonCuoiKip") return next;
+      const editedIdx = next.findIndex((r) => r.key === rowKey);
+      const editedRow = next[editedIdx];
+      if (!editedRow?._splitGroupId || editedRow._isSplitParent) return next;
+
+      const gid = editedRow._splitGroupId;
+      const childIdxs = next.reduce<number[]>((acc, r, i) => {
+        if (r._splitGroupId === gid && !r._isSplitParent) acc.push(i);
+        return acc;
+      }, []);
+      const lastIdx = childIdxs[childIdxs.length - 1];
+      if (editedIdx === lastIdx) return next; // đang sửa trực tiếp dòng cuối, không auto-tính đè
+
+      return recalcLastChildKL(next, gid);
+    });
   }, []);
 
   // Cập nhật NVL được chọn cho hàng con tách liệu; đồng thời đồng bộ tên hiển thị
@@ -846,6 +920,14 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
+      {/* Nền cam của ô KL nhập tay cần !important để đè background mặc định của
+          input con bên trong InputNumber (inline style trên InputNumber không đè được);
+          scoped tại đây thay vì sửa file css dùng chung. */}
+      <style>{`
+        .kl-manual-input .ant-input-number-input {
+          background-color: #fff7e6 !important;
+        }
+      `}</style>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div style={{ flex: 1, textAlign: "center" }}>
           <Typography.Title level={3} style={{ marginBottom: 0 }}>{config.title}</Typography.Title>
@@ -1316,6 +1398,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
                   return (
                     <Tooltip title={row._manualKL ? "Đã chỉnh sửa thủ công" : undefined}>
                       <InputNumber
+                        className={row._manualKL ? "kl-manual-input" : undefined}
                         style={{
                           width: "100%",
                           ...(row._manualKL ? { backgroundColor: "#fff7e6", borderColor: "#fa8c16" } : {}),
@@ -1399,7 +1482,7 @@ const TaoPhieuTonSiLo = ({ useChiTietApi = false }: { useChiTietApi?: boolean })
             <Button
               type="dashed"
               style={{ marginTop: 8 }}
-              onClick={() => setTableData((prev) => [...prev, { key: `row-${Date.now()}`, stt: prev.length + 1 }])}
+              onClick={() => setTableData((prev) => renumberStt([...prev, { key: `row-${Date.now()}` }]))}
             >
               + Thêm dòng
             </Button>
