@@ -9,6 +9,7 @@ export interface NhomPhanBoDto {
   phuongThucPhanBo: number; // 1=tỷ trọng+dòng dư, 2=tỷ lệ nhập tay
   maVatTu: string | null;
   thuTu: number | null;
+  idLoCao: number; // nhóm chỉ áp dụng cho ĐÚNG 1 lò cao — dùng chung nhiều lò phải tạo nhiều nhóm riêng
 }
 
 export interface CreateNhomPhanBoDto {
@@ -17,6 +18,7 @@ export interface CreateNhomPhanBoDto {
   phuongThucPhanBo: number;
   maVatTu?: string | null;
   thuTu?: number | null;
+  idLoCao: number;
 }
 
 export interface UpdateNhomPhanBoDto extends CreateNhomPhanBoDto {}
@@ -40,8 +42,8 @@ export interface AddNvlNhomPhanBoDto {
 }
 
 export const nhomPhanBoApi = {
-  getList: (loaiPhanBo?: number): Promise<NhomPhanBoDto[]> =>
-    apiService.get("/api/LG_PhanBo/nhom/get-list", { params: { loaiPhanBo } }),
+  getList: (loaiPhanBo?: number, idLoCao?: number): Promise<NhomPhanBoDto[]> =>
+    apiService.get("/api/LG_PhanBo/nhom/get-list", { params: { loaiPhanBo, idLoCao } }),
 
   create: (dto: CreateNhomPhanBoDto): Promise<NhomPhanBoDto> =>
     apiService.post("/api/LG_PhanBo/nhom/create", dto),

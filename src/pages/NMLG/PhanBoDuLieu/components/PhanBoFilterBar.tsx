@@ -1,7 +1,7 @@
 import { Card, Col, DatePicker, Row, Select } from "antd";
 import type { Dayjs } from "dayjs";
 
-const LO_CAO_OPTIONS = [1, 2, 3, 4, 5, 6].map((n) => ({
+export const LO_CAO_OPTIONS = [1, 2, 3, 4, 5, 6].map((n) => ({
   label: `Lò cao ${n}`,
   value: n,
 }));
