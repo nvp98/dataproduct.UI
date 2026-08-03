@@ -13,6 +13,7 @@ import {
   type NvlNhomPhanBoDto,
 } from "../../../../services/PhanBoApi";
 import { lgnlNvlApi, type LGNLNvlDto } from "../../../../services/LGNLApi";
+import { LO_CAO_OPTIONS } from "./PhanBoFilterBar";
 
 const { Title } = Typography;
 
@@ -64,14 +65,14 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
   const fetchNhom = useCallback(async () => {
     setLoadingNhom(true);
     try {
-      const res = await nhomPhanBoApi.getList(loaiPhanBo);
+      const res = await nhomPhanBoApi.getList(loaiPhanBo, idLoCao);
       setNhomList(Array.isArray(res) ? res : []);
     } catch {
       message.error("Lỗi khi tải danh sách nhóm phân bổ");
     } finally {
       setLoadingNhom(false);
     }
-  }, [loaiPhanBo]);
+  }, [loaiPhanBo, idLoCao]);
 
   useEffect(() => {
     fetchNhom();
@@ -88,7 +89,7 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
 
   const openCreate = () => {
     form.resetFields();
-    form.setFieldsValue({ loaiPhanBo, phuongThucPhanBo: 1 });
+    form.setFieldsValue({ loaiPhanBo, phuongThucPhanBo: 1, idLoCao });
     setEditingNhom(null);
     setModalOpen(true);
   };
@@ -100,6 +101,7 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
       phuongThucPhanBo: row.phuongThucPhanBo,
       maVatTu: row.maVatTu,
       thuTu: row.thuTu,
+      idLoCao: row.idLoCao,
     });
     setEditingNhom(row);
     setModalOpen(true);
@@ -282,6 +284,14 @@ export default function QuanLyNhomPhanBoTab({ ngay, ca, idLoCao }: QuanLyNhomPha
               options={LOAI_PHAN_BO_TABS.map((t) => ({ label: t.label, value: Number(t.key) }))}
               disabled={!!editingNhom}
             />
+          </Form.Item>
+          <Form.Item
+            name="idLoCao"
+            label="Lò cao áp dụng"
+            rules={[{ required: true, message: "Chọn lò cao" }]}
+            tooltip="Nhóm chỉ áp dụng cho đúng 1 lò cao. Nếu cần dùng chung cho nhiều lò, tạo nhiều nhóm riêng (cùng tên khác lò)."
+          >
+            <Select options={LO_CAO_OPTIONS} />
           </Form.Item>
           <Form.Item name="phuongThucPhanBo" label="Phương thức phân bổ" rules={[{ required: true }]}>
             <Select options={PHUONG_THUC_OPTIONS} />
