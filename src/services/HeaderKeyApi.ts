@@ -39,7 +39,7 @@ type HeaderKeySearchParams = {
   ToDate?: string; // ISO string
   IdNhom?: number;
   chuaMappingNM?: boolean;
-  SortBy?: string; // thuTu_TK_BOF | thuTu_TK_LFRH | thuTu_Excel_BOF | thuTu_Excel_LFRH
+  SortBy?: string; // thuTu_TK_BOF | thuTu_TK_LF | thuTu_TK_RH | thuTu_Excel_BOF | thuTu_Excel_LF | thuTu_Excel_RH
   SortOrder?: string; // ascend | descend
   page?: number;
   pageSize?: number;

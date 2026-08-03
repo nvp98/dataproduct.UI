@@ -480,6 +480,10 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
 
   // Hàm khởi tạo dữ liệu ban đầu
   const initData = useCallback(async () => {
+    // Phiếu đã Chốt: không auto-load lại từ NM (xem finally bên dưới) — chỉ dùng snapshot
+    // table1DynamicColumns/table1 đã lưu, tránh "mất" cột phụ liệu nếu sau này ai đó đổi
+    // config Excel/ThongKe của Header_Key (phiếu Chốt phải là dữ liệu lịch sử cố định).
+    let loadedTinhTrang = TrangThaiPhieuConst.DangLuu;
     try {
       setLoading(true);
       // Gọi API lấy phiếu theo số phiếu
@@ -519,6 +523,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
           
           // Chuyển chuỗi -> dayjs
           const tinhTrang = (res as any)?.tinhTrang ?? 0;
+          loadedTinhTrang = tinhTrang;
           const formValues = {
             ...data,
             ...signatureFields, // Merge signature fields vào formValues (override nếu jsonData cũng có)
@@ -627,8 +632,11 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
       message.error("Không thể tải dữ liệu ban đầu!");
     } finally {
       setLoading(false);
-      // Khi vào component, luôn tự động load dữ liệu từ NM (nếu đủ filter)
-      await loadFromNM();
+      // Khi vào component, luôn tự động load dữ liệu từ NM (nếu đủ filter) — TRỪ phiếu đã Chốt
+      // (dùng snapshot đã restore ở trên, không load lại theo config hiện tại của Header_Key).
+      if (loadedTinhTrang !== TrangThaiPhieuConst.DaChot) {
+        await loadFromNM();
+      }
     }
   }, [form, idphieu, loadFromNM, config.signatures, renderDynamicColumnTitle, getUserInfo, safeGetDetail]);
 
