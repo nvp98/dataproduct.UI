@@ -798,7 +798,6 @@ const TaoPhieuBienBanSanLuongKCS = () => {
               </Button>
             )}
             {idphieu &&
-              currentTinhTrang !== TrangThaiPhieuConst.HoanThanh &&
               currentTinhTrang !== TrangThaiPhieuConst.DaChot &&
               getThongTinUser().iD_PhanXuong === phieuInfo.nguoiTaoId && (
                 <Button
