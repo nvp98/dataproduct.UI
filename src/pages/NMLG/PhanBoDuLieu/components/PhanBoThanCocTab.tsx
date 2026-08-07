@@ -87,6 +87,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
   const [loading, setLoading] = useState(false);
   const [tinhLoading, setTinhLoading] = useState(false);
   const [chotLoading, setChotLoading] = useState(false);
+  const [huyChotLoading, setHuyChotLoading] = useState(false);
   const [savingRowKey, setSavingRowKey] = useState<string | null>(null);
   const [savingMaCongDoanKey, setSavingMaCongDoanKey] = useState<string | null>(null);
 
@@ -149,6 +150,24 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
       message.error(err?.message || "Chốt dữ liệu thất bại.");
     } finally {
       setChotLoading(false);
+    }
+  };
+
+  const handleHuyChot = async () => {
+    const idNguoiXacNhan = getCurrentUserId();
+    if (!idNguoiXacNhan) {
+      message.error("Không xác định được người dùng hiện tại.");
+      return;
+    }
+    setHuyChotLoading(true);
+    try {
+      await phanBoApi.huyChot({ ngay: ngay.format("YYYY-MM-DD"), idNguoiXacNhan });
+      await fetchKetQua();
+      message.success("Đã hủy chốt dữ liệu.");
+    } catch (err: any) {
+      message.error(err?.message || "Hủy chốt dữ liệu thất bại.");
+    } finally {
+      setHuyChotLoading(false);
     }
   };
 
@@ -334,6 +353,17 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
             {daChot ? "Đã chốt" : "Chốt dữ liệu"}
           </Button>
         </Popconfirm>
+        {daChot && (
+          <Popconfirm
+            title="Hủy chốt dữ liệu phân bổ?"
+            description="Sau khi hủy chốt sẽ có thể sửa/tính lại cho ngày này (cả 3 loại phân bổ)."
+            okText="Hủy chốt"
+            cancelText="Đóng"
+            onConfirm={handleHuyChot}
+          >
+            <Button loading={huyChotLoading}>Hủy chốt</Button>
+          </Popconfirm>
+        )}
       </Space>
 
       <Table
