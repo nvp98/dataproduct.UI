@@ -208,6 +208,9 @@ export const phanBoApi = {
   chot: (dto: { ngay: string; idNguoiXacNhan: number }): Promise<{ message: string }> =>
     apiService.post("/api/LG_PhanBo/chot", dto),
 
+  huyChot: (dto: { ngay: string; idNguoiXacNhan: number }): Promise<{ message: string }> =>
+    apiService.post("/api/LG_PhanBo/huy-chot", dto),
+
   baoCao: (params: { tuNgay: string; denNgay: string; idLoCao?: number; loaiPhanBo?: number }): Promise<KetQuaPhanBoDto[]> =>
     apiService.get("/api/LG_PhanBo/bao-cao", { params }),
 
