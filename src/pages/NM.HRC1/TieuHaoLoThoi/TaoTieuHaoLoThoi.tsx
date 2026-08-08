@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import HRC1_BB_TieuHao_BOF from "../../../utils/BM_config/HRC1_BB_TieuHao_BOF.json";
 import { Button, Card, Form, Input, Typography, message } from "antd";
-import { FilterOutlined, EyeOutlined, EyeInvisibleOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
+import { FilterOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import CustomFormItem from "../../../components/CustomFormItem";
@@ -19,6 +19,7 @@ import {
 } from "../../../services/HRC1TableService";
 import { CommonAutocomplete, type AutocompleteSearchParams } from "../../../components/CommonAutocomplete";
 import { Hrc1PhuLieuNmServiceApi, type Hrc1PhuLieuNm } from "../../../services/Hrc1PhuLieuNmServiceApi";
+import { hrc1MeThoiMacThepServiceApi } from "../../../services/Hrc1MeThoiMacThepServiceApi";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 
@@ -39,7 +40,6 @@ const TaoTieuHaoLoThoi = () => {
   const [adjustColumnMetas, setAdjustColumnMetas] = useState<AdjustColumnMeta[]>([]);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
-  const [showAdjustColumns, setShowAdjustColumns] = useState(false);
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
     nguoiTaoId?: number | null;
@@ -80,7 +80,6 @@ const TaoTieuHaoLoThoi = () => {
         isManuallyAdded: true,
       },
     ]);
-    setShowAdjustColumns(true);
   }, []);
 
   const handleRemoveAdjustColumn = useCallback((dataIndex: string) => {
@@ -229,12 +228,14 @@ const TaoTieuHaoLoThoi = () => {
                 placeholder="Chọn hoặc tạo phụ liệu..."
                 style={{ minWidth: 120 }}
                 allowClear={false}
+                disabled={isFormLocked}
               />
               <Button
                 type="text"
                 size="small"
                 icon={<CloseOutlined />}
                 onClick={() => handleRemoveAdjustColumn(meta.dataIndex)}
+                disabled={isFormLocked}
                 style={{ position: "absolute", top: -6, right: -6, padding: 0, width: 18, height: 18 }}
               />
             </div>
@@ -245,9 +246,10 @@ const TaoTieuHaoLoThoi = () => {
           variant: meta.isManuallyAdded ? undefined : ("adjust" as const),
           metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
           headerKeyId: meta.headerKeyId ?? null,
+          sum: true,
         };
       });
-  }, [adjustColumnMetas, usedPhuLieuIds, handleColumnHeaderChange, handleRemoveAdjustColumn]);
+  }, [adjustColumnMetas, usedPhuLieuIds, handleColumnHeaderChange, handleRemoveAdjustColumn, isFormLocked]);
 
   const fetchPhuLieus = useCallback(async (paramsIn: { NgaySX?: string | null; Ca?: number | null; Scope?: number | null }) => {
     try {
@@ -334,7 +336,6 @@ const TaoTieuHaoLoThoi = () => {
           });
           return hrc1TableService.dedupeAdjustMetas(merged);
         });
-        setShowAdjustColumns(true);
       } else {
         setAdjustColumnMetas((prev) => (prev ?? []).filter(keepManual));
       }
@@ -346,10 +347,11 @@ const TaoTieuHaoLoThoi = () => {
           "meThoi",
           editableFields
         );
-        return hrc1TableService.applyManualOverrides(baseMerged, prev, {
+        const overridden = hrc1TableService.applyManualOverrides(baseMerged, prev, {
           rowIdField: "id",
           fallbackKeyField: "meThoi",
         });
+        return hrc1TableService.sortRowsByMeThoi(overridden);
       });
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);
@@ -377,12 +379,11 @@ const TaoTieuHaoLoThoi = () => {
     return hrc1TableService.buildColumnsWithAdjust({
       baseColumns,
       slotColumns: { BOF_PhuGia: effectivePhuGiaColumns },
-      showAdjustColumns,
       manualAdjustColumns: adjustChildColumns,
       phanBoColumns: phanBoChildColumns,
       generateAdjustColumnsFromBase: false,
     });
-  }, [config.layout, effectivePhuGiaColumns, showAdjustColumns, adjustChildColumns, phanBoChildColumns]);
+  }, [config.layout, effectivePhuGiaColumns, adjustChildColumns, phanBoChildColumns]);
 
   const loadFromNM = useCallback(async () => {
     if (!ngaySX || !ca || !scope) return;
@@ -401,6 +402,13 @@ const TaoTieuHaoLoThoi = () => {
     const stored = localStorage.getItem("userinfo");
     return stored ? JSON.parse(stored) : {};
   }, []);
+
+  // scope ở BOF chính là Lò thổi (1-5) — truyền thẳng làm IdLoThoi để search-me-thoi chỉ tìm đúng lò
+  // đang chọn trên phiếu, không lẫn mẻ của lò khác.
+  const searchMeThoiForScope = useCallback(
+    (params: AutocompleteSearchParams) => hrc1MeThoiMacThepServiceApi.searchMeThoi(params, scope),
+    [scope]
+  );
 
   const initData = useCallback(async () => {
     try {
@@ -464,7 +472,7 @@ const TaoTieuHaoLoThoi = () => {
               ...row,
               IsNM: row.IsNM !== undefined ? row.IsNM : true,
             }));
-            setTableData(processedTable1);
+            setTableData(hrc1TableService.sortRowsByMeThoi(processedTable1));
           } else {
             setTableData([]);
           }
@@ -672,19 +680,14 @@ const TaoTieuHaoLoThoi = () => {
             ))}
           </div>
 
-          <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8 }}>
+          <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
             <Button type="primary" icon={<FilterOutlined />} onClick={handleFilter} disabled={isFormLocked} loading={loading}>
               Làm mới dữ liệu
-            </Button>
-            <Button
-              icon={showAdjustColumns ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-              onClick={() => setShowAdjustColumns(!showAdjustColumns)}
-            >
-              {showAdjustColumns ? "Ẩn" : "Hiện"} điều chỉnh số liệu
             </Button>
             <Button icon={<PlusOutlined />} onClick={addAdjustColumn} disabled={isFormLocked}>
               Thêm cột điều chỉnh
             </Button>
+            {actionButtons}
           </div>
 
           {config.layout.map((layout, idx) => (
@@ -711,6 +714,10 @@ const TaoTieuHaoLoThoi = () => {
                     stickyFirstColumn
                     stickyColumnKeys={["meThoi", "macThep"]}
                     disableRowHover
+                    sortByMeThoi
+                    allowEditMacThepOnNMRow
+                    meThoiSearchApi={searchMeThoiForScope}
+                    macThepSearchApi={hrc1MeThoiMacThepServiceApi.searchMacThep}
                     scrollX="1500px"
                     lyDoLabel={(layout as any).lyDo?.label}
                     lyDoValue={table1LyDo}
@@ -798,9 +805,6 @@ const TaoTieuHaoLoThoi = () => {
               })}
           </div>
         </Form>
-        <div style={{ textAlign: "center", marginTop: 32, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-          {actionButtons}
-        </div>
       </Card>
     </>
   );

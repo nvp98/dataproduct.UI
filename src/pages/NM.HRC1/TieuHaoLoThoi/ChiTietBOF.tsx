@@ -15,9 +15,9 @@ import { PhieuApi } from "../../../services/PhieuApi";
 import HRC1_BB_TieuHao_BOF from "../../../utils/BM_config/HRC1_BB_TieuHao_BOF.json";
 import { getBmQuyenUiFlags } from "../../../utils/helpers/checkAdminRole";
 import { phieuActionService } from "../../../services/PhieuActionService";
-import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
+import { DETAIL_HIDDEN_BUTTON_KEYS, PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
 import { hrc1PhuLieuService } from "../../../services/HRC1PhuLieuService";
-import HRC1ExportBienBanButtons from "../../../components/HRC1ExportBienBanButtons";
+import logoHP from "../../../assets/images/LogoPDF.png";
 
 const { Title, Text } = Typography;
 
@@ -129,7 +129,7 @@ type NmColumnsPack = {
 const ChiTietTieuHaoLoThoi_BOF = () => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } = usePhieuNavigation(
     "phieu_hrc1_bof_id",
-    "/viecdentoi/hrc1_tieuhaolothoi_bof"
+    "/viecdentoi/hrc1_tieuhaolothoi"
   );
 
   const config = HRC1_BB_TieuHao_BOF;
@@ -164,7 +164,7 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
       const ca = fd.ca;
       const scope = fd.scope;
       if (!ngay || ca == null || scope == null) {
-        setTable1DisplayRows(savedWithAdjust);
+        setTable1DisplayRows(hrc1TableService.sortRowsByMeThoi(savedWithAdjust));
         setNmColumnsPack(null);
         return;
       }
@@ -181,7 +181,7 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
           (result.tableData.length === 1 && result.tableData[0]?.key === "row-empty");
 
         if (isEmpty) {
-          setTable1DisplayRows(savedWithAdjust);
+          setTable1DisplayRows(hrc1TableService.sortRowsByMeThoi(savedWithAdjust));
           setNmColumnsPack(null);
           return;
         }
@@ -191,7 +191,9 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
           savedWithAdjust,
           { rowIdField: "id", fallbackKeyField: "meThoi" }
         );
-        const finalRows = hrc1TableService.mergeServerRows(rowsWithOverrides, savedWithAdjust, "meThoi", editableFields);
+        const finalRows = hrc1TableService.sortRowsByMeThoi(
+          hrc1TableService.mergeServerRows(rowsWithOverrides, savedWithAdjust, "meThoi", editableFields)
+        );
 
         const phanBoMetas: AdjustColumnMeta[] = (result.phanBoColumns ?? []).map((col: any) => ({
           key: col.dataIndex || `phanBo_${col.headerKeyId}`,
@@ -226,7 +228,7 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
         });
       } catch (nmErr) {
         console.error("Lỗi tải/merge dữ liệu NM (filter):", nmErr);
-        setTable1DisplayRows(savedWithAdjust);
+        setTable1DisplayRows(hrc1TableService.sortRowsByMeThoi(savedWithAdjust));
         setNmColumnsPack(null);
       }
     } catch (error) {
@@ -296,6 +298,7 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
         variant: "adjust" as const,
         metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
         headerKeyId: meta.headerKeyId ?? null,
+        sum: true,
       }));
 
     const tableLayout = config.layout.find((l: any) => l.sectionType === "table" && l.key === "table1");
@@ -467,40 +470,30 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
       },
     });
 
-    const filteredButtons = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
+    // ExportExcel nằm trong DETAIL_HIDDEN_BUTTON_KEYS (dùng chung cho mọi trang Chi tiết), nhưng
+    // HRC1_BB_TieuHao_BOF/LF đã có exporter riêng (HRC1TieuHaoExcelExporter/HRC1TieuHaoPdfExporter,
+    // trùng chính xác template biên bản trước đây dùng HRC1ExportBienBanButtons) nên không cần ẩn ở đây.
+    const filteredButtons = buttons.filter(
+      (btn) => btn.key === PhieuActionButtonKeys.ExportExcel || !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key)
+    );
     if (filteredButtons.length === 0) return null;
     return phieuActionService.renderActionButtons(filteredButtons, idphieu || "");
   }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
 
   return (
     <Card bordered style={{ padding: 24, background: "#fff" }} loading={loading}>
-      {idphieu && (
-        <HRC1ExportBienBanButtons
-          templateCode={config.code}
-          bieuMau={config.loaiBm}
-          idPhieu={idphieu}
-          soPhieu={data?.soPhieu}
-          ngaySX={formData?.NgaySX}
-          ca={formData?.ca ?? null}
-          scope={formData?.scope ?? null}
-          containerStyle={{ marginBottom: 8 }}
-        />
-      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <img src="https://report.hoaphatdungquat.vn/img/logoHP.png" alt="logo" style={{ height: "auto", width: 150 }} />
-          {config.headerInfo && (
-            <>
-              <Typography.Text strong>{config.headerInfo.subCompany}</Typography.Text>
-              <Typography.Text strong>{config.headerInfo.company}</Typography.Text>
-            </>
-          )}
+          <img src={logoHP} alt="logo" style={{ height: "auto", width: 220 }} />
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-          <Button type="primary" icon={<ReloadOutlined />} onClick={() => void loadData()} loading={loading}>
-            Làm mới
-          </Button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <Button type="primary" icon={<ReloadOutlined />} onClick={() => void loadData()} loading={loading}>
+              Làm mới
+            </Button>
+            {actionButtons}
+          </div>
           {config.isoInfo && (
             <div style={{ fontSize: 13, textAlign: "right", lineHeight: "20px" }}>
               <div><b>{config.isoInfo.code}</b></div>
@@ -590,10 +583,6 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
           );
         })}
       </Row>
-
-      <div style={{ textAlign: "center", marginTop: 32, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-        {actionButtons}
-      </div>
     </Card>
   );
 };

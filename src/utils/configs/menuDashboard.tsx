@@ -60,12 +60,12 @@ export const MenuDataDashboard = [
       },
       {
         code: "hrc1_tieuhaolothoi",
-        title: "BM.16/QT.05.10 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI BOF",
+        title: "BM.07/QT.05.10 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI BOF",
         maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
       },
       {
         code: "hrc1_tieuhaotinhluyenlf",
-        title: "BM.14/QT.05.15 BIÊN BẢN TIÊU HAO NẤU LUYỆN TINH LUYỆN LF",
+        title: "BM.14/QT.05.10 BIÊN BẢN TIÊU HAO NẤU LUYỆN TINH LUYỆN LF",
         maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
       },
     ],

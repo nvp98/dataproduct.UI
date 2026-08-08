@@ -69,6 +69,7 @@ export interface NXTDetailDto_HRC1 {
   TuongQuanCuoiCa: string;
   TongThucTe: number;
   LuongSuDungKiemKe?: number | null;
+  ThuTu?: number | null; // Thứ tự hiển thị dòng trong bảng (theo Scope), do người dùng sắp xếp trên UI
 }
 
 /**

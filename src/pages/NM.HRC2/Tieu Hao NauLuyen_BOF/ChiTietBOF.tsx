@@ -28,6 +28,7 @@ import { phieuActionService } from "../../../services/PhieuActionService";
 import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
 import { hrc2PhuLieuService } from "../../../services/HRC2PhuLieuService";
 import HRC2ExportBienBanButtons from "../../../components/HRC2ExportBienBanButtons";
+import logoHP from "../../../assets/images/LogoPDF.png";
 
 const { Title, Text } = Typography;
 
@@ -626,21 +627,7 @@ const ChiTietTieuHaoNauLuyen_BOF = () => {
         >
           {/* Logo + tên công ty */}
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <img
-              src="https://report.hoaphatdungquat.vn/img/logoHP.png"
-              alt="logo"
-              style={{ height: "auto", width: 150 }}
-            />
-            {config.headerInfo && (
-              <>
-                <Typography.Text strong>
-                  {config.headerInfo.subCompany}
-                </Typography.Text>
-                <Typography.Text strong>
-                  {config.headerInfo.company}
-                </Typography.Text>
-              </>
-            )}
+            <img src={logoHP} alt="logo" style={{ height: "auto", width: 220 }} />
           </div>
 
           {/* Tiêu đề trung tâm */}

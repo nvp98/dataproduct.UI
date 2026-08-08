@@ -1,7 +1,7 @@
 import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Space, Switch, Table, Tag, message } from "antd";
 import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
-import type { ColumnType } from "antd/es/table";
+import type { ColumnsType } from "antd/es/table";
 import { Hrc1PhuLieuNmServiceApi,
   type Hrc1PhuLieuNm,
   type Hrc1PhuLieuNmPayload } from "../../../services/Hrc1PhuLieuNmServiceApi";
@@ -55,7 +55,11 @@ const PhuLieuHRC1 = () => {
     setEditingRecord(record);
     modalForm.setFieldsValue({
       tenPhuLieu: record.tenPhuLieu,
-      thuTu: record.thuTu ?? null,
+      thuTu_TK_BOF: record.thuTu_TK_BOF ?? null,
+      thuTu_TK_LF: record.thuTu_TK_LF ?? null,
+      thuTu_Excel_BOF: record.thuTu_Excel_BOF ?? null,
+      thuTu_Excel_LF: record.thuTu_Excel_LF ?? null,
+      maVatTuChiPhi: record.maVatTuChiPhi ?? undefined,
     });
     setModalVisible(true);
   };
@@ -71,7 +75,11 @@ const PhuLieuHRC1 = () => {
       const values = await modalForm.validateFields();
       const payload: Hrc1PhuLieuNmPayload = {
         tenPhuLieu: values.tenPhuLieu.trim(),
-        thuTu: values.thuTu ?? null,
+        thuTu_TK_BOF: values.thuTu_TK_BOF ?? null,
+        thuTu_TK_LF: values.thuTu_TK_LF ?? null,
+        thuTu_Excel_BOF: values.thuTu_Excel_BOF ?? null,
+        thuTu_Excel_LF: values.thuTu_Excel_LF ?? null,
+        maVatTuChiPhi: values.maVatTuChiPhi?.trim() || null,
       };
       setModalLoading(true);
       if (editingRecord) {
@@ -83,9 +91,9 @@ const PhuLieuHRC1 = () => {
       }
       handleModalCancel();
       fetchData();
-    } catch (error: unknown) {
+    } catch (error: any) {
       if (typeof error === "object" && error !== null && "errorFields" in error) return;
-      message.error(error instanceof Error ? error.message : "Không thể lưu phụ liệu");
+      message.error(error.message ? error.message : "Không thể lưu phụ liệu");
     } finally {
       setModalLoading(false);
     }
@@ -136,17 +144,9 @@ const PhuLieuHRC1 = () => {
     }
   };
 
-  const columns = useMemo<ColumnType<Hrc1PhuLieuNm>[]>(
+  const columns = useMemo<ColumnsType<Hrc1PhuLieuNm>>(
     () => [
-      {
-        title: "Thứ tự",
-        dataIndex: "thuTu",
-        key: "thuTu",
-        width: 90,
-        align: "center",
-        sorter: (a, b) => (a.thuTu ?? 0) - (b.thuTu ?? 0),
-        render: (v?: number | null) => v ?? "-",
-      },
+      
       {
         title: "Tên phụ liệu",
         dataIndex: "tenPhuLieu",
@@ -159,6 +159,13 @@ const PhuLieuHRC1 = () => {
         key: "tenPhuLieuNM",
         width: 160,
         render: (v?: string | null) => (v ? <Tag color="blue">{v}</Tag> : "-"),
+      },
+      {
+        title: "Mã vật tư chi phí",
+        dataIndex: "maVatTuChiPhi",
+        key: "maVatTuChiPhi",
+        width: 160,
+        render: (v?: string | null) => (v ? <Tag color="purple">{v}</Tag> : "-"),
       },
       {
         title: "Nguồn",
@@ -199,6 +206,52 @@ const PhuLieuHRC1 = () => {
             unCheckedChildren="Không"
           />
         ),
+      },
+      {
+        title: "Thứ tự TK",
+        children: [
+          {
+            title: "BOF",
+            dataIndex: "thuTu_TK_BOF",
+            key: "thuTu_TK_BOF",
+            width: 70,
+            align: "center",
+            sorter: (a, b) => (a.thuTu_TK_BOF ?? 0) - (b.thuTu_TK_BOF ?? 0),
+            render: (v?: number | null) => v ?? "-",
+          },
+          {
+            title: "LF",
+            dataIndex: "thuTu_TK_LF",
+            key: "thuTu_TK_LF",
+            width: 70,
+            align: "center",
+            sorter: (a, b) => (a.thuTu_TK_LF ?? 0) - (b.thuTu_TK_LF ?? 0),
+            render: (v?: number | null) => v ?? "-",
+          },
+        ],
+      },
+      {
+        title: "Thứ tự Excel",
+        children: [
+          {
+            title: "BOF",
+            dataIndex: "thuTu_Excel_BOF",
+            key: "thuTu_Excel_BOF",
+            width: 70,
+            align: "center",
+            sorter: (a, b) => (a.thuTu_Excel_BOF ?? 0) - (b.thuTu_Excel_BOF ?? 0),
+            render: (v?: number | null) => v ?? "-",
+          },
+          {
+            title: "LF",
+            dataIndex: "thuTu_Excel_LF",
+            key: "thuTu_Excel_LF",
+            width: 70,
+            align: "center",
+            sorter: (a, b) => (a.thuTu_Excel_LF ?? 0) - (b.thuTu_Excel_LF ?? 0),
+            render: (v?: number | null) => v ?? "-",
+          },
+        ],
       },
       {
         title: "Thao tác",
@@ -291,8 +344,24 @@ const PhuLieuHRC1 = () => {
           >
             <Input placeholder="Nhập tên phụ liệu" />
           </Form.Item>
-          <Form.Item name="thuTu" label="Thứ tự hiển thị">
-            <InputNumber min={1} style={{ width: "100%" }} placeholder="Số thứ tự hiển thị trên biểu mẫu" />
+          <div style={{ display: "flex", gap: 12 }}>
+            <Form.Item name="thuTu_TK_BOF" label="Thứ tự Thống kê - BOF" style={{ flex: 1 }}>
+              <InputNumber min={0} style={{ width: "100%" }} placeholder="Số thứ tự" />
+            </Form.Item>
+            <Form.Item name="thuTu_TK_LF" label="Thứ tự Thống kê - LF" style={{ flex: 1 }}>
+              <InputNumber min={0} style={{ width: "100%" }} placeholder="Số thứ tự" />
+            </Form.Item>
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <Form.Item name="thuTu_Excel_BOF" label="Thứ tự Excel - BOF" style={{ flex: 1 }}>
+              <InputNumber min={0} style={{ width: "100%" }} placeholder="Số thứ tự" />
+            </Form.Item>
+            <Form.Item name="thuTu_Excel_LF" label="Thứ tự Excel - LF" style={{ flex: 1 }}>
+              <InputNumber min={0} style={{ width: "100%" }} placeholder="Số thứ tự" />
+            </Form.Item>
+          </div>
+          <Form.Item name="maVatTuChiPhi" label="Mã vật tư chi phí">
+            <Input placeholder="Mã vật tư bên hệ thống chi phí (để trống nếu không feed)" />
           </Form.Item>
         </Form>
       </Modal>

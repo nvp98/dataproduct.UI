@@ -68,12 +68,17 @@ const Tao_STD_HRC1 = () => {
   // Helper build payload DTO cho API lưu riêng (STD_XUAT_NHAP_TON_HRC1s & STD_NXT_TOTAL_HRC1)
   const buildNxtUpsertPayload = useCallback(
     (formValues: any): STD_NXT_HRC1_UpsertDto => {
+      // Đếm thứ tự dòng theo từng Scope để BE lưu ThuTu, giữ đúng vị trí người dùng sắp xếp trên UI
+      const scopeOrderCounters = new Map<number, number>();
       const details = (table1Data || []).map((row) => {
         const khuVucKey = row.khuVuc ? String(row.khuVuc) : "";
         const scopeVal = khuVucKey && scopeMap.has(khuVucKey) ? scopeMap.get(khuVucKey) || 0 : 0;
+        const thuTu = scopeOrderCounters.get(scopeVal) ?? 0;
+        scopeOrderCounters.set(scopeVal, thuTu + 1);
         return {
           Scope: scopeVal,
           ViTri: row.viTri ?? 0,
+          ThuTu: thuTu,
           PhuLieuID: row.idPhuLieu ?? 0,
           TenNguyenLieu: row.nguyenNhienLieu ?? "",
           TonDauCa: row.tonDauCa ? Number(row.tonDauCa) : 0,
@@ -640,6 +645,11 @@ const Tao_STD_HRC1 = () => {
           message.warning("Vui lòng chọn Ngày và Ca trước khi không phân bổ.");
           return;
         }
+        const canPhanBo = await loadRelatedPhieuStatuses();
+        if (!canPhanBo) {
+          message.warning("Không thể thực hiện vì có ít nhất 1 phiếu tiêu hao BOF/LF chưa hoàn thành.");
+          return;
+        }
         const payload: STD_NXT_HRC1_KhongPhanBoDto = {
           NgaySX: ngay,
           Ca: Number(caVal),
@@ -672,7 +682,7 @@ const Tao_STD_HRC1 = () => {
         message.error(error?.message || "Không thể không phân bổ. Vui lòng thử lại.");
       }
     },
-    [form, idphieu, refreshSummaryAndStatus]
+    [form, idphieu, loadRelatedPhieuStatuses, refreshSummaryAndStatus]
   );
 
   const handleFilterData = useCallback(async () => {

@@ -33,9 +33,10 @@ const getVal = <T,>(item: Hrc1RawItem, ...keys: string[]): T | null => {
  * Service xử lý dữ liệu phụ liệu HRC1 Tinh luyện LF — khác hrc1PhuLieuService (BOF): LF không có
  * nguồn NM nào để đồng bộ, mọi mẻ + phụ liệu đều nhập tay 100%. Vì vậy:
  * - Không có khái niệm "auto vs manual" / baseline để so sánh (không __orig, không __IsManual).
- * - Cột phụ liệu luôn lấy TOÀN BỘ danh mục HRC1_PhuLieuNM đang active (dùng chung với BOF,
- *   không phân biệt theo BieuMau), không lọc theo "đã có dữ liệu" như BOF — vì người dùng cần
- *   cột trống để gõ vào ngay từ đầu.
+ * - Cột phụ liệu KHÔNG lọc theo "đã có dữ liệu" như BOF (LF chưa có nguồn NM để tự biết loại nào
+ *   "đã dùng"). Thay vào đó lấy đúng những phụ liệu đã được cấu hình `thuTu_Excel_LF` (khác NULL) trên
+ *   danh mục HRC1_PhuLieuNM (trang quản lý PhuLieuHRC1.tsx) — loại nào được cấu hình cột này mới hiện
+ *   ra để nhập tay, sắp theo đúng giá trị đó. Xem Models/Hrc1PhuLieuNm.cs.
  * - Mọi dòng trả về đều ép IsNM=false (bắt buộc để CustomTableHRC cho sửa meThoi/macThep).
  */
 export const hrc1LFPhuLieuService = {
@@ -58,10 +59,11 @@ export const hrc1LFPhuLieuService = {
 
     const rawData = (Array.isArray(res) ? res : res ? [res] : []) as Hrc1RawItem[];
 
-    const phuGiaColumns: HRCChildColumn[] = [...catalog]
+    const phuGiaColumns: HRCChildColumn[] = catalog
+      .filter((pl) => pl.thuTu_Excel_LF != null)
       .sort((a, b) => {
-        const ta = a.thuTu ?? Number.MAX_SAFE_INTEGER;
-        const tb = b.thuTu ?? Number.MAX_SAFE_INTEGER;
+        const ta = a.thuTu_Excel_LF ?? Number.MAX_SAFE_INTEGER;
+        const tb = b.thuTu_Excel_LF ?? Number.MAX_SAFE_INTEGER;
         if (ta !== tb) return ta - tb;
         return a.id - b.id;
       })

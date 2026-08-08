@@ -43,4 +43,10 @@ export const dlnmHRC1Api = {
       responseType: "blob",
       headers: { Accept: "application/pdf" },
     }),
+  refreshGangMetrics: (phieuIds: string[]) =>
+    apiService.post<{ updatedRows: number; skippedPhieu: number; message: string }>(
+      "/api/DLNMHRC1/refresh-gang-metrics",
+      { phieuIds }
+    ),
+  
 };

@@ -7,14 +7,24 @@ export interface Hrc1PhuLieuNm {
   dangSuDung: boolean;
   isNM: boolean;
   isUsedNXT?: boolean | null;
-  thuTu?: number | null;
+  // Thứ tự hiển thị cột phụ liệu trên trang Thống kê / khi xuất Excel — tách riêng BOF/LF
+  // vì 2 biểu mẫu dùng bộ phụ liệu khác nhau (BOF 13, LF theo cấu hình thuTu_Excel_LF).
+  thuTu_TK_BOF?: number | null;
+  thuTu_TK_LF?: number | null;
+  thuTu_Excel_BOF?: number | null;
+  thuTu_Excel_LF?: number | null;
+  maVatTuChiPhi?: string | null;
   ngayTao?: string;
   nguoiTao?: string | null;
 }
 
 export interface Hrc1PhuLieuNmPayload {
   tenPhuLieu: string;
-  thuTu?: number | null;
+  thuTu_TK_BOF?: number | null;
+  thuTu_TK_LF?: number | null;
+  thuTu_Excel_BOF?: number | null;
+  thuTu_Excel_LF?: number | null;
+  maVatTuChiPhi?: string | null;
 }
 
 export const Hrc1PhuLieuNmServiceApi = {

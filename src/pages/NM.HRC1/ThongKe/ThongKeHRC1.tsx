@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Tabs } from "antd";
 import ThongKeBBGNThepLong from "./ThongKeBBGNThepLong";
-import ThongKeTieuHaoBOF from "./ThongKeTieuHaoBOF";
+import ThongKeTieuHaoHRC1 from "./ThongKeTieuHaoHRC1";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { getAllowedScope } from "../../../utils/helpers/checkAdminRole";
 
@@ -35,7 +35,7 @@ const ThongKeHRC1 = () => {
   return (
     <div style={{ margin: 2 }}>
       <Tabs activeKey={mainTabKey} onChange={(k) => setMainTabKey(k as MainTabKey)} items={mainTabItems} />
-      {mainTabKey === "bbgn" ? <ThongKeBBGNThepLong /> : <ThongKeTieuHaoBOF />}
+      {mainTabKey === "bbgn" ? <ThongKeBBGNThepLong /> : <ThongKeTieuHaoHRC1 />}
     </div>
   );
 };

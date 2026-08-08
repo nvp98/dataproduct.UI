@@ -21,6 +21,7 @@ import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { PheDuyetApi } from "../../../services/PheDuyetApi";
 import GroupedTableSTD from "../../../components/GroupedTableSTD";
 import SummaryTableSTD from "../../../components/SummaryTableSTD";
+import logoHP from "../../../assets/images/LogoPDF.png";
 
 const { Title, Text } = Typography;
 
@@ -177,21 +178,7 @@ const ChiTiet_STD = () => {
         >
           {/* Logo + tên công ty */}
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <img
-              src="https://report.hoaphatdungquat.vn/img/logoHP.png"
-              alt="logo"
-              style={{ height: "auto", width: 150 }}
-            />
-            {config.headerInfo && (
-              <>
-                <Typography.Text strong>
-                  {config.headerInfo.subCompany}
-                </Typography.Text>
-                <Typography.Text strong>
-                  {config.headerInfo.company}
-                </Typography.Text>
-              </>
-            )}
+            <img src={logoHP} alt="logo" style={{ height: "auto", width: 220 }} />
           </div>
 
           {/* Tiêu đề trung tâm */}

@@ -4,3 +4,24 @@
 .hrc-table-no-hover .ant-table-tbody > tr > td.ant-table-cell-row-hover {
   background: transparent !important;
 }
+
+/* Khi dùng scroll.y + sticky (header) + Table.Summary fixed (dòng Tổng), antd render header/thân
+   cuộn/dòng Tổng thành 3 <table> tách biệt xếp chồng lên nhau thay vì 1 table liền — ranh giới giữa
+   chúng không tự "collapse" border như 1 bảng duy nhất. Khi cuộn, dòng dữ liệu có màu nền riêng (vd
+   vàng nhạt của dòng thêm tay IsNM=false, vàng của ô đã sửa tay) có thể lộ ra đúng khe hở 1px ở sát
+   viền trên (giáp header) hoặc viền dưới (giáp dòng Tổng). Dùng box-shadow đè thêm 1px thay vì trông
+   chờ border 2 bảng khớp pixel — header/dòng Tổng luôn phủ kín ranh giới bất kể đang cuộn tới đâu. */
+.hrc-table .ant-table-thead {
+  position: relative;
+  z-index: 3;
+}
+.hrc-table .ant-table-thead > tr > th {
+  box-shadow: 0 1px 0 0 #f0f0f0;
+}
+.hrc-table .ant-table-summary {
+  position: relative;
+  z-index: 3;
+}
+.hrc-table .ant-table-summary > tr > td {
+  box-shadow: 0 -1px 0 0 #f0f0f0;
+}

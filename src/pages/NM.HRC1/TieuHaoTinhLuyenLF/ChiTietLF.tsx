@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { HRCChildColumn, HRCParentColumn } from "../../../components/CustomTableHRC";
-import { hrc1TableService, type DynamicColumnMeta } from "../../../services/HRC1TableService";
+import {
+  hrc1TableService,
+  type AdjustColumnMeta,
+  type DynamicColumnMeta,
+} from "../../../services/HRC1TableService";
 import { hrc1LFPhuLieuService } from "../../../services/HRC1LFPhuLieuService";
 import { Button, Card, Descriptions, Table, Typography, Row, Col, message } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
@@ -12,12 +16,37 @@ import { PhieuApi } from "../../../services/PhieuApi";
 import HRC1_BB_TieuHao_LF from "../../../utils/BM_config/HRC1_BB_TieuHao_LF.json";
 import { getBmQuyenUiFlags } from "../../../utils/helpers/checkAdminRole";
 import { phieuActionService } from "../../../services/PhieuActionService";
-import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
+import { DETAIL_HIDDEN_BUTTON_KEYS, PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
+import logoHP from "../../../assets/images/LogoPDF.png";
 
 const { Title, Text } = Typography;
 
 function isTrungMeRow(record: any): boolean {
   return record?.isTrungMeThoi === true || record?.IsTrungMeThoi === true;
+}
+
+// Merge giá trị các cột "phụ liệu thêm tay" (table1DynamicColumns.adjust) vào rows đang hiển thị —
+// khớp theo rowId (id mẻ) trước, fallback theo meThoi. Cần thiết vì LF không có API live nào trả
+// ngược các cột "thêm tay" (khác BOF), snapshot đã lưu là nguồn duy nhất để biết cột nào tồn tại.
+function mergeAdjustColumnValuesIntoRows(
+  rows: any[],
+  adjustMetas: (DynamicColumnMeta & {
+    values?: Array<{ rowId?: number | null; meThoi?: string | null; value?: string | number | null }>;
+  })[] | undefined
+): any[] {
+  if (!rows?.length || !adjustMetas?.length) return rows || [];
+  const list = rows.map((r) => ({ ...r }));
+  adjustMetas.forEach((meta) => {
+    const values = meta.values;
+    if (!values?.length || !meta.dataIndex) return;
+    values.forEach((v) => {
+      const row = list.find(
+        (r) => (v.rowId != null && r.id === v.rowId) || (v.meThoi != null && r.meThoi === v.meThoi)
+      );
+      if (row) row[meta.dataIndex] = v.value;
+    });
+  });
+  return list;
 }
 
 const isSttDataIndex = (dataIndex: string) => dataIndex === "stt" || dataIndex === "STT";
@@ -48,12 +77,17 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
   // nếu chỉ đọc snapshot sẽ hiển thị nhầm mẻ đã bị hủy nhận (đã xóa khỏi Hrc1TieuHao) là còn tồn tại.
   const [table1DisplayRows, setTable1DisplayRows] = useState<any[]>([]);
   const [livePhuGiaColumns, setLivePhuGiaColumns] = useState<HRCChildColumn[] | null>(null);
+  // Cột "phụ liệu thêm tay" (Hrc1PhuLieuNm mới tạo, chưa được admin cấu hình ThuTu_Excel_LF) — LF
+  // không có API live nào trả lại các cột này (khác BOF), nên phải phục hồi từ snapshot đã lưu
+  // (jsonData.table1DynamicColumns.adjust) mỗi lần load, kể cả khi phần còn lại của bảng đọc live.
+  const [adjustMetas, setAdjustMetas] = useState<AdjustColumnMeta[]>([]);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setTable1DisplayRows([]);
       setLivePhuGiaColumns(null);
+      setAdjustMetas([]);
       if (!idphieu) return;
       const res = await safeGetDetail(() => PhieuApi.getDetail(idphieu));
       if (!res) return;
@@ -62,12 +96,23 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
 
       const fd = payload?.jsonData || {};
       const savedRows = fd.table1 || [];
+      const dynAdjust = fd.table1DynamicColumns?.adjust as
+        | (DynamicColumnMeta & {
+            values?: Array<{ rowId?: number | null; meThoi?: string | null; value?: string | number | null }>;
+          })[]
+        | undefined;
+      const adjustMetasFromSaved = dynAdjust?.length
+        ? hrc1TableService.dedupeAdjustMetas(hrc1TableService.adjustMetaFromDynamic(dynAdjust))
+        : [];
+      setAdjustMetas(adjustMetasFromSaved);
 
       const ngay = fd.NgaySX;
       const ca = fd.ca;
       const scope = fd.scope;
       if (!ngay || ca == null || scope == null) {
-        setTable1DisplayRows(savedRows);
+        setTable1DisplayRows(
+          hrc1TableService.sortRowsByMeThoi(mergeAdjustColumnValuesIntoRows(savedRows, dynAdjust))
+        );
         return;
       }
 
@@ -83,11 +128,15 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
         // đúng là rỗng, KHÔNG fallback về snapshot cũ (nếu không sẽ hiện lại mẻ đã xóa, đúng bug đã gặp).
         // Chỉ fallback về snapshot khi bản thân lệnh gọi live thất bại (lỗi mạng/API — xem catch bên dưới).
         const liveRows = (result.tableData || []).filter((r) => r?.key !== "row-empty");
-        setTable1DisplayRows(liveRows);
+        setTable1DisplayRows(
+          hrc1TableService.sortRowsByMeThoi(mergeAdjustColumnValuesIntoRows(liveRows, dynAdjust))
+        );
         setLivePhuGiaColumns(result.phuGiaColumns);
       } catch (liveErr) {
         console.error("Lỗi tải dữ liệu Tiêu hao LF hiện tại (live):", liveErr);
-        setTable1DisplayRows(savedRows);
+        setTable1DisplayRows(
+          hrc1TableService.sortRowsByMeThoi(mergeAdjustColumnValuesIntoRows(savedRows, dynAdjust))
+        );
       }
     } catch (error) {
       console.error("Lỗi tải dữ liệu phiếu:", error);
@@ -130,10 +179,23 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
       });
     const baseColumns: HRCParentColumn[] = normalizeAlign((tableLayout?.columns || []) as any[]);
 
+    const adjustChildColumns: HRCChildColumn[] = adjustMetas.map((meta) => ({
+      title: meta.headerKeyLabel ?? "Phụ liệu",
+      dataIndex: meta.dataIndex,
+      width: meta.width ?? 150,
+      format: "number-group",
+      editable: false,
+      variant: "adjust" as const,
+      metaLabel: meta.headerKeyLabel ?? "Phụ liệu",
+      headerKeyId: meta.headerKeyId ?? null,
+      sum: true,
+    }));
+
     const built = hrc1TableService.buildColumnsWithAdjust({
       baseColumns,
       slotColumns: { LF_PhuGia: phuGiaCols },
-      showAdjustColumns: false,
+      showAdjustColumns: adjustChildColumns.length > 0,
+      manualAdjustColumns: adjustChildColumns,
       generateAdjustColumnsFromBase: false,
     });
 
@@ -161,7 +223,7 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
       });
 
     return mapColumnsWithHighlight(built as any[]);
-  }, [formData?.table1DynamicColumns, livePhuGiaColumns, renderDynamicColumnTitle, config.layout]);
+  }, [formData?.table1DynamicColumns, livePhuGiaColumns, adjustMetas, renderDynamicColumnTitle, config.layout]);
 
   const leafColumns = useMemo(() => {
     const result: Array<{ dataIndex: string; sum?: boolean; align?: string }> = [];
@@ -240,7 +302,12 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
         message.error((error as any)?.message ?? "Không thể thực hiện thao tác");
       },
     });
-    const filteredButtons = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
+    // ExportExcel nằm trong DETAIL_HIDDEN_BUTTON_KEYS (dùng chung cho mọi trang Chi tiết), nhưng
+    // HRC1_BB_TieuHao_BOF/LF đã có exporter riêng (HRC1TieuHaoExcelExporter/HRC1TieuHaoPdfExporter)
+    // nên không cần ẩn ở đây — mirror ChiTietBOF.tsx.
+    const filteredButtons = buttons.filter(
+      (btn) => btn.key === PhieuActionButtonKeys.ExportExcel || !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key)
+    );
     if (filteredButtons.length === 0) return null;
     return phieuActionService.renderActionButtons(filteredButtons, idphieu || "");
   }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
@@ -249,19 +316,16 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
     <Card bordered style={{ padding: 24, background: "#fff" }} loading={loading}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <img src="https://report.hoaphatdungquat.vn/img/logoHP.png" alt="logo" style={{ height: "auto", width: 150 }} />
-          {config.headerInfo && (
-            <>
-              <Typography.Text strong>{config.headerInfo.subCompany}</Typography.Text>
-              <Typography.Text strong>{config.headerInfo.company}</Typography.Text>
-            </>
-          )}
+          <img src={logoHP} alt="logo" style={{ height: "auto", width: 220 }} />
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-          <Button type="primary" icon={<ReloadOutlined />} onClick={() => void loadData()} loading={loading}>
-            Làm mới
-          </Button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <Button type="primary" icon={<ReloadOutlined />} onClick={() => void loadData()} loading={loading}>
+              Làm mới
+            </Button>
+            {actionButtons}
+          </div>
           {config.isoInfo && (
             <div style={{ fontSize: 13, textAlign: "right", lineHeight: "20px" }}>
               <div><b>{config.isoInfo.code}</b></div>
@@ -351,10 +415,6 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
           );
         })}
       </Row>
-
-      <div style={{ textAlign: "center", marginTop: 32, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-        {actionButtons}
-      </div>
     </Card>
   );
 };

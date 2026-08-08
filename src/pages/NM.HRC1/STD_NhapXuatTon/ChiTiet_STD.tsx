@@ -21,6 +21,7 @@ import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { PheDuyetApi } from "../../../services/PheDuyetApi";
 import GroupedTableSTD_HRC1 from "../../../components/GroupedTableSTD_HRC1";
 import SummaryTableSTD_HRC1 from "../../../components/SummaryTableSTD_HRC1";
+import logoHP from "../../../assets/images/LogoPDF.png";
 
 const { Title, Text } = Typography;
 
@@ -165,21 +166,7 @@ const ChiTiet_STD_HRC1 = () => {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <img
-              src="https://report.hoaphatdungquat.vn/img/logoHP.png"
-              alt="logo"
-              style={{ height: "auto", width: 150 }}
-            />
-            {config.headerInfo && (
-              <>
-                <Typography.Text strong>
-                  {config.headerInfo.subCompany}
-                </Typography.Text>
-                <Typography.Text strong>
-                  {config.headerInfo.company}
-                </Typography.Text>
-              </>
-            )}
+            <img src={logoHP} alt="logo" style={{ height: "auto", width: 220 }} />
           </div>
 
           {config.isoInfo && (

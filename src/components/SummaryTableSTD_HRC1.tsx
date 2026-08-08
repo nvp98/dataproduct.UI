@@ -503,7 +503,7 @@ export default function SummaryTableSTD_HRC1({
               type="default"
               size="small"
               loading={isLoading === 'khong-phan-bo'}
-              disabled={!editable || isLocked || isPhanBo === true}
+              disabled={!editable || isLocked || isPhanBo === true || (canPhanBo === false && isPhanBo === null)}
               onClick={() => handleKhongPhanBoClick(record)}
             >
               Không PB

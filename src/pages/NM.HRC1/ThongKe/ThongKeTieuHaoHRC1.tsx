@@ -12,15 +12,22 @@ import {
   Select,
   Input,
   Button,
+  Tabs,
   Space,
 } from "antd";
 import dayjs from "dayjs";
 import { dlnmHRC1Api } from "../../../services/DLNMHRC1Api";
 import { formatNumberVN } from "../../../utils/formatters/numberFormat";
-import { Header_TieuHaoLoThoi_HRC1, type ThongKeHeaderColumn } from "../../../utils/configs/thongKeHRC1HeaderConfig";
+import {
+  Header_TieuHaoLoThoi_HRC1,
+  Header_TieuHaoTinhLuyen_LF_HRC1,
+  type ThongKeHeaderColumn,
+} from "../../../utils/configs/thongKeHRC1HeaderConfig";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
+
+type LoaiBmKey = "BOF" | "LF";
 
 type PlCellData = {
   klPhuGia: number | null;
@@ -42,7 +49,7 @@ const renderPlCell = (cellData: PlCellData | null | unknown) => {
   if (cellData === null || cellData === undefined) return "";
   const { klPhuGia, klPhuGia_Manual, klPhanBo, totalKLPhuGia, isManual } = cellData as PlCellData;
 
-  const effectiveValue = isManual ? (klPhuGia_Manual ?? 0) : klPhuGia;
+  const effectiveValue = isManual ? klPhuGia_Manual : klPhuGia;
   const displayValue = totalKLPhuGia ?? effectiveValue;
   const formatted = formatNumberVN(displayValue);
 
@@ -66,7 +73,12 @@ const renderPlCell = (cellData: PlCellData | null | unknown) => {
   return formatted;
 };
 
-const toAntdColumns = (cols: ThongKeHeaderColumn[]): any[] => {
+const SCOPE_LABEL_BY_BM: Record<LoaiBmKey, string> = {
+  BOF: "Lò thổi",
+  LF: "Tinh luyện",
+};
+
+const toAntdColumns = (cols: ThongKeHeaderColumn[], loaiBm: LoaiBmKey): any[] => {
   return cols.map((c) => {
     const mapped: any = {
       key: c.dataIndex,
@@ -85,10 +97,10 @@ const toAntdColumns = (cols: ThongKeHeaderColumn[]): any[] => {
     }
 
     if (c.dataIndex === "scope") {
-      mapped.render = (value: unknown) => (value != null ? `Lò thổi ${value}` : "");
+      mapped.render = (value: unknown) => (value != null ? `${SCOPE_LABEL_BY_BM[loaiBm]} ${value}` : "");
     }
 
-    if (c.dataIndex === "klGang" || c.dataIndex === "klThepPhe") {
+    if (c.dataIndex === "klGang" || c.dataIndex === "klThepPhe" || c.dataIndex === "klThepLong") {
       mapped.render = (value: unknown) => formatNumberVN(value);
     }
 
@@ -114,22 +126,32 @@ const CA_OPTIONS = [
   { value: 2, label: "Ca Đêm" },
 ];
 
-const SCOPE_OPTIONS = [1, 2, 3, 4, 5].map((s) => ({ value: s, label: `Lò thổi ${s}` }));
+const SCOPE_OPTIONS_BY_BM: Record<LoaiBmKey, { value: number; label: string }[]> = {
+  BOF: [1, 2, 3, 4, 5].map((s) => ({ value: s, label: `Lò thổi ${s}` })),
+  LF: [1, 2, 3, 4, 5].map((s) => ({ value: s, label: `Tinh luyện ${s}` })),
+};
+
+const HEADER_CONFIG_BY_BM: Record<LoaiBmKey, ThongKeHeaderColumn[]> = {
+  BOF: Header_TieuHaoLoThoi_HRC1,
+  LF: Header_TieuHaoTinhLuyen_LF_HRC1,
+};
 
 type SumRowMap = Record<string, number | null>;
 
-const ThongKeTieuHaoBOF = () => {
+const ThongKeTieuHaoHRC1 = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [sumLoading, setSumLoading] = useState(false);
   const [sumRow, setSumRow] = useState<SumRowMap>({});
   const [columns, setColumns] = useState<any[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
+  const [loaiBmKey, setLoaiBmKey] = useState<LoaiBmKey>("BOF");
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
 
   const handleSearch = useCallback(
-    async (page?: number, pageSize?: number) => {
+    async (overrideLoaiBm?: LoaiBmKey, page?: number, pageSize?: number) => {
       try {
+        const currentLoaiBm: LoaiBmKey = overrideLoaiBm ?? loaiBmKey ?? "BOF";
         const values = form.getFieldsValue(true) as Record<string, unknown>;
 
         const dateRange = values.dateRange as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
@@ -141,7 +163,8 @@ const ThongKeTieuHaoBOF = () => {
         const isDelete = (values.isDelete as boolean | undefined) === true;
         const isTrungMeThoi = (values.isTrungMeThoi as boolean | undefined) === true;
 
-        const fixedColumns = toAntdColumns(Header_TieuHaoLoThoi_HRC1);
+        const headerConfig = HEADER_CONFIG_BY_BM[currentLoaiBm];
+        const fixedColumns = toAntdColumns(headerConfig, currentLoaiBm);
 
         setLoading(true);
 
@@ -152,6 +175,7 @@ const ThongKeTieuHaoBOF = () => {
           TuNgay: fromDate ? fromDate.format("YYYY-MM-DD") : null,
           DenNgay: toDate ? toDate.format("YYYY-MM-DD") : null,
           Ca: ca ?? undefined,
+          BieuMau: currentLoaiBm,
           Scope: scope ?? undefined,
           SearchText: meThoiFilter ?? undefined,
           IsDelete: isDelete || undefined,
@@ -228,7 +252,7 @@ const ThongKeTieuHaoBOF = () => {
             key: getVal<number>(dataObj, "id", "ID") ?? idx,
           };
 
-          Header_TieuHaoLoThoi_HRC1.forEach((c) => {
+          headerConfig.forEach((c) => {
             const pascal = c.dataIndex.charAt(0).toUpperCase() + c.dataIndex.slice(1);
             row[c.dataIndex] = getVal(dataObj, c.dataIndex, pascal);
           });
@@ -279,13 +303,13 @@ const ThongKeTieuHaoBOF = () => {
           total: totalRecords || rows.length,
         });
       } catch (error) {
-        console.error("Lỗi thống kê tiêu hao BOF HRC1:", error);
+        console.error("Lỗi thống kê tiêu hao HRC1:", error);
         message.error("Không thể tải dữ liệu thống kê.");
       } finally {
         setLoading(false);
       }
     },
-    [form, pagination.pageSize]
+    [form, loaiBmKey, pagination.pageSize]
   );
 
   useEffect(() => {
@@ -300,6 +324,19 @@ const ThongKeTieuHaoBOF = () => {
     setSumRow({});
     setPagination({ current: 1, pageSize: pagination.pageSize, total: 0 });
   }, [form, pagination.pageSize]);
+
+  const handleTabChange = useCallback(
+    (key: string) => {
+      const bmKey = key as LoaiBmKey;
+      setLoaiBmKey(bmKey);
+      form.resetFields();
+      setColumns([]);
+      setTableData([]);
+      setSumRow({});
+      void handleSearch(bmKey, 1, pagination.pageSize);
+    },
+    [form, handleSearch, pagination.pageSize]
+  );
 
   const handleExcel = useCallback(async () => {
     const values = form.getFieldsValue(true) as Record<string, unknown>;
@@ -320,6 +357,7 @@ const ThongKeTieuHaoBOF = () => {
       TuNgay: fromDate.format("YYYY-MM-DD"),
       DenNgay: toDate.format("YYYY-MM-DD"),
       Ca: ca ?? undefined,
+      BieuMau: loaiBmKey,
       Scope: scope ?? undefined,
       SearchText: meThoiFilter ?? undefined,
       IsDelete: isDelete || undefined,
@@ -346,7 +384,7 @@ const ThongKeTieuHaoBOF = () => {
       }
 
       const blob = await res.blob();
-      let fileName = `ThongKe_HRC1_BOF_${fromDate.format("YYYYMMDD")}_${toDate.format("YYYYMMDD")}.xlsx`;
+      let fileName = `ThongKe_HRC1_${loaiBmKey}_${fromDate.format("YYYYMMDD")}_${toDate.format("YYYYMMDD")}.xlsx`;
       const contentDisposition = res.headers.get("Content-Disposition");
       if (contentDisposition) {
         const match = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
@@ -369,7 +407,7 @@ const ThongKeTieuHaoBOF = () => {
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [form, loaiBmKey]);
 
   const flattenLeafColumns = (cols: any[]): any[] =>
     cols.flatMap((c) => (Array.isArray(c.children) ? flattenLeafColumns(c.children) : [c]));
@@ -378,7 +416,7 @@ const ThongKeTieuHaoBOF = () => {
     <Card style={{ boxShadow: "0 2px 8px #f0f1f2" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <Title level={3} style={{ textAlign: "center", flex: 1, marginBottom: 0 }}>
-          BẢNG TỔNG HỢP DỮ LIỆU TIÊU HAO BOF HRC1
+          BẢNG TỔNG HỢP DỮ LIỆU TIÊU HAO HRC1
         </Title>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
           {[
@@ -404,7 +442,17 @@ const ThongKeTieuHaoBOF = () => {
         </div>
       </div>
 
-      <Form form={form} layout="inline" style={{ marginTop: 16 }}>
+      <Tabs
+        activeKey={loaiBmKey}
+        onChange={handleTabChange}
+        style={{ marginTop: 8 }}
+        items={[
+          { key: "BOF", label: "BOF" },
+          { key: "LF", label: "LF" },
+        ]}
+      />
+
+      <Form form={form} layout="inline" style={{ marginTop: 8 }}>
         <Space wrap align="center">
           <Form.Item name="dateRange" label="Từ ngày / Đến ngày">
             <RangePicker format="DD/MM/YYYY" />
@@ -414,8 +462,13 @@ const ThongKeTieuHaoBOF = () => {
             <Select allowClear options={CA_OPTIONS} placeholder="-- Ca --" style={{ minWidth: 120 }} />
           </Form.Item>
 
-          <Form.Item name="scope" label="Lò thổi">
-            <Select allowClear options={SCOPE_OPTIONS} placeholder="-- Lò thổi --" style={{ minWidth: 130 }} />
+          <Form.Item name="scope" label={SCOPE_LABEL_BY_BM[loaiBmKey]}>
+            <Select
+              allowClear
+              options={SCOPE_OPTIONS_BY_BM[loaiBmKey]}
+              placeholder={`-- ${SCOPE_LABEL_BY_BM[loaiBmKey]} --`}
+              style={{ minWidth: 150 }}
+            />
           </Form.Item>
 
           <Form.Item name="meThoi" label="Mã mẻ thép">
@@ -462,7 +515,7 @@ const ThongKeTieuHaoBOF = () => {
             pageSizeOptions: ["10", "20", "50", "100"],
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} bản ghi`,
             onChange: (page, pageSize) => {
-              void handleSearch(page, pageSize);
+              void handleSearch(undefined, page, pageSize);
             },
           }}
           scroll={{ x: "max-content", y: 500 }}
@@ -508,4 +561,4 @@ const ThongKeTieuHaoBOF = () => {
   );
 };
 
-export default ThongKeTieuHaoBOF;
+export default ThongKeTieuHaoHRC1;

@@ -279,6 +279,27 @@ export const hrc1TableService = {
     }));
   },
 
+  /**
+   * Sắp xếp lại toàn bộ dòng theo MeThoi tăng dần — áp dụng ở bước render cuối cùng, sau mọi merge
+   * (mergeServerRows/applyManualOverrides chỉ nối [...merged, ...manualRows]/[...result, ...unsavedNewRows],
+   * KHÔNG tự sắp xếp lại), để mẻ thêm tay (IsNM=false) không bị dồn thành khối riêng ở cuối bảng dù
+   * MeThoi của nó nhỏ hơn các mẻ tự động. Dùng localeCompare numeric để đúng thứ tự cả khi MeThoi lẫn
+   * chữ (vd "B10" > "B9"), không chỉ so sánh chuỗi thuần (sẽ sai "10" < "9"). Dòng thiếu MeThoi (mới
+   * thêm, chưa nhập) luôn rơi xuống cuối thay vì chen vào giữa.
+   */
+  sortRowsByMeThoi(rows: HRCTableRow[], keyField = "meThoi"): HRCTableRow[] {
+    return [...rows].sort((a, b) => {
+      const rawA = a[keyField];
+      const rawB = b[keyField];
+      const sa = rawA === undefined || rawA === null || rawA === "" ? null : String(rawA);
+      const sb = rawB === undefined || rawB === null || rawB === "" ? null : String(rawB);
+      if (sa === null && sb === null) return 0;
+      if (sa === null) return 1;
+      if (sb === null) return -1;
+      return sa.localeCompare(sb, undefined, { numeric: true, sensitivity: "base" });
+    });
+  },
+
   mergeServerRows(
     serverRows: HRCTableRow[] = [],
     previousRows: HRCTableRow[] = [],
@@ -482,7 +503,13 @@ export const hrc1TableService = {
         };
       }
 
-      if (replacement && replacement.length) {
+      // Cột slot động (vd BOF_PhuGia/LF_PhuGia): nếu là dataIndex có đăng ký slot nhưng không có
+      // phụ liệu nào (vd Lò thổi 5 chưa có dữ liệu NM), ẩn hẳn cột thay vì render placeholder gốc
+      // từ config JSON (cột đó không có tác dụng gì vì không map tới dữ liệu nào).
+      if (dataIndex && dataIndex in slotColumns) {
+        if (!replacement || replacement.length === 0) {
+          return { ...col, children: [] };
+        }
         return {
           ...col,
           children: replacement.map((child) =>
@@ -523,7 +550,7 @@ export const hrc1TableService = {
       .filter(
         (c) =>
           !(
-            c.dataIndex === "dieuChinh" &&
+            (c.dataIndex === "dieuChinh" || (c.dataIndex && c.dataIndex in slotColumns)) &&
             (!c.children || c.children.length === 0)
           )
       );
