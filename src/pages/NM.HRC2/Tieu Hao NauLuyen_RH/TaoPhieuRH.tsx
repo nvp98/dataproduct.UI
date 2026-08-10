@@ -448,6 +448,10 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
 
   // Hàm khởi tạo dữ liệu ban đầu
   const initData = useCallback(async () => {
+    // Phiếu đã Chốt: không auto-load lại từ NM (xem finally bên dưới) — chỉ dùng snapshot
+    // table1DynamicColumns/table1 đã lưu, tránh "mất" cột phụ liệu nếu sau này ai đó đổi
+    // config Excel/ThongKe của Header_Key (phiếu Chốt phải là dữ liệu lịch sử cố định).
+    let loadedTinhTrang = TrangThaiPhieuConst.DangLuu;
     try {
       setLoading(true);
       const idPhieu = idphieu || "";
@@ -492,6 +496,7 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
           // - Nếu phiếu chưa có `nguoiTaoId` và phiếu đang ở trạng thái DangLuu (0) => coi như "tạo tự động" => set select cấp 0 = currentUser
           // - Còn lại: giữ nguyên giá trị từ API.
           const tinhTrangFromRes = (res as any)?.tinhTrang ?? 0;
+          loadedTinhTrang = tinhTrangFromRes;
           const nguoiTaoIdFromRes = (res as any)?.nguoiTaoId ?? null;
           const hasNguoiTaoIdFromRes =
             nguoiTaoIdFromRes != null && Number(nguoiTaoIdFromRes) > 0;
@@ -564,8 +569,11 @@ const TaoPhieuTieuHaoNauLuyen_RH = () => {
       message.error("Không thể tải dữ liệu ban đầu!");
     } finally {
       setLoading(false);
-      // Sau khi khôi phục phiếu, tự động load dữ liệu NM (nếu đủ filter)
-      await loadFromNM();
+      // Sau khi khôi phục phiếu, tự động load dữ liệu NM (nếu đủ filter) — TRỪ phiếu đã Chốt
+      // (dùng snapshot đã restore ở trên, không load lại theo config hiện tại của Header_Key).
+      if (loadedTinhTrang !== TrangThaiPhieuConst.DaChot) {
+        await loadFromNM();
+      }
     }
   }, [form, idphieu, restoreDynamicColumns, config.signatures, loadFromNM, safeGetDetail, getUserInfo]);
 

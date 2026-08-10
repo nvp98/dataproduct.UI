@@ -28,6 +28,7 @@ import { phieuActionService } from "../../../services/PhieuActionService";
 import { hrc2PhuLieuService } from "../../../services/HRC2PhuLieuService";
 import HRC2ExportBienBanButtons from "../../../components/HRC2ExportBienBanButtons";
 import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
+import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 
 const { Title, Text } = Typography;
 
@@ -205,7 +206,11 @@ const ChiTietTieuHaoNauLuyen_RH = () => {
       const ngay = fd.NgaySX;
       const ca = fd.ca;
       const scope = fd.scope;
-      if (!ngay || ca == null || scope == null) {
+      // Phiếu đã Chốt: dùng snapshot table1/table1DynamicColumns đã lưu, KHÔNG load lại từ NM
+      // theo config Header_Key hiện tại — tránh "mất" cột phụ liệu nếu sau này ai đó bỏ tick
+      // Excel/ThongKe cho header đã dùng trong phiếu Chốt (dữ liệu lịch sử phải cố định).
+      const isChot = payload?.tinhTrang === TrangThaiPhieuConst.DaChot;
+      if (isChot || !ngay || ca == null || scope == null) {
         setTable1DisplayRows(savedWithAdjust);
         setNmColumnsPack(null);
         return;

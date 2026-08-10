@@ -115,7 +115,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   const config = HRC2_BBSL_PhoiTam;
 
   const TAB_TITLES: Record<string, string> = {
-    slab: "BIÊN BẢN GIAO NHẬN PHÔI TẤM",
+    slab: "CHI TIẾT SẢN LƯỢNG PHÔI TẤM",
     tonghop: config.title,
   };
   const [activeTabKey, setActiveTabKey] = useState<string>("slab");
