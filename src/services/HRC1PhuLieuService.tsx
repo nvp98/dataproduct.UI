@@ -168,7 +168,9 @@ export const hrc1PhuLieuService = {
       const isNM = getVal<boolean>(data, "isNM", "IsNM");
 
       const row: HRCTableRow = {
-        key: `row-${meThoi ?? index}`,
+        // Luôn kèm index — 2 mẻ trùng số (IsTrungMeThoi) có cùng meThoi sẽ đụng key nếu chỉ dùng
+        // meThoi, khiến STT (resolveSttText tra theo key) và các thao tác sửa/xoá theo key bị lẫn dòng.
+        key: `row-${index}-${meThoi ?? "empty"}`,
         id: getVal<number>(data, "id", "ID") ?? undefined,
         IsNM: isNM ?? true,
         isTrungMeThoi: isTrungMe,

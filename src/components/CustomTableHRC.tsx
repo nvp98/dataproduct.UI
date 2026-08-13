@@ -375,10 +375,71 @@ const CustomTableHRC = forwardRef(({
   // meThoi ngay khi nhận initialData mới (xem useEffect ở trên) — ở đây KHÔNG sort lại theo giá trị
   // nữa, chỉ trả nguyên rows, để dòng đang thao tác (vừa thêm/chọn meThoi) không tự nhảy vị trí giữa
   // chừng; thứ tự chỉ được áp dụng lại sau khi Lưu + tải lại dữ liệu từ server.
+  // const buildMeSortKey = (
+  //     thoiGian: string | null | undefined,
+  //     ca: number | null | undefined,
+  //     ngaySX: string | null | undefined,
+  //   ): string => {
+  //     if (!thoiGian) return "9999-12-31 99:99";
+  //     const base = ngaySX ?? "2000-01-01";
+  //     const isNextDay = ca === 2 && thoiGian < "20:00";
+  //     const date = isNextDay ? dayjs(base).add(1, "day").format("YYYY-MM-DD") : base;
+  //     return `${date} ${thoiGian}`;
+  //   };
+
+  const buildMeSortKey = (
+  thoiGian: string | null | undefined,
+  ca: number | null | undefined,
+  ngaySX: Date | null | undefined,
+): string => {
+  if (!thoiGian || !ngaySX) {
+    return "9999-12-31 99:99";
+  }
+
+  const isNextDay =
+    ca === 2 && thoiGian < "20:00";
+
+  const date = isNextDay
+    ? dayjs(ngaySX).add(1, "day").format("YYYY-MM-DD")
+    : dayjs(ngaySX).format("YYYY-MM-DD");
+
+  return `${date} ${thoiGian}`;
+};
+ 
+  // const sortedRows = useMemo(() => {
+  //   console.log('sortedRows useMemo called');
+  //   if (sortByMeThoi) {
+  //     console.log('sortByMeThoi is true');
+  //     return rows;
+  //   }
+  //   if(maBm === "HRC1_BB_TieuHao_LF"){
+  //     console.log('LF');
+  //     return [...rows].sort((a, b) => buildMeSortKey(a.thoiGianLF as string, ca, ngaySX)
+  //         .localeCompare(buildMeSortKey(b.thoiGianLF as string, ca, ngaySX)));
+  //   }
+  //   console.log('khac');
+  //   const cloned = [...rows];
+  //   cloned.sort((a, b) => {
+  //     const aManual = a.IsNM === false;
+  //     const bManual = b.IsNM === false;
+  //     if (aManual === bManual) return 0;
+  //     return aManual ? 1 : -1;
+  //   });
+  //   return cloned;
+  // }, [rows, sortByMeThoi, maBm]);
   const sortedRows = useMemo(() => {
     if (sortByMeThoi) {
       return rows;
     }
+
+    if (maBm === "HRC1_BB_TieuHao_LF") {
+      return [...rows].sort((a, b) =>
+        buildMeSortKey(a.thoiGianLF as string, ca, ngaySX).localeCompare(
+          buildMeSortKey(b.thoiGianLF as string, ca, ngaySX)
+        )
+      );
+    }
+
     const cloned = [...rows];
     cloned.sort((a, b) => {
       const aManual = a.IsNM === false;
@@ -387,7 +448,8 @@ const CustomTableHRC = forwardRef(({
       return aManual ? 1 : -1;
     });
     return cloned;
-  }, [rows, sortByMeThoi]);
+  }, [rows, sortByMeThoi, maBm, ca, ngaySX]);
+
   const handleAddRow = () => {
     const fieldKeys = getAllFieldKeys(columns);
     const newRow: HRCTableRow = {
@@ -678,6 +740,7 @@ const CustomTableHRC = forwardRef(({
                 // Style chung cho ô editable (highlight vàng sau khi blur)
                 const editableStyle: React.CSSProperties = {
                   textAlign: child.align ?? "right",
+                  width: "100%",
                   ...(isKeyColumn && record.IsNM === false ? { backgroundColor: "#fffbe6" } : {}),
                   ...(!(isMeThoiColumn && isTrungMeThoi) && child.highlight
                     ? { backgroundColor: "#fff1f0" }
@@ -705,8 +768,14 @@ const CustomTableHRC = forwardRef(({
                     mapOption={(item) => ({ value: item.value, label: item.label })}
                     fallbackLabelBuilder={(v) => String(v)}
                     size="small"
-                    allowClear
+                    allowClear={false}
                     style={editableStyle}
+                    selectProps={{
+                      className: [
+                        "hrc-select-key-column",
+                        isMeThoiColumn && isTrungMeThoi ? "hrc-select-trung-me-thoi" : "",
+                      ].filter(Boolean).join(" "),
+                    }}
                     placeholder={
                       child.placeholder ??
                       (typeof child.title === "string" ? child.title : undefined)
@@ -838,6 +907,7 @@ const CustomTableHRC = forwardRef(({
 
           const editableStyle: React.CSSProperties = {
             textAlign: col.align ?? "right",
+            width: "100%",
             ...(isKeyColumn && record.IsNM === false ? { backgroundColor: "#fffbe6" } : {}),
             ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight
               ? { backgroundColor: "#fff1f0" }
@@ -868,8 +938,14 @@ const CustomTableHRC = forwardRef(({
               mapOption={(item) => ({ value: item.value, label: item.label })}
               fallbackLabelBuilder={(v) => String(v)}
               size="small"
-              allowClear
+              allowClear={false}
               style={editableStyle}
+              selectProps={{
+                className: [
+                  "hrc-select-key-column",
+                  isMeThoiColumn && isTrungMeThoi ? "hrc-select-trung-me-thoi" : "",
+                ].filter(Boolean).join(" "),
+              }}
               placeholder={typeof baseTitle === "string" ? baseTitle : undefined}
             />
           ) : canEditThisCell ? (

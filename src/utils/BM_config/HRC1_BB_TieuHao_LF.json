@@ -8,8 +8,8 @@
     "subCompany": "HÒA PHÁT GANG THÉP"
   },
   "isoInfo": {
-    "code": "BM.14/QT.05.15",
-    "effectiveDate": "10/01/2025",
+    "code": "BM.14/QT.05.10",
+    "effectiveDate": "01/09/2023",
     "revision": "00"
   },
 
@@ -63,7 +63,7 @@
         {
           "title": "Mẻ nấu số",
           "dataIndex": "meThoi",
-          "width": 115,
+          "width": 145,
           "editable": false,
           "readonly": true,
           "alwaysReadonly": true
@@ -71,7 +71,7 @@
         {
           "title": "Mác thép",
           "dataIndex": "macThep",
-          "width": 130,
+          "width": 150,
           "editable": false,
           "readonly": true,
           "alwaysReadonly": true

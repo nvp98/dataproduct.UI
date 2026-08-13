@@ -21,6 +21,9 @@ export type DynamicColumnMeta = {
   variant?: "source" | "adjust" | "default";
   highlight?: boolean;
   headerKeyId?: number | null;
+  // true: cột này được tính vào dòng Tổng (Table.Summary) — phải lưu/khôi phục qua snapshot
+  // table1DynamicColumns, nếu không dòng Tổng sẽ ngưng cộng cột này sau khi tải lại phiếu đã lưu.
+  sum?: boolean;
 };
 
 export type AdjustColumnMeta = {
@@ -205,6 +208,7 @@ export const hrc1TableService = {
         variant: col.variant,
         highlight: col.highlight,
         headerKeyId: (col as { headerKeyId?: number | null })?.headerKeyId ?? null,
+        sum: col.sum,
       }));
     });
     return result;
@@ -231,6 +235,10 @@ export const hrc1TableService = {
       metaGroup: item.metaGroup,
       variant: item.variant ?? "source",
       headerKeyId: item.headerKeyId ?? undefined,
+      // Mặc định true nếu snapshot cũ (lưu trước khi field `sum` được thêm vào DynamicColumnMeta)
+      // không có field này — mọi cột phụ liệu BOF_PhuGia/LF_PhuGia phục hồi qua columnsFromMeta
+      // luôn phải được cộng vào dòng Tổng, không có trường hợp nào cố tình để false.
+      sum: item.sum ?? true,
     }));
   },
 

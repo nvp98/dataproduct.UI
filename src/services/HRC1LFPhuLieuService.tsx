@@ -98,14 +98,22 @@ export const hrc1LFPhuLieuService = {
       const data = (getVal<Hrc1RawItem>(item, "data", "Data") ?? {}) as Hrc1RawItem;
       const meThoi = getVal<string>(data, "meThoi", "MeThoi");
       const isTrungMe = getVal<boolean>(data, "isTrungMeThoi", "IsTrungMeThoi") === true;
+      const thoiGianLF = getVal<string>(data, "thoiGianLF", "ThoiGianLF");
 
       const row: HRCTableRow = {
-        key: `row-${meThoi ?? index}`,
+        // Luôn kèm index — 2 mẻ trùng số (IsTrungMeThoi) có cùng meThoi sẽ đụng key nếu chỉ dùng
+        // meThoi, khiến STT (resolveSttText tra theo key) và các thao tác sửa/xoá theo key bị lẫn dòng.
+        key: `row-${index}-${meThoi ?? "empty"}`,
         id: getVal<number>(data, "id", "ID") ?? undefined,
         // LF không có mẻ từ NM — luôn ép false để CustomTableHRC cho sửa mọi ô (meThoi/macThep...).
         IsNM: false,
         isTrungMeThoi: isTrungMe,
         IsTrungMeThoi: isTrungMe,
+        // thoiGianLF không phải cột hiển thị trong config JSON (baseColumns) nên mapField() bên dưới
+        // không bao giờ gán nó — phải gán tường minh ở đây để CustomTableHRC.sortedRows (sort theo
+        // thời gian LF thực tế cho maBm HRC1_BB_TieuHao_LF) và các nơi sort theo thoiGianLF khác có
+        // dữ liệu để dùng.
+        ...(thoiGianLF !== null ? { thoiGianLF } : {}),
         __fromFilterAPI: true,
       };
 

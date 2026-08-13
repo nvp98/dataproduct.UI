@@ -38,6 +38,10 @@ const TaoTieuHaoLoThoi = () => {
   const [table1LyDo, setTable1LyDo] = useState("");
   const [phuGiaColumns, setPhuGiaColumns] = useState<HRCChildColumn[]>([]); // 13 phụ liệu cố định (HRC1_PhuLieuNM)
   const [adjustColumnMetas, setAdjustColumnMetas] = useState<AdjustColumnMeta[]>([]);
+  // Snapshot cột phụ liệu BOF_PhuGia đã lưu (khác null = phiếu đã tồn tại và đã có snapshot) — khi có,
+  // fetchPhuLieus KHÔNG được ghi đè phuGiaColumns bằng danh mục live hiện tại, để giữ đúng bộ + thứ tự
+  // phụ liệu tại thời điểm lưu (tránh mất/lệch cột khi danh mục HRC1_PhuLieuNM đổi sau này).
+  const savedPhuGiaSnapshotRef = useRef<HRCChildColumn[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
@@ -305,7 +309,12 @@ const TaoTieuHaoLoThoi = () => {
         return;
       }
 
-      setPhuGiaColumns((result.phuGiaColumns ?? []).map((col) => ({ ...col, editable: false })));
+      // Nếu phiếu đã có snapshot BOF_PhuGia (đã lưu ít nhất 1 lần), giữ nguyên cột theo snapshot thay vì
+      // ghi đè bằng danh mục live hiện tại — xem comment tại khai báo savedPhuGiaSnapshotRef.
+      setPhuGiaColumns(
+        savedPhuGiaSnapshotRef.current ??
+          (result.phuGiaColumns ?? []).map((col) => ({ ...col, editable: false }))
+      );
 
       // Cột "thêm tay" (phuLieu_*) luôn giữ nguyên trong nhóm điều chỉnh, không tự gộp/ẩn khi có dữ liệu —
       // việc loại trùng với cột phụ liệu tự động (nếu id trùng) được xử lý riêng ở table1Columns (effectivePhuGiaColumns).
@@ -492,7 +501,9 @@ const TaoTieuHaoLoThoi = () => {
           if (formValues.table1DynamicColumns) {
             const dyn = formValues.table1DynamicColumns as Record<string, DynamicColumnMeta[]>;
             const restored = hrc1TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
-            setPhuGiaColumns(restored.BOF_PhuGia ?? []);
+            const savedPhuGia = restored.BOF_PhuGia ?? [];
+            setPhuGiaColumns(savedPhuGia);
+            savedPhuGiaSnapshotRef.current = savedPhuGia.length > 0 ? savedPhuGia : null;
             if (dyn.adjust) {
               setAdjustColumnMetas(
                 hrc1TableService.dedupeAdjustMetas(hrc1TableService.adjustMetaFromDynamic(dyn.adjust))
@@ -500,6 +511,8 @@ const TaoTieuHaoLoThoi = () => {
             } else {
               setAdjustColumnMetas([]);
             }
+          } else {
+            savedPhuGiaSnapshotRef.current = null;
           }
 
           setPhieuInfo({

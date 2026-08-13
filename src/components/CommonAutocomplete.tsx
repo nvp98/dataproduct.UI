@@ -319,7 +319,7 @@ function CommonAutocompleteInner<T>({
 
 // Wrapper để giữ generic props khi import
 export function CommonAutocomplete<T>(props: CommonAutocompleteProps<T>) {
-  console.log("CommonAutocomplete props:", props);
+  // console.log("CommonAutocomplete props:", props);
   return <CommonAutocompleteInner {...props} />;
 }
 

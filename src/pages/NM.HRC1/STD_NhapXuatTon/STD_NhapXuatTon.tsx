@@ -71,6 +71,7 @@ const STD_NhapXuatTon_HRC1 = ({ type }: { type?: string }) => {
                 state: {
                   idphieu: record.idphieu,
                   pheduyet: record?.pheDuyet?.[0] ?? null,
+                  type,
                 },
               });
             } else {
@@ -155,7 +156,11 @@ const STD_NhapXuatTon_HRC1 = ({ type }: { type?: string }) => {
             icon={<EyeOutlined twoToneColor="#1890ff" />}
             onClick={() =>
               navigate("/chi_tiet_std_hrc1", {
-                state: { idphieu: record.idphieu },
+                state: {
+                  idphieu: record.idphieu,
+                  pheduyet: record?.pheDuyet?.[0] ?? null,
+                  type,
+                },
               })
             }
           />

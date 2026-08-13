@@ -39,6 +39,10 @@ const TaoTieuHaoTinhLuyenLF = () => {
   const [table1LyDo, setTable1LyDo] = useState("");
   const [phuGiaColumns, setPhuGiaColumns] = useState<HRCChildColumn[]>([]);
   const [adjustColumnMetas, setAdjustColumnMetas] = useState<AdjustColumnMeta[]>([]);
+  // Snapshot cột phụ liệu LF_PhuGia đã lưu (khác null = phiếu đã tồn tại và đã có snapshot) — khi có,
+  // fetchPhuLieus KHÔNG được ghi đè phuGiaColumns bằng danh mục live hiện tại, để giữ đúng bộ + thứ tự
+  // phụ liệu tại thời điểm lưu (tránh mất/lệch cột khi danh mục HRC1_PhuLieuNM đổi sau này).
+  const savedPhuGiaSnapshotRef = useRef<HRCChildColumn[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
@@ -253,7 +257,9 @@ const TaoTieuHaoTinhLuyenLF = () => {
 
       // Cột phụ liệu LF luôn hiển thị đủ (lấy từ danh mục), kể cả khi chưa có mẻ nào — khác BOF
       // (không early-return xóa cột khi trống, vì người dùng cần cột trống để bắt đầu nhập).
-      setPhuGiaColumns(result.phuGiaColumns);
+      // Nếu phiếu đã có snapshot LF_PhuGia (đã lưu ít nhất 1 lần), giữ nguyên cột theo snapshot thay vì
+      // ghi đè bằng danh mục live hiện tại — xem comment tại khai báo savedPhuGiaSnapshotRef.
+      setPhuGiaColumns(savedPhuGiaSnapshotRef.current ?? result.phuGiaColumns);
 
       // Bảng CHỈ render từ live api/DLNMHRC1/filter — không dùng hrc1TableService.mergeServerRows
       // (hàm đó coi mọi dòng IsNM=false trong state cũ là "thêm tay cần giữ lại" khi không thấy trên
@@ -403,7 +409,9 @@ const TaoTieuHaoTinhLuyenLF = () => {
           if (formValues.table1DynamicColumns) {
             const dyn = formValues.table1DynamicColumns as Record<string, DynamicColumnMeta[]>;
             const restored = hrc1TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
-            setPhuGiaColumns(restored.LF_PhuGia ?? []);
+            const savedPhuGia = restored.LF_PhuGia ?? [];
+            setPhuGiaColumns(savedPhuGia);
+            savedPhuGiaSnapshotRef.current = savedPhuGia.length > 0 ? savedPhuGia : null;
             if (dyn.adjust) {
               setAdjustColumnMetas(
                 hrc1TableService.dedupeAdjustMetas(hrc1TableService.adjustMetaFromDynamic(dyn.adjust))
@@ -411,6 +419,8 @@ const TaoTieuHaoTinhLuyenLF = () => {
             } else {
               setAdjustColumnMetas([]);
             }
+          } else {
+            savedPhuGiaSnapshotRef.current = null;
           }
 
           setPhieuInfo({
@@ -619,7 +629,6 @@ const TaoTieuHaoTinhLuyenLF = () => {
                   stickyFirstColumn
                   stickyColumnKeys={["meThoi", "macThep"]}
                   disableRowHover
-                  sortByMeThoi
                   meThoiSearchApi={hrc1MeThoiMacThepServiceApi.searchMeThoi}
                   macThepSearchApi={hrc1MeThoiMacThepServiceApi.searchMacThep}
                   scrollX="1500px"

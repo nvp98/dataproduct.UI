@@ -25,6 +25,33 @@ function isTrungMeRow(record: any): boolean {
   return record?.isTrungMeThoi === true || record?.IsTrungMeThoi === true;
 }
 
+// Khớp đúng logic buildMeSortKey/sortedRows trong CustomTableHRC.tsx (cho maBm HRC1_BB_TieuHao_LF):
+// sắp theo thoiGianLF (giờ thực tế mẻ vào LF) thay vì meThoi (chỉ là số hiệu, không phản ánh đúng thứ
+// tự thời gian) — ca đêm (ca=2) mà thoiGianLF < 20:00 nghĩa là đã sang ngày hôm sau, phải cộng thêm 1
+// ngày khi ghép key để không bị xếp sai lên đầu.
+function buildMeSortKeyLF(
+  thoiGian: string | null | undefined,
+  ca: number | null | undefined,
+  ngaySX: string | Date | null | undefined
+): string {
+  if (!thoiGian || !ngaySX) return "9999-12-31 99:99";
+  const isNextDay = ca === 2 && thoiGian < "20:00";
+  const date = isNextDay
+    ? dayjs(ngaySX).add(1, "day").format("YYYY-MM-DD")
+    : dayjs(ngaySX).format("YYYY-MM-DD");
+  return `${date} ${thoiGian}`;
+}
+
+function sortRowsByThoiGianLF(
+  rows: any[],
+  ca: number | null | undefined,
+  ngaySX: string | Date | null | undefined
+): any[] {
+  return [...rows].sort((a, b) =>
+    buildMeSortKeyLF(a?.thoiGianLF, ca, ngaySX).localeCompare(buildMeSortKeyLF(b?.thoiGianLF, ca, ngaySX))
+  );
+}
+
 // Merge giá trị các cột "phụ liệu thêm tay" (table1DynamicColumns.adjust) vào rows đang hiển thị —
 // khớp theo rowId (id mẻ) trước, fallback theo meThoi. Cần thiết vì LF không có API live nào trả
 // ngược các cột "thêm tay" (khác BOF), snapshot đã lưu là nguồn duy nhất để biết cột nào tồn tại.
@@ -129,13 +156,13 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
         // Chỉ fallback về snapshot khi bản thân lệnh gọi live thất bại (lỗi mạng/API — xem catch bên dưới).
         const liveRows = (result.tableData || []).filter((r) => r?.key !== "row-empty");
         setTable1DisplayRows(
-          hrc1TableService.sortRowsByMeThoi(mergeAdjustColumnValuesIntoRows(liveRows, dynAdjust))
+          sortRowsByThoiGianLF(mergeAdjustColumnValuesIntoRows(liveRows, dynAdjust), ca, ngay)
         );
         setLivePhuGiaColumns(result.phuGiaColumns);
       } catch (liveErr) {
         console.error("Lỗi tải dữ liệu Tiêu hao LF hiện tại (live):", liveErr);
         setTable1DisplayRows(
-          hrc1TableService.sortRowsByMeThoi(mergeAdjustColumnValuesIntoRows(savedRows, dynAdjust))
+          sortRowsByThoiGianLF(mergeAdjustColumnValuesIntoRows(savedRows, dynAdjust), ca, ngay)
         );
       }
     } catch (error) {
@@ -158,13 +185,20 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
   const renderDynamicColumnTitle = useCallback((label: string) => label, []);
 
   const tableColumns = useMemo(() => {
+    const dyn = (formData?.table1DynamicColumns as Record<string, DynamicColumnMeta[]> | undefined) || {};
+    const savedPhuGiaCols = dyn.LF_PhuGia;
+
+    // Ưu tiên snapshot LF_PhuGia đã lưu (đúng bộ + thứ tự phụ liệu tại thời điểm lưu phiếu) — KHÔNG dùng
+    // danh mục live hiện tại (livePhuGiaColumns, luôn lọc theo dangSuDung:true của danh mục HRC1_PhuLieuNM
+    // hiện tại), tránh mất/lệch cột khi danh mục đổi sau này (tắt DangSuDung, đổi ThuTu_Excel_LF, bớt/thêm
+    // phụ liệu...). Chỉ fallback về live cho phiếu cũ lưu trước khi có snapshot này.
     let phuGiaCols: HRCChildColumn[];
-    if (livePhuGiaColumns) {
+    if (savedPhuGiaCols?.length) {
+      phuGiaCols = hrc1TableService.columnsFromMeta(savedPhuGiaCols, renderDynamicColumnTitle);
+    } else if (livePhuGiaColumns) {
       phuGiaCols = livePhuGiaColumns;
     } else {
-      const dyn = (formData?.table1DynamicColumns as Record<string, DynamicColumnMeta[]> | undefined) || {};
-      const restored = hrc1TableService.restoreDynamicGroups(dyn, renderDynamicColumnTitle);
-      phuGiaCols = restored.LF_PhuGia ?? [];
+      phuGiaCols = [];
     }
 
     const tableLayout = config.layout.find((l: any) => l.sectionType === "table" && l.key === "table1");

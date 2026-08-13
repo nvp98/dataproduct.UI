@@ -252,21 +252,21 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
 
   const tableColumns = useMemo(() => {
     const dyn = (formData?.table1DynamicColumns as Record<string, DynamicColumnMeta[]> | undefined) || {};
-    const { adjust: adjustFromDyn, ...restDyn } = dyn;
+    const { adjust: adjustFromDyn, BOF_PhuGia: savedPhuGiaCols } = dyn;
 
-    let phuGiaCols: HRCChildColumn[];
+    // Ưu tiên snapshot BOF_PhuGia đã lưu (đúng bộ + thứ tự phụ liệu tại thời điểm lưu phiếu) cho nhóm cột
+    // phụ liệu CHUẨN — KHÔNG dùng danh mục live hiện tại (nmColumnsPack.phuGiaColumns, luôn lọc theo
+    // DangSuDung/ThuTu_Excel_BOF hiện tại), tránh mất/lệch cột khi danh mục HRC1_PhuLieuNM đổi sau này.
+    // Nhóm Phân bổ/Điều chỉnh tay (adjustMetas) vẫn ưu tiên live vì bản chất động hơn (Phân bổ tính lại
+    // mỗi lần load) — chỉ fallback về snapshot khi live thất bại/rỗng, như trước.
+    const phuGiaCols: HRCChildColumn[] = savedPhuGiaCols?.length
+      ? hrc1TableService.columnsFromMeta(savedPhuGiaCols, renderDynamicColumnTitle)
+      : nmColumnsPack?.phuGiaColumns ?? [];
+
     let adjustMetas: AdjustColumnMeta[];
-
     if (nmColumnsPack) {
-      phuGiaCols = nmColumnsPack.phuGiaColumns;
       adjustMetas = nmColumnsPack.adjustMetas;
     } else {
-      const restored = hrc1TableService.restoreDynamicGroups(
-        Object.keys(restDyn).length ? restDyn : undefined,
-        renderDynamicColumnTitle
-      );
-      phuGiaCols = restored.BOF_PhuGia ?? [];
-
       adjustMetas = adjustFromDyn?.length
         ? hrc1TableService.dedupeAdjustMetas(hrc1TableService.adjustMetaFromDynamic(adjustFromDyn))
         : [];
