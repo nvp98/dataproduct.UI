@@ -12,7 +12,7 @@ import { DEFAULT_TINH_TRANG_OPTIONS } from "../../../utils/ConfigDefault/thongKe
 import type { SearchPhieuRequest } from "../../../models/Phieu";
 import type { PhieuFilterValues } from "../../../components/PhieuFilterCard";
 import { PhieuApi } from "../../../services/PhieuApi";
-import { getPhieuStatusConfig } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { getPhieuStatusConfig, PHOI_TAM_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
@@ -142,7 +142,17 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       fields.push({ key: "scope", label: "Máy đúc", type: "select", options: scopeOptions });
     }
 
-    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: DEFAULT_TINH_TRANG_OPTIONS });
+    // Biên bản sản lượng phôi tấm (HRC1_BBSL_PhoiTam) dùng thang trạng thái tổng hợp riêng
+    // (11/12, xem PHOI_TAM_STATUS_CONFIG) thay vì TrangThaiPhieuConst chuẩn — gộp thêm vào đây
+    // để lọc được tình trạng cho mã BM này.
+    const tinhTrangOptions = [
+      ...DEFAULT_TINH_TRANG_OPTIONS,
+      ...Object.entries(PHOI_TAM_STATUS_CONFIG).map(([value, cfg]) => ({
+        label: `${cfg.text} (Phôi tấm)`,
+        value: Number(value),
+      })),
+    ];
+    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: tinhTrangOptions });
 
     return fields;
   }, [mayDucOptions, selectedLoaiBM]);
@@ -286,7 +296,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
 
   return (
     <ThongKePhieuCommon
-      maBmList={MABM_LIST}
+      maBmList={MABM_LIST} 
       title="Tổng hợp phiếu HRC1"
       type={type}
       mabmDetailRoute={MABM_DETAIL_ROUTE}

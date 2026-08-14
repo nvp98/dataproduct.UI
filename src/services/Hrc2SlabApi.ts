@@ -21,6 +21,8 @@ async function downloadBlob(res: Response, fallbackName: string): Promise<void> 
 export interface HrcSlabSearchRequest {
   tuNgay?: string | null;
   denNgay?: string | null;
+  tuNgayXL?: string | null;
+  denNgayXL?: string | null;
   caSanXuat?: string | null;
   kip?: string | null;
   mayDuc?: number | null;
@@ -90,6 +92,8 @@ export interface HrcSlabItem {
   nguoiXacNhanDuc?: string | null;
   nguoiXacNhanKho?: string | null;
   nguoiXacNhanPKH?: string | null;
+  // Đánh dấu "đã check" của riêng user đang đăng nhập — độc lập với workflow xác nhận
+  daCheck: boolean;
 }
 
 export interface HrcSlabSearchResponse {
@@ -170,8 +174,9 @@ export const Hrc2SlabApi = {
     return (await apiService.get(`${BASE}/ruot-phieu/${idPhieu}`)) as SlabTongHopItem[];
   },
 
-  getSlabsByPhieu: async (idPhieu: string): Promise<HrcSlabItem[]> => {
-    return (await apiService.get(`${BASE}/slabs-by-phieu/${idPhieu}`)) as HrcSlabItem[];
+  getSlabsByPhieu: async (idPhieu: string, currentUserId?: number): Promise<HrcSlabItem[]> => {
+    const qs = currentUserId != null ? `?currentUserId=${currentUserId}` : "";
+    return (await apiService.get(`${BASE}/slabs-by-phieu/${idPhieu}${qs}`)) as HrcSlabItem[];
   },
 
   chuyenBBSL: async (idSlabs: number[], idPhieu: string, nguoiThucHien: number): Promise<WorkflowResult> => {
@@ -198,6 +203,14 @@ export const Hrc2SlabApi = {
     return (await apiService.post(`${BASE}/huy-chot-phieu`, { idPhieu, nguoiThucHien })) as WorkflowResult;
   },
 
+  check: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/check`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  },
+
+  unCheck: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/un-check`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  },
+
   sync: async (ngayBatDau?: string | null, ngayKetThuc?: string | null): Promise<SyncStatusItem> => {
     return (await apiService.post(`${BASE}/sync`, { ngayBatDau, ngayKetThuc })) as SyncStatusItem;
   },
@@ -210,11 +223,12 @@ export const Hrc2SlabApi = {
     }
   },
 
-  exportExcel: async (idPhieu: string, tab: "chitiet" | "tonghop"): Promise<void> => {
+  exportExcel: async (idPhieu: string, tab: "chitiet" | "tonghop", currentUserId?: number): Promise<void> => {
     const token = localStorage.getItem("token");
     const apiUrl = (import.meta.env.VITE_API_URL as string).replace(/\/$/, "");
+    const userQs = currentUserId != null ? `&currentUserId=${currentUserId}` : "";
     const res = await fetch(
-      `${apiUrl}${BASE}/export/excel?idPhieu=${encodeURIComponent(idPhieu)}&tab=${tab}`,
+      `${apiUrl}${BASE}/export/excel?idPhieu=${encodeURIComponent(idPhieu)}&tab=${tab}${userQs}`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     );
     if (!res.ok) throw new Error("Lỗi xuất Excel");

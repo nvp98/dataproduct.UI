@@ -182,7 +182,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
     if (!idphieu) return;
     const [slabs, details] = await Promise.all([
       Hrc2SlabApi.getRuotPhieu(idphieu),
-      Hrc2SlabApi.getSlabsByPhieu(idphieu),
+      Hrc2SlabApi.getSlabsByPhieu(idphieu, getUserId()),
     ]);
     setSlabRows(slabs);
     setSlabDetails(details);
@@ -338,6 +338,11 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
     );
   const canHuyChot =
     selectedCount > 0 && selectedRows.every((r) => r.trangThaiPKH === 1);
+  // Đánh dấu "đã check" — độc lập theo user, không phụ thuộc trạng thái workflow
+  const canCheck =
+    selectedCount > 0 && selectedRows.every((r) => !r.daCheck);
+  const canUnCheck =
+    selectedCount > 0 && selectedRows.every((r) => r.daCheck);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleXacNhan = async (loai: "KCS" | "Duc" | "Kho" | "PKH") => {
@@ -368,13 +373,42 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
     }
   };
 
+  // ── Đánh dấu "đã check" (độc lập theo user, không thuộc workflow xác nhận) ──
+  const handleCheck = async () => {
+    try {
+      setActionLoading(true);
+      const ids = selectedRows.map((r) => r.id);
+      await Hrc2SlabApi.check(ids, getUserId());
+      message.success(`Đã check ${ids.length} slab`);
+      await loadData();
+    } catch (err: any) {
+      message.error(err?.message ?? "Lỗi check");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnCheck = async () => {
+    try {
+      setActionLoading(true);
+      const ids = selectedRows.map((r) => r.id);
+      await Hrc2SlabApi.unCheck(ids, getUserId());
+      message.success(`Đã bỏ check ${ids.length} slab`);
+      await loadData();
+    } catch (err: any) {
+      message.error(err?.message ?? "Lỗi bỏ check");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // ── Export handlers ───────────────────────────────────────────────────────
 
   const handleExportChiTietExcel = useCallback(async () => {
     if (!idphieu) return;
     setExportLoading("chitiet-excel");
     try {
-      await Hrc2SlabApi.exportExcel(idphieu, "chitiet");
+      await Hrc2SlabApi.exportExcel(idphieu, "chitiet", getUserId());
     } catch (e: any) {
       message.error(e?.message ?? "Lỗi xuất Excel");
     } finally { setExportLoading(null); }
@@ -510,8 +544,17 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
         width: 90,
         align: "center" as const,
         render: (v: number) => (
-          // 
+          //
           <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã Chốt" : "Chưa"}</Tag>
+        ),
+      },
+      {
+        title: "Đã check",
+        dataIndex: "daCheck",
+        width: 90,
+        align: "center" as const,
+        render: (v: boolean) => (
+          <Tag color={v ? "green" : "default"}>{v ? "Đã check" : "Chưa"}</Tag>
         ),
       },
     ],
@@ -669,6 +712,37 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                       >
                         Excel
                       </Button>
+                      <>
+                          <Popconfirm
+                            title={`Check ${selectedCount} slab?`}
+                            onConfirm={handleCheck}
+                            disabled={!canCheck}
+                          >
+                            <Button
+                              size="small"
+                              icon={<CheckCircleOutlined />}
+                              disabled={!canCheck}
+                              loading={actionLoading}
+                            >
+                              Check
+                            </Button>
+                          </Popconfirm>
+                          <Popconfirm
+                            title={`Bỏ check ${selectedCount} slab?`}
+                            onConfirm={handleUnCheck}
+                            disabled={!canUnCheck}
+                          >
+                            <Button
+                              size="small"
+                              icon={<CloseCircleOutlined />}
+                              disabled={!canUnCheck}
+                              loading={actionLoading}
+                              danger
+                            >
+                              Bỏ check
+                            </Button>
+                          </Popconfirm>
+                      </>
                       {canAct && isDuc && (
                         <>
                           <Popconfirm
@@ -782,7 +856,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                 >
                   <Table<HrcSlabItem>
                     rowKey="id"
-                    rowSelection={readOnly ? undefined : rowSelection}
+                    rowSelection={rowSelection}
                     size="small"
                     bordered
                     columns={detailColumns}
@@ -802,7 +876,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                             <Table.Summary.Cell index={7} align="right">
                               <strong>{Number(totalKL).toLocaleString("vi-VN", { minimumFractionDigits: 3 })}</strong>
                             </Table.Summary.Cell>
-                            <Table.Summary.Cell index={8} colSpan={1 + optColCount} />
+                            <Table.Summary.Cell index={8} colSpan={1 + optColCount + 1} />
                           </Table.Summary.Row>
                         </Table.Summary>
                       );

@@ -137,9 +137,12 @@ const BkHrc2SlabTable = () => {
       setLoading(true);
       const filters = values ?? form.getFieldsValue();
       const dateRange = filters.dateRange;
+      const dateXLRange = filters.dateXLRange;
       const res = await Hrc2SlabApi.search({
         tuNgay:    dateRange?.[0] ? dayjs(dateRange[0]).format("YYYY-MM-DD") : null,
         denNgay:   dateRange?.[1] ? dayjs(dateRange[1]).format("YYYY-MM-DD") : null,
+        tuNgayXL:  dateXLRange?.[0] ? dayjs(dateXLRange[0]).format("YYYY-MM-DD") : null,
+        denNgayXL: dateXLRange?.[1] ? dayjs(dateXLRange[1]).format("YYYY-MM-DD") : null,
         caSanXuat: filters.caSanXuat || null,
         kip:       filters.kip || null,
         mayDuc:    filters.mayDuc ?? null,
@@ -414,6 +417,12 @@ const BkHrc2SlabTable = () => {
       fixed: "left" as const,
       render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
     },
+    {
+      title: "Ngày xử lý",
+      dataIndex: "ngayXuLy",
+      width: 105,
+      render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
+    },
     { title: "Ca SX", dataIndex: "shiftName", width: 150, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
     { title: "Kíp", dataIndex: "kipSanXuat", width: 40, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
     { title: "Mẻ thép", dataIndex: "meThep", width: 100, align: "center" as const, fixed: "left" as const },
@@ -468,12 +477,6 @@ const BkHrc2SlabTable = () => {
   const extraCols = useMemo(() => [
     { title: "Loại phôi", dataIndex: "loaiPhoi", width: 95, render: (v: string) => v ?? "-" },
     { title: "SAP Description", dataIndex: "sapDescription", width: 300, render: (v: string) => v ?? "-" },
-    {
-      title: "Ngày xử lý",
-      dataIndex: "ngayXuLy",
-      width: 105,
-      render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
-    },
     {
       title: "Ca (phiếu)",
       dataIndex: "caBBSL",
@@ -532,6 +535,11 @@ const BkHrc2SlabTable = () => {
           <Row gutter={[12, 0]}>
             <Col xs={24} sm={12} md={4}>
               <Form.Item name="dateRange" label="Khoảng ngày SX">
+                <RangePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder={["Từ ngày", "Đến ngày"]} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={4}>
+              <Form.Item name="dateXLRange" label="Khoảng ngày xử lý">
                 <RangePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder={["Từ ngày", "Đến ngày"]} />
               </Form.Item>
             </Col>

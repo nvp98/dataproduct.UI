@@ -10,7 +10,7 @@ import ThongKePhieuCommon, {
 import { DEFAULT_TINH_TRANG_OPTIONS } from "../../../utils/ConfigDefault/thongKePhieuDefaults";
 import type { SearchPhieuRequest } from "../../../models/Phieu";
 import type { PhieuFilterValues } from "../../../components/PhieuFilterCard";
-import { getPhieuStatusConfig } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { getPhieuStatusConfig, PHOI_TAM_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
 import type { NhaMayEnum } from "../../../models/SiloModel";
@@ -157,7 +157,17 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
             });
           })();
     fields.push({ key: "scope", label: "Lò thổi", type: "select", options: scopeOptions });
-    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: DEFAULT_TINH_TRANG_OPTIONS });
+    // Biên bản sản lượng phôi tấm (HRC2_BBSL_PhoiTam) dùng thang trạng thái tổng hợp riêng
+    // (11/12, xem PHOI_TAM_STATUS_CONFIG) thay vì TrangThaiPhieuConst chuẩn — gộp thêm vào đây
+    // để lọc được tình trạng cho mã BM này.
+    const tinhTrangOptions = [
+      ...DEFAULT_TINH_TRANG_OPTIONS,
+      ...Object.entries(PHOI_TAM_STATUS_CONFIG).map(([value, cfg]) => ({
+        label: `${cfg.text} (Phôi tấm)`,
+        value: Number(value),
+      })),
+    ];
+    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: tinhTrangOptions });
 
     return fields;
   }, [mayDucOptions, selectedLoaiBM]);
