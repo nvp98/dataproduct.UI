@@ -209,8 +209,11 @@ const BkHrc2SlabTable = () => {
     r.trangThaiPKH === 0 &&
     !r.isChot;
 
+  const hasChatLuong = (r: HrcSlabItem): boolean =>
+    !!(r.chatLuong && String(r.chatLuong).trim() !== "");
+
   const canChuyenBBSLRow = (r: HrcSlabItem): boolean =>
-    r.trangThaiKCS === 0 && r.isSaiLotName === false && r.isTrungIDSlab === false && r.isDiffMacThep === false;
+    r.trangThaiKCS === 0 && r.isSaiLotName === false && r.isTrungIDSlab === false && r.isDiffMacThep === false && hasChatLuong(r);
 
   const validateSameCaSanXuat = (): boolean => {
     const caValues = [...new Set(selectedRows.map((r) => r.caSanXuat ?? ""))];
@@ -241,7 +244,7 @@ const BkHrc2SlabTable = () => {
     if (hasChuyenRoi) { message.warning("Một số mẻ đã được chuyển BBSL, vui lòng bỏ chọn chúng!"); return; }
 
     const invalidRows = selectedRows.filter(
-      (r) => r.isSaiLotName || r.isTrungIDSlab || r.isDiffMacThep
+      (r) => r.isSaiLotName || r.isTrungIDSlab || r.isDiffMacThep || !hasChatLuong(r)
     );
     if (invalidRows.length > 0) {
       const lines = invalidRows.map((r) => {
@@ -249,6 +252,7 @@ const BkHrc2SlabTable = () => {
         if (r.isSaiLotName) reasons.push("LotName");
         if (r.isTrungIDSlab) reasons.push("ID Slab (trùng)");
         if (r.isDiffMacThep) reasons.push("Mác thép (khác)");
+        if (!hasChatLuong(r)) reasons.push("thiếu Chất lượng");
         return `Không thể chuyển BBSL ID ${r.idSlab} vì đang sai ${reasons.join(", ")}`;
       });
       message.error(
@@ -354,8 +358,16 @@ const BkHrc2SlabTable = () => {
 
   const currentPageKeys = useMemo(() => data.map((r) => r.id as React.Key), [data]);
 
+  // Slab chưa chuyển BBSL mà thiếu Chất lượng thì không cho tick chọn
+  const isRowSelectable = (r: HrcSlabItem): boolean =>
+    r.trangThaiKCS !== 0 || hasChatLuong(r);
+
   const rowSelection: TableRowSelection<HrcSlabItem> = {
     selectedRowKeys,
+    getCheckboxProps: (r) => ({
+      disabled: !isRowSelectable(r),
+      title: !isRowSelectable(r) ? "Thiếu thông tin Chất lượng, không thể chọn để chuyển BBSL" : undefined,
+    }),
     onChange: (newKeys) => {
       // Giữ lại selections từ các trang khác, merge với selection trang hiện tại
       const otherPageKeys = selectedRowKeys.filter((k) => !currentPageKeys.includes(k));
@@ -363,7 +375,10 @@ const BkHrc2SlabTable = () => {
     },
     onSelectAll: (selected) => {
       if (selected) {
-        setSelectedRowKeys([...new Set([...selectedRowKeys, ...currentPageKeys])]);
+        const selectableCurrentPageKeys = data
+          .filter((r) => isRowSelectable(r))
+          .map((r) => r.id as React.Key);
+        setSelectedRowKeys([...new Set([...selectedRowKeys, ...selectableCurrentPageKeys])]);
       } else {
         setSelectedRowKeys(selectedRowKeys.filter((k) => !currentPageKeys.includes(k)));
       }
@@ -457,7 +472,21 @@ const BkHrc2SlabTable = () => {
       render: (v: number) =>
         v != null ? Number(v).toLocaleString("vi-VN", { minimumFractionDigits: 3 }) : "-",
     },
-    { title: "Chất lượng", dataIndex: "chatLuong", width: 280 },
+    {
+      title: "Chất lượng",
+      dataIndex: "chatLuong",
+      width: 280,
+      render: (v: string, r: HrcSlabItem) => {
+        const missing = r.trangThaiKCS === 0 && !hasChatLuong(r);
+        return (
+          <Tooltip title={missing ? "Thiếu Chất lượng, không thể chuyển BBSL" : undefined}>
+            <span style={{ color: missing ? "#ff4d4f" : undefined, fontWeight: missing ? 600 : undefined }}>
+              {v ?? "-"}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
     { title: "OrderID", dataIndex: "orderId", width: 150 },
     {
       title: "LotName",
@@ -505,7 +534,7 @@ const BkHrc2SlabTable = () => {
   // Cột phiếu BBSL trong modal
   const phieuColumns = [
     { title: "Số phiếu", dataIndex: "soPhieu", width: 170 },
-    { title: "Ngày SX", dataIndex: "ngaySX", width: 110, render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-", onCell: () => ({ style: { fontWeight: "bold" } }) },
+    { title: "Ngày lên BBSL", dataIndex: "ngaySX", width: 110, render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-", onCell: () => ({ style: { fontWeight: "bold" } }) },
     { title: "Ca", dataIndex: "ca", width: 100, render: (v: number) => v === 1 ? "Ca Ngày" : v === 2 ? "Ca Đêm" : v ?? "-", onCell: () => ({ style: { fontWeight: "bold" } }) },
     { title: "Kíp", dataIndex: "kip", width: 70, onCell: () => ({ style: { fontWeight: "bold" } }) },
     { title: "Số slab", dataIndex: "soSlabDaChot", width: 75, align: "right" as const },

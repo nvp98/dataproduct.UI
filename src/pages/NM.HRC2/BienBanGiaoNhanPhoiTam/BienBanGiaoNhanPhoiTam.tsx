@@ -80,7 +80,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
       width: 250,
     },
     {
-      title: "Ngày SX",
+      title: "Ngày lên BBSL",
       dataIndex: "ngaySX",
       key: "ngaySX",
       width: 140,

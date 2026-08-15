@@ -672,12 +672,12 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                   <Descriptions.Item label="Số phiếu">
                     {data?.soPhieu || ""}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Ngày SX">
+                  <Descriptions.Item label="Ngày lên BBSL">
                     {formData?.NgaySX
                       ? dayjs(formData.NgaySX).format("DD/MM/YYYY")
                       : ""}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Ca sản xuất">
+                  <Descriptions.Item label="Ca lên BBSL">
                     {formData?.ca == 1
                       ? "Ca ngày"
                       : formData?.ca == 2
@@ -895,12 +895,12 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                   <Descriptions.Item label="Số phiếu">
                     {data?.soPhieu || ""}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Ngày SX">
+                  <Descriptions.Item label="Ngày lên BBSL">
                     {formData?.NgaySX
                       ? dayjs(formData.NgaySX).format("DD/MM/YYYY")
                       : ""}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Ca sản xuất">
+                  <Descriptions.Item label="Ca lên BBSL">
                     {formData?.ca == 1
                       ? "Ca ngày"
                       : formData?.ca == 2
