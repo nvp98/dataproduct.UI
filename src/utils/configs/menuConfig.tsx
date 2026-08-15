@@ -160,6 +160,20 @@ export const menuConfig = [
             ),
           },
         ],
+      },
+      {
+        key: "sub1-5",
+        label: "NM.TKVV",
+        children: [
+          {
+            key: "sub1-5-1",
+            label: (
+              <Tooltip title="Quản lý sản phẩm & Mapping TKVV">
+                <NavLink to="/quanlynvltkvv">Quản lý NVL & Mapping</NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
       }
     ],
   },
@@ -504,6 +518,21 @@ export const menuConfig = [
             ),
           },
         ]
+      },
+      {
+        key: "sub2-tkvv",
+        label: "NM.TKVV",
+        children: [
+          {
+            key: "sub2-tkvv-1",
+            maBM: BM_CONFIG.TKVV.TKVV_BB_SanLuong,
+            label: (
+              <Tooltip title="Biên bản sản lượng">
+                <NavLink to="/sanluongtkvv">Biên bản sản lượng</NavLink>
+              </Tooltip>
+            ),
+          },
+        ]
       }
     ],
   },
@@ -785,6 +814,21 @@ export const menuConfig = [
           },
         ],
       },
+      {
+        key: "sub3-tkvv",
+        label: "NM.TKVV",
+        children: [
+          {
+            key: "sub3-tkvv-1",
+            maBM: BM_CONFIG.TKVV.TKVV_BB_SanLuong,
+            label: (
+              <Tooltip title="Biên bản sản lượng">
+                <NavLink to="/viecdentoi/sanluongtkvv">Biên bản sản lượng</NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
     ],
   },
   {
@@ -1041,6 +1085,21 @@ export const menuConfig = [
           },
         ],
       },
+      {
+        key: "sub4-tkvv",
+        label: "NM.TKVV",
+        children: [
+          {
+            key: "sub4-tkvv-1",
+            maBM: BM_CONFIG.TKVV.TKVV_BB_SanLuong,
+            label: (
+              <Tooltip title="Biên bản sản lượng">
+                <NavLink to="/xemphieu/sanluongtkvv">Biên bản sản lượng</NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
     ],
   },
   {
@@ -1250,6 +1309,21 @@ export const menuConfig = [
             label: (
               <Tooltip title="Phân bổ dữ liệu (QHLC / CVH / Than cốc <10mm)">
                 <NavLink to="/phanbodulieu">Phân bổ dữ liệu</NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
+      {
+        key: "sub5-tkvv",
+        label: "NM.TKVV",
+        children: [
+          {
+            key: "sub5-tkvv-1",
+            maBM: BM_CONFIG.TKVV.TKVV_BB_SanLuong,
+            label: (
+              <Tooltip title="Biên bản sản lượng">
+                <NavLink to="/sanluongtkvv">Biên bản sản lượng</NavLink>
               </Tooltip>
             ),
           },

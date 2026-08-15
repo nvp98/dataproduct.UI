@@ -239,6 +239,19 @@ export const bmQuyenConfig = {
         { khuVucPhu: "Can", tenKhuVuc: "Bộ phận Cán Tấm" },
         { khuVucPhu: "C4", tenKhuVuc: "GĐ/PGĐ NM" },
       ]
+    },
+    {
+      maBm: BM_CONFIG.TKVV.TKVV_BB_SanLuong,
+      tenBm: "Biên bản sản lượng",
+      nhom: "NM.TKVV",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Thiêu kết 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Thiêu kết 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Thiêu kết 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Thiêu kết 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Vê viên 1" },
+        { maKhuVuc: "6", tenKhuVuc: "Vê viên 2" },
+      ]
     }
   ] as BieuMauQuyenItem[],
 };

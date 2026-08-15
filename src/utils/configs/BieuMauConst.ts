@@ -38,5 +38,8 @@ export const BM_CONFIG = {
     NL: {
         NL_BB_TheoDoiBenPhe: 'NL_BB_TheoDoiBenPhe',
     },
+    TKVV: {
+        TKVV_BB_SanLuong: 'TKVV_BB_SanLuong',
+    },
 }
 

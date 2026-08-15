@@ -156,4 +156,16 @@ export const MenuDataDashboard = [
       },
     ],
   },
+  {
+    category: "NM.TKVV",
+    icon: "nmtkvv",
+    color: "#019221ff",
+    items: [
+      {
+        code: "sanluongtkvv",
+        title: "BIÊN BẢN SẢN LƯỢNG",
+        maBm: BM_CONFIG.TKVV.TKVV_BB_SanLuong,
+      },
+    ],
+  },
 ];
