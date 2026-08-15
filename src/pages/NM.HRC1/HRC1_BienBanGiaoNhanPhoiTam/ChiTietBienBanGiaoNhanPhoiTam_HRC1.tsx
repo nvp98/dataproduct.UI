@@ -5,6 +5,7 @@ import {
   Card,
   Descriptions,
   Input,
+  Modal,
   Popconfirm,
   Table,
   Tabs,
@@ -20,6 +21,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ReloadOutlined,
+  SnippetsOutlined,
   SyncOutlined,
   LockOutlined,
   UnlockOutlined,
@@ -107,6 +109,29 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
 
   const [chuyenLoading, setChuyenLoading] = useState<"truoc" | "sau" | null>(null);
   const [tongHopRefreshLoading, setTongHopRefreshLoading] = useState(false);
+
+  // Search client-side (không gọi API) cho cột Số Mẻ / ID Slab trong tab chi tiết —
+  // gõ trực tiếp vào ô input, hoặc bấm nút Paste để mở popup dán danh sách
+  // (mỗi dòng/phẩy/tab 1 giá trị) từ Excel.
+  const [maMeSearch, setMaMeSearch] = useState("");
+  const [idSlabSearch, setIdSlabSearch] = useState("");
+
+  const [pasteModalOpen, setPasteModalOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteTarget, setPasteTarget] = useState<((v: string) => void) | null>(null);
+
+  const openPasteModal = useCallback((setter: (v: string) => void) => {
+    setPasteTarget(() => setter);
+    setPasteText("");
+    setPasteModalOpen(true);
+  }, []);
+
+  const applyPasteModal = () => {
+    const vals = pasteText.split(/[\n\t,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (vals.length > 0 && pasteTarget) pasteTarget(vals.join(", "));
+    setPasteModalOpen(false);
+    setPasteText("");
+  };
 
   const TAB_TITLES: Record<string, string> = {
     chitiet: "BIÊN BẢN GIAO NHẬN PHÔI TẤM",
@@ -230,6 +255,24 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
   );
   const selectedCount = selectedRowKeys.length;
 
+  // Lọc client-side theo Số Mẻ / ID Slab — tách các giá trị nhập/paste theo dòng/phẩy/tab,
+  // 1 dòng khớp nếu chứa (contains, không phân biệt hoa/thường) BẤT KỲ giá trị nào đã nhập.
+  // Chạy trên danh sách slab đã tải sẵn của phiếu này, không gọi API.
+  const parseSearchTerms = (text: string) =>
+    text.split(/[\n\t,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+  const filteredSlabDetails = useMemo(() => {
+    const maMeTerms = parseSearchTerms(maMeSearch);
+    const idSlabTerms = parseSearchTerms(idSlabSearch);
+    return slabDetails.filter((r) => {
+      const maMe = (r.maMe ?? "").toLowerCase();
+      const idSlab = (r.idSlab ?? "").toLowerCase();
+      if (maMeTerms.length > 0 && !maMeTerms.some((t) => maMe.includes(t))) return false;
+      if (idSlabTerms.length > 0 && !idSlabTerms.some((t) => idSlab.includes(t))) return false;
+      return true;
+    });
+  }, [slabDetails, maMeSearch, idSlabSearch]);
+
   // Đúc, Cán và C4 đồng cấp (song song, không phụ thuộc lẫn nhau)
   const canXacNhanDuc = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 0 && r.trangThaiPKH === 0);
   const canHuyDuc     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiPKH === 0);
@@ -344,16 +387,50 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
       render: (_: unknown, r: Hrc1SlabItem) => r.tenVatTu || r.macThep || "-",
     },
     {
-      title: "Số Mẻ",
+      title: (
+        <div>
+          <div>Số Mẻ</div>
+          <div style={{ display: "flex", gap: 2, marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
+            <Input
+              size="small"
+              value={maMeSearch}
+              onChange={(e) => setMaMeSearch(e.target.value)}
+              placeholder="Tìm/paste..."
+              allowClear
+              style={{ fontWeight: "normal" }}
+            />
+            <Tooltip title="Paste từ clipboard">
+              <Button size="small" icon={<SnippetsOutlined />} onClick={() => openPasteModal(setMaMeSearch)} />
+            </Tooltip>
+          </div>
+        </div>
+      ),
       dataIndex: "maMe",
-      width: 100,
+      width: 130,
       align: "center" as const,
       render: (v: string) => v ?? "-",
     },
     {
-      title: "ID Slab",
+      title: (
+        <div>
+          <div>ID Slab</div>
+          <div style={{ display: "flex", gap: 2, marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
+            <Input
+              size="small"
+              value={idSlabSearch}
+              onChange={(e) => setIdSlabSearch(e.target.value)}
+              placeholder="Tìm/paste..."
+              allowClear
+              style={{ fontWeight: "normal" }}
+            />
+            <Tooltip title="Paste từ clipboard">
+              <Button size="small" icon={<SnippetsOutlined />} onClick={() => openPasteModal(setIdSlabSearch)} />
+            </Tooltip>
+          </div>
+        </div>
+      ),
       dataIndex: "idSlab",
-      width: 130,
+      width: 150,
       align: "center" as const,
     },
     {
@@ -408,7 +485,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
       render: (v: number) => <Tag color={v === 1 ? "blue" : "default"}>{v === 1 ? "Đã chốt" : "Chưa"}</Tag>,
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [isDuc, isCan, isC4, isPKH, rowEdits, saveRowEdit, data?.tinhTrang]);
+  ], [isDuc, isCan, isC4, isPKH, rowEdits, saveRowEdit, data?.tinhTrang, maMeSearch, idSlabSearch, openPasteModal]);
 
   // ── Tab tổng hợp rows ─────────────────────────────────────────────────────
   const tongHopRows = useMemo(() => {
@@ -646,7 +723,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                 {phieuInfo}
                 <Card
                   size="small"
-                  title={`Danh sách slab (${slabDetails.length})${selectedCount > 0 ? ` — Đã chọn ${selectedCount}` : ""}`}
+                  title={`Danh sách slab (${filteredSlabDetails.length}${filteredSlabDetails.length !== slabDetails.length ? ` / ${slabDetails.length}` : ""})${selectedCount > 0 ? ` — Đã chọn ${selectedCount}` : ""}`}
                   styles={{ body: { padding: "8px 12px" } }}
                   extra={
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -799,13 +876,13 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                     bordered
                     virtual
                     columns={detailColumns}
-                    dataSource={slabDetails}
+                    dataSource={filteredSlabDetails}
                     pagination={false}
                     scroll={{ x: "max-content", y: 520 }}
                     sticky={{ offsetHeader: 0 }}
                     rowClassName={(r) => r.isChuyenCa ? "row-chuyen-ca" : ""}
                     summary={() => {
-                      const totalKL = slabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
+                      const totalKL = filteredSlabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
                       const optColCount = ((isDuc || isCan || isPKH) ? 1 : 0) + ((isCan || isPKH) ? 1 : 0) + ((isC4 || isPKH) ? 1 : 0) + (isPKH ? 1 : 0);
                       return (
                         <Table.Summary fixed>
@@ -909,6 +986,28 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
           {actionButtons}
         </div>
       )} */}
+
+      {/* Popup paste danh sách Số Mẻ / ID Slab (dùng chung) */}
+      <Modal
+        title="Paste danh sách"
+        open={pasteModalOpen}
+        onOk={applyPasteModal}
+        onCancel={() => { setPasteModalOpen(false); setPasteText(""); }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <p style={{ marginBottom: 8, color: "#666", fontSize: 12 }}>
+          Paste danh sách từ Excel (mỗi dòng 1 giá trị, hoặc phân cách bằng dấu phẩy/tab).
+        </p>
+        <Input.TextArea
+          autoFocus
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder="Paste dữ liệu từ Excel vào đây..."
+          rows={8}
+        />
+      </Modal>
 
       {/* CSS cho row được chuyển ca */}
       <style>{`
