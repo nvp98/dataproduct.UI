@@ -24,9 +24,10 @@ import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import {
   tkvvNvlApi,
   tkvvMappingApi,
+  tkvvEmsTagApi,
   type TKVVNguyenVatLieuDto,
   type TKVVMappingDto,
-  type TKVVPhanLoai,
+  type EMSMappingTagDto,
 } from "../../../services/TKVVApi";
 
 const { Title } = Typography;
@@ -43,20 +44,15 @@ const SCOPE_OPTIONS = [
   { label: "TK4 - Thiêu kết 4", value: "TK4" },
 ];
 
-// PhanLoai cố định theo cột trên biểu mẫu giấy — xem TKVV_SanLuongMapping.PhanLoai ở BE.
-const PHAN_LOAI_OPTIONS: { label: string; value: TKVVPhanLoai; color: string }[] = [
-  { label: "Loại 1", value: 1, color: "green" },
-  { label: "Loại 2", value: 2, color: "blue" },
-  { label: "Loại 3", value: 3, color: "orange" },
-  { label: "Phế phẩm", value: 4, color: "red" },
+const scopeLabel = (v: string) => SCOPE_OPTIONS.find((o) => o.value === v)?.label ?? v;
+
+// Ca ngày và ca đêm dùng 2 Tag PLC khác nhau — bắt buộc chọn khi tạo Mapping.
+const CA_OPTIONS = [
+  { label: "Ca 1 - Ngày", value: 1 },
+  { label: "Ca 2 - Đêm", value: 2 },
 ];
 
-const phanLoaiTag = (v: TKVVPhanLoai) => {
-  const opt = PHAN_LOAI_OPTIONS.find((o) => o.value === v);
-  return <Tag color={opt?.color ?? "default"}>{opt?.label ?? v}</Tag>;
-};
-
-const scopeLabel = (v: string) => SCOPE_OPTIONS.find((o) => o.value === v)?.label ?? v;
+const caLabel = (v: number) => CA_OPTIONS.find((o) => o.value === v)?.label ?? String(v);
 
 // ─── Tab 1: Danh mục sản phẩm (NVL) ─────────────────────────────────────────
 
@@ -189,21 +185,52 @@ const NvlTab = ({
   );
 };
 
-// ─── Tab 2: Mapping Tag PLC ↔ Sản phẩm ──────────────────────────────────────
+// ─── Tab 2: Mapping Tag PLC ↔ Xưởng (1 Tag = 1 BM/xưởng, không gắn sản phẩm) ──
 
-const MappingTab = ({ nvlOptions }: { nvlOptions: TKVVNguyenVatLieuDto[] }) => {
+const MappingTab = () => {
   const [data, setData] = useState<TKVVMappingDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [scopeFilter, setScopeFilter] = useState<string | undefined>();
+  const [caFilter, setCaFilter] = useState<number | undefined>();
   const [form] = Form.useForm();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TKVVMappingDto | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const fetchData = useCallback(async (scope?: string) => {
+  // Danh sách Tag PLC lấy từ EMS (dbo.EMS_GetMappingTag) theo Xưởng đang chọn trong
+  // modal — chỉ để gợi ý/tự điền TagIDEMS + TagName + Ca, người dùng vẫn có thể tự
+  // gõ tay nếu Tag chưa có trong EMS.
+  const [emsTags, setEmsTags] = useState<EMSMappingTagDto[]>([]);
+  const [emsLoading, setEmsLoading] = useState(false);
+  const modalScope = Form.useWatch("scope", form);
+
+  useEffect(() => {
+    if (!modalOpen || !modalScope) {
+      setEmsTags([]);
+      return;
+    }
+    setEmsLoading(true);
+    tkvvEmsTagApi
+      .getList({ xuong: modalScope })
+      .then((list) => setEmsTags(Array.isArray(list) ? list : []))
+      .catch(() => message.error("Không thể tải danh sách Tag từ EMS"))
+      .finally(() => setEmsLoading(false));
+  }, [modalOpen, modalScope]);
+
+  const handlePickEmsTag = (id: number) => {
+    const tag = emsTags.find((t) => t.id === id);
+    if (!tag) return;
+    form.setFieldsValue({
+      tagID: tag.tagIDEMS,
+      maKey: tag.tagName,
+      ...(tag.ca ? { ca: tag.ca } : {}),
+    });
+  };
+
+  const fetchData = useCallback(async (scope?: string, ca?: number) => {
     setLoading(true);
     try {
-      const res = await tkvvMappingApi.getList(scope ? { scope } : undefined);
+      const res = await tkvvMappingApi.getList({ scope, ca });
       setData(Array.isArray(res) ? res : []);
     } catch {
       message.error("Lỗi khi tải danh sách Mapping");
@@ -213,8 +240,8 @@ const MappingTab = ({ nvlOptions }: { nvlOptions: TKVVNguyenVatLieuDto[] }) => {
   }, []);
 
   useEffect(() => {
-    fetchData(scopeFilter);
-  }, [fetchData, scopeFilter]);
+    fetchData(scopeFilter, caFilter);
+  }, [fetchData, scopeFilter, caFilter]);
 
   const openCreate = () => {
     setEditing(null);
@@ -250,7 +277,7 @@ const MappingTab = ({ nvlOptions }: { nvlOptions: TKVVNguyenVatLieuDto[] }) => {
         message.success("Thêm mapping thành công");
       }
       setModalOpen(false);
-      fetchData(scopeFilter);
+      fetchData(scopeFilter, caFilter);
     } catch (err: any) {
       message.error(err?.message || "Không thể lưu mapping");
     } finally {
@@ -262,7 +289,7 @@ const MappingTab = ({ nvlOptions }: { nvlOptions: TKVVNguyenVatLieuDto[] }) => {
     try {
       await tkvvMappingApi.delete(id);
       message.success("Đã ngừng mapping");
-      fetchData(scopeFilter);
+      fetchData(scopeFilter, caFilter);
     } catch (err: any) {
       message.error(err?.message || "Không thể xóa mapping");
     }
@@ -271,15 +298,25 @@ const MappingTab = ({ nvlOptions }: { nvlOptions: TKVVNguyenVatLieuDto[] }) => {
   return (
     <div>
       <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
-        <Select
-          allowClear
-          placeholder="Lọc theo xưởng"
-          style={{ width: 220 }}
-          options={SCOPE_OPTIONS}
-          value={scopeFilter}
-          onChange={(v) => setScopeFilter(v)}
-        />
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} disabled={nvlOptions.length === 0}>
+        <Space>
+          <Select
+            allowClear
+            placeholder="Lọc theo xưởng"
+            style={{ width: 220 }}
+            options={SCOPE_OPTIONS}
+            value={scopeFilter}
+            onChange={(v) => setScopeFilter(v)}
+          />
+          <Select
+            allowClear
+            placeholder="Lọc theo ca"
+            style={{ width: 160 }}
+            options={CA_OPTIONS}
+            value={caFilter}
+            onChange={(v) => setCaFilter(v)}
+          />
+        </Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
           Thêm mapping
         </Button>
       </div>
@@ -290,16 +327,9 @@ const MappingTab = ({ nvlOptions }: { nvlOptions: TKVVNguyenVatLieuDto[] }) => {
         pagination={{ pageSize: 20, showSizeChanger: true }}
         columns={[
           { title: "Xưởng", dataIndex: "scope", width: 140, render: scopeLabel },
+          { title: "Ca", dataIndex: "ca", width: 110, align: "center", render: caLabel },
           { title: "TagID", dataIndex: "tagID", width: 160 },
-          { title: "MaKey", dataIndex: "maKey", width: 140 },
-          { title: "Sản phẩm", dataIndex: "tenNVL" },
-          {
-            title: "Phân loại",
-            dataIndex: "phanLoai",
-            width: 110,
-            align: "center",
-            render: phanLoaiTag,
-          },
+          { title: "MaKey", dataIndex: "maKey" },
           { title: "Từ ngày", dataIndex: "tuNgay", width: 110 },
           { title: "Đến ngày", dataIndex: "denNgay", width: 110 },
           {
@@ -337,20 +367,44 @@ const MappingTab = ({ nvlOptions }: { nvlOptions: TKVVNguyenVatLieuDto[] }) => {
           <Form.Item name="scope" label="Xưởng" rules={[{ required: true, message: "Bắt buộc" }]}>
             <Select options={SCOPE_OPTIONS} placeholder="Chọn xưởng" />
           </Form.Item>
-          <Form.Item name="tagID" label="Tag ID (PLC)" rules={[{ required: true, message: "Bắt buộc" }]}>
-            <Input placeholder="VD: VV2_L1_WEIGHT" />
-          </Form.Item>
-          <Form.Item name="maKey" label="Mã Key hiển thị" rules={[{ required: true, message: "Bắt buộc" }]}>
-            <Input placeholder="VD: VV2.Loai1" />
-          </Form.Item>
-          <Form.Item name="nguyenVatLieuID" label="Sản phẩm" rules={[{ required: true, message: "Bắt buộc" }]}>
+          <Form.Item label="Chọn từ danh sách Tag EMS (gợi ý)" extra="Chọn xưởng trước để tải danh sách. Chọn 1 Tag sẽ tự điền TagIDEMS/TagName/Ca bên dưới — vẫn có thể tự sửa lại.">
             <Select
-              placeholder="Chọn sản phẩm"
-              options={nvlOptions.map((n) => ({ label: n.tenNVL, value: n.id }))}
+              allowClear
+              showSearch
+              loading={emsLoading}
+              disabled={!modalScope}
+              placeholder={modalScope ? "Tìm theo tên cân / TagName..." : "Chọn Xưởng trước"}
+              notFoundContent={emsLoading ? "Đang tải..." : "Không có Tag nào cho xưởng này"}
+              filterOption={(input, option) =>
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+              options={emsTags
+                .filter((t) => t.ca !== null)
+                .map((t) => ({
+                  value: t.id,
+                  label: `${t.tenCan ?? t.tagName} — ${t.tagName} (${t.ca === 1 ? "Ngày" : "Đêm"}${t.loai ? ` · ${t.loai}` : ""})`,
+                }))}
+              onChange={(id) => handlePickEmsTag(id)}
             />
           </Form.Item>
-          <Form.Item name="phanLoai" label="Phân loại" rules={[{ required: true, message: "Bắt buộc" }]}>
-            <Select options={PHAN_LOAI_OPTIONS.map(({ label, value }) => ({ label, value }))} placeholder="Chọn phân loại" />
+          <Form.Item
+            name="ca"
+            label="Ca"
+            rules={[{ required: true, message: "Bắt buộc" }]}
+            extra="Ca ngày và ca đêm dùng 2 Tag PLC khác nhau — chọn đúng ca của Tag này."
+          >
+            <Select options={CA_OPTIONS} placeholder="Chọn ca" />
+          </Form.Item>
+          <Form.Item
+            name="tagID"
+            label="TagIDEMS (PLC)"
+            rules={[{ required: true, message: "Bắt buộc" }]}
+            extra="Lấy từ cột TagIDEMS trong EMS_DATA_CAN — 1 Tag báo tổng khối lượng, không phân theo Loại."
+          >
+            <Input placeholder="VD: 1012311" />
+          </Form.Item>
+          <Form.Item name="maKey" label="TagName hiển thị" rules={[{ required: true, message: "Bắt buộc" }]}>
+            <Input placeholder="VD: TK_Sieve_AI037" />
           </Form.Item>
           <Form.Item name="thuTu" label="Thứ tự hiển thị">
             <InputNumber style={{ width: "100%" }} />
@@ -373,12 +427,6 @@ const MappingTab = ({ nvlOptions }: { nvlOptions: TKVVNguyenVatLieuDto[] }) => {
           </Form.Item>
         </Form>
       </Modal>
-
-      {nvlOptions.length === 0 && (
-        <Typography.Text type="warning">
-          Chưa có sản phẩm nào ở tab "Danh mục sản phẩm" — hãy thêm sản phẩm trước khi tạo mapping.
-        </Typography.Text>
-      )}
     </div>
   );
 };
@@ -405,8 +453,6 @@ const QuanLyNVLTKVV = () => {
     loadNvl();
   }, [loadNvl]);
 
-  const activeNvlOptions = useMemo(() => nvlData.filter((n) => n.trangThai), [nvlData]);
-
   return (
     <Card style={{ margin: 24 }}>
       <Title level={4}>Quản lý sản phẩm &amp; Mapping (NM.TKVV)</Title>
@@ -420,8 +466,8 @@ const QuanLyNVLTKVV = () => {
           },
           {
             key: "mapping",
-            label: "Mapping Tag PLC ↔ Sản phẩm",
-            children: <MappingTab nvlOptions={activeNvlOptions} />,
+            label: "Mapping Tag PLC ↔ Xưởng",
+            children: <MappingTab />,
           },
         ]}
       />

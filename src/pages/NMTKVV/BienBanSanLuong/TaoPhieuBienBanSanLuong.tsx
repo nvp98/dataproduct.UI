@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import TKVV_BB_SanLuong from "../../../utils/BM_config/TKVV_BB_SanLuong.json";
-import { Button, Card, Form, Input, Space, Typography, message } from "antd";
+import { Alert, Button, Card, Form, Input, Space, Typography, message } from "antd";
 import { ReloadOutlined, UndoOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -13,10 +13,11 @@ import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuCons
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 import {
   tkvvNvlApi,
-  tkvvDuLieuPivotApi,
+  tkvvTongTuDongApi,
   tkvvChiTietApi,
   type TKVVNguyenVatLieuDto,
   type TKVVChiTietDto,
+  type TKVVTongTuDongDto,
 } from "../../../services/TKVVApi";
 
 interface TableRow {
@@ -68,6 +69,9 @@ const TaoPhieuBienBanSanLuong = () => {
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   const [nvlOptions, setNvlOptions] = useState<TKVVNguyenVatLieuDto[]>([]);
+  // Tổng tự động (PLC) — 1 Tag = 1 BM/xưởng nên chỉ có 1 số tổng duy nhất, chỉ để
+  // đối chiếu, KHÔNG tự điền vào Loại 1/2/3/Phế phẩm vì cân/PLC không tự phân loại được.
+  const [tongTuDong, setTongTuDong] = useState<TKVVTongTuDongDto | null>(null);
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
     nguoiTaoId?: number | null;
@@ -119,9 +123,8 @@ const TaoPhieuBienBanSanLuong = () => {
       .catch(() => message.error("Không thể tải danh mục sản lượng!"));
   }, [config.code]);
 
-  // Scope (số) trùng nhau giữa 2 nhóm ở tầng hiển thị (không trùng thật — xem ghi chú
-  // ở BM_config) nên không cần tenScope để tránh trùng; tenScope chỉ dùng để hiển thị
-  // tên xưởng dễ đọc (BmPhieu.TenScope) — tự động gán theo lựa chọn "Xưởng".
+  // tenScope chỉ dùng để hiển thị tên xưởng dễ đọc (BmPhieu.TenScope) — tự động
+  // gán theo lựa chọn "Xưởng", không dùng để tra dữ liệu PLC (BE dùng Scope số).
   const scopeValue = Form.useWatch("scope", form);
   useEffect(() => {
     const opt = config.headerFields
@@ -144,57 +147,21 @@ const TaoPhieuBienBanSanLuong = () => {
 
   // ─── Chuyển chi tiết đã lưu (DB) -> dòng bảng hiển thị ─────────────────────
   const chiTietToRows = useCallback((chiTiet: TKVVChiTietDto[]): TableRow[] => {
-    const groups = new Map<number, TKVVChiTietDto[]>();
-    chiTiet.forEach((c) => {
-      const key = c.thuTuDong ?? 0;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(c);
-    });
-
-    return Array.from(groups.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([thuTu, items]) => {
-        const first = items[0];
-        const row: TableRow = {
-          key: `row-${thuTu}`,
-          thuTuDong: thuTu,
-          thoiGian: first.thoiGian ?? "",
-          tenSanPham: first.nguyenVatLieuID,
-          donViTinh: nvlById.get(first.nguyenVatLieuID)?.donViTinh ?? "",
-          ghiChu: first.ghiChu ?? "",
-        };
-        items.forEach((it) => {
-          const k = String(it.phanLoai);
-          row[k] = it.giaTriHienTai ?? "";
-          if (it.isEdited) {
-            row[`_manual_${k}`] = true;
-            row[`_goc_${k}`] = it.giaTriTuDong ?? null;
-          }
-        });
-        return row;
-      });
+    return [...chiTiet]
+      .sort((a, b) => (a.thuTuDong ?? 0) - (b.thuTuDong ?? 0))
+      .map((c) => ({
+        key: `row-${c.thuTuDong ?? c.id}`,
+        thuTuDong: c.thuTuDong ?? 0,
+        thoiGian: c.thoiGian ?? "",
+        tenSanPham: c.nguyenVatLieuID,
+        donViTinh: nvlById.get(c.nguyenVatLieuID)?.donViTinh ?? "",
+        ghiChu: c.ghiChu ?? "",
+        "1": c.loai1 ?? "",
+        "2": c.loai2 ?? "",
+        "3": c.loai3 ?? "",
+        "4": c.phePham ?? "",
+      }));
   }, [nvlById]);
-
-  // ─── Chuyển pivot PLC (chưa lưu) -> dòng bảng hiển thị ─────────────────────
-  const pivotToRows = useCallback(
-    (rows: Record<string, unknown>[]): TableRow[] =>
-      rows.map((r, idx) => {
-        const nguyenVatLieuID = Number(r["nguyenVatLieuID"] ?? 0) || null;
-        const row: TableRow = {
-          key: `row-${idx + 1}`,
-          thuTuDong: idx + 1,
-          thoiGian: String(r["thoiGian"] ?? ""),
-          tenSanPham: nguyenVatLieuID,
-          donViTinh: nguyenVatLieuID ? nvlById.get(nguyenVatLieuID)?.donViTinh ?? "" : "",
-          ghiChu: "",
-        };
-        PHAN_LOAI_KEYS.forEach((k) => {
-          if (r[k] !== undefined && r[k] !== null) row[k] = Number(r[k]);
-        });
-        return row;
-      }),
-    [nvlById]
-  );
 
   // ─── initData: tải phiếu khi mở trang ──────────────────────────────────────
   const initData = useCallback(async () => {
@@ -280,7 +247,9 @@ const TaoPhieuBienBanSanLuong = () => {
     initData();
   }, [initData]);
 
-  // ─── Cập nhật dữ liệu từ PLC ────────────────────────────────────────────────
+  // ─── Cập nhật tổng tự động (PLC) để đối chiếu ──────────────────────────────
+  // Không đụng vào bảng chi tiết — số liệu Loại 1-4 luôn do KTV/KCS tự nhập tay,
+  // PLC chỉ báo tổng khối lượng nên không thể tự điền vào từng cột phân loại.
   const handleCapNhatDuLieu = useCallback(async () => {
     const formData = form.getFieldsValue();
     const ngay = formData.NgaySX ? dayjs(formData.NgaySX).format("YYYY-MM-DD") : null;
@@ -294,21 +263,19 @@ const TaoPhieuBienBanSanLuong = () => {
 
     try {
       setLoading(true);
-      if (idphieu) {
-        await tkvvDuLieuPivotApi.syncChiTiet(idphieu);
-        const chiTiet = await tkvvChiTietApi.getByPhieu(idphieu);
-        setTableData(chiTietToRows(chiTiet || []));
-      } else {
-        const pivot = await tkvvDuLieuPivotApi.getPivot({ ngay, ca, scope });
-        setTableData(pivotToRows(pivot.rows || []));
-      }
-      message.success("Cập nhật dữ liệu thành công!");
+      const tong = await tkvvTongTuDongApi.getTong({ ngay, ca, scope });
+      setTongTuDong(tong ?? null);
+      message.success(
+        tong && tong.tongTuDong > 0
+          ? "Đã cập nhật tổng tự động từ PLC — tự chọn Sản lượng và chia vào các cột Loại bên dưới sao cho khớp."
+          : "Chưa có dữ liệu PLC cho xưởng/ca/ngày này.",
+      );
     } catch (error: any) {
       message.error(error?.response?.data?.message || error?.message || "Không thể cập nhật dữ liệu!");
     } finally {
       setLoading(false);
     }
-  }, [form, idphieu, chiTietToRows, pivotToRows]);
+  }, [form]);
 
   // ─── Thêm dòng thủ công (KTV/KCS lấy mẫu thêm) ──────────────────────────────
   // Thời gian để trống — người dùng tự ghi mốc giờ lấy mẫu thực tế, không suy ra
@@ -335,6 +302,21 @@ const TaoPhieuBienBanSanLuong = () => {
   );
 
   const hasRowsToDelete = tableData.length > 0; // minRows=0 cho phép xóa hết
+
+  // ─── Đối chiếu tổng tự động (PLC) với tổng KTV/KCS đã nhập ─────────────────
+  const tongDaNhap = useMemo(
+    () =>
+      tableData.reduce((sum, row) => {
+        const rowSum = PHAN_LOAI_KEYS.reduce((s, k) => {
+          const v = Number(row[k]);
+          return Number.isNaN(v) ? s : s + v;
+        }, 0);
+        return sum + rowSum;
+      }, 0),
+    [tableData]
+  );
+  const tongTuDongSum = tongTuDong?.tongTuDong ?? 0;
+  const lechTong = tongTuDongSum - tongDaNhap;
 
   // ─── getFormData ────────────────────────────────────────────────────────────
   const getFormData = useCallback(async () => {
@@ -380,10 +362,6 @@ const TaoPhieuBienBanSanLuong = () => {
       };
       PHAN_LOAI_KEYS.forEach((k) => {
         if (row[k] !== undefined && row[k] !== "") r[k] = row[k];
-        if (row[`_manual_${k}`]) {
-          r[`_manual_${k}`] = true;
-          r[`_goc_${k}`] = row[`_goc_${k}`] ?? null;
-        }
       });
       return r;
     });
@@ -528,7 +506,7 @@ const TaoPhieuBienBanSanLuong = () => {
           <Space style={{ justifyContent: "center", width: "100%" }}>
             {!isFormLocked && (
               <Button icon={<ReloadOutlined />} onClick={handleCapNhatDuLieu} loading={loading}>
-                Cập nhật dữ liệu
+                Cập nhật tổng tự động (PLC)
               </Button>
             )}
             {actionButtons}
@@ -537,6 +515,27 @@ const TaoPhieuBienBanSanLuong = () => {
             </Button>
           </Space>
         </div>
+
+        {tongTuDong && (
+          <Alert
+            style={{ marginBottom: 12 }}
+            type={lechTong === 0 ? "success" : "warning"}
+            showIcon
+            message={
+              <span>
+                Tổng tự động (PLC):{" "}
+                <b>{tongTuDongSum.toLocaleString("en-US", { maximumFractionDigits: 3 })}</b>
+                {" — "}Tổng đã nhập:{" "}
+                <b>{tongDaNhap.toLocaleString("en-US", { maximumFractionDigits: 3 })}</b>
+                {lechTong !== 0 && (
+                  <span>
+                    {" — "}Chênh lệch: <b>{lechTong.toLocaleString("en-US", { maximumFractionDigits: 3 })}</b>
+                  </span>
+                )}
+              </span>
+            }
+          />
+        )}
 
         <div style={{ width: "100%", overflowX: "auto", marginBottom: 8 }}>
           <CustomFormTable
@@ -548,7 +547,6 @@ const TaoPhieuBienBanSanLuong = () => {
             minRows={0}
             showAddButton={false}
             showDeleteButton={!isFormLocked && hasRowsToDelete}
-            manualTrackPattern={/^[1-4]$/}
             summary={tableSummary}
           />
         </div>

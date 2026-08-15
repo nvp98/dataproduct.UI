@@ -51,7 +51,7 @@
 
       "dataSource": {
         "type": "api",
-        "endpoint": "/api/TKVV_BBSL/get-dulieu-pivot",
+        "endpoint": "/api/TKVV_BBSL/get-tong-tudong",
         "paramsMap": {
           "scope": "scope",
           "ngay": "NgaySX",
