@@ -252,6 +252,19 @@ export const bmQuyenConfig = {
         { maKhuVuc: "5", tenKhuVuc: "Vê viên 1" },
         { maKhuVuc: "6", tenKhuVuc: "Vê viên 2" },
       ]
+    },
+    {
+      maBm: BM_CONFIG.TKVV.TKVV_BC_SanLuongChiPhi,
+      tenBm: "Báo cáo sản lượng & chi phí",
+      nhom: "NM.TKVV",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Thiêu kết 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Thiêu kết 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Thiêu kết 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Thiêu kết 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Vê viên 1" },
+        { maKhuVuc: "6", tenKhuVuc: "Vê viên 2" },
+      ]
     }
   ] as BieuMauQuyenItem[],
 };

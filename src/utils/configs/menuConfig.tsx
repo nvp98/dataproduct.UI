@@ -532,6 +532,15 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub2-tkvv-2",
+            maBM: BM_CONFIG.TKVV.TKVV_BC_SanLuongChiPhi,
+            label: (
+              <Tooltip title="Báo cáo sản lượng & chi phí sản xuất hàng ngày">
+                <NavLink to="/baocaoslcptkvv">Báo cáo sản lượng & chi phí</NavLink>
+              </Tooltip>
+            ),
+          },
         ]
       }
     ],
@@ -827,6 +836,15 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub3-tkvv-2",
+            maBM: BM_CONFIG.TKVV.TKVV_BC_SanLuongChiPhi,
+            label: (
+              <Tooltip title="Báo cáo sản lượng & chi phí sản xuất hàng ngày">
+                <NavLink to="/viecdentoi/baocaoslcptkvv">Báo cáo sản lượng & chi phí</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -1098,6 +1116,15 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub4-tkvv-2",
+            maBM: BM_CONFIG.TKVV.TKVV_BC_SanLuongChiPhi,
+            label: (
+              <Tooltip title="Báo cáo sản lượng & chi phí sản xuất hàng ngày">
+                <NavLink to="/xemphieu/baocaoslcptkvv">Báo cáo sản lượng & chi phí</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -1324,6 +1351,15 @@ export const menuConfig = [
             label: (
               <Tooltip title="Biên bản sản lượng">
                 <NavLink to="/sanluongtkvv">Biên bản sản lượng</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub5-tkvv-2",
+            maBM: BM_CONFIG.TKVV.TKVV_BC_SanLuongChiPhi,
+            label: (
+              <Tooltip title="Báo cáo sản lượng & chi phí sản xuất hàng ngày">
+                <NavLink to="/baocaoslcptkvv">Báo cáo sản lượng & chi phí</NavLink>
               </Tooltip>
             ),
           },

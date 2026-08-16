@@ -10,6 +10,8 @@ export interface TKVVNguyenVatLieuDto {
   thuTu: number | null;
   trangThai: boolean;
   ghiChu: string | null;
+  scope: string | null;
+  tenScope: string | null;
 }
 
 export interface CreateTKVVNguyenVatLieuDto {
@@ -18,6 +20,8 @@ export interface CreateTKVVNguyenVatLieuDto {
   donViTinh?: string | null;
   thuTu?: number | null;
   ghiChu?: string | null;
+  scope?: string | null;
+  tenScope?: string | null;
 }
 
 export interface UpdateTKVVNguyenVatLieuDto extends CreateTKVVNguyenVatLieuDto {
@@ -25,7 +29,7 @@ export interface UpdateTKVVNguyenVatLieuDto extends CreateTKVVNguyenVatLieuDto {
 }
 
 export const tkvvNvlApi = {
-  getList: (params?: { maBM?: string }): Promise<TKVVNguyenVatLieuDto[]> =>
+  getList: (params?: { maBM?: string; scope?: string }): Promise<TKVVNguyenVatLieuDto[]> =>
     apiService.get("/api/TKVV_BBSL/get-nvl", { params }),
 
   getById: (id: number): Promise<TKVVNguyenVatLieuDto> =>
@@ -40,37 +44,28 @@ export const tkvvNvlApi = {
   delete: (id: number) => apiService.delete(`/api/TKVV_BBSL/delete-nvl/${id}`),
 };
 
-// ─── Mapping Tag PLC -> NVL -> PhanLoai -> Scope ─────────────────────────────
+// ─── Mapping NVL ↔ Tag EMS + Ca (TKVV_NVL_TagMapping) ───────────────────────
+// Scope không lưu ở mapping — kế thừa từ NVL qua NguyenVatLieuID.
 
 // PhanLoai cố định theo cột trên biểu mẫu giấy: 1=Loại 1, 2=Loại 2, 3=Loại 3, 4=Phế phẩm
 export type TKVVPhanLoai = 1 | 2 | 3 | 4;
 
 export interface TKVVMappingDto {
   id: number;
-  tagID: string;
-  maKey: string;
   nguyenVatLieuID: number;
   tenNVL: string | null;
-  donViTinh: string | null;
-  scope: string; // mã xưởng phía PLC, vd "VV1","VV2","TK1".."TK4"
-  phanLoai: TKVVPhanLoai;
-  thuTu: number | null;
-  tuNgay: string | null;
-  denNgay: string | null;
+  scopeNVL: string | null;
+  tagIDEMS: string;
+  ca: number;
   trangThai: boolean;
   ghiChu: string | null;
-  ngayTao: string | null;
+  ngayCapNhat: string;
 }
 
 export interface CreateTKVVMappingDto {
-  tagID: string;
-  maKey: string;
   nguyenVatLieuID: number;
-  scope: string;
-  phanLoai: TKVVPhanLoai;
-  thuTu?: number | null;
-  tuNgay?: string | null;
-  denNgay?: string | null;
+  tagIDEMS: string;
+  ca: number;
   ghiChu?: string | null;
 }
 
@@ -79,8 +74,8 @@ export interface UpdateTKVVMappingDto extends CreateTKVVMappingDto {
 }
 
 export const tkvvMappingApi = {
-  getList: (params?: { scope?: string; tagID?: string }): Promise<TKVVMappingDto[]> =>
-    apiService.get("/api/TKVV_BBSL/get-mapping", { params }),
+  getList: (): Promise<TKVVMappingDto[]> =>
+    apiService.get("/api/TKVV_BBSL/get-mapping"),
 
   getById: (id: number): Promise<TKVVMappingDto> =>
     apiService.get(`/api/TKVV_BBSL/get-mapping/${id}`),
@@ -92,6 +87,25 @@ export const tkvvMappingApi = {
     apiService.put(`/api/TKVV_BBSL/update-mapping/${id}`, dto),
 
   delete: (id: number) => apiService.delete(`/api/TKVV_BBSL/delete-mapping/${id}`),
+};
+
+// ─── Danh mục cân từ EMS (dbo.EMS_GetMappingTag) ──────────────────────────────
+
+export interface EMSMappingTagDto {
+  id: number;
+  xuong: string;
+  loai: string | null;
+  maCan: string | null;
+  tenCan: string | null;
+  tagIDEMS: string;
+  tagName: string;
+  ca: number | null; // 1=ca ngày, 2=ca đêm, null=đang tích lũy ca hiện tại (LoaiDuLieu="0")
+  ghiChu: string | null;
+}
+
+export const tkvvEmsTagApi = {
+  getList: (params?: { xuong?: string; tagName?: string }): Promise<EMSMappingTagDto[]> =>
+    apiService.get("/api/TKVV_BBSL/get-ems-tags", { params }),
 };
 
 // ─── Dữ liệu PLC thô ──────────────────────────────────────────────────────────

@@ -103,6 +103,9 @@ import BienBanSanLuongTKVV from "../pages/NMTKVV/BienBanSanLuong/BienBanSanLuong
 import TaoPhieuBienBanSanLuongTKVV from "../pages/NMTKVV/BienBanSanLuong/TaoPhieuBienBanSanLuong";
 import ChiTietBienBanSanLuongTKVV from "../pages/NMTKVV/BienBanSanLuong/ChiTietBienBanSanLuong";
 import QuanLyNVLTKVV from "../pages/NMTKVV/QuanLyNVLTKVV/QuanLyNVLTKVV";
+import BaoCaoSanLuongChiPhiTKVV from "../pages/NMTKVV/BaoCaoSanLuongChiPhi/BaoCaoSanLuongChiPhi";
+import TaoPhieuBaoCaoSanLuongChiPhiTKVV from "../pages/NMTKVV/BaoCaoSanLuongChiPhi/TaoPhieuBaoCaoSanLuongChiPhi";
+import ChiTietBaoCaoSanLuongChiPhiTKVV from "../pages/NMTKVV/BaoCaoSanLuongChiPhi/ChiTietBaoCaoSanLuongChiPhi";
 
 export const routes = [
   {
@@ -1326,6 +1329,66 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <ChiTietBienBanSanLuongTKVV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "baocaoslcptkvv",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BaoCaoSanLuongChiPhiTKVV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/baocaoslcptkvv",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BaoCaoSanLuongChiPhiTKVV type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/baocaoslcptkvv",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BaoCaoSanLuongChiPhiTKVV type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieubaocaoslcptkvv",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuBaoCaoSanLuongChiPhiTKVV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieubaocaoslcptkvv/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuBaoCaoSanLuongChiPhiTKVV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietbaocaoslcptkvv/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietBaoCaoSanLuongChiPhiTKVV />
             </RequireRole>
           </RequireAuth>
         ),

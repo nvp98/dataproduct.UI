@@ -166,6 +166,11 @@ export const MenuDataDashboard = [
         title: "BIÊN BẢN SẢN LƯỢNG",
         maBm: BM_CONFIG.TKVV.TKVV_BB_SanLuong,
       },
+      {
+        code: "baocaoslcptkvv",
+        title: "BÁO CÁO SẢN LƯỢNG & CHI PHÍ",
+        maBm: BM_CONFIG.TKVV.TKVV_BC_SanLuongChiPhi,
+      },
     ],
   },
 ];
