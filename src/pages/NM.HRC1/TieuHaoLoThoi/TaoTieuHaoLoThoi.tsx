@@ -812,6 +812,7 @@ const TaoTieuHaoLoThoi = () => {
                       idx={i}
                       disabled={isLevelZero || isSignatureReadonly || isFormLocked}
                       initialValue={cap0InitialValue}
+                      scope={scope}
                     />
                   </div>
                 );

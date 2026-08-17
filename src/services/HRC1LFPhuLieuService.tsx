@@ -99,6 +99,7 @@ export const hrc1LFPhuLieuService = {
       const meThoi = getVal<string>(data, "meThoi", "MeThoi");
       const isTrungMe = getVal<boolean>(data, "isTrungMeThoi", "IsTrungMeThoi") === true;
       const thoiGianLF = getVal<string>(data, "thoiGianLF", "ThoiGianLF");
+      const isEdited = getVal<boolean>(data, "isEdited", "IsEdited") === true;
 
       const row: HRCTableRow = {
         // Luôn kèm index — 2 mẻ trùng số (IsTrungMeThoi) có cùng meThoi sẽ đụng key nếu chỉ dùng
@@ -107,6 +108,7 @@ export const hrc1LFPhuLieuService = {
         id: getVal<number>(data, "id", "ID") ?? undefined,
         // LF không có mẻ từ NM — luôn ép false để CustomTableHRC cho sửa mọi ô (meThoi/macThep...).
         IsNM: false,
+        IsEdited: isEdited,
         isTrungMeThoi: isTrungMe,
         IsTrungMeThoi: isTrungMe,
         // thoiGianLF không phải cột hiển thị trong config JSON (baseColumns) nên mapField() bên dưới

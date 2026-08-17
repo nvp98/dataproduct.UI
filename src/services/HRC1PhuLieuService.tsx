@@ -166,6 +166,7 @@ export const hrc1PhuLieuService = {
       const meThoi = getVal<string>(data, "meThoi", "MeThoi");
       const isTrungMe = getVal<boolean>(data, "isTrungMeThoi", "IsTrungMeThoi") === true;
       const isNM = getVal<boolean>(data, "isNM", "IsNM");
+      const isEdited = getVal<boolean>(data, "isEdited", "IsEdited") === true;
 
       const row: HRCTableRow = {
         // Luôn kèm index — 2 mẻ trùng số (IsTrungMeThoi) có cùng meThoi sẽ đụng key nếu chỉ dùng
@@ -173,6 +174,7 @@ export const hrc1PhuLieuService = {
         key: `row-${index}-${meThoi ?? "empty"}`,
         id: getVal<number>(data, "id", "ID") ?? undefined,
         IsNM: isNM ?? true,
+        IsEdited: isEdited,
         isTrungMeThoi: isTrungMe,
         IsTrungMeThoi: isTrungMe,
         __fromFilterAPI: true,
@@ -191,6 +193,23 @@ export const hrc1PhuLieuService = {
           col.children.forEach((c: any) => mapField(c.dataIndex));
         }
       });
+
+      // MacThep/KLThepPhe: BE lưu snapshot giá trị NM gốc vào MacThepOrig/KLThepPheOrig + cờ
+      // MacThepIsManual/KLThepPheIsManual khi user sửa tay lần đầu (mirror KLPhuGia/KLPhuGia_Manual/
+      // IsManual của phụ liệu) — map vào `${dataIndex}__orig`/`${dataIndex}__IsManual` mà
+      // CustomTableHRC đã dùng sẵn để so sánh + highlight per-cell. Dựa vào cờ IsManual (không suy
+      // luận từ Orig != null) vì Orig tự nó có thể null hợp lệ — vd MacThep chưa sync được lần đầu,
+      // Orig gốc lúc sửa vốn null — vẫn phải nhận biết đúng là "đã sửa" để giữ highlight.
+      const macThepIsManual = getVal<boolean>(data, "macThepIsManual", "MacThepIsManual") === true;
+      if (macThepIsManual) {
+        row["macThep__IsManual"] = true;
+        row["macThep__orig"] = getVal<string>(data, "macThepOrig", "MacThepOrig");
+      }
+      const klThepPheIsManual = getVal<boolean>(data, "klThepPheIsManual", "KLThepPheIsManual") === true;
+      if (klThepPheIsManual) {
+        row["klThepPhe__IsManual"] = true;
+        row["klThepPhe__orig"] = getVal<number>(data, "klThepPheOrig", "KLThepPheOrig");
+      }
 
       const phuLieus = (getVal<Hrc1RawItem[]>(item, "phuLieus", "PhuLieus") ?? []) as Hrc1RawItem[];
       phuLieus.forEach((pl) => {

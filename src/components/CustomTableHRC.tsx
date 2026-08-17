@@ -83,6 +83,10 @@ export interface HRCChildColumn {
   // cho sửa ở dòng thêm tay/manual). Dùng cho các cột như meThoi/macThep ở LF, nơi MỌI dòng đều bị
   // ép IsNM=false nên `readonly` thường bị "mở khoá" nhầm bởi điều kiện isManualRow.
   alwaysReadonly?: boolean;
+  // true: cột "không phải phụ liệu" (không có __orig/__IsManual per-cell) nhưng BE có lưu cờ
+  // Hrc1TieuHao.IsEdited ở cấp dòng khi field này thực sự đổi giá trị lúc Lưu — bật cờ này để ô được
+  // tô vàng "đã chỉnh sửa" theo record.IsEdited, thay vì so __orig (vốn không tồn tại cho các cột này).
+  trackRowEdited?: boolean;
 }
 
 export interface HRCParentColumn {
@@ -102,6 +106,7 @@ export interface HRCParentColumn {
   sum?: boolean; // true: tính tổng cột này trong dòng summary
   readonly?: boolean; // true: không cho sửa, bất kể editable của bảng
   alwaysReadonly?: boolean; // xem giải thích ở HRCChildColumn
+  trackRowEdited?: boolean; // xem giải thích ở HRCChildColumn
 }
 
 export interface HRCTableRow {
@@ -110,6 +115,11 @@ export interface HRCTableRow {
   _isNewRow?: boolean; // Flag UI: dòng thêm mới bằng button (highlight cả hàng + xếp cuối)
   id?: number; // ID bản ghi DLNM_HRC2 (nếu có)
   isTrungMeThoi?: boolean; // Flag để đánh dấu mẻ thổi bị trùng
+  // Cờ BE Hrc1TieuHao.IsEdited — true nếu dòng đã từng bị sửa tay ở 1 trong các cột "không phải phụ
+  // liệu" (o2/n2/ar/queLayMau/queDoNhiet/ghiChu...), dùng để tô vàng lại các ô đó sau khi Lưu + tải lại
+  // (khác cột phụ liệu vốn tự có __orig/__IsManual theo từng ô). Xem HRC1_BB_TieuHao_*.json:
+  // trackRowEdited đánh dấu cột nào tham gia cờ này.
+  IsEdited?: boolean;
   // Cho phép null để biểu diễn các trường FE cần gửi lên BE (vd __orig khi nền tự động = null).
   [key: string]: string | number | boolean | null | undefined;
 }
@@ -714,9 +724,13 @@ const CustomTableHRC = forwardRef(({
                 const origValue = record[origKey];
                 const currentValue = record[child.dataIndex];
                 const isManualFlag = (record as HRCRowWithManualFlags)[manualKey] === true;
-                const isCellChanged =
+                const isPerCellDiff =
                   isManualFlag ||
                   (origValue !== undefined && String(currentValue ?? "") !== String(origValue ?? ""));
+                // Cột không có __orig per-cell (không phải phụ liệu) — dùng cờ IsEdited cấp dòng do BE
+                // lưu lại (record.IsEdited) để highlight vẫn còn sau khi Lưu + tải lại dữ liệu.
+                const isRowEditedCell = child.trackRowEdited === true && record.IsEdited === true;
+                const isCellChanged = isPerCellDiff || isRowEditedCell;
 
                 const cellValue = record[child.dataIndex];
                 const displayValue = !canEditThisCell
@@ -731,9 +745,11 @@ const CustomTableHRC = forwardRef(({
 
                 const tooltipTitle = isNegative
                   ? "Không được âm"
-                  : isCellChanged
+                  : isPerCellDiff
                     ? `Tự động: ${origValue === null ? "0" : String(origValue ?? "")} | Chỉnh sửa: ${String(currentValue ?? "")}`
-                    : undefined;
+                    : isRowEditedCell
+                      ? "Đã chỉnh sửa thủ công"
+                      : undefined;
 
                 const isKeyColumn = isMeThoiColumn || isMacThepColumn;
 
@@ -888,9 +904,13 @@ const CustomTableHRC = forwardRef(({
           const origValue = record[origKey];
           const currentValue = record[dataIndex];
           const isManualFlag = (record as HRCRowWithManualFlags)[manualKey] === true;
-          const isCellChanged =
+          const isPerCellDiff =
             isManualFlag ||
             (origValue !== undefined && String(currentValue ?? "") !== String(origValue ?? ""));
+          // Cột không có __orig per-cell (không phải phụ liệu) — dùng cờ IsEdited cấp dòng do BE
+          // lưu lại (record.IsEdited) để highlight vẫn còn sau khi Lưu + tải lại dữ liệu.
+          const isRowEditedCell = col.trackRowEdited === true && record.IsEdited === true;
+          const isCellChanged = isPerCellDiff || isRowEditedCell;
 
           const cellValue = record[dataIndex];
           const displayValue = !canEditThisCell
@@ -904,6 +924,12 @@ const CustomTableHRC = forwardRef(({
           const isNegative = !isTextDataIndex(dataIndex) && isNegativeValue(currentValue);
 
           const isKeyColumn = isMeThoiColumn || isMacThepColumn;
+          // Mác thép của dòng NM (sync tự động) về null ngay lần đầu — tô đỏ nhạt để user để ý bổ sung.
+          // Hết đỏ ngay khi có giá trị (kể cả giá trị rỗng do gõ tay xoá lại thì lại đỏ tiếp — đúng ý
+          // nghĩa "đang thiếu"). Không áp dụng dòng thêm tay (isManualRow đã luôn cho autocomplete rồi).
+          const isMacThepMissing =
+            isMacThepColumn && isNMRow &&
+            (currentValue === null || currentValue === undefined || currentValue === "");
 
           const editableStyle: React.CSSProperties = {
             textAlign: col.align ?? "right",
@@ -912,6 +938,7 @@ const CustomTableHRC = forwardRef(({
             ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight
               ? { backgroundColor: "#fff1f0" }
               : {}),
+            ...(isMacThepMissing ? { backgroundColor: "#fff1f0" } : {}),
             ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
             ...(!(isMeThoiColumn && isTrungMeThoi) && isCellChanged
               ? { backgroundColor: "#fff7b3" }
@@ -921,14 +948,13 @@ const CustomTableHRC = forwardRef(({
 
           // Autocomplete cho meThoi/macThep trên dòng thêm tay — chỉ bật khi đã truyền searchApi tương
           // ứng (mặc định chưa có API thật, giữ nguyên ô nhập tay). Value/onChange đều làm việc trên
-          // chuỗi (giống EditableCellInput), tái dùng applyAndEmitCellChange sẵn có.
-          const activeTextAutocompleteApi = isManualRow
-            ? isMeThoiColumn
-              ? meThoiSearchApi
-              : isMacThepColumn
-                ? macThepSearchApi
-                : undefined
-            : undefined;
+          // chuỗi (giống EditableCellInput), tái dùng applyAndEmitCellChange sẵn có. Mác thép còn bật
+          // thêm cho dòng NM khi đang null — cho user chọn/tạo ngay từ danh mục thay vì gõ tay tự do.
+          const activeTextAutocompleteApi = isMeThoiColumn
+            ? (isManualRow ? meThoiSearchApi : undefined)
+            : isMacThepColumn && (isManualRow || isMacThepMissing)
+              ? macThepSearchApi
+              : undefined;
 
           const inputNode = canEditThisCell && activeTextAutocompleteApi ? (
             <CommonAutocomplete<HRCTextAutocompleteOption>
@@ -965,7 +991,11 @@ const CustomTableHRC = forwardRef(({
                 backgroundColor:
                   isMeThoiColumn && isTrungMeThoi
                     ? "tomato"
-                    : (isCellChanged ? "#fff7b3" : "#f5f5f5"),
+                    : isCellChanged
+                      ? "#fff7b3"
+                      : isMacThepMissing
+                        ? "#fff1f0"
+                        : "#f5f5f5",
                 cursor: "not-allowed",
               }}
             />
@@ -973,9 +1003,13 @@ const CustomTableHRC = forwardRef(({
 
           const flatTooltip = isNegative
             ? "Không được âm"
-            : isCellChanged
-              ? `Cũ: ${origValue === null ? "0" : String(origValue ?? "")} | Mới: ${String(currentValue ?? "")}`
-              : undefined;
+            : isPerCellDiff
+              ? `Cũ: ${origValue === null ? (isTextDataIndex(dataIndex) ? "(trống)" : "0") : String(origValue ?? "")} | Mới: ${String(currentValue ?? "")}`
+              : isRowEditedCell
+                ? "Đã chỉnh sửa thủ công"
+                : isMacThepMissing
+                  ? "Mác thép đang trống — vui lòng chọn hoặc nhập"
+                  : undefined;
 
           return flatTooltip ? (
             <Tooltip title={flatTooltip}>
