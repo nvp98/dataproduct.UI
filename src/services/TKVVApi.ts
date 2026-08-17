@@ -152,6 +152,34 @@ export const tkvvDuLieuPivotApi = {
     apiService.post(`/api/TKVV_BBSL/sync-chitiet/${idPhieu}`, null),
 };
 
+// ─── Giá trị NVL tự động từ EMS (SP_TKVV_GetGiaTriNVL_Auto) ─────────────────
+// Dùng khi nhấn "Làm mới dữ liệu" — trả danh sách NVL + GiaTri (tổng từ cân
+// băng tải EMS) cho maBM + scope (1-6) + ngay + ca. FE map vào bảng phiếu.
+
+export interface TKVVGiaTriNVLAutoDto {
+  nguyenVatLieuID: number;
+  maBM: string;
+  tenNVL: string;
+  donViTinh: string | null;
+  thuTu: number | null;
+  scope: string | null;      // mã xưởng dạng "TK1" / "VV2"
+  tenScope: string | null;
+  giaTri: number;            // tổng GiaTri từ EMS (khối lượng ẩm từ cân)
+  soLuongTag: number;
+  thoiGianTu: string | null;
+  thoiGianDen: string | null;
+}
+
+export const tkvvGiaTriNVLAutoApi = {
+  getList: (params: {
+    ngay: string;   // "YYYY-MM-DD"
+    ca: number;     // 1=ca ngày, 2=ca đêm
+    scope: number;  // 1-6 (TK1..TK4, VV1, VV2)
+    maBM: string;
+  }): Promise<TKVVGiaTriNVLAutoDto[]> =>
+    apiService.get("/api/TKVV_BCSL_ChiPhi/get-giatri-nvl-auto", { params }),
+};
+
 // ─── Chi tiết sản lượng theo phiếu ────────────────────────────────────────────
 
 export interface TKVVChiTietDto {
