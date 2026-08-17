@@ -9,6 +9,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import {
   nhomPhanBoApi,
+  tyLePhanBoApi,
   type NhomPhanBoDto,
   type NvlNhomPhanBoDto,
 } from "../../../../services/PhanBoApi";
@@ -330,6 +331,19 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: Nvl
   const [tyLeNhom, setTyLeNhom] = useState<number | null>(null);
   const [tyLeNhomInput, setTyLeNhomInput] = useState<number | null>(null);
   const [savingTyLeNhom, setSavingTyLeNhom] = useState(false);
+  const [savingTyLeNvlId, setSavingTyLeNvlId] = useState<number | null>(null);
+  const [daChot, setDaChot] = useState(false);
+
+  // % dùng chung cho NVL ở MỌI lò cao của (Ngày, Ca) — nên phải hỏi đã chốt ở BẤT KỲ lò cao nào của
+  // (Ngày, Ca), không phải riêng idLoCao đang chọn, để khớp đúng phạm vi backend thực sự chặn khi sửa %.
+  const fetchDaChot = useCallback(async () => {
+    try {
+      const res = await tyLePhanBoApi.isCaDaChot({ ngay: ngayStr, ca });
+      setDaChot(res);
+    } catch {
+      setDaChot(false);
+    }
+  }, [ngayStr, ca]);
 
   const fetchNvl = useCallback(async () => {
     setLoading(true);
@@ -358,8 +372,9 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: Nvl
   useEffect(() => {
     fetchNvl();
     fetchTyLeNhom();
+    fetchDaChot();
     addForm.resetFields();
-  }, [fetchNvl, fetchTyLeNhom, addForm, refreshToken]);
+  }, [fetchNvl, fetchTyLeNhom, fetchDaChot, addForm, refreshToken]);
 
   const handleSaveTyLeNhom = async () => {
     if (tyLeNhomInput == null) return;
@@ -385,6 +400,33 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: Nvl
       message.error(err?.message || "Lưu % nhóm thất bại.");
     } finally {
       setSavingTyLeNhom(false);
+    }
+  };
+
+  // Sửa % riêng cho 1 NVL — độc lập với "Áp dụng % cho cả nhóm", vì cùng 1 nhóm có thể có
+  // các NVL với tỷ lệ khác nhau (không bắt buộc phải áp dụng % chung trước mới sửa được từng NVL).
+  const handleSaveTyLeNvl = async (row: NvlNhomPhanBoDto, percent: number | null) => {
+    if (percent == null) return;
+    const idNguoiNhap = getCurrentUserId();
+    if (!idNguoiNhap) {
+      message.error("Không xác định được người dùng hiện tại.");
+      return;
+    }
+    setSavingTyLeNvlId(row.idNvl);
+    try {
+      await tyLePhanBoApi.create({
+        idNvl: row.idNvl,
+        ngay: ngayStr,
+        ca,
+        tyLe: percent / 100,
+        idNguoiNhap,
+      });
+      message.success(`Đã lưu % cho ${row.tenNvl ?? `#${row.idNvl}`}.`);
+      fetchNvl();
+    } catch (err: any) {
+      message.error(err?.message || "Lưu % thất bại.");
+    } finally {
+      setSavingTyLeNvlId(null);
     }
   };
 
@@ -421,6 +463,27 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: Nvl
       key: "tenNvl",
       render: (v: string | null, row) => v ?? `#${row.idNvl}`,
     },
+    ...(laPp2
+      ? [
+          {
+            title: "% riêng NVL",
+            dataIndex: "tyLe",
+            key: "tyLe",
+            width: 220,
+            render: (v: number | null, row: NvlNhomPhanBoDto) => (
+              <TyLeRiengCell
+                // key đổi theo v để reset về giá trị nguồn khi nó thay đổi từ bên ngoài (cascade từ
+                // "Áp dụng % cho cả nhóm" hoặc sau khi lưu riêng thành công)
+                key={`${row.id}-${v ?? "empty"}`}
+                initialValue={v == null ? null : v * 100}
+                disabled={daChot}
+                saving={savingTyLeNvlId === row.idNvl}
+                onApply={(percent) => handleSaveTyLeNvl(row, percent)}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       title: "",
       key: "action",
@@ -451,12 +514,13 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: Nvl
             addonAfter="%"
             placeholder="% cho cả nhóm"
             value={tyLeNhomInput}
+            disabled={daChot}
             onChange={(v) => setTyLeNhomInput(v)}
           />
           <Button
             type="primary"
             loading={savingTyLeNhom}
-            disabled={tyLeNhomInput == null || tyLeNhomInput === tyLeNhom}
+            disabled={tyLeNhomInput == null || daChot}
             onClick={handleSaveTyLeNhom}
           >
             Áp dụng % cho cả nhóm
@@ -500,11 +564,50 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: Nvl
         lần tính — không cần cấu hình tay, và không dùng % nhóm.
         {laPp2 && (
           <>
-            {" "}Với phương thức "Tỷ lệ nhập tay": bấm "Áp dụng % cho cả nhóm" để gán cùng 1 % cho mọi NVL
-            đang có trong nhóm; NVL thêm sau đó cũng tự động lấy % này.
+            {" "}Với phương thức "Tỷ lệ nhập tay": bấm "Áp dụng % cho cả nhóm" để gán nhanh cùng 1 % cho
+            mọi NVL đang có trong nhóm (NVL thêm sau đó cũng tự động lấy % này), hoặc nhập % rồi bấm nút
+            "Áp dụng" ở cột "% riêng NVL" cho từng dòng — không bắt buộc phải bấm "Áp dụng % cho cả nhóm"
+            trước, vì cùng 1 nhóm có thể có nhiều NVL với tỷ lệ khác nhau.
           </>
         )}
       </div>
     </>
+  );
+}
+
+// Ô nhập % riêng cho 1 NVL — giữ giá trị đang gõ ở state cục bộ, chỉ gọi API khi bấm "Áp dụng"
+// (hoặc Enter) thay vì lưu ngay mỗi lần blur, tránh gọi API liên tục khi người dùng di chuyển qua
+// nhiều ô nhập liệu.
+function TyLeRiengCell({
+  initialValue,
+  disabled,
+  saving,
+  onApply,
+}: {
+  initialValue: number | null;
+  disabled: boolean;
+  saving: boolean;
+  onApply: (percent: number | null) => void;
+}) {
+  const [value, setValue] = useState<number | null>(initialValue);
+
+  return (
+    <Space.Compact style={{ width: "100%" }}>
+      <InputNumber
+        style={{ width: "100%" }}
+        min={0}
+        max={100}
+        precision={3}
+        addonAfter="%"
+        placeholder="Chưa nhập"
+        value={value}
+        disabled={disabled || saving}
+        onChange={(v) => setValue(v)}
+        onPressEnter={() => onApply(value)}
+      />
+      <Button size="small" type="primary" loading={saving} disabled={disabled || value == null} onClick={() => onApply(value)}>
+        Áp dụng
+      </Button>
+    </Space.Compact>
   );
 }

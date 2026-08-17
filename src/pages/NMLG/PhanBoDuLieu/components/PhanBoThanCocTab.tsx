@@ -143,7 +143,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
     }
     setChotLoading(true);
     try {
-      await phanBoApi.chot({ ngay: ngay.format("YYYY-MM-DD"), idNguoiXacNhan });
+      await phanBoApi.chot({ ngay: ngay.format("YYYY-MM-DD"), ca, idLoCao, idNguoiXacNhan });
       await fetchKetQua();
       message.success("Đã chốt dữ liệu.");
     } catch (err: any) {
@@ -161,7 +161,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
     }
     setHuyChotLoading(true);
     try {
-      await phanBoApi.huyChot({ ngay: ngay.format("YYYY-MM-DD"), idNguoiXacNhan });
+      await phanBoApi.huyChot({ ngay: ngay.format("YYYY-MM-DD"), ca, idLoCao, idNguoiXacNhan });
       await fetchKetQua();
       message.success("Đã hủy chốt dữ liệu.");
     } catch (err: any) {
@@ -343,7 +343,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
         </Button>
         <Popconfirm
           title="Chốt dữ liệu phân bổ?"
-          description="Sau khi chốt sẽ không thể sửa/tính lại cho ngày này (cả 3 loại phân bổ)."
+          description={`Sau khi chốt sẽ không thể sửa/tính lại cho Ngày ${ngay.format("DD/MM/YYYY")}, Ca ${ca}, Lò cao ${idLoCao} (cả 3 loại phân bổ). Các ca/lò cao khác không bị ảnh hưởng.`}
           okText="Chốt"
           cancelText="Hủy"
           onConfirm={handleChot}
@@ -356,7 +356,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
         {daChot && (
           <Popconfirm
             title="Hủy chốt dữ liệu phân bổ?"
-            description="Sau khi hủy chốt sẽ có thể sửa/tính lại cho ngày này (cả 3 loại phân bổ)."
+            description={`Sau khi hủy chốt sẽ có thể sửa/tính lại cho Ngày ${ngay.format("DD/MM/YYYY")}, Ca ${ca}, Lò cao ${idLoCao} (cả 3 loại phân bổ).`}
             okText="Hủy chốt"
             cancelText="Đóng"
             onConfirm={handleHuyChot}
