@@ -45,6 +45,25 @@ export const canUnlockMonthly = (date = new Date()) => {
 
 /* ======================= EDITABLE CELLS ======================= */
 
+/** Công thức Lượng sử dụng kiểm kê = Tồn đầu + Nhập trong ca - Tồn cuối — mirror logic trong commitCell,
+ * dùng lại khi nạp initialData (vd sau khi bấm "Làm mới") để không hiển thị giá trị cũ đã lưu, lệch với
+ * tonDauCa/nhapTrongCa/tonCuoiCa mới nhất trên dòng. */
+const computeLuongSuDungKiemKe = (row: any): any => {
+  const rawTonDau = row?.tonDauCa;
+  const rawTonCuoi = row?.tonCuoiCa;
+  const hasTonDau = rawTonDau !== null && rawTonDau !== undefined && rawTonDau !== "";
+  const hasTonCuoi = rawTonCuoi !== null && rawTonCuoi !== undefined && rawTonCuoi !== "";
+  if (!hasTonDau || !hasTonCuoi) return row?.luongSuDungKiemKe;
+
+  const tonDau = Number(rawTonDau);
+  const tonCuoi = Number(rawTonCuoi);
+  const rawNhap = row?.nhapTrongCa;
+  const nhap = rawNhap === null || rawNhap === undefined || rawNhap === "" ? 0 : Number(rawNhap);
+  if (Number.isNaN(tonDau) || Number.isNaN(nhap) || Number.isNaN(tonCuoi)) return row?.luongSuDungKiemKe;
+
+  return tonDau + nhap - tonCuoi;
+};
+
 const formatVi = (val: any): string => {
   if (val === null || val === undefined || val === "") return "";
   const num = parseFloat(String(val));
@@ -133,8 +152,15 @@ export default function GroupedTableSTD_HRC1({
 
     if (initialData.length) {
       if (initialDataChanged) {
-        setRows(initialData);
-        rowsRef.current = initialData;
+        // Tính lại luongSuDungKiemKe từ tonDauCa/nhapTrongCa/tonCuoiCa mới nhất thay vì tin thẳng giá trị
+        // đã lưu trong initialData — quan trọng nhất là sau khi bấm "Làm mới" (handleFilterData ở
+        // Tao_STD.tsx) load lại dữ liệu, để cột này luôn khớp với 3 cột tồn/nhập hiện có trên dòng.
+        const recalculated = initialData.map((row: any) => ({
+          ...row,
+          luongSuDungKiemKe: computeLuongSuDungKiemKe(row),
+        }));
+        setRows(recalculated);
+        rowsRef.current = recalculated;
       }
       return;
     }

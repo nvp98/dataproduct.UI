@@ -280,48 +280,8 @@ const Tao_STD_HRC1 = () => {
     }));
 
     if (!skipValidation) {
-      const missingSiloRows = table1Normalized.filter((row) => !row.siloId && row.viTri !== 2);
-      if (missingSiloRows.length > 0) {
-        const byTab = missingSiloRows.reduce<Record<string, string[]>>((acc, r: any) => {
-          const tab = String(r?.khuVuc ?? "Không xác định");
-          const name = String(r?.nguyenNhienLieu ?? "").trim() || "(không tên)";
-          (acc[tab] ||= []).push(name);
-          return acc;
-        }, {});
-
-        const detailLines = Object.entries(byTab)
-          .map(([tab, names]) => `- Tab ${tab}: ${names.join(", ")}`)
-          .join("\n");
-
-        message.error(
-          `Vui lòng chọn Silo cho tất cả loại liệu trước khi gửi.\nCác dòng chưa chọn theo tab:\n${detailLines}`
-        );
-        throw new Error("Validation failed: thiếu Silo");
-      }
-
-      const inconsistentKiemKeRows = table1Normalized.filter((row) => {
-        const thucTe = Number(row.tongThucTe);
-        const kiemKe = row.luongSuDungKiemKe;
-        const kiemKeNum = kiemKe === null || kiemKe === undefined ? 0 : Number(kiemKe);
-        if (Number.isNaN(kiemKeNum)) return false;
-        return (thucTe === 0 && kiemKeNum !== 0) || (thucTe !== 0 && kiemKeNum === 0);
-      });
-      if (inconsistentKiemKeRows.length > 0) {
-        const byTabKiemKe = inconsistentKiemKeRows.reduce<Record<string, string[]>>((acc, r: any) => {
-          const tab = String(r?.khuVuc ?? "Không xác định");
-          const name = String(r?.nguyenNhienLieu ?? "").trim() || "(không tên)";
-          (acc[tab] ||= []).push(name);
-          return acc;
-        }, {});
-        const detailLinesKiemKe = Object.entries(byTabKiemKe)
-          .map(([tab, names]) => `- Tab ${tab}: ${names.join(", ")}`)
-          .join("\n");
-        message.error(
-          `Lượng sử dụng kiểm kê không nhất quán với lượng thực tế sử dụng.\nVui lòng kiểm tra lại theo tab:\n${detailLinesKiemKe}`
-        );
-        throw new Error("Validation failed: luongSuDungKiemKe không nhất quán với tongThucTe");
-      }
-
+      // Chỉ chặn lưu khi có ô dữ liệu âm — không bắt buộc Silo/kiểm kê nhất quán/tồn cuối khớp tồn đầu
+      // nữa, để cho phép lưu thoải mái theo tiến độ nhập liệu thực tế (nhập tới đâu lưu tới đó).
       const isNeg = (v: unknown) => {
         if (v === null || v === undefined || v === "") return false;
         const num = typeof v === "number" ? v : Number(v);
@@ -342,22 +302,6 @@ const Tao_STD_HRC1 = () => {
           throw new Error(`Validation failed: ${field} âm`);
         }
       }
-
-      const invalidRows = table1Normalized.filter((row) => {
-        const soSuDung = row.tongThucTe;
-        const soNhapVe = row.nhapTrongCa;
-        const soTonDau = row.tonDauCa;
-        const soTonCuoi = row.tonCuoiCa;
-        return soSuDung === 0 && soNhapVe === 0 && soTonCuoi !== soTonDau;
-      });
-
-      if (invalidRows.length > 0) {
-        const tenNguyenLieu = invalidRows.map((r) => r.nguyenNhienLieu || "(không tên)").join(", ");
-        message.error(
-          `Dữ liệu tồn kho không hợp lệ.\nKhi số sử dụng = 0 và số nhập về = 0 thì số tồn cuối phải bằng số tồn đầu.\nVui lòng kiểm tra lại: ${tenNguyenLieu}`
-        );
-        throw new Error("Validation failed: tồn cuối không bằng tồn đầu");
-      }
     }
 
     const table2Normalized = (table2Data || []).map((row) => ({
@@ -371,6 +315,28 @@ const Tao_STD_HRC1 = () => {
       tyLeBOF: row.tyLeBOF != null ? Number(row.tyLeBOF) : null,
       tyLeLF: row.tyLeLF != null ? Number(row.tyLeLF) : null,
     }));
+
+    if (!skipValidation) {
+      const isNegSummary = (v: unknown) => {
+        if (v === null || v === undefined || v === "") return false;
+        const num = typeof v === "number" ? v : Number(v);
+        return !Number.isNaN(num) && num < 0;
+      };
+      const summaryNumericFields: { field: keyof typeof table2Normalized[0]; label: string }[] = [
+        { field: "totalTonDauCa", label: "Tổng khối lượng tồn đầu ca" },
+        { field: "totalNhapTrongCa", label: "Tổng khối lượng nhập trong ca" },
+        { field: "totalTonCuoiCa", label: "Tổng khối lượng tồn cuối ca" },
+        { field: "totalSuDung", label: "Tổng sử dụng" },
+      ];
+      for (const { field, label } of summaryNumericFields) {
+        const negRows = table2Normalized.filter((row) => isNegSummary(row[field]));
+        if (negRows.length > 0) {
+          const tenNguyenLieu = negRows.map((r) => r.totalNguyenNhienLieu || "(không tên)").join(", ");
+          message.error(`${label} đang âm. Vui lòng kiểm tra lại: ${tenNguyenLieu}`);
+          throw new Error(`Validation failed: ${field} âm (table2)`);
+        }
+      }
+    }
 
     return {
       ...values,
@@ -390,7 +356,7 @@ const Tao_STD_HRC1 = () => {
   const handleSave = useCallback(async () => {
     try {
       setLoading(true);
-      const formData = await getFormData(true);
+      const formData = await getFormData();
       const nxtPayload = (formData as any)?.nxtPayload as STD_NXT_HRC1_UpsertDto | undefined;
       if (idphieu) {
         await PhieuApi.putData(idphieu, formData as Record<string, unknown>);

@@ -13,6 +13,7 @@ type Hrc1RawItem = Record<string, unknown>;
 
 export interface ProcessedHrc1LFPhuLieusResult {
   phuGiaColumns: HRCChildColumn[];
+  phanBoColumns: HRCChildColumn[];
   tableData: HRCTableRow[];
 }
 
@@ -58,6 +59,32 @@ export const hrc1LFPhuLieuService = {
     ]);
 
     const rawData = (Array.isArray(res) ? res : res ? [res] : []) as Hrc1RawItem[];
+
+    // Cột "Phân bổ" — gom từ phanBoPhulieus (record IsPhanBo=true riêng, ghi bởi
+    // STD_XNT_HRC1Repository.PhanBoAsync) trả về theo từng mẻ. Phải tách riêng khỏi phuLieus (record
+    // đo thật, IsPhanBo=false) — nếu gộp chung, giá trị phân bổ sẽ đè lên giá trị đo thật vì cùng
+    // PhuLieuID. Mirror hrc1PhuLieuService (BOF) — xem TaoTieuHaoLoThoi.tsx phanBoChildColumns.
+    const allPhanBoMeta: Record<number, Hrc1RawItem> = {};
+    rawData.forEach((item) => {
+      const phanBo = (getVal<Hrc1RawItem[]>(item, "phanBoPhulieus", "PhanBoPhulieus") ?? []) as Hrc1RawItem[];
+      phanBo.forEach((pb) => {
+        const id = getVal<number>(pb, "idPhuLieu", "iD_PhuLieu", "ID_PhuLieu");
+        if (id != null && !allPhanBoMeta[id]) allPhanBoMeta[id] = pb;
+      });
+    });
+    const phanBoColumns: HRCChildColumn[] = Object.entries(allPhanBoMeta).map(([idStr, pb]) => {
+      const id = Number(idStr);
+      const label = getVal<string>(pb, "tenPhuLieu", "TenPhuLieu") ?? `PB-${id}`;
+      return {
+        title: label,
+        dataIndex: `phanBo_${id}`,
+        width: 100,
+        editable: false,
+        variant: "adjust" as const,
+        metaLabel: label,
+        headerKeyId: id,
+      };
+    });
 
     const phuGiaColumns: HRCChildColumn[] = catalog
       .filter((pl) => pl.thuTu_Excel_LF != null)
@@ -141,6 +168,14 @@ export const hrc1LFPhuLieuService = {
         row[`phuLieu_${id}`] = value ?? "";
       });
 
+      const phanBo = (getVal<Hrc1RawItem[]>(item, "phanBoPhulieus", "PhanBoPhulieus") ?? []) as Hrc1RawItem[];
+      phanBo.forEach((pb) => {
+        const id = getVal<number>(pb, "idPhuLieu", "iD_PhuLieu", "ID_PhuLieu");
+        if (id == null) return;
+        const value = getVal<number>(pb, "klPhuGiaTotal", "KLPhuGiaTotal") ?? getVal<number>(pb, "klPhuGia", "KLPhuGia");
+        row[`phanBo_${id}`] = value ?? "";
+      });
+
       return row;
     });
 
@@ -148,7 +183,7 @@ export const hrc1LFPhuLieuService = {
       tableData.push({ key: "row-empty" });
     }
 
-    return { phuGiaColumns, tableData };
+    return { phuGiaColumns, phanBoColumns, tableData };
   },
 
   /** Chuẩn hóa table rows trước khi gửi payload — LF không cần dọn __orig/manual_col_* vì không dùng. */

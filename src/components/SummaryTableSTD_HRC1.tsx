@@ -5,6 +5,12 @@ import React, { useMemo, useState, useCallback, memo, useEffect } from "react";
 import { Table, Input, Button, InputNumber, message, Tag, Tooltip } from "antd";
 import type { STD_NXT_HRC1_PhanBoDto } from "../models/STD_NXT_HRC1_Model";
 
+// Cột tổng hợp tính toán (readOnly) cần chặn/cảnh báo khi ra giá trị âm — mirror GroupedTableSTD_HRC1.
+const NEGATIVE_HIGHLIGHT_COLS = ["totalTonDauCa", "totalNhapTrongCa", "totalTonCuoiCa", "totalSuDung"];
+
+const isNegativeNumber = (val: any) =>
+  val != null && val !== "" && !Number.isNaN(Number(val)) && Number(val) < 0;
+
 const formatVi = (val: any): string => {
   if (val === null || val === undefined || val === "") return "";
   const num = parseFloat(String(val));
@@ -334,7 +340,18 @@ export default function SummaryTableSTD_HRC1({
     if (isReadonly) {
       if (isNumberColumn && (value || value === 0)) {
         const formatted = formatNumber(value, isChenhLechColumn);
-        return <span style={{ textAlign: "right", display: "block" }}>{formatted}</span>;
+        const isNeg = NEGATIVE_HIGHLIGHT_COLS.includes(dataIndex) && isNegativeNumber(value);
+        return (
+          <span
+            style={{
+              textAlign: "right",
+              display: "block",
+              ...(isNeg ? { color: "#ff4d4f", fontWeight: 600 } : undefined),
+            }}
+          >
+            {formatted}
+          </span>
+        );
       }
       return <span>{value}</span>;
     }
@@ -374,6 +391,9 @@ export default function SummaryTableSTD_HRC1({
           const total = allFilled ? Number(bof) + Number(lf) : null;
           const isInvalid = allFilled && Math.abs(total! - 100) > 0.001;
           return { style: { minWidth: minW, ...(isInvalid && { backgroundColor: "#fff1f0" }) } };
+        }
+        if (NEGATIVE_HIGHLIGHT_COLS.includes(col.dataIndex || "") && isNegativeNumber(record[col.dataIndex || ""])) {
+          return { style: { minWidth: minW, backgroundColor: "#fff2f0" } };
         }
         return { style: { minWidth: minW } };
       },
@@ -440,9 +460,15 @@ export default function SummaryTableSTD_HRC1({
       const isPhanBo = getIsPhanBo(record);
       const isLoading = loadingMap[record.key];
       const isLocked = !!lockedTooltip;
+      // Chặn Phân bổ/Không PB khi các cột tổng hợp tính toán (xem NEGATIVE_HIGHLIGHT_COLS) đang âm —
+      // dữ liệu chưa hợp lệ thì không nên cho xử lý phân bổ chênh lệch dựa trên số sai.
+      const hasNegativeSummary = NEGATIVE_HIGHLIGHT_COLS.some((col) => isNegativeNumber(record[col]));
+      const negativeTooltip = "Số liệu tổng hợp (tồn đầu/nhập/tồn cuối/tổng sử dụng) đang âm — vui lòng kiểm tra lại trước khi phân bổ.";
 
       const wrapLocked = (btn: React.ReactNode) =>
         isLocked ? <Tooltip title={lockedTooltip}><span style={{ display: "inline-block" }}>{btn}</span></Tooltip> : btn;
+      const wrapNegative = (btn: React.ReactNode) =>
+        hasNegativeSummary ? <Tooltip title={negativeTooltip}><span style={{ display: "inline-block" }}>{btn}</span></Tooltip> : btn;
 
       let btnPhanBo: React.ReactNode;
       if (isPhanBo === true) {
@@ -457,13 +483,17 @@ export default function SummaryTableSTD_HRC1({
           </Button>
         );
       } else {
-        btnPhanBo = wrapLocked(
+        btnPhanBo = wrapLocked(wrapNegative(
           <Button
             type="primary"
             size="small"
             loading={isLoading === 'phan-bo'}
-            disabled={isPhanBo === false || !editable || isLocked || (canPhanBo === false && isPhanBo === null)}
+            disabled={isPhanBo === false || !editable || isLocked || hasNegativeSummary || (canPhanBo === false && isPhanBo === null)}
             onClick={() => {
+              if (hasNegativeSummary) {
+                message.warning(negativeTooltip);
+                return;
+              }
               const rowTyLe = tyLeMap[record.key] ?? {};
               const tyLeBOF = rowTyLe.tyLeBOF ?? record.tyLeBOF ?? null;
               const tyLeLF = rowTyLe.tyLeLF ?? record.tyLeLF ?? null;
@@ -481,7 +511,7 @@ export default function SummaryTableSTD_HRC1({
           >
             Phân bổ
           </Button>
-        );
+        ));
       }
 
       const btnKhongPhanBo = isPhanBo === false
@@ -497,18 +527,24 @@ export default function SummaryTableSTD_HRC1({
               Reset
             </Button>
           )
-        : wrapLocked(
+        : wrapLocked(wrapNegative(
             <Button
               danger
               type="default"
               size="small"
               loading={isLoading === 'khong-phan-bo'}
-              disabled={!editable || isLocked || isPhanBo === true || (canPhanBo === false && isPhanBo === null)}
-              onClick={() => handleKhongPhanBoClick(record)}
+              disabled={!editable || isLocked || isPhanBo === true || hasNegativeSummary || (canPhanBo === false && isPhanBo === null)}
+              onClick={() => {
+                if (hasNegativeSummary) {
+                  message.warning(negativeTooltip);
+                  return;
+                }
+                handleKhongPhanBoClick(record);
+              }}
             >
               Không PB
             </Button>
-          );
+          ));
 
       return (
         <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap" }}>

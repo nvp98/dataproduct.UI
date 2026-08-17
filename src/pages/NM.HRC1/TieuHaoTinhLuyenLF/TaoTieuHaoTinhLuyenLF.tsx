@@ -167,8 +167,27 @@ const TaoTieuHaoTinhLuyenLF = () => {
     );
   }, [phuGiaColumns, manuallyManagedPhuLieuIds]);
 
+  // Cột "Phân bổ" (phanBo_*) — tên phụ liệu, không editable, group header "Phân bổ" do
+  // buildColumnsWithAdjust render. Mirror TaoTieuHaoLoThoi.tsx (BOF) — giá trị đến từ record
+  // IsPhanBo=true riêng (PhanBoAsync), phải tách khỏi cột phụ liệu đo thật (phuLieu_*).
+  const phanBoChildColumns = useMemo<HRCChildColumn[]>(() => {
+    return adjustColumnMetas
+      .filter((meta) => meta.dataIndex.startsWith("phanBo_"))
+      .map((meta) => ({
+        title: meta.headerKeyLabel ?? "Phân bổ",
+        dataIndex: meta.dataIndex,
+        width: meta.width ?? 100,
+        editable: false,
+        variant: "adjust" as const,
+        metaLabel: meta.headerKeyLabel ?? "Phân bổ",
+        headerKeyId: meta.headerKeyId ?? null,
+      }));
+  }, [adjustColumnMetas]);
+
   const adjustChildColumns = useMemo<HRCChildColumn[]>(() => {
-    return adjustColumnMetas.map((meta) => {
+    return adjustColumnMetas
+      .filter((meta) => !meta.dataIndex.startsWith("phanBo_"))
+      .map((meta) => {
       const searchPhuLieu = async (params: AutocompleteSearchParams) => {
         const list = await Hrc1PhuLieuNmServiceApi.getAll({
           dangSuDung: true,
@@ -261,6 +280,31 @@ const TaoTieuHaoTinhLuyenLF = () => {
       // ghi đè bằng danh mục live hiện tại — xem comment tại khai báo savedPhuGiaSnapshotRef.
       setPhuGiaColumns(savedPhuGiaSnapshotRef.current ?? result.phuGiaColumns);
 
+      // Cột "Phân bổ" (phanBo_*) — tái dùng adjustColumnMetas làm nơi lưu, giống hệt cơ chế BOF
+      // (TaoTieuHaoLoThoi.tsx). Giữ nguyên các cột "Thêm cột điều chỉnh" (isManuallyAdded=true) đã có,
+      // chỉ merge/replace phần phanBo_* theo dữ liệu mới nhất từ server.
+      const keepManual = (m: AdjustColumnMeta) => m.isManuallyAdded === true;
+      const phanBoMetas = (result.phanBoColumns ?? []).map((col) => ({
+        key: col.dataIndex || `phanBo_${col.headerKeyId}`,
+        dataIndex: col.dataIndex || `phanBo_${col.headerKeyId}`,
+        headerKeyId: col.headerKeyId ?? null,
+        headerKeyLabel: col.metaLabel || col.title?.toString() || undefined,
+        width: col.width || 100,
+      }));
+      if (phanBoMetas.length > 0) {
+        setAdjustColumnMetas((prev) => {
+          const manual = (prev ?? []).filter(keepManual);
+          const merged = [...manual];
+          const seen = new Set(manual.map((m) => m.dataIndex));
+          phanBoMetas.forEach((m) => {
+            if (!seen.has(m.dataIndex)) merged.push(m);
+          });
+          return hrc1TableService.dedupeAdjustMetas(merged);
+        });
+      } else {
+        setAdjustColumnMetas((prev) => (prev ?? []).filter(keepManual));
+      }
+
       // Bảng CHỈ render từ live api/DLNMHRC1/filter — không dùng hrc1TableService.mergeServerRows
       // (hàm đó coi mọi dòng IsNM=false trong state cũ là "thêm tay cần giữ lại" khi không thấy trên
       // server; nhưng ở LF MỌI dòng đều IsNM=false theo quy ước riêng — nếu dùng chung sẽ khiến mẻ đã
@@ -310,9 +354,10 @@ const TaoTieuHaoTinhLuyenLF = () => {
       baseColumns,
       slotColumns: { LF_PhuGia: effectivePhuGiaColumns },
       manualAdjustColumns: adjustChildColumns,
+      phanBoColumns: phanBoChildColumns,
       generateAdjustColumnsFromBase: false,
     });
-  }, [config.layout, effectivePhuGiaColumns, adjustChildColumns]);
+  }, [config.layout, effectivePhuGiaColumns, adjustChildColumns, phanBoChildColumns]);
 
   const loadFromNM = useCallback(async () => {
     if (!ngaySX || !ca || !scope) return;
