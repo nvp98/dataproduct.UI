@@ -438,10 +438,21 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   const detailColumns = useMemo(
     () => [
       {
+        title: "Đã check",
+        dataIndex: "daCheck",
+        width: 90,
+        align: "center" as const,
+        fixed: "left" as const,
+        render: (v: boolean) => (
+          <Tag color={v ? "green" : "default"}>{v ? "Đã check" : "Chưa"}</Tag>
+        ),
+      },
+      {
         title: "Ca SX",
         dataIndex: "shiftName",
         width: 120,
         align: "center" as const,
+        fixed: "left" as const,
         render: (v: string) => v ?? "-",
       },
       {
@@ -449,12 +460,14 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
         dataIndex: "idSlab",
         width: 100,
         align: "center" as const,
+        fixed: "left" as const
       },
       {
         title: "OrderID",
         dataIndex: "orderId",
         width: 100,
         align: "center" as const,
+        fixed: "left" as const
       },
       {
         title: "Mẻ thép",
@@ -548,15 +561,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
           <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã Chốt" : "Chưa"}</Tag>
         ),
       },
-      {
-        title: "Đã check",
-        dataIndex: "daCheck",
-        width: 90,
-        align: "center" as const,
-        render: (v: boolean) => (
-          <Tag color={v ? "green" : "default"}>{v ? "Đã check" : "Chưa"}</Tag>
-        ),
-      },
+      
     ],
     [isKCS, isDuc, isKho, isPKH],
   );
@@ -870,13 +875,13 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                       return (
                         <Table.Summary fixed>
                           <Table.Summary.Row>
-                            <Table.Summary.Cell index={0} colSpan={7} align="center">
+                            <Table.Summary.Cell index={0} colSpan={9} align="center">
                               <strong>Tổng</strong>
                             </Table.Summary.Cell>
-                            <Table.Summary.Cell index={7} align="right">
+                            <Table.Summary.Cell index={10} align="right">
                               <strong>{Number(totalKL).toLocaleString("vi-VN", { minimumFractionDigits: 3 })}</strong>
                             </Table.Summary.Cell>
-                            <Table.Summary.Cell index={8} colSpan={1 + optColCount + 1} />
+                            <Table.Summary.Cell index={10} colSpan={1 + optColCount + 1} />
                           </Table.Summary.Row>
                         </Table.Summary>
                       );
