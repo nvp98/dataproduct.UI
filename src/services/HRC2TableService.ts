@@ -17,6 +17,7 @@ export type DynamicColumnMeta = {
   variant?: "source" | "adjust" | "default";
   highlight?: boolean;
   headerKeyId?: number | null;
+  sum?: boolean;
 };
 
 export type AdjustColumnMeta = {
@@ -197,6 +198,7 @@ export const hrc2TableService = {
         variant: col.variant,
         highlight: col.highlight,
         headerKeyId: (col as { headerKeyId?: number | null })?.headerKeyId ?? null,
+        sum: col.sum,
       }));
     });
     return result;
@@ -223,6 +225,7 @@ export const hrc2TableService = {
       metaGroup: item.metaGroup,
       variant: item.variant ?? "source",
       headerKeyId: item.headerKeyId ?? undefined,
+      sum: item.sum,
     }));
   },
 

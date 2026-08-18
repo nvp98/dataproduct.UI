@@ -67,7 +67,7 @@ const getUserId = (): number => {
   return 0;
 };
 
-const BkHrc2SlabTable = () => {
+const BkHrc2SlabTable = ({ readOnly = false }: { readOnly?: boolean }) => {
   // ── Phân quyền theo bộ phận ──────────────────────────────────────────────
   const userInfo = (() => { try { const s = localStorage.getItem("userinfo"); return s ? JSON.parse(s) : null; } catch { return null; } })();
   const isView    = getBmQuyenUiFlags(BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam, userInfo).isView;
@@ -126,6 +126,9 @@ const BkHrc2SlabTable = () => {
   const [phieuList, setPhieuList] = useState<PhieuBBSLItem[]>([]);
   const [phieuLoading, setPhieuLoading] = useState(false);
   const [selectedPhieu, setSelectedPhieu] = useState<PhieuBBSLItem | null>(null);
+  // Kíp/Ca cố định theo slab đã chọn — chỉ khoảng ngày là tiêu chí tìm kiếm người dùng điều chỉnh được
+  const [phieuKipCa, setPhieuKipCa] = useState<{ kip: string | null; ca: number | null }>({ kip: null, ca: null });
+  const [phieuSearchForm] = Form.useForm();
 
   // Sub-modal tạo phiếu BBSL mới
   const [createVisible, setCreateVisible] = useState(false);
@@ -263,20 +266,43 @@ const BkHrc2SlabTable = () => {
       return;
     }
 
-    try {
-      setPhieuLoading(true);
-      setModalVisible(true);
-      setSelectedPhieu(null);
-      const firstKip = selectedRows[0]?.kipSanXuat;
-      const firstCaStr = selectedRows[0]?.caSanXuat;
-      const caNum = firstCaStr ? parseInt(String(firstCaStr), 10) : null;
-      const list = await Hrc2SlabApi.getPhieuBBSL(firstKip ?? null, caNum != null && !isNaN(caNum) ? caNum : null);
-      setPhieuList(list);
-    } catch {
-      message.error("Không thể tải danh sách phiếu!");
-    } finally {
-      setPhieuLoading(false);
-    }
+    const firstKip = selectedRows[0]?.kipSanXuat ?? null;
+    const firstCaStr = selectedRows[0]?.caSanXuat;
+    const caNum = firstCaStr ? parseInt(String(firstCaStr), 10) : null;
+    const ca = caNum != null && !isNaN(caNum) ? caNum : null;
+    setPhieuKipCa({ kip: firstKip, ca });
+
+    // Mặc định tìm phiếu trong 30 ngày gần nhất — người dùng có thể mở rộng khoảng ngày để tìm xa hơn
+    const defaultRange: [dayjs.Dayjs, dayjs.Dayjs] = [dayjs().subtract(30, "day"), dayjs()];
+    phieuSearchForm.setFieldsValue({ dateRange: defaultRange });
+
+    setModalVisible(true);
+    setSelectedPhieu(null);
+    await fetchPhieuBBSL(firstKip, defaultRange[0].format("YYYY-MM-DD"), defaultRange[1].format("YYYY-MM-DD"));
+  };
+
+  // Không lọc theo "ca" — chỉ theo kíp + khoảng ngày (xem ghi chú trong Hrc2SlabApi.getPhieuBBSL)
+  const fetchPhieuBBSL = useCallback(
+    async (kip: string | null, tuNgay: string | null, denNgay: string | null) => {
+      try {
+        setPhieuLoading(true);
+        const list = await Hrc2SlabApi.getPhieuBBSL(kip, tuNgay, denNgay);
+        setPhieuList(list);
+      } catch {
+        message.error("Không thể tải danh sách phiếu!");
+      } finally {
+        setPhieuLoading(false);
+      }
+    },
+    []
+  );
+
+  const handleSearchPhieuBBSL = async () => {
+    const values = phieuSearchForm.getFieldsValue();
+    const range = values.dateRange as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+    const tuNgay = range?.[0] ? dayjs(range[0]).format("YYYY-MM-DD") : null;
+    const denNgay = range?.[1] ? dayjs(range[1]).format("YYYY-MM-DD") : null;
+    await fetchPhieuBBSL(phieuKipCa.kip, tuNgay, denNgay);
   };
 
   const handleConfirmChuyenBBSL = async () => {
@@ -286,7 +312,10 @@ const BkHrc2SlabTable = () => {
       setActionLoading(true);
       const userId = getUserId();
       const ids = selectedRows.map((r) => r.id);
-      await Hrc2SlabApi.chuyenBBSL(ids, selectedPhieu.idPhieu, userId);
+      // Bắt thời điểm ngay lúc người dùng bấm xác nhận trong popup — không dùng giờ server nhận request
+      // (có thể lệch do độ trễ mạng) để lưu vết đúng thời điểm thao tác thực tế.
+      const thoiDiemThaoTac = dayjs().toISOString();
+      await Hrc2SlabApi.chuyenBBSL(ids, selectedPhieu.idPhieu, userId, thoiDiemThaoTac);
       message.success(`Đã chuyển ${ids.length} slab vào phiếu ${selectedPhieu.soPhieu}`);
       setModalVisible(false);
       await fetchData(pagination.current, pagination.pageSize);
@@ -317,11 +346,12 @@ const BkHrc2SlabTable = () => {
       message.success(`Tạo phiếu thành công: ${(res as any)?.soPhieu ?? ""}`);
       setCreateVisible(false);
       createForm.resetFields();
-      // Reload danh sách phiếu
-      const firstKip = selectedRows[0]?.kipSanXuat;
-      const firstCaStr = selectedRows[0]?.caSanXuat;
-      const caNum2 = firstCaStr ? parseInt(String(firstCaStr), 10) : null;
-      const list = await Hrc2SlabApi.getPhieuBBSL(firstKip ?? null, caNum2 != null && !isNaN(caNum2) ? caNum2 : null);
+      // Reload danh sách phiếu — dùng lại kíp + khoảng ngày đang tìm kiếm trong popup
+      const searchValues = phieuSearchForm.getFieldsValue();
+      const range = searchValues.dateRange as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+      const tuNgay = range?.[0] ? dayjs(range[0]).format("YYYY-MM-DD") : null;
+      const denNgay = range?.[1] ? dayjs(range[1]).format("YYYY-MM-DD") : null;
+      const list = await Hrc2SlabApi.getPhieuBBSL(phieuKipCa.kip, tuNgay, denNgay);
       setPhieuList(list);
       // Auto-select phiếu vừa tạo
       const newId = (res as any)?.idphieu;
@@ -433,8 +463,9 @@ const BkHrc2SlabTable = () => {
       render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
     },
     {
-      title: "Ngày xử lý",
+      title: "Ngày lên BBSL",
       dataIndex: "ngayXuLy",
+      fixed: "left" as const,
       width: 105,
       render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
     },
@@ -514,6 +545,12 @@ const BkHrc2SlabTable = () => {
     },
     { title: "Kíp (phiếu)", dataIndex: "kipBBSL", width: 85, render: (v: string) => v ?? "-" },
     { title: "Người Chuyển BBSL (KCS)", dataIndex: "nguoiChuyenBBSL", width: 200, render: (v: string) => v ?? "-" },
+    {
+      title: "Thời điểm thao tác",
+      dataIndex: "thoiDiemThaoTac",
+      width: 150,
+      render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY HH:mm:ss") : "-"),
+    },
     { title: "Người xác nhận Đúc", dataIndex: "nguoiXacNhanDuc", width: 200, render: (v: string) => v ?? "-" },
     { title: "Người xác nhận Kho", dataIndex: "nguoiXacNhanKho", width: 200, render: (v: string) => v ?? "-" },
     { title: "Người xác nhận PKH", dataIndex: "nguoiXacNhanPKH", width: 200, render: (v: string) => v ?? "-" },
@@ -568,7 +605,7 @@ const BkHrc2SlabTable = () => {
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={4}>
-              <Form.Item name="dateXLRange" label="Khoảng ngày xử lý">
+              <Form.Item name="dateXLRange" label="Khoảng ngày lên BBSL">
                 <RangePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder={["Từ ngày", "Đến ngày"]} />
               </Form.Item>
             </Col>
@@ -680,7 +717,7 @@ const BkHrc2SlabTable = () => {
                 : `Tổng: ${pagination.total} bản ghi`}
             </span>
 
-            {!isView && isKCS && (<>
+            {!readOnly && !isView && isKCS && (<>
               <Button type="primary" icon={<ArrowUpOutlined />} disabled={!canChuyenBBSL} loading={actionLoading} onClick={handleOpenChuyenBBSL}>
                 Chuyển BBSL
               </Button>
@@ -693,7 +730,7 @@ const BkHrc2SlabTable = () => {
               <Button icon={showExtraColumns ? <EyeInvisibleOutlined /> : <EyeOutlined />} onClick={() => setShowExtraColumns((v) => !v)}>
                 {showExtraColumns ? "Ẩn cột phụ" : "Hiện cột phụ"}
               </Button>
-              {isKCS && (
+              {!readOnly && isKCS && (
                 <Button icon={<SyncOutlined />} onClick={() => setSyncVisible(true)}>Sync BKMIS</Button>
               )}
             </div>
@@ -705,7 +742,7 @@ const BkHrc2SlabTable = () => {
       <Card bodyStyle={{ padding: "8px 12px" }}>
         <Table<HrcSlabItem>
           rowKey="id"
-          rowSelection={rowSelection}
+          rowSelection={readOnly ? undefined : rowSelection}
           columns={columns}
           dataSource={data}
           loading={loading}
@@ -788,11 +825,22 @@ const BkHrc2SlabTable = () => {
         ]}
       >
         <p style={{ marginBottom: 8, color: "#555" }}>
-          Sẽ chuyển <b>{selectedCount}</b> slab vào phiếu được chọn.
+          Sẽ chuyển <b>{selectedCount}</b> slab vào phiếu được chọn (Kíp <b>{phieuKipCa.kip ?? "-"}</b>, Ca{" "}
+          <b>{phieuKipCa.ca === 1 ? "Ngày" : phieuKipCa.ca === 2 ? "Đêm" : phieuKipCa.ca ?? "-"}</b>).
           {selectedPhieu && (
             <> Phiếu đã chọn: <b style={{ color: "#1976d2" }}>{selectedPhieu.soPhieu}</b></>
           )}
         </p>
+        <Form form={phieuSearchForm} layout="inline" style={{ marginBottom: 12 }} onFinish={handleSearchPhieuBBSL}>
+          <Form.Item name="dateRange" label="Khoảng ngày SX của phiếu">
+            <RangePicker format="DD/MM/YYYY" allowClear={false} />
+          </Form.Item>
+          <Form.Item>
+            <Button icon={<SearchOutlined />} htmlType="submit" loading={phieuLoading}>
+              Tìm kiếm
+            </Button>
+          </Form.Item>
+        </Form>
         <Table<PhieuBBSLItem>
           rowKey="idPhieu"
           columns={phieuColumns}

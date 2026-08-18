@@ -5,6 +5,8 @@ import {
   Card,
   Descriptions,
   Popconfirm,
+  Radio,
+  Space,
   Table,
   Tabs,
   Tag,
@@ -24,11 +26,7 @@ import type { TableRowSelection } from "antd/es/table/interface";
 import dayjs from "dayjs";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
-import {
-  Hrc2SlabApi,
-  type HrcSlabItem,
-  type SlabTongHopItem,
-} from "../../../services/Hrc2SlabApi";
+import { Hrc2SlabApi, type HrcSlabItem } from "../../../services/Hrc2SlabApi";
 import { HRC2_PHAN_LOAI_ORDER } from "../../../utils/enums/Hrc2PhanLoaiEnum";
 import HRC2_BBSL_PhoiTam from "../../../utils/BM_config/HRC2_BBSL_PhoiTam.json";
 import {
@@ -43,6 +41,19 @@ import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 const { Title } = Typography;
 
 const TT_COLOR: Record<number, string> = { 0: "default", 1: "green" };
+
+// Màu theo Ý NGHĨA (không theo vị trí) để nhất quán giữa 3 nhóm filter: xám = "Tất cả" (không lọc),
+// xanh = trạng thái "tốt/đã xong" (trong ca, đã xác nhận), cam = trạng thái "cần chú ý" (ngoài ca, chưa xác nhận).
+const FILTER_BTN_COLOR: Record<string, { background: string; borderColor: string; color: string }> = {
+  all: { background: "#f5f5f5", borderColor: "#d9d9d9", color: "rgba(0, 0, 0, 0.88)" },
+  trongCa: { background: "#52c41a", borderColor: "#52c41a", color: "#fff" },
+  da: { background: "#52c41a", borderColor: "#52c41a", color: "#fff" },
+  ngoaiCa: { background: "#fa8c16", borderColor: "#fa8c16", color: "#fff" },
+  chua: { background: "#fa8c16", borderColor: "#fa8c16", color: "#fff" },
+};
+
+const filterBtnStyle = (value: string, current: string) =>
+  value === current ? FILTER_BTN_COLOR[value] : undefined;
 
 const getUserId = (): number => {
   try {
@@ -140,7 +151,6 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   // ── State ─────────────────────────────────────────────────────────────────
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [slabRows, setSlabRows] = useState<SlabTongHopItem[]>([]);
   const [slabDetails, setSlabDetails] = useState<HrcSlabItem[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
@@ -178,13 +188,12 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   };
 
   // ── Load data ─────────────────────────────────────────────────────────────
+  // Nguồn dữ liệu duy nhất cho cả 2 tab: bảng chi tiết theo từng slab (đủ trangThaiDuc/Kho,
+  // ngaySXTheoCa, caSanXuat, phanLoai...) — tab "Tổng hợp" tự pivot lại từ đây (xem pivotedRows)
+  // để filter cùng lúc ảnh hưởng cả 2 tab, thay vì gọi riêng API group-by getRuotPhieu.
   const loadSlabRows = useCallback(async () => {
     if (!idphieu) return;
-    const [slabs, details] = await Promise.all([
-      Hrc2SlabApi.getRuotPhieu(idphieu),
-      Hrc2SlabApi.getSlabsByPhieu(idphieu, getUserId()),
-    ]);
-    setSlabRows(slabs);
+    const details = await Hrc2SlabApi.getSlabsByPhieu(idphieu, getUserId());
     setSlabDetails(details);
     setSelectedRowKeys([]);
   }, [idphieu]);
@@ -192,7 +201,6 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      setSlabRows([]);
       setSlabDetails([]);
       setSelectedRowKeys([]);
       if (!idphieu) return;
@@ -229,7 +237,6 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   }, [loadSlabRows]);
 
   const formData = data?.jsonData || {};
-
   // ── Bảng tổng hợp: build columns từ JSON config ───────────────────────────
   const tongHopColumns = useMemo(
     () => buildAntCols(HRC2_BBSL_PhoiTam.layout[0].columns),
@@ -247,49 +254,96 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
     [leafCols],
   );
 
-  // Pivot: nhóm slabRows theo (meThep, macThep, kichThuoc); trải loaiPhoi/chatLuongTPHH thành cột
+  // ── Ngày/Ca của phiếu (chuẩn hóa để so với ngaySXTheoCa/caSanXuat từng slab) ─
+  const phieuInfo = useMemo(
+    () => ({
+      ngaySX: formData?.NgaySX ? dayjs(formData.NgaySX).format("YYYY-MM-DD") : null,
+      ca: formData?.ca != null ? String(formData.ca) : null,
+    }),
+    [formData?.NgaySX, formData?.ca],
+  );
+
+  // true = slab lệch ngày/ca so với phiếu — dùng chung cho filter "Trong ca/Ngoài ca" (dưới đây)
+  // và highlight nhóm lệch (shiftGroupInfo, sau phần selectedRows).
+  const isRecordMismatch = useCallback(
+    (d: HrcSlabItem) => {
+      const recNgay = d.ngaySXTheoCa ? dayjs(d.ngaySXTheoCa).format("YYYY-MM-DD") : null;
+      const recCa = d.caSanXuat != null ? String(d.caSanXuat) : null;
+      return (
+        (phieuInfo.ngaySX != null && recNgay != null && recNgay !== phieuInfo.ngaySX) ||
+        (phieuInfo.ca != null && recCa != null && recCa !== phieuInfo.ca)
+      );
+    },
+    [phieuInfo],
+  );
+
+  // ── Bộ lọc dùng chung cho cả 2 tab: Trong ca/Ngoài ca — XN Đúc — XN Kho ─────
+  const [filterTrongCa, setFilterTrongCa] = useState<"all" | "trongCa" | "ngoaiCa">("all");
+  const [filterDuc, setFilterDuc] = useState<"all" | "chua" | "da">("all");
+  const [filterKho, setFilterKho] = useState<"all" | "chua" | "da">("all");
+  const hasActiveFilter = filterTrongCa !== "all" || filterDuc !== "all" || filterKho !== "all";
+  const resetFilters = () => {
+    setFilterTrongCa("all");
+    setFilterDuc("all");
+    setFilterKho("all");
+  };
+
+  const filteredSlabDetails = useMemo(() => {
+    return slabDetails.filter((d) => {
+      if (filterTrongCa !== "all") {
+        const mismatch = isRecordMismatch(d);
+        if (filterTrongCa === "trongCa" && mismatch) return false;
+        if (filterTrongCa === "ngoaiCa" && !mismatch) return false;
+      }
+      if (filterDuc === "chua" && d.trangThaiDuc !== 0) return false;
+      if (filterDuc === "da" && d.trangThaiDuc !== 1) return false;
+      if (filterKho === "chua" && d.trangThaiKho !== 0) return false;
+      if (filterKho === "da" && d.trangThaiKho !== 1) return false;
+      return true;
+    });
+  }, [slabDetails, filterTrongCa, filterDuc, filterKho, isRecordMismatch]);
+
+  // Pivot: nhóm filteredSlabDetails theo (meThep, macThep, kichThuoc); trải phanLoai thành cột.
+  // Tự pivot client-side từ slab chi tiết (thay vì gọi API group-by riêng) để bộ lọc trên cùng
+  // áp dụng được luôn cho tab "Tổng hợp" — dữ liệu group-by sẵn không giữ trangThaiDuc/Kho/
+  // ngaySXTheoCa theo từng slab nên không lọc lại được.
   const pivotedRows = useMemo(() => {
-    // Build map: pivotKey → tập shiftName từ các slab chi tiết (mỗi nhóm có thể có nhiều shiftName)
-    const shiftNameMap = new Map<string, Set<string>>();
-    slabDetails.forEach((d) => {
-      if (!d.shiftName) return;
+    const map = new Map<string, Record<string, any>>();
+    filteredSlabDetails.forEach((d) => {
       const kt = [d.chieuDay, d.chieuRong, d.chieuDai].every((v) => v != null)
         ? `${d.chieuDay}x${d.chieuRong}x${d.chieuDai}`
         : "";
-      const key = `${d.meThep ?? ""}|${d.macThep ?? ""}|${kt}`;
-      if (!shiftNameMap.has(key)) shiftNameMap.set(key, new Set());
-      shiftNameMap.get(key)!.add(d.shiftName);
-    });
-
-    const map = new Map<string, Record<string, any>>();
-    slabRows.forEach((r) => {
-      const kt = [r.chieuDay, r.chieuRong, r.chieuDai].every((v) => v != null)
-        ? `${r.chieuDay}x${r.chieuRong}x${r.chieuDai}`
-        : "";
-      const rowKey = `${r.meThep ?? ""}|${r.macThep ?? ""}|${kt}`;
+      const rowKey = `${d.meThep ?? ""}|${d.macThep ?? ""}|${kt}`;
       if (!map.has(rowKey)) {
-        const shiftNames = shiftNameMap.get(rowKey);
         map.set(rowKey, {
           key: rowKey,
-          shiftName: shiftNames ? Array.from(shiftNames).join(", ") : "",
-          meThep: r.meThep,
-          macThep: r.macThep,
+          shiftNames: new Set<string>(),
+          meThep: d.meThep,
+          macThep: d.macThep,
           kichThuoc: kt,
           tongSoPhoi: 0,
           tongKhoiLuong: 0,
         });
       }
       const row = map.get(rowKey)!;
-      const keys = getColKeysByPhanLoai(r.phanLoai);
+      if (d.shiftName) (row.shiftNames as Set<string>).add(d.shiftName);
+      const keys = getColKeysByPhanLoai(d.phanLoai);
       if (keys) {
-        row[keys.soKey] = (row[keys.soKey] ?? 0) + (r.soLuong ?? 0);
-        row[keys.klKey] = (row[keys.klKey] ?? 0) + (r.tongKhoiLuong ?? 0);
+        row[keys.soKey] = (row[keys.soKey] ?? 0) + 1;
+        row[keys.klKey] = (row[keys.klKey] ?? 0) + (d.khoiLuong ?? 0);
       }
-      row.tongSoPhoi += r.soLuong ?? 0;
-      row.tongKhoiLuong += r.tongKhoiLuong ?? 0;
+      row.tongSoPhoi += 1;
+      row.tongKhoiLuong += d.khoiLuong ?? 0;
     });
-    return Array.from(map.values()).map((r, i) => ({ ...r, stt: i + 1 }));
-  }, [slabRows, slabDetails]);
+    return Array.from(map.values()).map((r, i) => {
+      const { shiftNames, ...rest } = r;
+      return {
+        ...rest,
+        shiftName: Array.from(shiftNames as Set<string>).join(", "),
+        stt: i + 1,
+      };
+    });
+  }, [filteredSlabDetails]);
 
   // Tính tổng các cột sum
   const sumTotals = useMemo(() => {
@@ -311,6 +365,40 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
     [slabDetails, selectedRowKeys],
   );
   const selectedCount = selectedRowKeys.length;
+
+  // ── Gom nhóm theo shiftName (Ca SX), order theo ngaySXTheoCa desc ───────────
+  // Nhóm nào có ngaySXTheoCa/caSanXuat khác Ngày/Ca của phiếu → tô nền xanh lá nhạt để
+  // nhận biết đây là các ID Slab "lạc" ngày/ca so với phiếu BBSL đang xem.
+  const groupedSlabDetails = useMemo(() => {
+    const groups = new Map<string, HrcSlabItem[]>();
+    filteredSlabDetails.forEach((d) => {
+      const key = d.shiftName ?? "";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(d);
+    });
+    return Array.from(groups.values())
+      .sort((a, b) => {
+        const na = a[0]?.ngaySXTheoCa ?? "";
+        const nb = b[0]?.ngaySXTheoCa ?? "";
+        return nb.localeCompare(na); // desc — nhóm gần đây nhất lên trước
+      })
+      .flatMap((rows) => rows);
+  }, [filteredSlabDetails]);
+
+  const shiftGroupInfo = useMemo(() => {
+    const mismatchMap = new Map<number, boolean>();
+    let i = 0;
+    while (i < groupedSlabDetails.length) {
+      const shiftName = groupedSlabDetails[i].shiftName;
+      let j = i;
+      while (j < groupedSlabDetails.length && groupedSlabDetails[j].shiftName === shiftName) j++;
+      const groupRows = groupedSlabDetails.slice(i, j);
+      const isMismatch = isRecordMismatch(groupRows[0]);
+      groupRows.forEach((r) => mismatchMap.set(r.id, isMismatch));
+      i = j;
+    }
+    return { mismatchMap };
+  }, [groupedSlabDetails, isRecordMismatch]);
 
   const rowSelection: TableRowSelection<HrcSlabItem> = {
     selectedRowKeys,
@@ -561,9 +649,26 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
           <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã Chốt" : "Chưa"}</Tag>
         ),
       },
-      
+
     ],
     [isKCS, isDuc, isKho, isPKH],
+  );
+
+  // Áp rowSpan gom nhóm theo shiftName lên cột "Ca SX" + tô nền xanh lá nhạt cho mọi cột của
+  // các dòng thuộc nhóm lệch ngày/ca so với phiếu — dùng onCell per-column vì rowSpan khiến ô
+  // merge không nhận được style tô nền qua onRow (onRow chỉ style <tr>, không phủ được ô đang
+  // span xuống từ dòng trước).
+  const MISMATCH_BG = "#f6ffed";
+  const groupedDetailColumns = useMemo(
+    () =>
+      detailColumns.map((col) => ({
+        ...col,
+        onCell: (record: HrcSlabItem) => {
+          const isMismatch = shiftGroupInfo.mismatchMap.get(record.id);
+          return { style: isMismatch ? { backgroundColor: MISMATCH_BG } : undefined };
+        },
+      })),
+    [detailColumns, shiftGroupInfo],
   );
 
   // ── Action buttons phiếu ──────────────────────────────────────────────────
@@ -662,6 +767,62 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
         {idphieu && <b>Số phiếu: {data?.soPhieu}</b>}
       </div>
 
+      {/* Bộ lọc dùng chung cho cả 2 tab (Chi tiết slab + Tổng hợp) */}
+      <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: "8px 12px" }}>
+        <Space wrap size={[16, 8]}>
+          <Space size={4}>
+            <span style={{ color: "#555" }}>Ngày/Ca:</span>
+            <Radio.Group
+              size="small"
+              value={filterTrongCa}
+              onChange={(e) => setFilterTrongCa(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="all" style={filterBtnStyle("all", filterTrongCa)}>Tất cả</Radio.Button>
+              <Radio.Button value="trongCa" style={filterBtnStyle("trongCa", filterTrongCa)}>Trong ca</Radio.Button>
+              <Radio.Button value="ngoaiCa" style={filterBtnStyle("ngoaiCa", filterTrongCa)}>Ngoài ca</Radio.Button>
+            </Radio.Group>
+          </Space>
+          <Space size={4}>
+            <span style={{ color: "#555" }}>Đúc:</span>
+            <Radio.Group
+              size="small"
+              value={filterDuc}
+              onChange={(e) => setFilterDuc(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="all" style={filterBtnStyle("all", filterDuc)}>Tất cả</Radio.Button>
+              <Radio.Button value="chua" style={filterBtnStyle("chua", filterDuc)}>Chưa XN</Radio.Button>
+              <Radio.Button value="da" style={filterBtnStyle("da", filterDuc)}>Đã XN</Radio.Button>
+            </Radio.Group>
+          </Space>
+          <Space size={4}>
+            <span style={{ color: "#555" }}>Kho:</span>
+            <Radio.Group
+              size="small"
+              value={filterKho}
+              onChange={(e) => setFilterKho(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="all" style={filterBtnStyle("all", filterKho)}>Tất cả</Radio.Button>
+              <Radio.Button value="chua" style={filterBtnStyle("chua", filterKho)}>Chưa XN</Radio.Button>
+              <Radio.Button value="da" style={filterBtnStyle("da", filterKho)}>Đã XN</Radio.Button>
+            </Radio.Group>
+          </Space>
+          {hasActiveFilter && (
+            <Button size="small" onClick={resetFilters}>
+              Xóa lọc
+            </Button>
+          )}
+          <span style={{ color: "#888" }}>
+            Đang hiển thị {filteredSlabDetails.length}/{slabDetails.length} slab
+          </span>
+        </Space>
+      </Card>
+
       <Tabs
         defaultActiveKey="slab"
         onChange={setActiveTabKey}
@@ -690,12 +851,12 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                         : ""}
                   </Descriptions.Item>
                   <Descriptions.Item label="Kíp">
-                    {formData?.kip || ""}
+                    {data?.kip || ""}
                   </Descriptions.Item>
                 </Descriptions>
                 <Card
                   size="small"
-                  title={`Danh sách slab (${slabDetails.length})${selectedCount > 0 ? ` — Đã chọn ${selectedCount}` : ""}`}
+                  title={`Danh sách slab (${filteredSlabDetails.length})${selectedCount > 0 ? ` — Đã chọn ${selectedCount}` : ""}`}
                   style={{ marginTop: 16 }}
                   bodyStyle={{ padding: "8px 12px" }}
                   extra={
@@ -864,13 +1025,13 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                     rowSelection={rowSelection}
                     size="small"
                     bordered
-                    columns={detailColumns}
-                    dataSource={slabDetails}
+                    columns={groupedDetailColumns}
+                    dataSource={groupedSlabDetails}
                     pagination={false}
                     scroll={{ x: "max-content", y: 520 }}
                     sticky={{ offsetHeader: 0 }}
                     summary={() => {
-                      const totalKL = slabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
+                      const totalKL = filteredSlabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
                       const optColCount = (isKCS ? 1 : 0) + (isDuc ? 1 : 0) + (isKho ? 1 : 0) + (isPKH ? 1 : 0);
                       return (
                         <Table.Summary fixed>
@@ -893,7 +1054,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
           },
           {
             key: "tonghop",
-            label: "Tổng hợp slab",
+            label: "Biên bản sản lượng",
             children: (
               <>
                 <Descriptions bordered size="small" column={2}>
