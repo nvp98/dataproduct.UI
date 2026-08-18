@@ -199,12 +199,16 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
 
 /** Entry point — phân nhánh theo type */
 const BienBanGiaoNhanPhoiTam = ({ type }: { type?: string }) => {
-  // viecdentoi / xemphieu: chỉ hiện danh sách phiếu
-  if (type == "viecdentoi" || type === "xemphieu") {
+  // viecdentoi: chỉ hiện danh sách phiếu
+  if (type === "viecdentoi") {
     return <PhieuListView type={type} />;
   }
 
-  // /bbgnphoitam: 2 tab
+  // xemphieu (vùng xem phiếu): hiện đủ 2 tab như trang chính nhưng chỉ để truy xuất dữ liệu —
+  // BkHrc2SlabTable ở chế độ readOnly (ẩn Sync/Chuyển BBSL/Thu hồi + cột tick chọn dòng).
+  const readOnly = type === "xemphieu";
+
+  // /bbgnphoitam (mặc định) hoặc /xemphieu/bbgnphoitam: 2 tab
   return (
     <Tabs
       defaultActiveKey="slab"
@@ -214,12 +218,12 @@ const BienBanGiaoNhanPhoiTam = ({ type }: { type?: string }) => {
         {
           key: "slab",
           label: "Tổng hợp phôi tấm",
-          children: <BkHrc2SlabTable />,
+          children: <BkHrc2SlabTable readOnly={readOnly} />,
         },
         {
           key: "phieu",
           label: "Danh sách phiếu BBSL",
-          children: <PhieuListView type="taoMoi" />,
+          children: <PhieuListView type={readOnly ? "xemphieu" : "taoMoi"} />,
         },
       ]}
     />
