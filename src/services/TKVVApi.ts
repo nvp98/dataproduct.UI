@@ -194,9 +194,9 @@ export const tkvvSyncDuLieuApi = {
     apiService.post("/api/TKVV_BBSL/sync-dulieu-ems", dto),
 };
 
-// ─── Tổng tự động (PLC) theo Ngay/Ca/Scope — chỉ 1 số tổng/ca, dùng để đối soát
-// với "Giá trị đối soát" người dùng tự nhập trên phiếu, KHÔNG tự điền vào bảng
-// chi tiết (PLC không phân loại được Loại 1/2/3/Phế phẩm).
+// ─── Tổng tự động (PLC) theo Ngay/Ca/Scope — chỉ 1 số tổng/ca (ưu tiên GiaTriDieuChinh,
+// fallback GiaTriTuDong per-tag), hiển thị ở dòng "TỔNG CỘNG" của bảng phiếu để xem/đối
+// chiếu với số người dùng tự nhập, KHÔNG tự điền vào Loại 1/2/3/Phế phẩm.
 
 export interface TKVVTongTuDongDto {
   tongTuDong: number;

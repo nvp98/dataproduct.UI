@@ -532,6 +532,11 @@ const DanhMucCanTab = ({ defaultXuong }: { defaultXuong?: string }) => {
 // trong khoảng Từ ngày/Đến ngày — dùng cho "Tổng tự động (PLC)" trên phiếu Biên
 // bản sản lượng. Kíp chỉ để ghi chú/lọc hiển thị, chưa được dùng khi tính tổng.
 
+// TKVV_SanLuongMapping.Scope lưu MÃ XƯỞNG DẠNG CHUỖI ("TK1".."VV2", khớp EMS_DATA_CAN.Xuong
+// và SP_TKVV_GetDuLieuCan_TuMapping) — khác với NvlTab/MappingTab dùng value SỐ (1-6) của
+// SCOPE_OPTIONS. Không dùng chung options số ở đây, phải map sang mã chuỗi qua tenScope.
+const SCOPE_CODE_OPTIONS = SCOPE_OPTIONS.map(({ label, tenScope }) => ({ label, value: tenScope }));
+
 const SanLuongMappingTab = ({ defaultScope }: { defaultScope?: string }) => {
   const [data, setData] = useState<TKVVSanLuongMappingDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -641,7 +646,7 @@ const SanLuongMappingTab = ({ defaultScope }: { defaultScope?: string }) => {
             allowClear
             placeholder="Tất cả xưởng"
             style={{ width: 220 }}
-            options={SCOPE_OPTIONS.map(({ label, value }) => ({ label, value }))}
+            options={SCOPE_CODE_OPTIONS}
             value={scopeFilter}
             onChange={(v) => setScopeFilter(v)}
           />
@@ -727,7 +732,7 @@ const SanLuongMappingTab = ({ defaultScope }: { defaultScope?: string }) => {
       >
         <Form form={form} layout="vertical">
           <Form.Item name="scope" label="Xưởng" rules={[{ required: true, message: "Bắt buộc" }]}>
-            <Select placeholder="Chọn xưởng" options={SCOPE_OPTIONS.map(({ label, value }) => ({ label, value }))} />
+            <Select placeholder="Chọn xưởng" options={SCOPE_CODE_OPTIONS} />
           </Form.Item>
           <Form.Item name="tagID" label="Cân (Tag ID EMS)" rules={[{ required: true, message: "Bắt buộc" }]}>
             <Select
