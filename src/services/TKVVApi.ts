@@ -180,6 +180,135 @@ export const tkvvGiaTriNVLAutoApi = {
     apiService.get("/api/TKVV_BCSL_ChiPhi/get-giatri-nvl-auto", { params }),
 };
 
+// ─── TKVV_Silo ──────────────────────────────────────────────────────────────
+
+export interface TKVVSiloDto {
+  id: number;
+  maXuong: string | null;
+  scope: string | null;
+  tenScope: string | null;
+  maSilo: string | null;
+  tenSilo: string;
+  ghiChu: string | null;
+  trangThai: boolean;
+  ngayCapNhat: string;
+}
+
+export interface CreateTKVVSiloDto {
+  maXuong?: string | null;
+  scope?: string | null;
+  tenScope?: string | null;
+  maSilo?: string | null;
+  tenSilo: string;
+  ghiChu?: string | null;
+}
+
+export interface UpdateTKVVSiloDto extends CreateTKVVSiloDto {
+  trangThai: boolean;
+}
+
+export const tkvvSiloApi = {
+  getList: (params?: { scope?: string }): Promise<TKVVSiloDto[]> =>
+    apiService.get("/api/TKVV_Silo/silo", { params }),
+  getById: (id: number): Promise<TKVVSiloDto> =>
+    apiService.get(`/api/TKVV_Silo/silo/${id}`),
+  create: (dto: CreateTKVVSiloDto): Promise<TKVVSiloDto> =>
+    apiService.post("/api/TKVV_Silo/silo", dto),
+  update: (id: number, dto: UpdateTKVVSiloDto): Promise<TKVVSiloDto> =>
+    apiService.put(`/api/TKVV_Silo/silo/${id}`, dto),
+  delete: (id: number) => apiService.delete(`/api/TKVV_Silo/silo/${id}`),
+};
+
+// ─── TKVV_NVL_SiloMapping ────────────────────────────────────────────────────
+
+export interface TKVVNvlSiloMappingDto {
+  id: number;
+  nguyenVatLieuID: number;
+  tenNVL: string | null;
+  scopeNVL: string | null;
+  siloID: number;
+  tenSilo: string | null;
+  maSilo: string | null;
+  ca: number;
+  ngaySX: string;
+  ghiChu: string | null;
+  trangThai: boolean;
+  ngayCapNhat: string;
+}
+
+export interface CreateTKVVNvlSiloMappingDto {
+  nguyenVatLieuID: number;
+  siloID: number;
+  ca: number;
+  ngaySX: string;
+  ghiChu?: string | null;
+}
+
+export interface UpdateTKVVNvlSiloMappingDto extends CreateTKVVNvlSiloMappingDto {
+  trangThai: boolean;
+}
+
+export const tkvvNvlSiloMappingApi = {
+  getList: (params?: { nvlId?: number; siloId?: number }): Promise<TKVVNvlSiloMappingDto[]> =>
+    apiService.get("/api/TKVV_Silo/nvl-silo-mapping", { params }),
+  getById: (id: number): Promise<TKVVNvlSiloMappingDto> =>
+    apiService.get(`/api/TKVV_Silo/nvl-silo-mapping/${id}`),
+  create: (dto: CreateTKVVNvlSiloMappingDto): Promise<TKVVNvlSiloMappingDto> =>
+    apiService.post("/api/TKVV_Silo/nvl-silo-mapping", dto),
+  update: (id: number, dto: UpdateTKVVNvlSiloMappingDto): Promise<TKVVNvlSiloMappingDto> =>
+    apiService.put(`/api/TKVV_Silo/nvl-silo-mapping/${id}`, dto),
+  delete: (id: number) => apiService.delete(`/api/TKVV_Silo/nvl-silo-mapping/${id}`),
+};
+
+// ─── TKVV_Silo_TagMapping ────────────────────────────────────────────────────
+
+export interface TKVVSiloTagMappingDto {
+  id: number;
+  siloID: number;
+  tenSilo: string | null;
+  scopeNVL: string | null;
+  maBM: string;
+  loaiDuLieu: string;
+  tagIDEMS: string | null;
+  tagName: string | null;
+  tagIDEMS_Ngay: string | null;
+  tagName_Ngay: string | null;
+  tagIDEMS_Dem: string | null;
+  tagName_Dem: string | null;
+  ghiChu: string | null;
+  trangThai: boolean;
+  ngayCapNhat: string;
+}
+
+export interface CreateTKVVSiloTagMappingDto {
+  siloID: number;
+  maBM: string;
+  loaiDuLieu: string;
+  tagIDEMS?: string | null;
+  tagName?: string | null;
+  tagIDEMS_Ngay?: string | null;
+  tagName_Ngay?: string | null;
+  tagIDEMS_Dem?: string | null;
+  tagName_Dem?: string | null;
+  ghiChu?: string | null;
+}
+
+export interface UpdateTKVVSiloTagMappingDto extends CreateTKVVSiloTagMappingDto {
+  trangThai: boolean;
+}
+
+export const tkvvSiloTagMappingApi = {
+  getList: (params?: { siloId?: number; maBM?: string }): Promise<TKVVSiloTagMappingDto[]> =>
+    apiService.get("/api/TKVV_Silo/silo-tag-mapping", { params }),
+  getById: (id: number): Promise<TKVVSiloTagMappingDto> =>
+    apiService.get(`/api/TKVV_Silo/silo-tag-mapping/${id}`),
+  create: (dto: CreateTKVVSiloTagMappingDto): Promise<TKVVSiloTagMappingDto> =>
+    apiService.post("/api/TKVV_Silo/silo-tag-mapping", dto),
+  update: (id: number, dto: UpdateTKVVSiloTagMappingDto): Promise<TKVVSiloTagMappingDto> =>
+    apiService.put(`/api/TKVV_Silo/silo-tag-mapping/${id}`, dto),
+  delete: (id: number) => apiService.delete(`/api/TKVV_Silo/silo-tag-mapping/${id}`),
+};
+
 // ─── Chi tiết sản lượng theo phiếu ────────────────────────────────────────────
 
 export interface TKVVChiTietDto {
