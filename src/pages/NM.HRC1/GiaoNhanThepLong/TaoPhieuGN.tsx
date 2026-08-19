@@ -1109,7 +1109,7 @@ export const TinhLuyenPanel = ({
     { title: "Ghi chú LT",  key: "ghiChuLo",  width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo  ?? "" },
     { title: "Ghi chú đúc", key: "ghiChuDuc2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
     {
-      title: "Chuyển ca", key: "chuyenCaDuc", width: 110,
+      title: "Chuyển ca", key: "chuyenCaDuc", width: 120,
       render: (_, me) => {
         if (readOnly || me.isChot || (me.trangThaiTL ?? 0) < 1 || (me.trangThaiDuc ?? 0) >= 1) return null;
         const busy = chuyenCaBusy.has(me.id);
@@ -1450,7 +1450,7 @@ export const DucPanel = ({
     },
     { title: "STT",       key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
     {
-      title: "Tình trạng", key: "tinhTrang", width: 130, fixed: "left",
+      title: "Tình trạng", key: "tinhTrang", width: 160, fixed: "left",
       render: (_, me) => (
         <Space size={4}>
           {tinhTrangTag(me.trangThaiDuc, me.isChot)}
