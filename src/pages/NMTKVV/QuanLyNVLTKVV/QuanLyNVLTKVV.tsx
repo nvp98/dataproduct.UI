@@ -30,6 +30,9 @@ import {
   TKVV_SCOPES,
   TKVV_CA_OPTIONS,
   getTKVVScopeByCode,
+  tkvvScopeToCode,
+  tkvvScopeToLabel,
+  TKVV_SCOPE_OPTIONS,
 } from "../../../utils/constants/TKVV_constant";
 import {
   tkvvNvlApi,
@@ -47,6 +50,10 @@ import {
 const { Title } = Typography;
 
 const MA_BM_OPTIONS = [
+  {
+    label: "ALL - Tất cả BM TKVV",
+    value: "ALL",
+  },
   {
     label: "BB Sản lượng (TKVV_BB_SanLuong)",
     value: BM_CONFIG.TKVV.TKVV_BB_SanLuong,
@@ -89,11 +96,17 @@ const NvlTab = ({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TKVVNguyenVatLieuDto | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteSaving, setPasteSaving] = useState(false);
 
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ trangThai: true, maBM: selectedMaBM });
+    form.setFieldsValue({
+      trangThai: true,
+      maBM: selectedMaBM === "ALL" ? undefined : selectedMaBM,
+    });
     setModalOpen(true);
   };
 
@@ -113,10 +126,10 @@ const NvlTab = ({
     setSaving(true);
     try {
       if (editing) {
-        await tkvvNvlApi.update(editing.id, { ...values, maBM: selectedMaBM });
+        await tkvvNvlApi.update(editing.id, values);
         message.success("Cập nhật NVL thành công");
       } else {
-        await tkvvNvlApi.create({ ...values, maBM: selectedMaBM });
+        await tkvvNvlApi.create(values);
         message.success("Thêm NVL thành công");
       }
       setModalOpen(false);
@@ -138,6 +151,154 @@ const NvlTab = ({
     }
   };
 
+  // Resolve scope input (code "TK1" hoặc số "1"–"6") → { code, tenScope }
+  const resolveNvlScope = (
+    raw: string,
+  ): { code: string; tenScope: string } | null => {
+    const byCode = TKVV_SCOPES.find(
+      (s) => s.code.toUpperCase() === raw.toUpperCase(),
+    );
+    if (byCode) return { code: byCode.code, tenScope: byCode.label };
+    const byNum = TKVV_SCOPES.find((s) => s.scope.toString() === raw.trim());
+    if (byNum) return { code: byNum.code, tenScope: byNum.label };
+    return null;
+  };
+
+  // Format: maBM | TenNVL | DonViTinh | ThuTu | Scope
+  const parsePasteRows = (text: string) => {
+    const lines = text
+      .split(/\r?\n+/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) =>
+        l
+          .replace(/\s*\|\s*/g, "\t")
+          .replace(/\s*;\s*/g, "\t")
+          .split(/\t+/)
+          .map((p) => p.trim()),
+      );
+
+    type ValidRow = {
+      maBM: string;
+      tenNVL: string;
+      donViTinh: string | null;
+      thuTu: number | null;
+      scope: string | null;
+      tenScope: string | null;
+    };
+
+    const validRows: ValidRow[] = [];
+    const errorRows: string[] = [];
+
+    for (const [i, parts] of lines.entries()) {
+      const lineNo = i + 1;
+      if (parts.length < 2) {
+        errorRows.push(`Dòng ${lineNo}: cần ít nhất maBM và tên NVL`);
+        continue;
+      }
+
+      const maBM = parts[0];
+      const tenNVL = parts[1];
+      const donViTinh = parts[2] || null;
+      const rawThuTu = parts[3];
+      const rawScope = parts[4];
+
+      if (!maBM) {
+        errorRows.push(`Dòng ${lineNo}: maBM trống`);
+        continue;
+      }
+      if (!tenNVL) {
+        errorRows.push(`Dòng ${lineNo}: tên NVL trống`);
+        continue;
+      }
+
+      let thuTu: number | null = null;
+      if (rawThuTu) {
+        const n = Number(rawThuTu);
+        if (!Number.isInteger(n)) {
+          errorRows.push(`Dòng ${lineNo}: thứ tự không hợp lệ (${rawThuTu})`);
+          continue;
+        }
+        thuTu = n;
+      }
+
+      let scope: string | null = null;
+      let tenScope: string | null = null;
+      // if (rawScope) {
+      //   const resolved = resolveNvlScope(rawScope);
+      //   if (!resolved) {
+      //     errorRows.push(`Dòng ${lineNo}: scope không hợp lệ (${rawScope}) — dùng TK1..VV2 hoặc 1-6`);
+      //     continue;
+      //   }
+      //   scope = resolved.code;
+      //   tenScope = resolved.tenScope;
+      // }
+
+      validRows.push({ maBM, tenNVL, donViTinh, thuTu, scope, tenScope });
+    }
+
+    return { validRows, errorRows };
+  };
+
+  const handlePasteSubmit = async () => {
+    const { validRows, errorRows } = parsePasteRows(pasteText);
+    if (validRows.length === 0) {
+      message.error(errorRows[0] || "Không có dòng hợp lệ");
+      return;
+    }
+    setPasteSaving(true);
+    try {
+      let created = 0;
+      const failedRows: string[] = [];
+      for (const row of validRows) {
+        try {
+          await tkvvNvlApi.create(row);
+          created++;
+        } catch (err: any) {
+          failedRows.push(`${row.tenNVL}: ${err?.message ?? "lỗi"}`);
+        }
+      }
+      onReload();
+      setPasteOpen(false);
+      setPasteText("");
+      const parts = [
+        `Đã thêm ${created}/${validRows.length} NVL`,
+        errorRows.length ? `Bỏ qua ${errorRows.length} dòng lỗi` : null,
+        failedRows.length ? `Lưu thất bại ${failedRows.length} dòng` : null,
+      ].filter(Boolean);
+      if (errorRows.length || failedRows.length) {
+        Modal.warning({
+          title: "Kết quả dán nhanh NVL",
+          content: (
+            <div style={{ maxHeight: 320, overflow: "auto" }}>
+              <p>{parts.join(". ")}.</p>
+              {!!errorRows.length && (
+                <div style={{ marginBottom: 8 }}>
+                  <b>Dòng bỏ qua:</b>
+                  {errorRows.map((r) => (
+                    <div key={r}>{r}</div>
+                  ))}
+                </div>
+              )}
+              {!!failedRows.length && (
+                <div>
+                  <b>Lưu thất bại:</b>
+                  {failedRows.map((r) => (
+                    <div key={r}>{r}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ),
+        });
+      } else {
+        message.success(parts.join(". "));
+      }
+    } finally {
+      setPasteSaving(false);
+    }
+  };
+
   return (
     <div>
       <div
@@ -147,9 +308,19 @@ const NvlTab = ({
           justifyContent: "flex-end",
         }}
       >
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Thêm NVL
-        </Button>
+        <Space>
+          <Button
+            onClick={() => {
+              setPasteText("");
+              setPasteOpen(true);
+            }}
+          >
+            Dán nhanh
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            Thêm NVL
+          </Button>
+        </Space>
       </div>
       <Table
         rowKey="id"
@@ -165,18 +336,19 @@ const NvlTab = ({
             align: "center",
             render: (_: unknown, __: unknown, i: number) => i + 1,
           },
+          { title: "Mã BM", dataIndex: "maBM", width: 140, ellipsis: true },
           { title: "Tên NVL", dataIndex: "tenNVL" },
           { title: "ĐVT", dataIndex: "donViTinh", width: 90, align: "center" },
           {
             title: "Scope",
             dataIndex: "scope",
-            width: 100,
+            width: 80,
             align: "center",
             render: (v: string | null) =>
               v ? <Tag color="blue">{v}</Tag> : null,
           },
           { title: "Tên scope", dataIndex: "tenScope", width: 160 },
-          { title: "Thứ tự", dataIndex: "thuTu", width: 80, align: "center" },
+          { title: "Thứ tự", dataIndex: "thuTu", width: 75, align: "center" },
           {
             title: "Trạng thái",
             dataIndex: "trangThai",
@@ -212,6 +384,7 @@ const NvlTab = ({
         ]}
       />
 
+      {/* Modal thêm/sửa đơn lẻ */}
       <Modal
         title={editing ? "Sửa NVL" : "Thêm NVL"}
         open={modalOpen}
@@ -221,6 +394,19 @@ const NvlTab = ({
         destroyOnClose
       >
         <Form form={form} layout="vertical">
+          <Form.Item
+            name="maBM"
+            label="Mã BM"
+            rules={[{ required: true, message: "Bắt buộc" }]}
+          >
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="Chọn Mã BM"
+              options={MA_BM_OPTIONS.filter((opt) => opt.value !== "ALL")}
+              disabled={selectedMaBM !== "ALL"}
+            />
+          </Form.Item>
           <Form.Item
             name="tenNVL"
             label="Tên NVL"
@@ -264,6 +450,41 @@ const NvlTab = ({
             <Input.TextArea rows={2} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal dán nhanh nhiều NVL */}
+      <Modal
+        title="Dán nhanh danh mục NVL"
+        open={pasteOpen}
+        onCancel={() => setPasteOpen(false)}
+        onOk={handlePasteSubmit}
+        okText="Kiểm tra & thêm"
+        confirmLoading={pasteSaving}
+        destroyOnClose
+        width={720}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="small">
+          <Typography.Text>
+            Mỗi dòng một NVL. Các cột ngăn cách bằng <b>tab</b>, dấu <b>|</b>{" "}
+            hoặc dấu <b>;</b>:
+          </Typography.Text>
+          <Typography.Text code style={{ fontSize: 12 }}>
+            maBM | Tên NVL | Đơn vị tính | Thứ tự | Scope
+          </Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Ba cột cuối là tùy chọn. Scope chấp nhận mã (<b>TK1, VV2…</b>) hoặc
+            số (<b>1–6</b>). Tên scope tự động điền khi lưu.
+          </Typography.Text>
+          <Input.TextArea
+            rows={14}
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            placeholder={
+              "Ví dụ:\nTKVV_BB_SanLuong\tQuặng Vê Viên TP\tTấn\t1\tVV1\nTKVV_BB_SanLuong\tQuặng Sinter\tTấn\t2\tTK1\nTKVV_BC_SanLuongChiPhi\tCoke\tTấn\t3\t"
+            }
+            style={{ fontFamily: "monospace" }}
+          />
+        </Space>
       </Modal>
     </div>
   );
@@ -687,9 +908,13 @@ const SiloTab = () => {
 const NvlSiloMappingTab = ({
   allNvl,
   allSilo,
+  selectedMaBM,
+  selectedScope,
 }: {
   allNvl: TKVVNguyenVatLieuDto[];
   allSilo: TKVVSiloDto[];
+  selectedMaBM: string;
+  selectedScope?: string;
 }) => {
   const [data, setData] = useState<TKVVNvlSiloMappingDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -699,12 +924,38 @@ const NvlSiloMappingTab = ({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TKVVNvlSiloMappingDto | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteSaving, setPasteSaving] = useState(false);
   const [selectedNvlScope, setSelectedNvlScope] = useState<string | null>(null);
+
+  const activeNvlOptions = useMemo(
+    () =>
+      allNvl.filter(
+        (n) =>
+          n.trangThai &&
+          (!selectedMaBM || n.maBM === selectedMaBM) &&
+          (!selectedScope || n.scope === selectedScope),
+      ),
+    [allNvl, selectedMaBM, selectedScope],
+  );
+
+  const activeSiloOptions = useMemo(
+    () =>
+      allSilo.filter(
+        (s) => s.trangThai && (!selectedScope || s.scope === selectedScope),
+      ),
+    selectedMaBM === "ALL" || !selectedMaBM,
+  );
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await tkvvNvlSiloMappingApi.getList({
+        ...(selectedMaBM && selectedMaBM !== "ALL"
+          ? { maBM: selectedMaBM }
+          : {}),
+        ...(selectedScope ? { scope: selectedScope } : {}),
         ...(nvlFilter ? { nvlId: nvlFilter } : {}),
         ...(siloFilter ? { siloId: siloFilter } : {}),
       });
@@ -714,7 +965,7 @@ const NvlSiloMappingTab = ({
     } finally {
       setLoading(false);
     }
-  }, [nvlFilter, siloFilter]);
+  }, [nvlFilter, siloFilter, selectedMaBM, selectedScope]);
 
   useEffect(() => {
     fetchData();
@@ -736,6 +987,9 @@ const NvlSiloMappingTab = ({
       ? (getTKVVScopeByCode(nvl.scope)?.scope.toString() ?? null)
       : null;
     setSelectedNvlScope(siloScope);
+    form.setFieldValue("maBM", nvl?.maBM ?? selectedMaBM ?? null);
+    form.setFieldValue("scope", nvl?.scope ?? selectedScope ?? null);
+    form.setFieldValue("thuTu", nvl?.thuTu ?? null);
     form.setFieldValue("siloID", undefined);
   };
 
@@ -743,6 +997,7 @@ const NvlSiloMappingTab = ({
     setEditing(null);
     setSelectedNvlScope(null);
     form.resetFields();
+    form.setFieldsValue({ maBM: selectedMaBM, scope: selectedScope ?? null });
     setModalOpen(true);
   };
 
@@ -754,10 +1009,13 @@ const NvlSiloMappingTab = ({
       : null;
     setSelectedNvlScope(siloScope);
     form.setFieldsValue({
+      maBM: record.maBM,
       nguyenVatLieuID: record.nguyenVatLieuID,
+      scope: record.scope,
       siloID: record.siloID,
       ca: record.ca,
       ngaySX: record.ngaySX ? dayjs(record.ngaySX) : null,
+      thuTu: record.thuTu,
       ghiChu: record.ghiChu,
       trangThai: record.trangThai,
     });
@@ -798,6 +1056,218 @@ const NvlSiloMappingTab = ({
     }
   };
 
+  const normalizeScopeCode = (raw: string | null): string | null => {
+    if (!raw) return null;
+    const trimmed = raw.trim();
+    const byCode = getTKVVScopeByCode(trimmed.toUpperCase());
+    if (byCode) return byCode.code;
+    const byNumber = TKVV_SCOPES.find((s) => s.scope.toString() === trimmed);
+    return byNumber?.scope.toString() ?? null;
+  };
+
+  const parseDateToIso = (raw: string | null): string | null => {
+    if (!raw) return null;
+    const trimmed = raw.trim();
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})$/;
+    const dmy = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const dashDmy = /^(\d{2})-(\d{2})-(\d{4})$/;
+
+    let match = trimmed.match(ymd);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+
+    match = trimmed.match(dmy);
+    if (match) return `${match[3]}-${match[2]}-${match[1]}`;
+
+    match = trimmed.match(dashDmy);
+    if (match) return `${match[3]}-${match[2]}-${match[1]}`;
+
+    return null;
+  };
+
+  const parsePasteRows = (text: string) => {
+    const rows = text
+      .split(/\r?\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) =>
+        line
+          .replace(/\s*[|;]\s*/g, "\t")
+          .replace(/\s*,\s*/g, "\t")
+          .split(/\t+/)
+          .map((part) => part.trim()),
+      );
+
+    type ValidRow = {
+      maBM: string;
+      nguyenVatLieuID: number;
+      scope: string;
+      siloID: number;
+      ngaySX: string;
+      ca: number;
+      thuTu: number | null;
+    };
+
+    const validRows: ValidRow[] = [];
+    const errorRows: string[] = [];
+
+    for (const [index, parts] of rows.entries()) {
+      const lineNo = index + 1;
+      if (parts.length < 6) {
+        errorRows.push(
+          `Dòng ${lineNo}: cần ít nhất 6 cột (Mã BM, NVLID, scope, SiloID, ngày sx, ca)`,
+        );
+        continue;
+      }
+      const maBM = parts[0];
+      const nvlId = Number(parts[1]);
+      const scope = normalizeScopeCode(parts[2]);
+      const siloId = Number(parts[3]);
+      const ngaySX = parseDateToIso(parts[4]);
+      const ca = Number(parts[5]);
+      const rawThuTu = parts[6];
+      const thuTu = rawThuTu ? Number(rawThuTu) : null;
+
+      if (!maBM) {
+        errorRows.push(`Dòng ${lineNo}: Mã BM trống`);
+        continue;
+      }
+      if (!Number.isInteger(nvlId) || nvlId <= 0) {
+        errorRows.push(`Dòng ${lineNo}: NVLID không hợp lệ (${parts[1]})`);
+        continue;
+      }
+      if (!scope) {
+        errorRows.push(`Dòng ${lineNo}: scope không hợp lệ (${parts[2]})`);
+        continue;
+      }
+      if (!Number.isInteger(siloId) || siloId <= 0) {
+        errorRows.push(`Dòng ${lineNo}: SiloID không hợp lệ (${parts[3]})`);
+        continue;
+      }
+      if (!ngaySX) {
+        errorRows.push(`Dòng ${lineNo}: ngày sx không hợp lệ (${parts[4]})`);
+        continue;
+      }
+      if (!Number.isInteger(ca) || (ca !== 1 && ca !== 2)) {
+        errorRows.push(`Dòng ${lineNo}: ca không hợp lệ (${parts[5]})`);
+        continue;
+      }
+      if (rawThuTu && (!Number.isInteger(thuTu) || (thuTu ?? 0) < 0)) {
+        errorRows.push(`Dòng ${lineNo}: Thứ tự không hợp lệ (${rawThuTu})`);
+        continue;
+      }
+
+      const nvl = allNvl.find((item) => item.id === nvlId);
+      if (!nvl) {
+        errorRows.push(`Dòng ${lineNo}: không tìm thấy NVL ID=${nvlId}`);
+        continue;
+      }
+      // if (nvl.maBM !== maBM) {
+      //   errorRows.push(
+      //     `Dòng ${lineNo}: Mã BM ${maBM} không khớp với NVL ID=${nvlId} (${nvl.maBM})`,
+      //   );
+      //   continue;
+      // }
+      // if (nvl.scope && nvl.scope !== scope) {
+      //   errorRows.push(
+      //     `Dòng ${lineNo}: scope ${scope} không khớp với NVL ID=${nvlId} (${nvl.scope})`,
+      //   );
+      //   continue;
+      // }
+
+      const silo = allSilo.find((item) => item.id === siloId);
+      if (!silo) {
+        errorRows.push(`Dòng ${lineNo}: không tìm thấy Silo ID=${siloId}`);
+        continue;
+      }
+      const siloScopeCode = normalizeScopeCode(silo.scope);
+      if (siloScopeCode && siloScopeCode !== scope) {
+        errorRows.push(
+          `Dòng ${lineNo}: scope ${scope} không khớp với Silo ID=${siloId} (${silo.scope ?? "?"})`,
+        );
+        continue;
+      }
+
+      validRows.push({
+        maBM,
+        nguyenVatLieuID: nvlId,
+        scope,
+        siloID: siloId,
+        ngaySX,
+        ca,
+        thuTu,
+      });
+    }
+
+    return { validRows, errorRows };
+  };
+
+  const handlePasteSubmit = async () => {
+    const { validRows, errorRows } = parsePasteRows(pasteText);
+    if (validRows.length === 0) {
+      message.error(errorRows[0] || "Không có dòng hợp lệ");
+      return;
+    }
+
+    setPasteSaving(true);
+    try {
+      let created = 0;
+      const failedRows: string[] = [];
+
+      for (const row of validRows) {
+        try {
+          await tkvvNvlSiloMappingApi.create(row);
+          created += 1;
+        } catch (err: any) {
+          failedRows.push(
+            `NVL ${row.nguyenVatLieuID} / Silo ${row.siloID}: ${err?.message || "không thể lưu"}`,
+          );
+        }
+      }
+
+      await fetchData();
+      setPasteOpen(false);
+      setPasteText("");
+
+      const parts = [
+        `Đã thêm ${created}/${validRows.length} mapping`,
+        errorRows.length ? `Bỏ qua ${errorRows.length} dòng lỗi` : null,
+        failedRows.length ? `Lưu thất bại ${failedRows.length} dòng` : null,
+      ].filter(Boolean);
+
+      if (errorRows.length || failedRows.length) {
+        Modal.warning({
+          title: "Kết quả dán nhanh NVL-Silo",
+          width: 780,
+          content: (
+            <div style={{ maxHeight: 360, overflow: "auto" }}>
+              <p style={{ marginBottom: 8 }}>{parts.join(". ")}.</p>
+              {!!errorRows.length && (
+                <div style={{ marginBottom: 12 }}>
+                  <b>Dòng bỏ qua:</b>
+                  {errorRows.map((item) => (
+                    <div key={item}>{item}</div>
+                  ))}
+                </div>
+              )}
+              {!!failedRows.length && (
+                <div>
+                  <b>Lưu thất bại:</b>
+                  {failedRows.map((item) => (
+                    <div key={item}>{item}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ),
+        });
+      } else {
+        message.success(parts.join(". "));
+      }
+    } finally {
+      setPasteSaving(false);
+    }
+  };
+
   return (
     <div>
       <div
@@ -816,7 +1286,7 @@ const NvlSiloMappingTab = ({
             optionFilterProp="label"
             placeholder="Tất cả NVL"
             style={{ width: 260 }}
-            options={allNvl.map((n) => ({
+            options={activeNvlOptions.map((n) => ({
               label: `[${n.scope ?? "?"}] ${n.tenNVL}`,
               value: n.id,
             }))}
@@ -830,7 +1300,7 @@ const NvlSiloMappingTab = ({
             optionFilterProp="label"
             placeholder="Tất cả Silo"
             style={{ width: 220 }}
-            options={allSilo.map((s) => ({
+            options={activeSiloOptions.map((s) => ({
               label: `[${s.scope ?? "?"}] ${s.tenSilo}`,
               value: s.id,
             }))}
@@ -841,14 +1311,25 @@ const NvlSiloMappingTab = ({
             Làm mới
           </Button>
         </Space>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={openCreate}
-          disabled={allNvl.length === 0 || allSilo.length === 0}
-        >
-          Thêm mapping
-        </Button>
+        <Space>
+          <Button
+            onClick={() => {
+              setPasteText("");
+              setPasteOpen(true);
+            }}
+            disabled={allNvl.length === 0 || allSilo.length === 0}
+          >
+            Dán nhanh
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={openCreate}
+            disabled={allNvl.length === 0 || allSilo.length === 0}
+          >
+            Thêm mapping
+          </Button>
+        </Space>
       </div>
 
       <Table
@@ -861,12 +1342,17 @@ const NvlSiloMappingTab = ({
         columns={[
           {
             title: "Khu vực",
-            dataIndex: "scopeNVL",
-            width: 90,
+            dataIndex: "scope",
+            width: 120,
             align: "center",
-            render: (v: string | null) =>
-              v ? <Tag color="blue">{v}</Tag> : null,
+            render: (v: number | string) =>
+              v ? (
+                <Tag color="blue">
+                  {TKVV_SCOPE_OPTIONS.find((o) => o.value === Number(v))?.label}
+                </Tag>
+              ) : null,
           },
+          { title: "Mã BM", dataIndex: "maBM", width: 160, ellipsis: true },
           { title: "Tên NVL", dataIndex: "tenNVL", width: 200, ellipsis: true },
           {
             title: "Silo",
@@ -875,6 +1361,7 @@ const NvlSiloMappingTab = ({
             render: (_: unknown, r: TKVVNvlSiloMappingDto) =>
               r.maSilo ? `${r.maSilo} — ${r.tenSilo}` : (r.tenSilo ?? ""),
           },
+          { title: "Thứ tự", dataIndex: "thuTu", width: 80, align: "center" },
           {
             title: "Ca",
             dataIndex: "ca",
@@ -894,7 +1381,7 @@ const NvlSiloMappingTab = ({
             align: "center",
             render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : ""),
           },
-          { title: "Ghi chú", dataIndex: "ghiChu", ellipsis: true },
+          { title: "Ghi chú", width: 80, dataIndex: "ghiChu", ellipsis: true },
           {
             title: "TT",
             dataIndex: "trangThai",
@@ -959,6 +1446,17 @@ const NvlSiloMappingTab = ({
               onChange={handleNvlChange}
             />
           </Form.Item>
+          <Space style={{ width: "100%" }} size="middle">
+            <Form.Item name="maBM" label="Mã BM" style={{ width: 180 }}>
+              <Input disabled />
+            </Form.Item>
+            <Form.Item name="scope" label="Scope" style={{ width: 160 }}>
+              <Input disabled />
+            </Form.Item>
+            <Form.Item name="thuTu" label="Thứ tự" style={{ width: 120 }}>
+              <InputNumber style={{ width: "100%" }} />
+            </Form.Item>
+          </Space>
           <Form.Item
             name="siloID"
             label={`Silo${selectedNvlScope ? ` (lọc theo scope ${selectedNvlScope})` : ""}`}
@@ -1006,6 +1504,39 @@ const NvlSiloMappingTab = ({
           </Form.Item>
         </Form>
       </Modal>
+
+      <Modal
+        title="Dán nhanh NVL-Silo"
+        open={pasteOpen}
+        onCancel={() => setPasteOpen(false)}
+        onOk={handlePasteSubmit}
+        okText="Kiểm tra & thêm"
+        confirmLoading={pasteSaving}
+        destroyOnClose
+        width={820}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="small">
+          <Typography.Text>
+            Mỗi dòng theo thứ tự:{" "}
+            <b>Mã BM - NVLID - scope - SiloID - ngày sx - ca - Thứ tự</b>. Ngăn
+            cách bằng tab, dấu phẩy, dấu chấm phẩy hoặc dấu <b>|</b>.
+          </Typography.Text>
+          <Typography.Text type="secondary">
+            scope chấp nhận <b>TK1, TK2, TK3, TK4, VV1, VV2</b> hoặc số{" "}
+            <b>1-6</b>. Ngày sx chấp nhận <b>YYYY-MM-DD</b> hoặc{" "}
+            <b>DD/MM/YYYY</b>.
+          </Typography.Text>
+          <Input.TextArea
+            rows={14}
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            placeholder={
+              "Ví dụ:\nTKVV_BB_SanLuong\t101\tTK1\t12\t2026-08-17\t1\t1\nTKVV_BB_SanLuong\t102\tTK1\t13\t17/08/2026\t2\t2"
+            }
+            style={{ fontFamily: "monospace" }}
+          />
+        </Space>
+      </Modal>
     </div>
   );
 };
@@ -1021,6 +1552,10 @@ const SiloTagMappingTab = ({ allSilo }: { allSilo: TKVVSiloDto[] }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TKVVSiloTagMappingDto | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteSaving, setPasteSaving] = useState(false);
+  const [emsTags, setEmsTags] = useState<EMSMappingTagDto[]>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -1040,6 +1575,31 @@ const SiloTagMappingTab = ({ allSilo }: { allSilo: TKVVSiloDto[] }) => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Tải EMS tags một lần khi mở paste modal (dùng để tra cứu TenCan → tagName)
+  const openPaste = async () => {
+    setPasteText("");
+    setPasteOpen(true);
+    if (emsTags.length === 0) {
+      try {
+        const res = await tkvvEmsTagApi.getList();
+        setEmsTags(Array.isArray(res) ? res : []);
+      } catch {
+        /* silent */
+      }
+    }
+  };
+
+  const emsTagById = useMemo(
+    () => new Map(emsTags.map((t) => [t.tagIDEMS, t])),
+    [emsTags],
+  );
+
+  // Tra cứu tagName (tenCan) từ tagIDEMS; trả null nếu tagIDEMS trống
+  const resolveTagName = (tagID: string | null): string | null => {
+    if (!tagID) return null;
+    return emsTagById.get(tagID)?.tenCan ?? null;
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -1095,6 +1655,154 @@ const SiloTagMappingTab = ({ allSilo }: { allSilo: TKVVSiloDto[] }) => {
     }
   };
 
+  // ─── Bulk paste ────────────────────────────────────────────────────────────
+  // Format mỗi dòng: SiloID | LoaiDuLieu | MaBM | TagIDEMS | TagIDEMS_Ngay | TagIDEMS_Dem
+  // TagIDEMS, TagIDEMS_Ngay, TagIDEMS_Dem đều tùy chọn nhưng phải có ít nhất 1
+  const parsePasteRows = (text: string) => {
+    const lines = text
+      .split(/\r?\n+/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) =>
+        l
+          .replace(/\s*\|\s*/g, "\t")
+          .replace(/\s*;\s*/g, "\t")
+          .split(/\t+/)
+          .map((p) => p.trim()),
+      );
+
+    type ValidRow = {
+      siloID: number;
+      loaiDuLieu: string;
+      maBM: string;
+      tagIDEMS: string | null;
+      tagName: string | null;
+      tagIDEMS_Ngay: string | null;
+      tagName_Ngay: string | null;
+      tagIDEMS_Dem: string | null;
+      tagName_Dem: string | null;
+    };
+
+    const validRows: ValidRow[] = [];
+    const errorRows: string[] = [];
+
+    for (const [i, parts] of lines.entries()) {
+      const lineNo = i + 1;
+      if (parts.length < 3) {
+        errorRows.push(
+          `Dòng ${lineNo}: cần ít nhất 3 cột (SiloID, LoaiDuLieu, MaBM)`,
+        );
+        continue;
+      }
+
+      const siloID = Number(parts[0]);
+      if (!Number.isInteger(siloID) || siloID <= 0) {
+        errorRows.push(`Dòng ${lineNo}: SiloID không hợp lệ (${parts[0]})`);
+        continue;
+      }
+      if (!allSilo.find((s) => s.id === siloID)) {
+        errorRows.push(`Dòng ${lineNo}: không tìm thấy Silo ID=${siloID}`);
+        continue;
+      }
+
+      const loaiDuLieu = parts[1];
+      if (!loaiDuLieu) {
+        errorRows.push(`Dòng ${lineNo}: LoaiDuLieu trống`);
+        continue;
+      }
+
+      const maBM = parts[2];
+      if (!maBM) {
+        errorRows.push(`Dòng ${lineNo}: MaBM trống`);
+        continue;
+      }
+
+      const tagIDEMS = parts[3] || null;
+      const tagIDEMS_Ngay = parts[4] || null;
+      const tagIDEMS_Dem = parts[5] || null;
+
+      if (!tagIDEMS && !tagIDEMS_Ngay && !tagIDEMS_Dem) {
+        errorRows.push(`Dòng ${lineNo}: phải có ít nhất 1 TagIDEMS`);
+        continue;
+      }
+
+      validRows.push({
+        siloID,
+        loaiDuLieu,
+        maBM,
+        tagIDEMS,
+        tagName: resolveTagName(tagIDEMS),
+        tagIDEMS_Ngay,
+        tagName_Ngay: resolveTagName(tagIDEMS_Ngay),
+        tagIDEMS_Dem,
+        tagName_Dem: resolveTagName(tagIDEMS_Dem),
+      });
+    }
+
+    return { validRows, errorRows };
+  };
+
+  const handlePasteSubmit = async () => {
+    const { validRows, errorRows } = parsePasteRows(pasteText);
+    if (validRows.length === 0) {
+      message.error(errorRows[0] || "Không có dòng hợp lệ");
+      return;
+    }
+    setPasteSaving(true);
+    try {
+      let created = 0;
+      const failedRows: string[] = [];
+      for (const row of validRows) {
+        try {
+          await tkvvSiloTagMappingApi.create(row);
+          created++;
+        } catch (err: any) {
+          failedRows.push(
+            `Silo ${row.siloID} / ${row.loaiDuLieu}: ${err?.message ?? "lỗi"}`,
+          );
+        }
+      }
+      await fetchData();
+      setPasteOpen(false);
+      setPasteText("");
+      const parts = [
+        `Đã thêm ${created}/${validRows.length} mapping`,
+        errorRows.length ? `Bỏ qua ${errorRows.length} dòng lỗi` : null,
+        failedRows.length ? `Lưu thất bại ${failedRows.length} dòng` : null,
+      ].filter(Boolean);
+      if (errorRows.length || failedRows.length) {
+        Modal.warning({
+          title: "Kết quả dán nhanh Silo-Tag",
+          content: (
+            <div style={{ maxHeight: 360, overflow: "auto" }}>
+              <p>{parts.join(". ")}.</p>
+              {!!errorRows.length && (
+                <div style={{ marginBottom: 8 }}>
+                  <b>Dòng bỏ qua:</b>
+                  {errorRows.map((r) => (
+                    <div key={r}>{r}</div>
+                  ))}
+                </div>
+              )}
+              {!!failedRows.length && (
+                <div>
+                  <b>Lưu thất bại:</b>
+                  {failedRows.map((r) => (
+                    <div key={r}>{r}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ),
+        });
+      } else {
+        message.success(parts.join(". "));
+      }
+    } finally {
+      setPasteSaving(false);
+    }
+  };
+
   return (
     <div>
       <div
@@ -1133,14 +1841,19 @@ const SiloTagMappingTab = ({ allSilo }: { allSilo: TKVVSiloDto[] }) => {
             Làm mới
           </Button>
         </Space>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={openCreate}
-          disabled={allSilo.length === 0}
-        >
-          Thêm Silo-Tag
-        </Button>
+        <Space>
+          <Button onClick={openPaste} disabled={allSilo.length === 0}>
+            Dán nhanh
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={openCreate}
+            disabled={allSilo.length === 0}
+          >
+            Thêm Silo-Tag
+          </Button>
+        </Space>
       </div>
 
       <Table
@@ -1226,6 +1939,7 @@ const SiloTagMappingTab = ({ allSilo }: { allSilo: TKVVSiloDto[] }) => {
         ]}
       />
 
+      {/* Modal thêm/sửa đơn lẻ */}
       <Modal
         title={editing ? "Sửa Silo-Tag EMS" : "Thêm Silo-Tag EMS"}
         open={modalOpen}
@@ -1326,6 +2040,46 @@ const SiloTagMappingTab = ({ allSilo }: { allSilo: TKVVSiloDto[] }) => {
             <Input.TextArea rows={2} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal dán nhanh nhiều Silo-Tag */}
+      <Modal
+        title="Dán nhanh Silo ↔ Tag EMS"
+        open={pasteOpen}
+        onCancel={() => setPasteOpen(false)}
+        onOk={handlePasteSubmit}
+        okText="Kiểm tra & thêm"
+        confirmLoading={pasteSaving}
+        destroyOnClose
+        width={760}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="small">
+          <Typography.Text>
+            Mỗi dòng một mapping. Các cột ngăn cách bằng <b>tab</b>, dấu{" "}
+            <b>|</b> hoặc dấu <b>;</b>:
+          </Typography.Text>
+          <Typography.Text code style={{ fontSize: 12 }}>
+            SiloID | LoaiDuLieu | MaBM | TagIDEMS | TagIDEMS_Ngay | TagIDEMS_Dem
+          </Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Ba cột tag cuối là tùy chọn nhưng phải có ít nhất 1. TagName sẽ tự
+            động tra cứu TenCan từ EMS theo TagID.
+          </Typography.Text>
+          <Input.TextArea
+            rows={14}
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            placeholder={
+              "Ví dụ:\n12\tKhoiLuongAm\tTKVV_BB_SanLuong\tTAG001\t\t\n12\tKhoiLuongAm\tTKVV_BB_SanLuong\t\tTAG_NGAY_01\tTAG_DEM_01\n13\tKhoiLuong\tTKVV_BC_SanLuongChiPhi\tTAG002\t\t"
+            }
+            style={{ fontFamily: "monospace" }}
+          />
+          {emsTags.length > 0 && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Đã tải {emsTags.length} tag EMS — tagName sẽ được điền tự động.
+            </Typography.Text>
+          )}
+        </Space>
       </Modal>
     </div>
   );
@@ -1444,7 +2198,7 @@ const QuanLyNVLTKVV = () => {
     setNvlLoading(true);
     try {
       const res = await tkvvNvlApi.getList({
-        maBM: selectedMaBM,
+        ...(selectedMaBM !== "ALL" ? { maBM: selectedMaBM } : {}),
         ...(scopeFilter ? { scope: scopeFilter } : {}),
       });
       setNvlData(Array.isArray(res) ? res : []);
@@ -1533,7 +2287,14 @@ const QuanLyNVLTKVV = () => {
           {
             key: "nvl-silo",
             label: "NVL ↔ Silo theo Ca",
-            children: <NvlSiloMappingTab allNvl={allNvl} allSilo={allSilo} />,
+            children: (
+              <NvlSiloMappingTab
+                allNvl={allNvl}
+                allSilo={allSilo}
+                selectedMaBM={selectedMaBM}
+                selectedScope={scopeFilter}
+              />
+            ),
           },
           {
             key: "silo-tag",

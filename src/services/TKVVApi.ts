@@ -223,24 +223,30 @@ export const tkvvSiloApi = {
 
 export interface TKVVNvlSiloMappingDto {
   id: number;
+  maBM: string | null;
   nguyenVatLieuID: number;
   tenNVL: string | null;
   scopeNVL: string | null;
-  siloID: number;
+  scope: string | null;
+  siloID: number | null;
   tenSilo: string | null;
   maSilo: string | null;
   ca: number;
   ngaySX: string;
+  thuTu: number | null;
   ghiChu: string | null;
   trangThai: boolean;
   ngayCapNhat: string;
 }
 
 export interface CreateTKVVNvlSiloMappingDto {
+  maBM?: string | null;
   nguyenVatLieuID: number;
-  siloID: number;
+  scope?: string | null;
+  siloID?: number | null;
   ca: number;
   ngaySX: string;
+  thuTu?: number | null;
   ghiChu?: string | null;
 }
 
@@ -249,7 +255,7 @@ export interface UpdateTKVVNvlSiloMappingDto extends CreateTKVVNvlSiloMappingDto
 }
 
 export const tkvvNvlSiloMappingApi = {
-  getList: (params?: { nvlId?: number; siloId?: number }): Promise<TKVVNvlSiloMappingDto[]> =>
+  getList: (params?: { maBM?: string; scope?: number; nvlId?: number; siloId?: number }): Promise<TKVVNvlSiloMappingDto[]> =>
     apiService.get("/api/TKVV_Silo/nvl-silo-mapping", { params }),
   getById: (id: number): Promise<TKVVNvlSiloMappingDto> =>
     apiService.get(`/api/TKVV_Silo/nvl-silo-mapping/${id}`),
