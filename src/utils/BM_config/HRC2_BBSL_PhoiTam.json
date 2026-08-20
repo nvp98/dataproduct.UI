@@ -48,7 +48,7 @@
         { "title": "Kíp-ngày",         "dataIndex": "shiftName",   "width": 120 },
         { "title": "Mác thép",         "dataIndex": "macThep",   "width": 100 },
         { "title": "Mẻ",               "dataIndex": "meThep",    "width": 120 },
-        { "title": "Kích thước (mm)",  "dataIndex": "kichThuoc", "width": 100 },
+        { "title": "Kích thước (mm)",  "dataIndex": "kichThuoc", "width": 130 },
         {
           "title": "Loại 1",
           "children": [

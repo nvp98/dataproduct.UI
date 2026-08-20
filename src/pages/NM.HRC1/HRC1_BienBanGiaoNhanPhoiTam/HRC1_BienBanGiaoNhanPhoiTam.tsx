@@ -22,6 +22,7 @@ import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { PHOI_TAM_STATUS_CONFIG, PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { renderXacNhanTag } from "../../../utils/helpers/renderXacNhanTag";
 
 const MA_BM = BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam as string;
 
@@ -186,7 +187,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
   );
 
   const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange } =
-    usePhieuSearchListHRC({ maBm: MA_BM, fixedFilters });
+    usePhieuSearchListHRC({ maBm: MA_BM, fixedFilters, persistKey: true });
 
   const detailPath =
     type === "xemphieu" ? "/xemphieu/chitietbbgnphoitam_hrc1" : "/chitietbbgnphoitam_hrc1";
@@ -242,11 +243,25 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
       ellipsis: true,
     },
     {
-      title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
-      width: 200,
-      ellipsis: true,
+      title: "Số lượng ID",
+      dataIndex: "soLuongSlab",
+      key: "soLuongSlab",
+      width: 110,
+      align: "right" as const,
+      render: (value: number | null | undefined) => (value ?? "-"),
+    },
+    {
+      title: "Trạng thái chi tiết",
+      key: "tinhTrangChiTiet",
+      width: 440,
+      render: (_: unknown, record: TableRecord) => (
+        <Space size={4} wrap>
+          {renderXacNhanTag("Đúc", record.soLuongXNDuc as number | null | undefined, record.soLuongSlab as number | null | undefined)}
+          {renderXacNhanTag("Cán", record.soLuongXNCan as number | null | undefined, record.soLuongSlab as number | null | undefined)}
+          {renderXacNhanTag("GĐ/PGĐ NM", record.soLuongXNC4 as number | null | undefined, record.soLuongSlab as number | null | undefined)}
+          {renderXacNhanTag("PKH", record.soLuongXNPKH as number | null | undefined, record.soLuongSlab as number | null | undefined)}
+        </Space>
+      ),
     },
     {
       title: "Tình trạng",
@@ -294,6 +309,15 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
           { label: "Ca đêm (2)", value: 2 },
         ],
       },
+      {
+        key: "tinhTrang",
+        label: "Tình trạng",
+        type: "select",
+        options: Object.entries(BBGN_PHOI_TAM_STATUS).map(([key, cfg]) => ({
+          label: cfg.text,
+          value: key,
+        })),
+      },
     ],
     []
   );
@@ -306,6 +330,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        storageKey={true}
         showCreateButton={true}
         onCreateClick={() => setModalOpen(true)}
         createButtonText="Tạo phiếu mới"
@@ -324,10 +349,10 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: onPageChange,
           }}
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1400 }}
           summary={() => (
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={7} align="right">
+              <Table.Summary.Cell index={0} colSpan={8} align="right">
                 <span style={{ fontWeight: 500 }}>Tổng: {pagination.total} Phiếu</span>
               </Table.Summary.Cell>
             </Table.Summary.Row>

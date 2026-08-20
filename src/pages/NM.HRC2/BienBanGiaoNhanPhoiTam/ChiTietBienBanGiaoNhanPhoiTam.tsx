@@ -7,23 +7,29 @@ import {
   Popconfirm,
   Radio,
   Space,
+  Input,
   Table,
   Tabs,
+  Tooltip,
   Tag,
   Typography,
   message,
+  Modal,
 } from "antd";
 import {
+  ArrowLeftOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   ReloadOutlined,
   LockOutlined,
   UnlockOutlined,
+  SnippetsOutlined,
   FileExcelOutlined,
   FilePdfOutlined,
 } from "@ant-design/icons";
 import type { TableRowSelection } from "antd/es/table/interface";
 import dayjs from "dayjs";
+import { useNavigate } from "react-router-dom";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { Hrc2SlabApi, type HrcSlabItem } from "../../../services/Hrc2SlabApi";
@@ -120,6 +126,7 @@ function buildAntCols(cols: any[]): any[] {
 }
 
 const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolean }) => {
+  const navigate = useNavigate();
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } =
     usePhieuNavigation("phieu_bbgnphoitam_id", "/viecdentoi/bbgnphoitam");
 
@@ -147,7 +154,18 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   const isKho = hasKhuVucPhu(userInfo, BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam, "Kho");
   const isPKH = canChotBm(userInfo, BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam);
   const canAct = !readOnly;
-
+  // Search client-side (không gọi API) cho các cột ID Slab / Ca SX / OrderID / Mẻ thép / Mác thép —
+  // gõ trực tiếp vào ô input trong header cột, hoặc bấm nút Paste để dán danh sách từ Excel.
+  const [idSlabSearch, setIdSlabSearch] = useState("");
+  const [caSXSearch, setCaSXSearch] = useState("");
+  const [orderIdSearch, setOrderIdSearch] = useState("");
+  const [meThepSearch, setMeThepSearch] = useState("");
+  const [macThepSearch, setMacThepSearch] = useState("");
+  // Search riêng cho tab "Tổng hợp" — độc lập với bộ lọc/tìm kiếm của tab "Chi tiết slab" —
+  // gắn cho 3 cột: Kíp-ngày (shiftName), Mác thép (macThep), Mẻ (meThep).
+  const [thKipNgaySearch, setThKipNgaySearch] = useState("");
+  const [thMacThepSearch, setThMacThepSearch] = useState("");
+  const [thMeThepSearch, setThMeThepSearch] = useState("");
   // ── State ─────────────────────────────────────────────────────────────────
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -157,6 +175,46 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   const [chotLoading, setChotLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState<string | null>(null);
   const [tongHopRefreshLoading, setTongHopRefreshLoading] = useState(false);
+
+  const [pasteModalOpen, setPasteModalOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteTarget, setPasteTarget] = useState<((v: string) => void) | null>(null);
+
+  const openPasteModal = useCallback((setter: (v: string) => void) => {
+    setPasteTarget(() => setter);
+    setPasteText("");
+    setPasteModalOpen(true);
+  }, []);
+
+  const applyPasteModal = () => {
+    const vals = pasteText.split(/[\n\t,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (vals.length > 0 && pasteTarget) pasteTarget(vals.join(", "));
+    setPasteModalOpen(false);
+    setPasteText("");
+  };
+
+  // Header cột có ô tìm/paste dùng chung cho ID Slab, Ca SX, OrderID, Mẻ thép, Mác thép
+  const renderSearchHeader = useCallback(
+    (label: string, value: string, onChangeValue: (v: string) => void) => (
+      <div>
+        <div>{label}</div>
+        <div style={{ display: "flex", gap: 2, marginTop: 4, minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
+          <Input
+            size="small"
+            value={value}
+            onChange={(e) => onChangeValue(e.target.value)}
+            placeholder="Tìm/paste..."
+            allowClear
+            style={{ fontWeight: "normal", flex: 1, minWidth: 0 }}
+          />
+          <Tooltip title="Paste từ clipboard">
+            <Button size="small" icon={<SnippetsOutlined />} onClick={() => openPasteModal(onChangeValue)} />
+          </Tooltip>
+        </div>
+      </div>
+    ),
+    [openPasteModal],
+  );
 
   // ── Chốt / Hủy chốt phiếu ────────────────────────────────────────────────
   const handleChotPhieu = async () => {
@@ -237,11 +295,28 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   }, [loadSlabRows]);
 
   const formData = data?.jsonData || {};
-  // ── Bảng tổng hợp: build columns từ JSON config ───────────────────────────
-  const tongHopColumns = useMemo(
-    () => buildAntCols(HRC2_BBSL_PhoiTam.layout[0].columns),
-    [],
-  );
+  // ── Bảng tổng hợp: build columns từ JSON config, gắn ô tìm/paste riêng cho
+  // 3 cột Kíp-ngày / Mác thép / Mẻ — bộ lọc này độc lập, không dùng chung với tab chi tiết.
+  const tongHopColumns = useMemo(() => {
+    const base = buildAntCols(HRC2_BBSL_PhoiTam.layout[0].columns);
+    // Kíp-ngày/Mác thép/Mẻ giảm 1/4 chiều rộng so với trước (150/140/150 → còn 3/4); Kích thước
+    // tăng 1/5 (100 → 120) để đủ chỗ hiển thị.
+    const searchable: Record<string, { value: string; setValue: (v: string) => void; width: number }> = {
+      shiftName: { value: thKipNgaySearch, setValue: setThKipNgaySearch, width: 113 },
+      macThep: { value: thMacThepSearch, setValue: setThMacThepSearch, width: 105 },
+      meThep: { value: thMeThepSearch, setValue: setThMeThepSearch, width: 113 },
+    };
+    const widthOnly: Record<string, number> = {
+      kichThuoc: 120,
+    };
+    return base.map((col: any) => {
+      const cfg = searchable[col.dataIndex];
+      if (cfg) return { ...col, title: renderSearchHeader(col.title, cfg.value, cfg.setValue), width: cfg.width };
+      const w = widthOnly[col.dataIndex];
+      if (w != null) return { ...col, width: w };
+      return col;
+    });
+  }, [renderSearchHeader, thKipNgaySearch, thMacThepSearch, thMeThepSearch]);
   const leafCols = useMemo(
     () => getLeafCols(HRC2_BBSL_PhoiTam.layout[0].columns),
     [],
@@ -288,7 +363,11 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
     setFilterKho("all");
   };
 
-  const filteredSlabDetails = useMemo(() => {
+  const parseSearchTerms = (text: string) =>
+    text.split(/[\n\t,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+  // Lọc Ngày/Ca — Đúc — Kho dùng CHUNG cho cả 2 tab (Chi tiết slab + Tổng hợp).
+  const sharedFilteredSlabDetails = useMemo(() => {
     return slabDetails.filter((d) => {
       if (filterTrongCa !== "all") {
         const mismatch = isRecordMismatch(d);
@@ -303,13 +382,46 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
     });
   }, [slabDetails, filterTrongCa, filterDuc, filterKho, isRecordMismatch]);
 
-  // Pivot: nhóm filteredSlabDetails theo (meThep, macThep, kichThuoc); trải phanLoai thành cột.
-  // Tự pivot client-side từ slab chi tiết (thay vì gọi API group-by riêng) để bộ lọc trên cùng
-  // áp dụng được luôn cho tab "Tổng hợp" — dữ liệu group-by sẵn không giữ trangThaiDuc/Kho/
-  // ngaySXTheoCa theo từng slab nên không lọc lại được.
+  // Lọc riêng cho tab "Chi tiết slab" theo ID Slab / Ca SX / OrderID / Mẻ thép / Mác thép — tách
+  // các giá trị nhập/paste theo dòng/phẩy/tab, 1 dòng khớp nếu chứa (contains, không phân biệt
+  // hoa/thường) BẤT KỲ giá trị nào đã nhập. Áp dụng thêm trên nền đã lọc chung ở trên.
+  const filteredSlabDetails = useMemo(() => {
+    const idSlabTerms = parseSearchTerms(idSlabSearch);
+    const caSXTerms = parseSearchTerms(caSXSearch);
+    const orderIdTerms = parseSearchTerms(orderIdSearch);
+    const meThepTerms = parseSearchTerms(meThepSearch);
+    const macThepTerms = parseSearchTerms(macThepSearch);
+    return sharedFilteredSlabDetails.filter((d) => {
+      if (idSlabTerms.length > 0 && !idSlabTerms.some((t) => (d.idSlab ?? "").toLowerCase().includes(t))) return false;
+      if (caSXTerms.length > 0 && !caSXTerms.some((t) => (d.shiftName ?? "").toLowerCase().includes(t))) return false;
+      if (orderIdTerms.length > 0 && !orderIdTerms.some((t) => (d.orderId ?? "").toLowerCase().includes(t))) return false;
+      if (meThepTerms.length > 0 && !meThepTerms.some((t) => (d.meThep ?? "").toLowerCase().includes(t))) return false;
+      if (macThepTerms.length > 0 && !macThepTerms.some((t) => (d.macThep ?? "").toLowerCase().includes(t))) return false;
+      return true;
+    });
+  }, [sharedFilteredSlabDetails, idSlabSearch, caSXSearch, orderIdSearch, meThepSearch, macThepSearch]);
+
+  // Lọc riêng cho tab "Tổng hợp" theo Kíp-ngày / Mác thép / Mẻ — áp dụng thêm trên nền đã lọc
+  // chung (Ngày/Ca — Đúc — Kho), độc lập với bộ lọc theo cột của tab "Chi tiết slab".
+  const filteredSlabDetailsForTongHop = useMemo(() => {
+    const kipNgayTerms = parseSearchTerms(thKipNgaySearch);
+    const macThepTerms = parseSearchTerms(thMacThepSearch);
+    const meThepTerms = parseSearchTerms(thMeThepSearch);
+    return sharedFilteredSlabDetails.filter((d) => {
+      if (kipNgayTerms.length > 0 && !kipNgayTerms.some((t) => (d.shiftName ?? "").toLowerCase().includes(t))) return false;
+      if (macThepTerms.length > 0 && !macThepTerms.some((t) => (d.macThep ?? "").toLowerCase().includes(t))) return false;
+      if (meThepTerms.length > 0 && !meThepTerms.some((t) => (d.meThep ?? "").toLowerCase().includes(t))) return false;
+      return true;
+    });
+  }, [sharedFilteredSlabDetails, thKipNgaySearch, thMacThepSearch, thMeThepSearch]);
+
+  // Pivot: nhóm filteredSlabDetailsForTongHop theo (meThep, macThep, kichThuoc); trải phanLoai thành cột.
+  // Tự pivot client-side từ slab chi tiết (thay vì gọi API group-by riêng) để bộ lọc riêng của
+  // tab "Tổng hợp" (Kíp-ngày/Mác thép/Mẻ) áp dụng được luôn — dữ liệu group-by sẵn không giữ
+  // trangThaiDuc/Kho/ngaySXTheoCa theo từng slab nên không lọc lại được.
   const pivotedRows = useMemo(() => {
     const map = new Map<string, Record<string, any>>();
-    filteredSlabDetails.forEach((d) => {
+    filteredSlabDetailsForTongHop.forEach((d) => {
       const kt = [d.chieuDay, d.chieuRong, d.chieuDai].every((v) => v != null)
         ? `${d.chieuDay}x${d.chieuRong}x${d.chieuDai}`
         : "";
@@ -343,7 +455,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
         stt: i + 1,
       };
     });
-  }, [filteredSlabDetails]);
+  }, [filteredSlabDetailsForTongHop]);
 
   // Tính tổng các cột sum
   const sumTotals = useMemo(() => {
@@ -403,6 +515,11 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
   const rowSelection: TableRowSelection<HrcSlabItem> = {
     selectedRowKeys,
     onChange: (keys) => setSelectedRowKeys(keys),
+    columnWidth: 32,
+    // 4 cột đầu (Đã check/Ca SX/ID Slab/OrderID) đang fixed "left" — cột tick chọn dòng
+    // cũng phải fixed để bám theo nhóm cột đó, không thì khi cuộn ngang cột tick sẽ trôi
+    // đi trong khi các cột kia đứng yên, gây lệch hàng.
+    fixed: true,
   };
 
   // ── Enable conditions ─────────────────────────────────────────────────────
@@ -536,31 +653,31 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
         ),
       },
       {
-        title: "Ca SX",
+        title: renderSearchHeader("Ca SX", caSXSearch, setCaSXSearch),
         dataIndex: "shiftName",
-        width: 120,
+        width: 160,
         align: "center" as const,
         fixed: "left" as const,
         render: (v: string) => v ?? "-",
       },
       {
-        title: "ID Slab",
+        title: renderSearchHeader("ID Slab", idSlabSearch, setIdSlabSearch),
         dataIndex: "idSlab",
-        width: 100,
+        width: 150,
         align: "center" as const,
-        fixed: "left" as const
+        fixed: "left" as const,
       },
       {
-        title: "OrderID",
+        title: renderSearchHeader("OrderID", orderIdSearch, setOrderIdSearch),
         dataIndex: "orderId",
-        width: 100,
+        width: 150,
         align: "center" as const,
-        fixed: "left" as const
+        fixed: "left" as const,
       },
       {
-        title: "Mẻ thép",
+        title: renderSearchHeader("Mẻ thép", meThepSearch, setMeThepSearch),
         dataIndex: "meThep",
-        width: 80,
+        width: 140,
         align: "center" as const,
       },
       {
@@ -581,9 +698,9 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
             : "-",
       },
       {
-        title: "Mác thép",
+        title: renderSearchHeader("Mác thép", macThepSearch, setMacThepSearch),
         dataIndex: "macThep",
-        width: 120,
+        width: 160,
         align: "center" as const,
       },
       {
@@ -651,7 +768,8 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
       },
 
     ],
-    [isKCS, isDuc, isKho, isPKH],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isKCS, isDuc, isKho, isPKH, renderSearchHeader, caSXSearch, idSlabSearch, orderIdSearch, meThepSearch, macThepSearch],
   );
 
   // Áp rowSpan gom nhóm theo shiftName lên cột "Ca SX" + tô nền xanh lá nhạt cho mọi cột của
@@ -760,14 +878,21 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
       style={{ padding: 24, background: "#fff" }}
       loading={loading}
     >
-      <div style={{ textAlign: "center", marginBottom: 16 }}>
+      <div style={{ position: "relative", textAlign: "center", marginBottom: 16 }}>
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(-1)}
+          style={{ position: "absolute", left: 0, top: 0 }}
+        >
+          Quay lại
+        </Button>
         <Title level={4} style={{ marginBottom: 0 }}>
           {TAB_TITLES[activeTabKey] ?? config.title}
         </Title>
         {idphieu && <b>Số phiếu: {data?.soPhieu}</b>}
       </div>
 
-      {/* Bộ lọc dùng chung cho cả 2 tab (Chi tiết slab + Tổng hợp) */}
+      {/* Bộ lọc Ngày/Ca — Đúc — Kho: dùng CHUNG cho cả 2 tab (Chi tiết slab + Tổng hợp) */}
       <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: "8px 12px" }}>
         <Space wrap size={[16, 8]}>
           <Space size={4}>
@@ -818,7 +943,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
             </Button>
           )}
           <span style={{ color: "#888" }}>
-            Đang hiển thị {filteredSlabDetails.length}/{slabDetails.length} slab
+            Đang hiển thị {sharedFilteredSlabDetails.length}/{slabDetails.length} slab
           </span>
         </Space>
       </Card>
@@ -854,6 +979,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                     {data?.kip || ""}
                   </Descriptions.Item>
                 </Descriptions>
+
                 <Card
                   size="small"
                   title={`Danh sách slab (${filteredSlabDetails.length})${selectedCount > 0 ? ` — Đã chọn ${selectedCount}` : ""}`}
@@ -1025,6 +1151,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                     rowSelection={rowSelection}
                     size="small"
                     bordered
+                    virtual
                     columns={groupedDetailColumns}
                     dataSource={groupedSlabDetails}
                     pagination={false}
@@ -1074,7 +1201,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                         : ""}
                   </Descriptions.Item>
                   <Descriptions.Item label="Kíp">
-                    {formData?.kip || ""}
+                    {data?.kip || ""}
                   </Descriptions.Item>
                 </Descriptions>
                 <div style={{ display: "flex", gap: 8, marginTop: 12, marginBottom: 8, justifyContent: "flex-end" }}>
@@ -1114,7 +1241,7 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
                     dataSource={pivotedRows}
                     pagination={false}
                     size="small"
-                    scroll={{ x: 1605 }}
+                    scroll={{ x: 1676 }}
                     sticky={{ offsetHeader: 0 }}
                     summary={() => (
                       <Table.Summary fixed>
@@ -1209,6 +1336,27 @@ const ChiTietBienBanGiaoNhanPhoiTam = ({ readOnly = false }: { readOnly?: boolea
           {actionButtons}
         </div>
       )} */}
+      {/* Popup paste danh sách Số Mẻ / ID Slab (dùng chung) */}
+      <Modal
+        title="Paste danh sách"
+        open={pasteModalOpen}
+        onOk={applyPasteModal}
+        onCancel={() => { setPasteModalOpen(false); setPasteText(""); }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <p style={{ marginBottom: 8, color: "#666", fontSize: 12 }}>
+          Paste danh sách từ Excel (mỗi dòng 1 giá trị, hoặc phân cách bằng dấu phẩy/tab).
+        </p>
+        <Input.TextArea
+          autoFocus
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder="Paste dữ liệu từ Excel vào đây..."
+          rows={8}
+        />
+      </Modal>
     </Card>
   );
 };
