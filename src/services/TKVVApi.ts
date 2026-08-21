@@ -352,6 +352,81 @@ export const tkvvSiloTagMappingApi = {
   delete: (id: number) => apiService.delete(`/api/TKVV_Silo/silo-tag-mapping/${id}`),
 };
 
+// ─── TKVV_BaoCaoSanLuongChiPhi — load + save dữ liệu cân với IsAdjusted ──────
+
+export interface TKVVBaoCaoSanLuongChiPhiDto {
+  id: number;
+  phieuID: string | null;
+  ngaySX: string;
+  ca: number;
+  kip: string | null;
+  scope: number | null;        // INT 1-6
+  thuTu: number | null;
+  nguyenVatLieuID: number;
+  tenNVL: string | null;
+  klAm: number | null;
+  klAmAuto: number | null;
+  doAm: number | null;
+  quyKho: number | null;
+  thanhPhamL1: number | null;
+  thanhPhamL2: number | null;
+  ghiChu: string | null;
+  isAdjusted: boolean;
+  adjustedBy: number | null;
+  adjustedDate: string | null;
+}
+
+export interface LoadDuLieuCanResultDto {
+  table1: TKVVBaoCaoSanLuongChiPhiDto[]; // Ca ngày
+  table2: TKVVBaoCaoSanLuongChiPhiDto[]; // Ca đêm
+}
+
+export interface SaveBcSlRowDto {
+  id?: number | null;
+  ngaySX: string;
+  ca: number;
+  scope: number | null;        // INT 1-6
+  nguyenVatLieuID: number;
+  kip?: string | null;
+  thuTu: number;
+  klAm?: number | null;
+  klAmAuto?: number | null;
+  doAm?: number | null;
+  quyKho?: number | null;
+  thanhPhamL1?: number | null;
+  thanhPhamL2?: number | null;
+  ghiChu?: string | null;
+}
+
+export const tkvvBcSlChiPhiApi = {
+  loadDuLieu: (request: {
+    ngaySX: string;
+    maBM: string;
+    loaiDuLieu?: string;
+    scope: number;
+    createdBy?: number | null;
+  }): Promise<LoadDuLieuCanResultDto> =>
+    apiService.post("/api/TKVV_BCSL_ChiPhi/load-dulieu", {
+      ...request,
+      loaiDuLieu: request.loaiDuLieu ?? "SANLUONG",
+    }),
+
+  getBaoCaoData: (params: {
+    ngaySX: string;
+    maBM: string;
+    scope: number;
+  }): Promise<LoadDuLieuCanResultDto> =>
+    apiService.get("/api/TKVV_BCSL_ChiPhi/get-baocao-data", { params }),
+
+  savePhieuRows: (request: {
+    maBM: string;
+    phieuID?: string | null;
+    currentUserId: number;
+    rows: SaveBcSlRowDto[];
+  }): Promise<void> =>
+    apiService.post("/api/TKVV_BCSL_ChiPhi/save-phieu-rows", request),
+};
+
 // ─── Chi tiết sản lượng theo phiếu ────────────────────────────────────────────
 
 export interface TKVVChiTietDto {

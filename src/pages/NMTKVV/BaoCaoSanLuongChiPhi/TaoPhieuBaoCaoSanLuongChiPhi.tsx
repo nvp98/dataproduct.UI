@@ -31,11 +31,11 @@ import { phieuActionService } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 import {
-  tkvvDuLieuCanApi,
+  tkvvBcSlChiPhiApi,
   tkvvNvlApi,
   tkvvNvlSiloMappingApi,
   tkvvSiloApi,
-  type TKVVDuLieuCanDto,
+  type TKVVBaoCaoSanLuongChiPhiDto,
   type TKVVNguyenVatLieuDto,
   type TKVVNvlSiloMappingDto,
   type TKVVSiloDto,
@@ -47,6 +47,7 @@ import {
 
 interface TableRow {
   key: string | number;
+  dbId?: number | null;         // TKVV_BaoCaoSanLuongChiPhi.ID
   nguyenVatLieuID?: number;
   siloID?: number | null;
   maSilo?: string | null;
@@ -54,6 +55,8 @@ interface TableRow {
   nguyenLieu?: string;
   donViTinh?: string | null;
   klAm?: number | string;
+  klAmAuto?: number | string;   // KLAmAuto từ hệ thống cân — chỉ tham chiếu, không sửa
+  isAdjusted?: boolean;
   doAm?: number | string;
   quyKho?: number | string;
   thanhPhamL1?: number | string;
@@ -104,20 +107,21 @@ const buildBlankRow = (idx: number): TableRow => ({
   ghiChu: "",
 });
 
-const toTableRow = (item: TKVVDuLieuCanDto, idx: number): TableRow => ({
-  key: `sp-${item.siloID ?? 0}-${item.nguyenVatLieuID}-${idx}`,
+const fromDbRecord = (item: TKVVBaoCaoSanLuongChiPhiDto, idx: number): TableRow => ({
+  key: `db-${item.id}-${idx}`,
+  dbId: item.id,
   nguyenVatLieuID: item.nguyenVatLieuID,
-  siloID: item.siloID,
-  maSilo: item.maSilo,
-  kip: item.maSilo ?? "",
-  nguyenLieu: item.tenNVL,
-  donViTinh: item.donViTinh,
-  klAm: item.giaTri,
-  doAm: "",
-  quyKho: calcQuyKho(item.giaTri, ""),
-  thanhPhamL1: "",
-  thanhPhamL2: "",
-  ghiChu: "",
+  kip: item.kip ?? "",
+  nguyenLieu: item.tenNVL ?? "",
+  donViTinh: null,
+  klAm: item.klAm ?? "",
+  klAmAuto: item.klAmAuto ?? "",
+  isAdjusted: item.isAdjusted,
+  doAm: item.doAm ?? "",
+  quyKho: item.quyKho ?? calcQuyKho(item.klAm, item.doAm),
+  thanhPhamL1: item.thanhPhamL1 ?? "",
+  thanhPhamL2: item.thanhPhamL2 ?? "",
+  ghiChu: item.ghiChu ?? "",
 });
 
 const fromNearestMapping = (
@@ -173,9 +177,16 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
   }>({});
 
   const phieuInfoRef = useRef(phieuInfo);
-  useEffect(() => {
-    phieuInfoRef.current = phieuInfo;
-  }, [phieuInfo]);
+  useEffect(() => { phieuInfoRef.current = phieuInfo; }, [phieuInfo]);
+
+  const tableDataNgayRef = useRef(tableDataNgay);
+  useEffect(() => { tableDataNgayRef.current = tableDataNgay; }, [tableDataNgay]);
+  const tableDataDemRef = useRef(tableDataDem);
+  useEffect(() => { tableDataDemRef.current = tableDataDem; }, [tableDataDem]);
+  const ngaySXRef = useRef(ngaySXFilter);
+  useEffect(() => { ngaySXRef.current = ngaySXFilter; }, [ngaySXFilter]);
+  const selectedScopeRef = useRef(selectedScope);
+  useEffect(() => { selectedScopeRef.current = selectedScope; }, [selectedScope]);
 
   const currentUserInfo = useMemo(() => getThongTinUser(), []);
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
@@ -312,34 +323,23 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     setLoadingEMS(true);
     try {
       const ngayStr = ngaySXFilter.format("YYYY-MM-DD");
-      const scopeCode = String(selectedScope);
-
-      const [dataNgay, dataDem] = await Promise.all([
-        tkvvDuLieuCanApi.getList({
-          ngay: ngayStr,
-          ca: 1,
-          maBM: MA_BM,
-          loaiDuLieu: LOAI_DU_LIEU,
-          scope: selectedScope,
-        }),
-        tkvvDuLieuCanApi.getList({
-          ngay: ngayStr,
-          ca: 2,
-          maBM: MA_BM,
-          loaiDuLieu: LOAI_DU_LIEU,
-          scope: selectedScope,
-        }),
-      ]);
+      const result = await tkvvBcSlChiPhiApi.loadDuLieu({
+        ngaySX: ngayStr,
+        maBM: MA_BM,
+        loaiDuLieu: LOAI_DU_LIEU,
+        scope: selectedScope,
+        createdBy: currentUserInfo?.iD_TaiKhoan ?? null,
+      });
 
       const msgs: string[] = [];
 
-      // Ca ngày
-      if (dataNgay && dataNgay.length > 0) {
-        setTableDataNgay(withQuyKho(dataNgay.map(toTableRow)));
-        msgs.push(`Ca ngày: ${dataNgay.length} dòng EMS`);
+      if (result.table1.length > 0) {
+        setTableDataNgay(result.table1.map(fromDbRecord));
+        msgs.push(`Ca ngày: ${result.table1.length} dòng`);
       } else {
+        // Không có dữ liệu EMS — dùng mapping làm cấu trúc dòng trống
         const mapping = await tkvvNvlSiloMappingApi.getList({
-          scope: scopeCode,
+          scope: String(selectedScope),
           ngaySX: ngayStr,
           ca: 1,
         });
@@ -351,13 +351,12 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         );
       }
 
-      // Ca đêm
-      if (dataDem && dataDem.length > 0) {
-        setTableDataDem(withQuyKho(dataDem.map(toTableRow)));
-        msgs.push(`Ca đêm: ${dataDem.length} dòng EMS`);
+      if (result.table2.length > 0) {
+        setTableDataDem(result.table2.map(fromDbRecord));
+        msgs.push(`Ca đêm: ${result.table2.length} dòng`);
       } else {
         const mapping = await tkvvNvlSiloMappingApi.getList({
-          scope: scopeCode,
+          scope: String(selectedScope),
           ngaySX: ngayStr,
           ca: 2,
         });
@@ -375,7 +374,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     } finally {
       setLoadingEMS(false);
     }
-  }, [ngaySXFilter, selectedScope]);
+  }, [ngaySXFilter, selectedScope, currentUserInfo]);
 
   const handleCheckSilo = useCallback(async () => {
     if (!ngaySXFilter) {
@@ -541,8 +540,57 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     ngaySXFilter,
   ]);
 
+  const saveBcSlRows = useCallback(async (phieuId?: string) => {
+    const userInfo = getUserInfo();
+    const userId = userInfo.iD_TaiKhoan;
+    if (!userId) return;
+
+    const ngaySX = ngaySXRef.current;
+    const scope = selectedScopeRef.current;
+    if (!ngaySX || !scope) return;
+
+    const ngayStr = ngaySX.format("YYYY-MM-DD");
+    const toNum = (v: any) => (v !== "" && v != null ? Number(v) : null);
+
+    const toSaveRow = (row: TableRow, ca: number, idx: number) => ({
+      id: row.dbId ?? null,
+      ngaySX: ngayStr,
+      ca,
+      scope,                         // INT — gửi thẳng giá trị number
+      nguyenVatLieuID: row.nguyenVatLieuID ?? 0,
+      kip: row.kip ?? null,
+      thuTu: idx + 1,
+      klAm: toNum(row.klAm),
+      klAmAuto: toNum(row.klAmAuto),
+      doAm: toNum(row.doAm),
+      quyKho: toNum(row.quyKho),
+      thanhPhamL1: toNum(row.thanhPhamL1),
+      thanhPhamL2: toNum(row.thanhPhamL2),
+      ghiChu: row.ghiChu ?? null,
+    });
+
+    // Chỉ lưu các dòng có dbId (đã được load từ DB) hoặc có nguyenVatLieuID hợp lệ
+    const rows = [
+      ...tableDataNgayRef.current.filter(r => r.dbId || r.nguyenVatLieuID).map((r, i) => toSaveRow(r, 1, i)),
+      ...tableDataDemRef.current.filter(r => r.dbId || r.nguyenVatLieuID).map((r, i) => toSaveRow(r, 2, i)),
+    ];
+    if (rows.length === 0) return;
+
+    try {
+      await tkvvBcSlChiPhiApi.savePhieuRows({
+        maBM: MA_BM,
+        phieuID: phieuId ?? idphieu ?? null,
+        currentUserId: userId,
+        rows,
+      });
+    } catch {
+      // không block phiếu nếu lưu BCSL lỗi
+    }
+  }, [getUserInfo, idphieu]);
+
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
+      await saveBcSlRows(context?.newPhieuId);
       if (context?.newPhieuId) {
         navigate(`/chitietbaocaoslcptkvv/${context.newPhieuId}`, {
           replace: true,
@@ -551,7 +599,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       }
       await initData();
     },
-    [navigate, initData],
+    [navigate, initData, saveBcSlRows],
   );
 
   const handleStatusChange = useCallback(async () => {
@@ -601,6 +649,19 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     );
     return (section?.columns || []) as FormColumnDef[];
   }, [config]);
+
+  const bcSlCellDecorator = useCallback(
+    (dataIndex: string, record: any) => {
+      if (dataIndex === "klAm" && record.isAdjusted && record.klAmAuto != null) {
+        return {
+          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          tooltip: `KL ẩm Auto: ${Number(record.klAmAuto).toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
+        };
+      }
+      return null;
+    },
+    [],
+  );
 
   const handleCellChangeNgay = useCallback(
     (rowIndex: number, dataIndex: string, value: any) => {
@@ -779,6 +840,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
             showAddButton={false}
             showDeleteButton={!isFormLocked && tableDataNgay.length > 0}
             summary={buildSummary}
+            cellDecorator={bcSlCellDecorator}
           />
         </div>
         {!isFormLocked && (
@@ -823,6 +885,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
             showAddButton={false}
             showDeleteButton={!isFormLocked && tableDataDem.length > 0}
             summary={buildSummary}
+            cellDecorator={bcSlCellDecorator}
           />
         </div>
         {!isFormLocked && (
