@@ -6,6 +6,11 @@ export const dlnmHRC1Api = {
     apiService.post("/api/DLNMHRC1/filter", payload),
   forceSync: (payload?: Record<string, unknown>) =>
     apiService.post("/api/DLNMHRC1/force-sync", payload),
+  // Nhân bản dòng Hrc1TieuHao/Hrc1PhuLieu riêng cho phiếu clone "Đề nghị hiệu chỉnh" — gọi ngay sau khi
+  // PhieuApi.clone() thành công (customPutApi trong TaoTieuHaoLoThoi.tsx/TaoTieuHaoTinhLuyenLF.tsx).
+  // Tự no-op an toàn nếu gọi lại ở các lần Lưu bình thường tiếp theo.
+  cloneTieuHaoData: (idPhieu: string) =>
+    apiService.post(`/api/DLNMHRC1/clone-tieuhao/${idPhieu}`),
   // Chuyển 1 mẻ sang ca trước/sau — dùng bởi CustomTableHRC (prop chuyenMeThoiApi).
   chuyenMeThoi: (payload: ChuyenMeThoiRequest) =>
     apiService.post("/api/DLNMHRC1/chuyen-me-thoi", payload),

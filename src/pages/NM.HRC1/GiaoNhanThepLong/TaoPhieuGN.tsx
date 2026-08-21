@@ -1450,15 +1450,15 @@ export const DucPanel = ({
     },
     { title: "STT",       key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
     {
-      title: "Tình trạng", key: "tinhTrang", width: 160, fixed: "left",
+      title: "Tình trạng", key: "tinhTrang", width: 120, fixed: "left",
       render: (_, me) => (
         <Space size={4}>
           {tinhTrangTag(me.trangThaiDuc, me.isChot)}
-          {me.isChuyenCaDuc && (
+          {/* {me.isChuyenCaDuc && (
             <Tooltip title="TL đã chuyển mẻ này từ ca trước sang phiếu đúc ca này">
               <Tag color="blue" style={{ fontSize: 11 }}>Chuyển ca</Tag>
             </Tooltip>
-          )}
+          )} */}
         </Space>
       ),
     },

@@ -499,6 +499,21 @@ const TaoTieuHaoTinhLuyenLF = () => {
     const fieldsToValidate = isSend ? [...headerFieldKeys, ...signatureKeys] : headerFieldKeys;
     await form.validateFields(fieldsToValidate);
     if (!(table1Ref.current?.validate() ?? true)) throw new Error("validation");
+
+    // Chặn lưu nếu còn cột "Thêm cột điều chỉnh" chưa chọn phụ liệu — không tự động loại bỏ cột này
+    // (số liệu người dùng đã nhập vào đó vẫn còn), để người dùng chủ động chọn phụ liệu và lưu lại,
+    // hoặc tự bấm nút xóa (x) trên cột nếu không cần nữa.
+    const unresolvedAdjustColumns = adjustColumnMetas.filter(
+      (m) => m.isManuallyAdded === true && m.headerKeyId == null
+    );
+    if (unresolvedAdjustColumns.length > 0) {
+      message.error(
+        `Có ${unresolvedAdjustColumns.length} cột "Điều chỉnh số liệu" chưa chọn phụ liệu. ` +
+          `Vui lòng chọn phụ liệu cho cột này rồi lưu lại, hoặc bấm nút xóa (x) trên cột đó nếu không cần nữa.`
+      );
+      throw new Error("validation");
+    }
+
     const formData = form.getFieldsValue(true);
 
     const pheDuyetFlow = config.signatures
@@ -600,6 +615,9 @@ const TaoTieuHaoTinhLuyenLF = () => {
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
       pheDuyet: phieuInfo.pheDuyet ?? [],
       redirectToList,
+      // Nhân bản riêng dòng Hrc1TieuHao/Hrc1PhuLieu cho phiếu clone "Đề nghị hiệu chỉnh" — BE tự no-op
+      // nếu không phải phiếu clone, an toàn khi cũng bị gọi ở các lần Lưu bình thường.
+      customPutApi: (idphieu) => dlnmHRC1Api.cloneTieuHaoData(idphieu),
       onSuccess: handleActionSuccess,
       onError: (error) => {
         console.error("Action error:", error);

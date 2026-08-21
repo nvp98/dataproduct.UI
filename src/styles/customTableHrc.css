@@ -1,7 +1,10 @@
 /* Tắt hiệu ứng hover đổi màu dòng của antd Table — màu hover mặc định (xám nhạt) đè lên các màu
-   highlight riêng của ô/dòng (vàng ô đã sửa, đỏ mẻ trùng, vàng dòng thêm tay), gây rối mắt. */
-.hrc-table-no-hover .ant-table-tbody > tr:hover > td,
-.hrc-table-no-hover .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+   highlight riêng của ô/dòng (vàng ô đã sửa, đỏ mẻ trùng, vàng dòng thêm tay), gây rối mắt.
+   Loại trừ cột fixed/sticky (.ant-table-cell-fix-left/-right, dùng cho stickyFirstColumn/stickyColumnKeys
+   của CustomTableHRC): antd tự set nền ĐỤC cho các cột này để che phần bảng đang cuộn ngang bên dưới —
+   ép background: transparent lên chúng lúc hover sẽ phá nền đục đó, lộ ra cột đang cuộn (bug đã gặp). */
+.hrc-table-no-hover .ant-table-tbody > tr:hover > td:not(.ant-table-cell-fix-left):not(.ant-table-cell-fix-right),
+.hrc-table-no-hover .ant-table-tbody > tr > td.ant-table-cell-row-hover:not(.ant-table-cell-fix-left):not(.ant-table-cell-fix-right) {
   background: transparent !important;
 }
 

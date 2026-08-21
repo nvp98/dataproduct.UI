@@ -29,10 +29,6 @@ a {
 /* HRC2 Slab — row highlight */
 .row-trung-idslab > td { background-color: #fffbe6 !important; }
 .row-trung-idslab:hover > td { background-color: #fff1b8 !important; }
-.hrc-table-no-hover .ant-table-tbody > tr:hover > td, .hrc-table-no-hover .ant-table-tbody > tr > td.ant-table-cell-row-hover {
-  background-color: #fcfcfc !important;
-}
-
 /* Scrollbar mảnh, tự ẩn — chỉ hiện khi hover/scroll vào vùng chứa */
 * {
   scrollbar-width: thin;

@@ -294,6 +294,7 @@ const Tao_STD_HRC1 = () => {
         { field: "tongThucTe", label: "Tổng thực tế" },
         { field: "luongSuDungKiemKe", label: "Lượng sử dụng kiểm kê" },
       ];
+      console.log("Kiểm tra dữ liệu âm trong table1:", table1Normalized);
       for (const { field, label } of numericFields) {
         const negRows = table1Normalized.filter((row) => isNeg(row[field]));
         if (negRows.length > 0) {
@@ -316,22 +317,30 @@ const Tao_STD_HRC1 = () => {
       tyLeLF: row.tyLeLF != null ? Number(row.tyLeLF) : null,
     }));
 
+    // Tính nxtPayload TRƯỚC khi validate, vì Summary của nó luôn được tính lại trực tiếp từ table1Data
+    // (nguồn dữ liệu mới nhất) — khác với table2Data (state của SummaryTableSTD_HRC1), chỉ được đồng bộ
+    // khi người dùng sửa tay ô "Tổng SD sổ sách" hoặc tỷ lệ BOF/LF trên bảng tổng hợp. Nếu người dùng chỉ
+    // sửa số liệu ở Bảng 1 (chi tiết) để hết âm, table2Data không được cập nhật theo nên vẫn giữ giá trị
+    // âm cũ dù UI đã hiển thị đúng, khiến validate chặn lưu oan. Dùng nxtPayload.Summary để validate cho
+    // khớp với dữ liệu thực sự sẽ được lưu.
+    const nxtPayload = buildNxtUpsertPayload(values);
+
     if (!skipValidation) {
       const isNegSummary = (v: unknown) => {
         if (v === null || v === undefined || v === "") return false;
         const num = typeof v === "number" ? v : Number(v);
         return !Number.isNaN(num) && num < 0;
       };
-      const summaryNumericFields: { field: keyof typeof table2Normalized[0]; label: string }[] = [
-        { field: "totalTonDauCa", label: "Tổng khối lượng tồn đầu ca" },
-        { field: "totalNhapTrongCa", label: "Tổng khối lượng nhập trong ca" },
-        { field: "totalTonCuoiCa", label: "Tổng khối lượng tồn cuối ca" },
-        { field: "totalSuDung", label: "Tổng sử dụng" },
+      const summaryNumericFields: { field: keyof NXTSummaryDto_HRC1; label: string }[] = [
+        { field: "TongTonDauCa", label: "Tổng khối lượng tồn đầu ca" },
+        { field: "TongNhapTrongCa", label: "Tổng khối lượng nhập trong ca" },
+        { field: "TongTonCuoiCa", label: "Tổng khối lượng tồn cuối ca" },
+        { field: "TongSuDung", label: "Tổng sử dụng" },
       ];
       for (const { field, label } of summaryNumericFields) {
-        const negRows = table2Normalized.filter((row) => isNegSummary(row[field]));
+        const negRows = nxtPayload.Summary.filter((row) => isNegSummary(row[field]));
         if (negRows.length > 0) {
-          const tenNguyenLieu = negRows.map((r) => r.totalNguyenNhienLieu || "(không tên)").join(", ");
+          const tenNguyenLieu = negRows.map((r) => r.TenNguyenLieu || "(không tên)").join(", ");
           message.error(`${label} đang âm. Vui lòng kiểm tra lại: ${tenNguyenLieu}`);
           throw new Error(`Validation failed: ${field} âm (table2)`);
         }
@@ -349,7 +358,7 @@ const Tao_STD_HRC1 = () => {
       idphongBan: userInfo.iD_PhongBan ?? null,
       table1: table1Normalized,
       table2: table2Normalized,
-      nxtPayload: buildNxtUpsertPayload(values),
+      nxtPayload,
     };
   }, [getUserInfo, form, config.headerFields, config.code, config.prefix, table1Data, table2Data, buildNxtUpsertPayload]);
 
@@ -358,6 +367,7 @@ const Tao_STD_HRC1 = () => {
       setLoading(true);
       const formData = await getFormData();
       const nxtPayload = (formData as any)?.nxtPayload as STD_NXT_HRC1_UpsertDto | undefined;
+      console.log("Lưu phiếu với dữ liệu:", formData, "và payload NXT:", nxtPayload);
       if (idphieu) {
         await PhieuApi.putData(idphieu, formData as Record<string, unknown>);
         if (nxtPayload) {
