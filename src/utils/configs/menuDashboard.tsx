@@ -59,6 +59,11 @@ export const MenuDataDashboard = [
         maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
       },
       {
+        code: "bbgnphoitam_hrc1",
+        title: "BM.29/QT.05.12 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
+        maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
+      },
+      {
         code: "hrc1_tieuhaolothoi",
         title: "BM.07/QT.05.10 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI BOF",
         maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
@@ -86,15 +91,20 @@ export const MenuDataDashboard = [
         maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_BOF,
       },
       {
-        code: "tieuhaonauluyen_rf",
+        code: "tieuhaonauluyen_rh",
         title: "BM.16/QT.05.15 BẢNG TIÊU HAO NẤU LUYỆN LÒ TINH LUYỆN RH",
         maBm: BM_CONFIG.HRC2.HRC2_BB_NauLuyen_RH,
       },
       {
         code: "giaonhantheplong",
-        title: "BM.16/QT.05.10 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
+        title: "BM.28/QT.05.15 BIÊN BẢN GIAO NHẬN THÉP LỎNG",
         maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
       },
+      {
+        code: "bbgnphoitam",
+        title: "BM.40/QT.05.15 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
+        maBm: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
+      }
     ],
   },
   {

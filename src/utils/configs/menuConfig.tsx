@@ -402,11 +402,11 @@ export const menuConfig = [
           },
           {
             key: "sub2-6-4",
-            maBM: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
-              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+              <Tooltip title="BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/bbgnphoitam">
-                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                  BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),
@@ -458,6 +458,17 @@ export const menuConfig = [
               <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
                 <NavLink to="/giaonhantheplong_hrc1">
                   BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-7-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
+            label: (
+              <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
+                <NavLink to="/bbgnphoitam_hrc1">
+                  BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)
                 </NavLink>
               </Tooltip>
             ),
@@ -705,11 +716,11 @@ export const menuConfig = [
           },
           {
             key: "sub4-5-4",
-            maBM: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
-              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+              <Tooltip title="BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/viecdentoi/bbgnphoitam">
-                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                  BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),
@@ -799,6 +810,17 @@ export const menuConfig = [
               <Tooltip title="BM.16/QT.05.10 (Bảng giao nhận thép lỏng)">
                 <NavLink to="/viecdentoi/giaonhantheplong_hrc1">
                   BM.16/QT.05.10 (Bảng giao nhận thép lỏng)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub3-6-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
+            label: (
+              <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
+                <NavLink to="/viecdentoi/bbgnphoitam_hrc1">
+                  BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)
                 </NavLink>
               </Tooltip>
             ),
@@ -941,6 +963,17 @@ export const menuConfig = [
           },
           {
             key: "sub4-1-2",
+            maBM: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
+            label: (
+              <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
+                <NavLink to="/xemphieu/bbgnphoitam_hrc1">
+                  BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-1-2",
             maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
             label: (
               <Tooltip title="BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)">
@@ -1023,11 +1056,11 @@ export const menuConfig = [
           },
           {
             key: "sub4-22-4",
-            maBM: BM_CONFIG.HRC2.HRC2_BBGN_PhoiTam,
+            maBM: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
             label: (
-              <Tooltip title="BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)">
+              <Tooltip title="BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)">
                 <NavLink to="/xemphieu/bbgnphoitam">
-                  BM.40/QT.05.15 (Biên bản giao nhận phôi tấm)
+                  BM.36/QT.05.15 (Biên bản giao nhận phôi tấm)
                 </NavLink>
               </Tooltip>
             ),
@@ -1176,6 +1209,14 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "5-1-tk",
+            label: (
+              <Tooltip title="Thống kê Phiếu CTD">
+                <NavLink to="/thongkephieuCTD">Thống kê Phiếu CTD</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -1281,6 +1322,23 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "5-lg-tk",
+            label: (
+              <Tooltip title="Thống kê Phiếu LG">
+                <NavLink to="/thongkephieulg">Thống kê Phiếu LG</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "5-lg-phanbo",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_PhanBoDuLieu,
+            label: (
+              <Tooltip title="Phân bổ dữ liệu (QHLC / CVH / Than cốc <10mm)">
+                <NavLink to="/phanbodulieu">Phân bổ dữ liệu</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
     ],
@@ -1324,9 +1382,17 @@ export const menuConfig = [
           </Tooltip>
         ),
       },
-      
+      {
+        key: "admin-4",
+        icon: <SettingOutlined />,
+        label: (
+          <Tooltip title="Quản lý mã vật tư">
+            <NavLink to="/ma-vat-tu-hrc1">Mã vật tư</NavLink>
+          </Tooltip>
+        ),
+      },
       // {
-      //   key: "admin-4",
+      //   key: "admin-5",
       //   icon: <UserOutlined />,
       //   label: (
       //     <Tooltip title="Quản lý tài khoản">

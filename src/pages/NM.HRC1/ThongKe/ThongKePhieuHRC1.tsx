@@ -12,7 +12,7 @@ import { DEFAULT_TINH_TRANG_OPTIONS } from "../../../utils/ConfigDefault/thongKe
 import type { SearchPhieuRequest } from "../../../models/Phieu";
 import type { PhieuFilterValues } from "../../../components/PhieuFilterCard";
 import { PhieuApi } from "../../../services/PhieuApi";
-import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { getPhieuStatusConfig, PHOI_TAM_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
@@ -25,6 +25,7 @@ const MABM_DETAIL_ROUTE: Record<string, string> = {
   HRC1_BB_Lothoi: "/taotieuhaolothoi",
   HRC1_TinhLuyen: "/taophieugiaonhantheplong_hrc1",
   HRC1_BBGN_ThepLong: "/chitietgiaonhantheplong_hrc1",
+  HRC1_BBSL_PhoiTam: "/chitietbbgnphoitam_hrc1",
   HRC1_BB_TieuHao_BOF: "/hrc1_chitiettieuhaolothoi_bof",
   HRC1_BB_TieuHao_LF: "/hrc1_chitiettieuhaotinhluyenlf",
 };
@@ -33,6 +34,7 @@ const MABM_LIST: string[] = [
   // BM_CONFIG.HRC1.HRC1_BB_Lothoi,
   // BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
+  BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
   BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
   BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
 ];
@@ -41,6 +43,7 @@ const LOAI_BM_TO_MABM: Record<string, string> = {
   LoThoi: BM_CONFIG.HRC1.HRC1_BB_Lothoi,
   TinhLuyen: BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BBGN_ThepLong: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
+  BBGN_PhoiTam: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
   BB_TieuHao_BOF: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
   BB_TieuHao_LF: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
 };
@@ -108,6 +111,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
           { label: "Lò thổi", value: "LoThoi" },
           { label: "Tinh luyện", value: "TinhLuyen" },
           { label: "Giao nhận thép lỏng", value: "BBGN_ThepLong" },
+          { label: "Biên bản sản lượng phôi tấm", value: "BBGN_PhoiTam" },
           { label: "Tiêu hao lò thổi BOF", value: "BB_TieuHao_BOF" },
           { label: "Tiêu hao tinh luyện LF", value: "BB_TieuHao_LF" },
         ],
@@ -148,7 +152,17 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       fields.push({ key: "scope", label: "Máy đúc", type: "select", options: scopeOptions });
     }
 
-    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: DEFAULT_TINH_TRANG_OPTIONS });
+    // Biên bản sản lượng phôi tấm (HRC1_BBSL_PhoiTam) dùng thang trạng thái tổng hợp riêng
+    // (11/12, xem PHOI_TAM_STATUS_CONFIG) thay vì TrangThaiPhieuConst chuẩn — gộp thêm vào đây
+    // để lọc được tình trạng cho mã BM này.
+    const tinhTrangOptions = [
+      ...DEFAULT_TINH_TRANG_OPTIONS,
+      ...Object.entries(PHOI_TAM_STATUS_CONFIG).map(([value, cfg]) => ({
+        label: `${cfg.text} (Phôi tấm)`,
+        value: Number(value),
+      })),
+    ];
+    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: tinhTrangOptions });
 
     return fields;
   }, [mayDucOptions, selectedLoaiBM]);
@@ -222,11 +236,10 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       dataIndex: "tinhTrang",
       key: "tinhTrang",
       width: 200,
-      render: (status: number) => (
-        <Tag color={PHIEU_STATUS_CONFIG[status]?.color || "default"}>
-          {PHIEU_STATUS_CONFIG[status]?.text || status}
-        </Tag>
-      ),
+      render: (status: number, record: TableRecord) => {
+        const cfg = getPhieuStatusConfig(record.maBm, status);
+        return <Tag color={cfg?.color || "default"}>{cfg?.text || status}</Tag>;
+      },
     },
   ], [navigate, type]);
 
@@ -350,7 +363,7 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
 
   return (
     <ThongKePhieuCommon
-      maBmList={MABM_LIST}
+      maBmList={MABM_LIST} 
       title="Tổng hợp phiếu HRC1"
       type={type}
       mabmDetailRoute={MABM_DETAIL_ROUTE}

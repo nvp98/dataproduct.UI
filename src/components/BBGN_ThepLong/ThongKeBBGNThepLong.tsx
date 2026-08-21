@@ -1,4 +1,4 @@
-import { Button, Card, Checkbox, DatePicker, Form, Input, Select, Space, Table, Tag, message } from "antd";
+import { Button, Card, Checkbox, DatePicker, Form, Input, Select, Space, Table, Tag, Tooltip, message } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import {
@@ -9,6 +9,7 @@ import {
   type TongHopItem,
 } from "../../services/BBGNThepLongApi";
 import { MayDucServiceApi } from "../../services/MayDucServiceApi";
+import { SyncOutlined } from "@ant-design/icons";
 
 const { RangePicker } = DatePicker;
 
@@ -26,6 +27,7 @@ type ThongKeRow = {
   ghiChu?: string | null;
   tinhLuyenLenThang?: string | null;
   phanLoai?: string | null;
+  macThepBKMIS?: string | null;
   phanLoaiNhom?: string | null;
   ngaySX?: string | null;
   ca?: number | null;
@@ -88,6 +90,7 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
   });
   const [mayDucOptions, setMayDucOptions] = useState<Array<{ label: string; value: number }>>([]);
   const [exporting, setExporting] = useState(false);
+  const [syncingPhanLoai, setSyncingPhanLoai] = useState(false);
   const [tongHopData, setTongHopData] = useState<TongHopBBGNThepLongResponse | null>(null);
 
   useEffect(() => {
@@ -156,15 +159,48 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
   }, [fetchData, form, pagination.pageSize, bieuMau]);
 
   const handleExcel = useCallback(async () => {
+    const dateRange = form.getFieldValue("ngaySX") as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+    if (!dateRange || !dateRange[0] || !dateRange[1]) {
+      message.warning("Vui lòng chọn khoảng ngày sản xuất trước khi xuất Excel.");
+      return;
+    }
     try {
       setExporting(true);
-      await bbgbThepLongApi.exportThongKe(filters);
+      await bbgbThepLongApi.exportThongKe({
+        ...filters,
+        tuNgay: dateRange[0].format("YYYY-MM-DD"),
+        denNgay: dateRange[1].format("YYYY-MM-DD"),
+      });
     } catch (error) {
       message.error(error instanceof Error ? error.message : "Xuất Excel thất bại.");
     } finally {
       setExporting(false);
     }
-  }, [filters]);
+  }, [filters, form]);
+
+  const handleSyncPhanLoai = useCallback(async () => {
+    const maMes = Array.from(
+      new Set(
+        tableData
+          .map((row) => row.me?.trim())
+          .filter((me): me is string => !!me)
+      )
+    );
+    if (maMes.length === 0) {
+      message.warning("Không có mã mẻ nào trong bảng để đồng bộ.");
+      return;
+    }
+    try {
+      setSyncingPhanLoai(true);
+      const res = await bbgbThepLongApi.syncPhanLoai({ bieuMau: "HRC2_BBGN_ThepLong", maMes });
+      message.success(`Đã đồng bộ ${res.totalUpdated}/${res.totalFromMySQL} mẻ có dữ liệu phân loại.`);
+      await fetchData(filters);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "Đồng bộ phân loại thất bại.");
+    } finally {
+      setSyncingPhanLoai(false);
+    }
+  }, [tableData, filters, fetchData]);
 
   const handleClearFilter = useCallback(() => {
     form.resetFields();
@@ -339,6 +375,7 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
       },
       { title: "Tinh luyện / Lên thẳng", dataIndex: "tinhLuyenLenThang", key: "tinhLuyenLenThang", width: 160 },
       { title: "Phân loại", dataIndex: "phanLoai", key: "phanLoai", width: 120 },
+      { title: "Mác thép BKMIS", dataIndex: "macThepBKMIS", key: "macThepBKMIS", width: 120 },
       { title: "Phân loại nhóm", dataIndex: "phanLoaiNhom", key: "phanLoaiNhom", width: 130 },
       { title: "Nhóm mác thép", dataIndex: "tenNhomPhanLoaiMacThep", key: "tenNhomPhanLoaiMacThep", width: 150 },
       {
@@ -434,6 +471,20 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
                 Tìm
               </Button>
               <Button onClick={handleClearFilter}>Reset</Button>
+              {/* <Button
+                loading={syncingPhanLoai}
+                onClick={() => void handleSyncPhanLoai()}
+              >
+                Đồng bộ phân loại / mác BKMIS
+              </Button> */}
+              <Tooltip title="Đồng bộ phân loại">
+                <Button
+                  icon={<SyncOutlined />}
+                  loading={syncingPhanLoai}
+                  onClick={() => void handleSyncPhanLoai()}
+                >
+                </Button>
+              </Tooltip>
               <Button
                 type="primary"
                 style={{ backgroundColor: "#217346", borderColor: "#217346" }}
@@ -485,7 +536,7 @@ const ThongKeBBGNThepLong = ({ bieuMau, nhaMay }: Props) => {
                   {formatNumber(sumData.totalKlThepLong)}
                 </span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell index={11} colSpan={9} align="center">
+              <Table.Summary.Cell index={11} colSpan={10} align="center">
               </Table.Summary.Cell>
             </Table.Summary.Row>
           </Table.Summary>

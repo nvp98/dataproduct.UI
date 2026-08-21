@@ -154,9 +154,9 @@ export const normalizeHRC2GroupedResponse = (
       klGangLong: getValue<number>(
         "klGangLongCCT",
         "KLGangLongCCT",
-        // "klGangLong",
-        // "KLGangLong"
-      ), // Ưu tiên lấy từ klGangLongCCT, fallback về klGangLong
+        "klGangLong",
+        "KLGangLong"
+      ), // Ưu tiên lấy từ klGangLongCCT (nguồn NM), fallback về klGangLong (giá trị nhập tay ở dòng IsNM=false)
       klThepPhe: getValue<number>("klThepPhe", "KLThepPhe"),
       klThepPheGang: getValue<number>("klThepPheGang", "KLThepPheGang"),
       isNM: getValue<boolean>("isNM", "IsNM"),

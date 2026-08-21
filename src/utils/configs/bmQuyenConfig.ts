@@ -1,3 +1,4 @@
+import { SIDEBAR_CONST } from "../constants/sidebarConstant";
 import { BM_CONFIG } from "./BieuMauConst";
 
 export interface KhuVucQuyenItem {
@@ -13,12 +14,20 @@ export interface KhuVucPhuItem {
   targetScope?: string;
 }
 
+export interface ExtraQuyenChucNangItem {
+  value: number;
+  label: string;
+  vung: number;
+}
+
 export interface BieuMauQuyenItem {
   maBm: string;
   tenBm: string;
   nhom: string;
   scope?: KhuVucQuyenItem[];
   khuVucPhus?: KhuVucPhuItem[];
+  /** Quyền chức năng riêng của BM này (value >= 6), chỉ hiện khi đang chọn đúng BM — không dùng chung với BM khác */
+  extraQuyens?: ExtraQuyenChucNangItem[];
 }
 
 export const bmQuyenConfig = {
@@ -64,6 +73,19 @@ export const bmQuyenConfig = {
       maBm: BM_CONFIG.CTD.CTD_BB_GiaoNhanPhoi,
       tenBm: "Biên bản giao nhận phôi",
       nhom: "NM.CTD",
+    },
+    {
+      maBm: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
+      tenBm: "Biên bản giao nhận phôi tấm",
+      nhom: "NM.HRC2",
+      // Không có scope vùng máy — workflow thống nhất 1 bảng
+      // khuVucPhus tạo record BM_QuyenXL riêng cho từng bộ phận
+      // PKH được cấp quyền Chốt (3) trực tiếp trên maBm HRC2_BBSL_PhoiTam
+      khuVucPhus: [
+        { khuVucPhu: "KCS", tenKhuVuc: "Bộ phận KCS" },
+        { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
+        { khuVucPhu: "Kho", tenKhuVuc: "Bộ phận Kho" },
+      ]
     },
     {
       maBm: BM_CONFIG.HRC2.HRC2_STD_NXT,
@@ -132,7 +154,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
-      tenBm: "HRC2 -Biên bản giao nhận thép lỏng",
+      tenBm: "Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC2",
       scope: [
         { maKhuVuc: "6", tenKhuVuc: "CCM1", },
@@ -146,7 +168,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
-      tenBm: "HRC1 - Biên bản giao nhận thép lỏng",
+      tenBm: "Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC1",
       scope: [
         { maKhuVuc: "1", tenKhuVuc: "TSC 1" },
@@ -166,7 +188,7 @@ export const bmQuyenConfig = {
         { khuVucPhu: "TL3", tenKhuVuc: "Tinh luyện 3", targetMaBm: "HRC1_TinhLuyen", targetScope: "3" },
         { khuVucPhu: "TL4", tenKhuVuc: "Tinh luyện 4", targetMaBm: "HRC1_TinhLuyen", targetScope: "4" },
         { khuVucPhu: "TL5", tenKhuVuc: "Tinh luyện 5", targetMaBm: "HRC1_TinhLuyen", targetScope: "5" },
-      ]
+      ],
     },
     {
       maBm: BM_CONFIG.NL.NL_BB_TheoDoiBenPhe,
@@ -218,6 +240,9 @@ export const bmQuyenConfig = {
       scope: [
         { maKhuVuc: "TIEUHAO", tenKhuVuc: "Tab: Thống kê tiêu hao HRC1" },
         { maKhuVuc: "BBGN", tenKhuVuc: "Tab: Thống kê BBGN thép lỏng" },
+      ],
+      extraQuyens: [
+        { value: 6, label: "Xác nhận PCN" , vung: SIDEBAR_CONST.VUNG_3 },
       ]
     },
     {
@@ -230,15 +255,13 @@ export const bmQuyenConfig = {
       ]
     },
     {
-      maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
-      tenBm: "HRC1 - Biên bản tiêu hao nấu luyện lò thổi BOF",
+      maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
+      tenBm: "Biên bản giao nhận phôi tấm",
       nhom: "NM.HRC1",
-      scope: [
-        { maKhuVuc: "1", tenKhuVuc: "Lò thổi 1" },
-        { maKhuVuc: "2", tenKhuVuc: "Lò thổi 2" },
-        { maKhuVuc: "3", tenKhuVuc: "Lò thổi 3" },
-        { maKhuVuc: "4", tenKhuVuc: "Lò thổi 4" },
-        { maKhuVuc: "5", tenKhuVuc: "Lò thổi 5" },
+      khuVucPhus: [
+        { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
+        { khuVucPhu: "Can", tenKhuVuc: "Bộ phận Cán Tấm" },
+        { khuVucPhu: "C4", tenKhuVuc: "GĐ/PGĐ NM" },
       ]
     },
     {

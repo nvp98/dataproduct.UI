@@ -375,16 +375,26 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
       // Merge dữ liệu mới từ server với dữ liệu đang nhập theo meThoi
       // Các field editable (config trong JSON) sẽ được preserve từ dữ liệu getDetail
       setTableData((prev) => {
-        const baseMerged = hrc2TableService.mergeServerRows(
+        // applyManualOverrides phải chạy TRƯỚC mergeServerRows, dùng NM gốc (result.tableData) làm base
+        // để so sánh với giá trị đã lưu ở phiếu (prev) — giống ChiTietBOF.tsx.
+        // Lý do: nếu mergeServerRows chạy trước, nó sẽ ghi đè các field editable (vd klThepPhe) bằng
+        // giá trị đã lưu NGAY TRÊN dòng NM gốc, khiến applyManualOverrides so sánh nhầm
+        // serverAuto (đã bị ghi đè = giá trị đã sửa) với manualValue (cũng = giá trị đã sửa) →
+        // tưởng "không còn khác nhau" → tắt highlight dù giá trị NM và giá trị đã lưu thực sự khác nhau.
+        const rowsWithOverrides = hrc2TableService.applyManualOverrides(
           result.tableData || [],
+          prev,
+          {
+            rowIdField: "id",
+            fallbackKeyField: "meThoi",
+          }
+        );
+        return hrc2TableService.mergeServerRows(
+          rowsWithOverrides,
           prev,
           "meThoi",
           editableFields
         );
-        return hrc2TableService.applyManualOverrides(baseMerged, prev, {
-          rowIdField: "id",
-          fallbackKeyField: "meThoi",
-        });
       });
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);
@@ -470,6 +480,10 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
 
   // Hàm khởi tạo dữ liệu ban đầu
   const initData = useCallback(async () => {
+    // Phiếu đã Chốt: không auto-load lại từ NM (xem finally bên dưới) — chỉ dùng snapshot
+    // table1DynamicColumns/table1 đã lưu, tránh "mất" cột phụ liệu nếu sau này ai đó đổi
+    // config Excel/ThongKe của Header_Key (phiếu Chốt phải là dữ liệu lịch sử cố định).
+    let loadedTinhTrang = TrangThaiPhieuConst.DangLuu;
     try {
       setLoading(true);
       // Gọi API lấy phiếu theo số phiếu
@@ -509,6 +523,7 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
           
           // Chuyển chuỗi -> dayjs
           const tinhTrang = (res as any)?.tinhTrang ?? 0;
+          loadedTinhTrang = tinhTrang;
           const formValues = {
             ...data,
             ...signatureFields, // Merge signature fields vào formValues (override nếu jsonData cũng có)
@@ -617,8 +632,11 @@ const TaoPhieuTieuHaoNauLuyen_BOF = () => {
       message.error("Không thể tải dữ liệu ban đầu!");
     } finally {
       setLoading(false);
-      // Khi vào component, luôn tự động load dữ liệu từ NM (nếu đủ filter)
-      await loadFromNM();
+      // Khi vào component, luôn tự động load dữ liệu từ NM (nếu đủ filter) — TRỪ phiếu đã Chốt
+      // (dùng snapshot đã restore ở trên, không load lại theo config hiện tại của Header_Key).
+      if (loadedTinhTrang !== TrangThaiPhieuConst.DaChot) {
+        await loadFromNM();
+      }
     }
   }, [form, idphieu, loadFromNM, config.signatures, renderDynamicColumnTitle, getUserInfo, safeGetDetail]);
 

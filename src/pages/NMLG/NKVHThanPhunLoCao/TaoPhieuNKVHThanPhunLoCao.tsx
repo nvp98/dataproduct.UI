@@ -557,18 +557,25 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
   const prodSummaryWatch = Form.useWatch(prodSummarySection?.key, form);
 
   // Auto-fill sanLuongPhun.caNgay/caDem từ lũy kế Tổng của mỗi ca
+  // Chỉ tự động điền khi ô này chưa có giá trị (chưa được lưu/nhập), tránh ghi đè
+  // giá trị đã lưu trong DB hoặc giá trị người dùng vừa nhập tay.
   useEffect(() => {
     if (!prodSummarySection) return;
+    const current = form.getFieldValue(prodSummarySection.key) ?? {};
+    const currentSanLuongPhun = current.sanLuongPhun ?? {};
+    if (currentSanLuongPhun.caNgay != null || currentSanLuongPhun.caDem != null) return;
+
     const ca1Summary = displayTableData.find((r) => r.key === "summary-ca1");
     const ca2Summary = displayTableData.find((r) => r.key === "summary-ca2");
     const val1 = ca1Summary?.luongThanPhunThucTe_Manual ?? null;
     const val2 = ca2Summary?.luongThanPhunThucTe_Manual ?? null;
-    const current = form.getFieldValue(prodSummarySection.key) ?? {};
+    if (val1 == null && val2 == null) return;
+
     form.setFieldsValue({
       [prodSummarySection.key]: {
         ...current,
         sanLuongPhun: {
-          ...(current.sanLuongPhun ?? {}),
+          ...currentSanLuongPhun,
           caNgay: val1,
           caDem: val2,
         },
@@ -681,6 +688,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
       currentUserTenNgan: userInfo.tenNgan ?? null,
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
+      phieuMaBm: config.code,
       pheDuyet: phieuInfo.pheDuyet ?? [],
       customPutApi: handleCustomPut,
       onStatusChange: handleStatusChange,
@@ -689,7 +697,7 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
     });
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, handleCustomPut]);
+  }, [idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, handleCustomPut, config.code]);
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -798,7 +806,11 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                           name={[prodSummarySection.key, record.key, "caNgay"]}
                           style={{ marginBottom: 0 }}
                         >
-                          <InputNumber style={{ width: "100%" }} disabled={isFormLocked} />
+                          <InputNumber
+                            style={{ width: "100%" }}
+                            disabled={isFormLocked}
+                            precision={record.key === "sanLuongPhun" ? 3 : undefined}
+                          />
                         </Form.Item>
                       ),
                     },
@@ -840,7 +852,11 @@ const TaoPhieuNKVHThanPhunLoCao = ({ useChiTietApi = false }: { useChiTietApi?: 
                           name={[prodSummarySection.key, record.key, "caDem"]}
                           style={{ marginBottom: 0 }}
                         >
-                          <InputNumber style={{ width: "100%" }} disabled={isFormLocked} />
+                          <InputNumber
+                            style={{ width: "100%" }}
+                            disabled={isFormLocked}
+                            precision={record.key === "sanLuongPhun" ? 3 : undefined}
+                          />
                         </Form.Item>
                       ),
                     },

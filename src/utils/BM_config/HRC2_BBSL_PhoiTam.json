@@ -1,0 +1,140 @@
+{
+  "code": "HRC2_BBSL_PhoiTam",
+  "prefix": "BBSL_SLAB",
+  "loaiBm": "BBSL_SLAB",
+  "title": "BIÊN BẢN XÁC NHẬN SẢN LƯỢNG PHÔI TẤM",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
+    "subCompany": "HÒA PHÁT GANG THÉP"
+  },
+  "isoInfo": {
+    "code": "BM.36/QT.05.15",
+    "effectiveDate": "01/04/2025",
+    "revision": "01"
+  },
+
+  "headerFields": [
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca ngày", "value": 1 },
+        { "label": "Ca đêm", "value": 2 }
+      ]
+    },
+    {
+      "label": "Kíp",
+      "type": "text",
+      "key": "kip",
+      "required": true
+    },
+    {
+      "label": "Ngày sản xuất",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết giao nhận phôi tấm",
+      "key": "table1",
+      "columns": [
+        { "title": "STT",              "dataIndex": "stt",       "width": 50,  "editable": false, "readonly": true },
+        { "title": "Kíp-ngày",         "dataIndex": "shiftName",   "width": 120 },
+        { "title": "Mác thép",         "dataIndex": "macThep",   "width": 100 },
+        { "title": "Mẻ",               "dataIndex": "meThep",    "width": 120 },
+        { "title": "Kích thước (mm)",  "dataIndex": "kichThuoc", "width": 130 },
+        {
+          "title": "Loại 1",
+          "children": [
+            { "title": "Số phôi",          "dataIndex": "pl_L1_so", "width": 50,  "align": "right", "sum": true },
+            { "title": "Khối lượng (kg)", "dataIndex": "pl_L1_kl", "width": 100, "align": "right", "format": "number-group", "sum": true }
+          ]
+        },
+        {
+          "title": "Loại 2",
+          "children": [
+            { "title": "Số phôi",          "dataIndex": "pl_L2_so", "width": 50,  "align": "right", "sum": true },
+            { "title": "Khối lượng (kg)", "dataIndex": "pl_L2_kl", "width": 100, "align": "right", "format": "number-group", "sum": true }
+          ]
+        },
+        {
+          "title": "Loại 2 TP",
+          "children": [
+            { "title": "Số phôi",          "dataIndex": "pl_L2TP_so", "width": 50,  "align": "right", "sum": true },
+            { "title": "Khối lượng (kg)", "dataIndex": "pl_L2TP_kl", "width": 100 , "align": "right", "format": "number-group", "sum": true }
+          ]
+        },
+        {
+          "title": "Loại 3",
+          "children": [
+            { "title": "Số phôi",          "dataIndex": "pl_L3_so", "width": 50,  "align": "right", "sum": true },
+            { "title": "Khối lượng (kg)", "dataIndex": "pl_L3_kl", "width": 100, "align": "right", "format": "number-group", "sum": true }
+          ]
+        },
+        {
+          "title": "Loại 3 TP",
+          "children": [
+            { "title": "Số phôi",          "dataIndex": "pl_L3TP_so", "width": 50,  "align": "right", "sum": true },
+            { "title": "Khối lượng (kg)", "dataIndex": "pl_L3TP_kl", "width": 100 , "align": "right", "format": "number-group", "sum": true }
+          ]
+        },
+        {
+          "title": "Ngắn dài",
+          "children": [
+            { "title": "Số phôi",          "dataIndex": "pl_ND_so", "width": 50,  "align": "right", "sum": true },
+            { "title": "Khối lượng (kg)", "dataIndex": "pl_ND_kl", "width": 100, "align": "right", "format": "number-group", "sum": true }
+          ]
+        },
+        {
+          "title": "Phế phẩm",
+          "children": [
+            { "title": "Số phôi",          "dataIndex": "pl_PP_so", "width": 50,  "align": "right", "sum": true },
+            { "title": "Khối lượng (kg)", "dataIndex": "pl_PP_kl", "width": 100 , "align": "right", "format": "number-group", "sum": true }
+          ]
+        },
+        { "title": "Tổng số phôi",           "dataIndex": "tongSoPhoi",    "width": 80,  "align": "right", "sum": true },
+        { "title": "Tổng khối lượng (kg)",   "dataIndex": "tongKhoiLuong", "width": 120, "align": "right", "format": "number-group", "sum": true }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+    "Biên bản này được lập thành 2 bản có giá trị như nhau: bên giao và bên nhận mỗi bên giữ 1 bản."
+  ],
+
+  "signatures": [
+    {
+      "label": "X.ĐPT - NM.HRC2",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_DPT",
+      "maphongBan": "NM.HRC2",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "Kho phôi - NM.HRC2",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_Kho",
+      "maphongBan": "NM.HRC2",
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "P.QLCL",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_PQLCL",
+      "maphongBan": "P.QLCL",
+      "capduyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

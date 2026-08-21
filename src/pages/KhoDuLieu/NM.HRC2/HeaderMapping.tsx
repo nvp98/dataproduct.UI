@@ -8,7 +8,6 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
-  Radio,
   Row,
   Select,
   Space,
@@ -17,7 +16,6 @@ import {
   Tabs,
   Tag,
   message,
-  DatePicker,
 } from "antd";
 import {
   PlusOutlined,
@@ -44,6 +42,44 @@ import type { AutocompleteSearchParams } from "../../../components/CommonAutocom
 import { headerNhomApi } from "../../../services/HeaderNhomApi";
 import type { HeaderNhom } from "../../../services/HeaderNhomApi";
 
+type ThuTuField =
+  | "thuTu_TK_BOF"
+  | "thuTu_TK_LF"
+  | "thuTu_TK_RH"
+  | "thuTu_Excel_BOF"
+  | "thuTu_Excel_LF"
+  | "thuTu_Excel_RH";
+
+// Bitmask cho loaiThongKe/loaiExcel: BOF=1, LF=2, RH=4 (kết hợp tự do, vd LF+RH=6)
+const LOAI_BM_BOF = 1;
+const LOAI_BM_LF = 2;
+const LOAI_BM_RH = 4;
+const LOAI_BM_OPTIONS = [
+  { label: "BOF", value: LOAI_BM_BOF },
+  { label: "LF", value: LOAI_BM_LF },
+  { label: "RH", value: LOAI_BM_RH },
+];
+const bitmaskToArray = (value: number | null | undefined): number[] =>
+  [LOAI_BM_BOF, LOAI_BM_LF, LOAI_BM_RH].filter((bit) => ((value ?? 0) & bit) !== 0);
+const arrayToBitmask = (values: number[] | null | undefined): number =>
+  (values ?? []).reduce((acc, v) => acc | v, 0);
+
+const renderLoaiFlags = (value: number | null | undefined) => {
+  const bits = bitmaskToArray(value);
+  if (bits.length === 0) return <Tag>-</Tag>;
+  const colorByBit: Record<number, string> = { [LOAI_BM_BOF]: "blue", [LOAI_BM_LF]: "cyan", [LOAI_BM_RH]: "geekblue" };
+  const labelByBit: Record<number, string> = { [LOAI_BM_BOF]: "BOF", [LOAI_BM_LF]: "LF", [LOAI_BM_RH]: "RH" };
+  return (
+    <>
+      {bits.map((bit) => (
+        <Tag color={colorByBit[bit]} key={bit}>
+          {labelByBit[bit]}
+        </Tag>
+      ))}
+    </>
+  );
+};
+
 type FilterState = {
   searchKey?: string;
   LoaiPhieu?: string;
@@ -52,10 +88,21 @@ type FilterState = {
   IsUsedThongKe?: boolean;
   FromDate?: string;
   ToDate?: string;
-  SortThuTu?: string;
   IdNhom?: number;
   chuaMappingNM?: boolean;
+  // Sort server-side theo 1 trong 4 cột TT — BE tự sort + phân trang lại toàn bộ dữ liệu
+  // (không chỉ sort trong trang đang xem).
+  SortBy?: ThuTuField;
+  SortOrder?: "ascend" | "descend";
 };
+
+const isThuTuField = (f: unknown): f is ThuTuField =>
+  f === "thuTu_TK_BOF" ||
+  f === "thuTu_TK_LF" ||
+  f === "thuTu_TK_RH" ||
+  f === "thuTu_Excel_BOF" ||
+  f === "thuTu_Excel_LF" ||
+  f === "thuTu_Excel_RH";
 
 type ErrorLike = {
   message?: unknown;
@@ -191,9 +238,11 @@ const HeaderMapping = () => {
         typeof values.IsUsedThongKe === "boolean" ? values.IsUsedThongKe : undefined,
       FromDate: fromDate,
       ToDate: toDate,
-      SortThuTu: values.SortThuTu || undefined,
       IdNhom: typeof values.IdNhom === "number" ? values.IdNhom : undefined,
       chuaMappingNM: values.chuaMappingNM === true ? true : undefined,
+      // Giữ nguyên sort đang áp dụng (nếu có) khi lọc lại
+      SortBy: filters.SortBy,
+      SortOrder: filters.SortOrder,
     };
     fetchData(1, pagination.pageSize, appliedFilters);
   };
@@ -221,14 +270,17 @@ const HeaderMapping = () => {
       isUsedNXT: record.isUsedNXT ?? false,
       tyTrong: record.tyTrong,
       isUsedThongKe: record.isUsedThongKe ?? false,
-      loaiThongKe: record.loaiThongKe,
+      loaiThongKe: bitmaskToArray(record.loaiThongKe),
       thuTu_TK_BOF: record.thuTu_TK_BOF,
-      thuTu_TK_LFRH: record.thuTu_TK_LFRH,
+      thuTu_TK_LF: record.thuTu_TK_LF,
+      thuTu_TK_RH: record.thuTu_TK_RH,
       isUsed_Excel: record.isUsed_Excel ?? false,
-      loaiExcel: record.loaiExcel,
+      loaiExcel: bitmaskToArray(record.loaiExcel),
       thuTu_Excel_BOF: record.thuTu_Excel_BOF,
-      thuTu_Excel_LFRH: record.thuTu_Excel_LFRH,
+      thuTu_Excel_LF: record.thuTu_Excel_LF,
+      thuTu_Excel_RH: record.thuTu_Excel_RH,
       iD_NhomKey: record.iD_NhomKey ?? undefined,
+      maVatTuChiPhi: record.maVatTuChiPhi ?? undefined,
     });
     setModalVisible(true);
   };
@@ -250,14 +302,17 @@ const HeaderMapping = () => {
         isUsedNXT: values.isUsedNXT ?? false,
         tyTrong: values.tyTrong ?? null,
         isUsedThongKe: values.isUsedThongKe ?? false,
-        loaiThongKe: values.isUsedThongKe ? (values.loaiThongKe ?? null) : null,
+        loaiThongKe: values.isUsedThongKe ? (arrayToBitmask(values.loaiThongKe) || null) : null,
         thuTu_TK_BOF: values.isUsedThongKe ? (values.thuTu_TK_BOF ?? null) : null,
-        thuTu_TK_LFRH: values.isUsedThongKe ? (values.thuTu_TK_LFRH ?? null) : null,
+        thuTu_TK_LF: values.isUsedThongKe ? (values.thuTu_TK_LF ?? null) : null,
+        thuTu_TK_RH: values.isUsedThongKe ? (values.thuTu_TK_RH ?? null) : null,
         isUsed_Excel: values.isUsed_Excel ?? false,
-        loaiExcel: values.isUsed_Excel ? (values.loaiExcel ?? null) : null,
+        loaiExcel: values.isUsed_Excel ? (arrayToBitmask(values.loaiExcel) || null) : null,
         thuTu_Excel_BOF: values.isUsed_Excel ? (values.thuTu_Excel_BOF ?? null) : null,
-        thuTu_Excel_LFRH: values.isUsed_Excel ? (values.thuTu_Excel_LFRH ?? null) : null,
+        thuTu_Excel_LF: values.isUsed_Excel ? (values.thuTu_Excel_LF ?? null) : null,
+        thuTu_Excel_RH: values.isUsed_Excel ? (values.thuTu_Excel_RH ?? null) : null,
         iD_NhomKey: values.iD_NhomKey ?? null,
+        maVatTuChiPhi: values.maVatTuChiPhi?.trim() || null,
       };
       if (editingRecord?.keyGuid) {
         payload.keyGuid = editingRecord.keyGuid;
@@ -331,6 +386,24 @@ const HeaderMapping = () => {
     setMappingOpen(true);
   };
 
+  // Cảnh báo sớm trùng thứ tự ngay khi nhập, so với các dòng đang tải trên trang hiện tại
+  // (loại trừ chính bản ghi đang sửa). BE vẫn là nơi chốt chặn thật (kiểm tra toàn bộ dữ liệu,
+  // không chỉ trang đang xem) — xem HeaderKeyService.EnsureThuTuUniqueAsync.
+  const makeThuTuValidator = (field: ThuTuField, label: string) => ({
+    validator: (_: unknown, value: number | null | undefined) => {
+      if (value == null) return Promise.resolve();
+      const dup = data.find(
+        (r) => r[field] === value && r.iD_HeaderKey !== editingRecord?.iD_HeaderKey
+      );
+      if (dup) {
+        return Promise.reject(
+          new Error(`${label} = ${value} đã được dùng bởi "${dup.tenHienThi ?? "Header Key khác"}"`)
+        );
+      }
+      return Promise.resolve();
+    },
+  });
+
   const columns = useMemo(
     () => [
       {
@@ -377,6 +450,13 @@ const HeaderMapping = () => {
       //       .join("; ");
       //   },
       // },
+      {
+        title: "Mã VT chi phí",
+        dataIndex: "maVatTuChiPhi",
+        key: "maVatTuChiPhi",
+        width: 120,
+        render: (value: string | null | undefined) => value || "-",
+      },
       {
         title: "Loại phiếu",
         dataIndex: "loaiPhieu",
@@ -436,25 +516,34 @@ const HeaderMapping = () => {
           title: "Loại thống kê",
           dataIndex: "loaiThongKe",
           key: "loaiThongKe",
-          width: 90,
-          render: (value: number | null | undefined) =>
-            value === 1 ? <Tag color="blue">BOF</Tag> :
-            value === 2 ? <Tag color="cyan">LFRH</Tag> :
-            value === 3 ? <Tag color="geekblue">All</Tag> :
-            <Tag>-</Tag>,
+          width: 120,
+          render: renderLoaiFlags,
         },
         {
           title: "TT TK BOF",
           dataIndex: "thuTu_TK_BOF",
           key: "thuTu_TK_BOF",
           width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_TK_BOF" ? filters.SortOrder : undefined,
           render: (value: number | null | undefined) => value ?? "-",
         },
         {
-          title: "TT TK LFRH",
-          dataIndex: "thuTu_TK_LFRH",
-          key: "thuTu_TK_LFRH",
+          title: "TT TK LF",
+          dataIndex: "thuTu_TK_LF",
+          key: "thuTu_TK_LF",
           width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_TK_LF" ? filters.SortOrder : undefined,
+          render: (value: number | null | undefined) => value ?? "-",
+        },
+        {
+          title: "TT TK RH",
+          dataIndex: "thuTu_TK_RH",
+          key: "thuTu_TK_RH",
+          width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_TK_RH" ? filters.SortOrder : undefined,
           render: (value: number | null | undefined) => value ?? "-",
         },
         {
@@ -469,25 +558,34 @@ const HeaderMapping = () => {
           title: "Loại Excel",
           dataIndex: "loaiExcel",
           key: "loaiExcel",
-          width: 90,
-          render: (value: number | null | undefined) =>
-            value === 1 ? <Tag color="blue">BOF</Tag> :
-            value === 2 ? <Tag color="cyan">LFRH</Tag> :
-            value === 3 ? <Tag color="geekblue">All</Tag> :
-            <Tag>-</Tag>,
+          width: 120,
+          render: renderLoaiFlags,
         },
         {
           title: "TT Excel BOF",
           dataIndex: "thuTu_Excel_BOF",
           key: "thuTu_Excel_BOF",
           width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_Excel_BOF" ? filters.SortOrder : undefined,
           render: (value: number | null | undefined) => value ?? "-",
         },
         {
-          title: "TT Excel LFRH",
-          dataIndex: "thuTu_Excel_LFRH",
-          key: "thuTu_Excel_LFRH",
+          title: "TT Excel LF",
+          dataIndex: "thuTu_Excel_LF",
+          key: "thuTu_Excel_LF",
           width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_Excel_LF" ? filters.SortOrder : undefined,
+          render: (value: number | null | undefined) => value ?? "-",
+        },
+        {
+          title: "TT Excel RH",
+          dataIndex: "thuTu_Excel_RH",
+          key: "thuTu_Excel_RH",
+          width: 80,
+          sorter: true,
+          sortOrder: filters.SortBy === "thuTu_Excel_RH" ? filters.SortOrder : undefined,
           render: (value: number | null | undefined) => value ?? "-",
         },
       ] as const : []),
@@ -543,7 +641,7 @@ const HeaderMapping = () => {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, showExtraColumns]
+    [data, showExtraColumns, filters.SortBy, filters.SortOrder]
   );
 
   return (
@@ -654,20 +752,26 @@ const HeaderMapping = () => {
           onChange={(
             pager: TablePaginationConfig,
             _tableFilters,
-            sorter:
-              | SorterResult<HeaderKeyMapping>
-              | SorterResult<HeaderKeyMapping>[]
+            sorter: SorterResult<HeaderKeyMapping> | SorterResult<HeaderKeyMapping>[]
           ) => {
-            const nextPage = pager?.current ?? 1;
             const nextPageSize = pager?.pageSize ?? pagination.pageSize;
+            const s = Array.isArray(sorter) ? sorter[0] : sorter;
 
             const nextFilters: FilterState = { ...filters };
-            const s = Array.isArray(sorter) ? sorter[0] : sorter;
-            if (s?.field === "thuTu") {
-              if (s.order === "ascend") nextFilters.SortThuTu = "asc";
-              else if (s.order === "descend") nextFilters.SortThuTu = "desc";
-              else delete nextFilters.SortThuTu;
+            if (s?.order && isThuTuField(s.field)) {
+              nextFilters.SortBy = s.field;
+              nextFilters.SortOrder = s.order;
+            } else {
+              delete nextFilters.SortBy;
+              delete nextFilters.SortOrder;
             }
+
+            // Đổi sort = sắp xếp lại toàn bộ dữ liệu (không chỉ trang đang xem) → luôn quay về
+            // trang 1, vì trang hiện tại không còn khớp với thứ tự mới.
+            const sortChanged =
+              nextFilters.SortBy !== filters.SortBy || nextFilters.SortOrder !== filters.SortOrder;
+            const nextPage = sortChanged ? 1 : (pager?.current ?? 1);
+
             fetchData(nextPage, nextPageSize, nextFilters);
           }}
           rowKey={(record) => {
@@ -717,79 +821,109 @@ const HeaderMapping = () => {
         onOk={handleSave}
         confirmLoading={modalLoading}
         destroyOnClose
+        width={720}
       >
-        <Form layout="vertical" form={modalForm}>
-          <Form.Item
-            name="tenHienThi"
-            label="Tên hiển thị"
-            rules={[
-              { required: true, message: "Vui lòng nhập tên hiển thị" },
-              { max: 150, message: "Tối đa 150 ký tự" },
-            ]}
-          >
-            <Input placeholder="Nhập tên hiển thị" />
-          </Form.Item>
-          <Form.Item name="loaiPhieu" label="Loại phiếu">
-            <Select placeholder="Chọn loại phụ liệu" allowClear>
-              <Select.Option value="KL">Chất hợp kim hóa</Select.Option>
-              <Select.Option value="PG">Phụ gia và chất khử oxy</Select.Option>
-            </Select>
-          </Form.Item>
+        <Form layout="vertical" form={modalForm} size="middle">
+          <Row gutter={16}>
+            <Col span={16}>
+              <Form.Item
+                name="tenHienThi"
+                label="Tên hiển thị"
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên hiển thị" },
+                  { max: 150, message: "Tối đa 150 ký tự" },
+                ]}
+              >
+                <Input placeholder="Nhập tên hiển thị" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="loaiPhieu" label="Loại phiếu">
+                <Select placeholder="Chọn loại phụ liệu" allowClear>
+                  <Select.Option value="KL">Chất hợp kim hóa</Select.Option>
+                  <Select.Option value="PG">Phụ gia và chất khử oxy</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item name="mota" label="Mô tả">
             <Input.TextArea
-              rows={3}
+              rows={2}
               placeholder="Ghi chú thêm (không bắt buộc)"
             />
           </Form.Item>
-          <Form.Item
-            name="tyTrong"
-            label="Tỷ trọng"
-            tooltip="Tỷ trọng của nguyên nhiên liệu (đơn vị: kg/m³ hoặc tương đương)"
-          >
-            <InputNumber
-              min={0}
-              step={0.001}
-              precision={3}
-              placeholder="Nhập tỷ trọng"
-              style={{ width: "100%" }}
-            />
-          </Form.Item>
-          <Form.Item
-            name="isActive"
-            label="Trạng thái"
-            valuePropName="checked"
-            initialValue
-          >
-            <Switch checkedChildren="Đang dùng" unCheckedChildren="Ngưng" />
-          </Form.Item>
-          <Form.Item
-            name="isUsedNXT"
-            label="Dùng cho STD NXT"
-            valuePropName="checked"
-            tooltip="Đánh dấu Header Key này sẽ được tự động chọn làm mặc định khi lọc dữ liệu STD NXT"
-          >
-            <Switch checkedChildren="Có" unCheckedChildren="Không" />
-          </Form.Item>
 
-          <Form.Item
-            name="iD_NhomKey"
-            label="Nhóm thống kê"
-            tooltip="Gom Header Key này vào một nhóm — giá trị sẽ được cộng dồn vào cột nhóm trong ThongKe"
-          >
-            <CommonAutocomplete<HeaderNhom>
-              searchApi={nhomSearchApi}
-              mapOption={(item) => ({ value: item.id, label: item.tenHienThi })}
-              fallbackLabelBuilder={(id) =>
-                editingRecord?.tenNhom ?? `Nhóm #${id}`
-              }
-              placeholder="Chọn nhóm hoặc tạo mới..."
-              allowClear
-              allowCreate
-              onCreate={handleCreateNhom}
-            />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="tyTrong"
+                label="Tỷ trọng"
+                tooltip="Tỷ trọng của nguyên nhiên liệu (đơn vị: kg/m³ hoặc tương đương)"
+              >
+                <InputNumber
+                  min={0}
+                  step={0.001}
+                  precision={3}
+                  placeholder="Nhập tỷ trọng"
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={16}>
+              <Form.Item
+                name="maVatTuChiPhi"
+                label="Mã vật tư chi phí"
+                tooltip="Mã vật tư bên hệ thống chi phí (ChiPhi_ProductionData). Để trống nếu phụ liệu này không cần feed sang hệ thống chi phí."
+              >
+                <Input placeholder="Nhập mã vật tư chi phí" allowClear maxLength={100} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <Form.Item label="Sử dụng cho">
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="isActive"
+                label="Trạng thái"
+                valuePropName="checked"
+                initialValue
+              >
+                <Switch checkedChildren="Đang dùng" unCheckedChildren="Ngưng" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="isUsedNXT"
+                label="Dùng cho STD NXT"
+                valuePropName="checked"
+                tooltip="Đánh dấu Header Key này sẽ được tự động chọn làm mặc định khi lọc dữ liệu STD NXT"
+              >
+                <Switch checkedChildren="Có" unCheckedChildren="Không" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="iD_NhomKey"
+                label="Nhóm thống kê"
+                tooltip="Gom Header Key này vào một nhóm — giá trị sẽ được cộng dồn vào cột nhóm trong ThongKe"
+              >
+                <CommonAutocomplete<HeaderNhom>
+                  searchApi={nhomSearchApi}
+                  mapOption={(item) => ({ value: item.id, label: item.tenHienThi })}
+                  fallbackLabelBuilder={(id) =>
+                    editingRecord?.tenNhom ?? `Nhóm #${id}`
+                  }
+                  placeholder="Chọn nhóm hoặc tạo mới..."
+                  allowClear
+                  allowCreate
+                  onCreate={handleCreateNhom}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label="Sử dụng cho" style={{ marginBottom: 12 }}>
             <Space size="large">
               <Form.Item name="isUsedThongKe" valuePropName="checked" noStyle>
                 <Checkbox>Thống kê</Checkbox>
@@ -811,8 +945,8 @@ const HeaderMapping = () => {
             {({ getFieldValue }) => {
               const useThongKe = getFieldValue("isUsedThongKe");
               const useExcel = getFieldValue("isUsed_Excel");
-              const loaiTK = getFieldValue("loaiThongKe");
-              const loaiEx = getFieldValue("loaiExcel");
+              const loaiTK: number[] | undefined = getFieldValue("loaiThongKe");
+              const loaiEx: number[] | undefined = getFieldValue("loaiExcel");
 
               if (!useThongKe && !useExcel) return null;
 
@@ -826,31 +960,65 @@ const HeaderMapping = () => {
                       <Form.Item
                         name="loaiThongKe"
                         label="Loại BM"
-                        rules={[{ required: true, message: "Vui lòng chọn loại BM" }]}
+                        rules={[
+                          {
+                            validator: (_, v: number[] | undefined) =>
+                              Array.isArray(v) && v.length > 0
+                                ? Promise.resolve()
+                                : Promise.reject(new Error("Vui lòng chọn ít nhất 1 loại BM")),
+                          },
+                        ]}
                       >
-                        <Radio.Group>
-                          <Radio value={1}>BOF</Radio>
-                          <Radio value={2}>LFRH</Radio>
-                          <Radio value={3}>All</Radio>
-                        </Radio.Group>
+                        <Checkbox.Group options={LOAI_BM_OPTIONS} />
                       </Form.Item>
-                      {(loaiTK === 1 || loaiTK === 3) && (
-                        <Form.Item name="thuTu_TK_BOF" label="Thứ tự BOF">
-                          <InputNumber
-                            min={0}
-                            placeholder="Nhập số thứ tự BOF"
-                            style={{ width: "100%" }}
-                          />
-                        </Form.Item>
-                      )}
-                      {(loaiTK === 2 || loaiTK === 3) && (
-                        <Form.Item name="thuTu_TK_LFRH" label="Thứ tự LFRH">
-                          <InputNumber
-                            min={0}
-                            placeholder="Nhập số thứ tự LFRH"
-                            style={{ width: "100%" }}
-                          />
-                        </Form.Item>
+                      {(loaiTK?.includes(LOAI_BM_BOF) || loaiTK?.includes(LOAI_BM_LF) || loaiTK?.includes(LOAI_BM_RH)) && (
+                        <Row gutter={8}>
+                          {loaiTK?.includes(LOAI_BM_BOF) && (
+                            <Col span={8}>
+                              <Form.Item
+                                name="thuTu_TK_BOF"
+                                label="Thứ tự BOF"
+                                rules={[makeThuTuValidator("thuTu_TK_BOF", "Thứ tự BOF")]}
+                              >
+                                <InputNumber
+                                  min={0}
+                                  placeholder="TT BOF"
+                                  style={{ width: "100%" }}
+                                />
+                              </Form.Item>
+                            </Col>
+                          )}
+                          {loaiTK?.includes(LOAI_BM_LF) && (
+                            <Col span={8}>
+                              <Form.Item
+                                name="thuTu_TK_LF"
+                                label="Thứ tự LF"
+                                rules={[makeThuTuValidator("thuTu_TK_LF", "Thứ tự LF")]}
+                              >
+                                <InputNumber
+                                  min={0}
+                                  placeholder="TT LF"
+                                  style={{ width: "100%" }}
+                                />
+                              </Form.Item>
+                            </Col>
+                          )}
+                          {loaiTK?.includes(LOAI_BM_RH) && (
+                            <Col span={8}>
+                              <Form.Item
+                                name="thuTu_TK_RH"
+                                label="Thứ tự RH"
+                                rules={[makeThuTuValidator("thuTu_TK_RH", "Thứ tự RH")]}
+                              >
+                                <InputNumber
+                                  min={0}
+                                  placeholder="TT RH"
+                                  style={{ width: "100%" }}
+                                />
+                              </Form.Item>
+                            </Col>
+                          )}
+                        </Row>
                       )}
                     </>
                   ),
@@ -865,31 +1033,65 @@ const HeaderMapping = () => {
                       <Form.Item
                         name="loaiExcel"
                         label="Loại BM"
-                        rules={[{ required: true, message: "Vui lòng chọn loại BM" }]}
+                        rules={[
+                          {
+                            validator: (_, v: number[] | undefined) =>
+                              Array.isArray(v) && v.length > 0
+                                ? Promise.resolve()
+                                : Promise.reject(new Error("Vui lòng chọn ít nhất 1 loại BM")),
+                          },
+                        ]}
                       >
-                        <Radio.Group>
-                          <Radio value={1}>BOF</Radio>
-                          <Radio value={2}>LFRH</Radio>
-                          <Radio value={3}>All</Radio>
-                        </Radio.Group>
+                        <Checkbox.Group options={LOAI_BM_OPTIONS} />
                       </Form.Item>
-                      {(loaiEx === 1 || loaiEx === 3) && (
-                        <Form.Item name="thuTu_Excel_BOF" label="Thứ tự BOF">
-                          <InputNumber
-                            min={0}
-                            placeholder="Nhập số thứ tự BOF"
-                            style={{ width: "100%" }}
-                          />
-                        </Form.Item>
-                      )}
-                      {(loaiEx === 2 || loaiEx === 3) && (
-                        <Form.Item name="thuTu_Excel_LFRH" label="Thứ tự LFRH">
-                          <InputNumber
-                            min={0}
-                            placeholder="Nhập số thứ tự LFRH"
-                            style={{ width: "100%" }}
-                          />
-                        </Form.Item>
+                      {(loaiEx?.includes(LOAI_BM_BOF) || loaiEx?.includes(LOAI_BM_LF) || loaiEx?.includes(LOAI_BM_RH)) && (
+                        <Row gutter={8}>
+                          {loaiEx?.includes(LOAI_BM_BOF) && (
+                            <Col span={8}>
+                              <Form.Item
+                                name="thuTu_Excel_BOF"
+                                label="Thứ tự BOF"
+                                rules={[makeThuTuValidator("thuTu_Excel_BOF", "Thứ tự Excel BOF")]}
+                              >
+                                <InputNumber
+                                  min={0}
+                                  placeholder="TT BOF"
+                                  style={{ width: "100%" }}
+                                />
+                              </Form.Item>
+                            </Col>
+                          )}
+                          {loaiEx?.includes(LOAI_BM_LF) && (
+                            <Col span={8}>
+                              <Form.Item
+                                name="thuTu_Excel_LF"
+                                label="Thứ tự LF"
+                                rules={[makeThuTuValidator("thuTu_Excel_LF", "Thứ tự Excel LF")]}
+                              >
+                                <InputNumber
+                                  min={0}
+                                  placeholder="TT LF"
+                                  style={{ width: "100%" }}
+                                />
+                              </Form.Item>
+                            </Col>
+                          )}
+                          {loaiEx?.includes(LOAI_BM_RH) && (
+                            <Col span={8}>
+                              <Form.Item
+                                name="thuTu_Excel_RH"
+                                label="Thứ tự RH"
+                                rules={[makeThuTuValidator("thuTu_Excel_RH", "Thứ tự Excel RH")]}
+                              >
+                                <InputNumber
+                                  min={0}
+                                  placeholder="TT RH"
+                                  style={{ width: "100%" }}
+                                />
+                              </Form.Item>
+                            </Col>
+                          )}
+                        </Row>
                       )}
                     </>
                   ),

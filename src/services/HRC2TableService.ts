@@ -17,6 +17,7 @@ export type DynamicColumnMeta = {
   variant?: "source" | "adjust" | "default";
   highlight?: boolean;
   headerKeyId?: number | null;
+  sum?: boolean;
 };
 
 export type AdjustColumnMeta = {
@@ -202,6 +203,7 @@ export const hrc2TableService = {
         variant: col.variant,
         highlight: col.highlight,
         headerKeyId: (col as { headerKeyId?: number | null })?.headerKeyId ?? null,
+        sum: col.sum,
       }));
     });
     return result;
@@ -228,6 +230,7 @@ export const hrc2TableService = {
       metaGroup: item.metaGroup,
       variant: item.variant ?? "source",
       headerKeyId: item.headerKeyId ?? undefined,
+      sum: item.sum,
     }));
   },
 
@@ -313,10 +316,32 @@ export const hrc2TableService = {
       }
       const mergedRow: HRCTableRow = { ...serverRow };
       Object.keys(prevRow).forEach((field) => {
+        if (field.endsWith("__orig") || field.endsWith("__IsManual")) return;
+
         const shouldPreserve =
           preserveSet !== null ? preserveSet.has(field) : field.endsWith("_adjust");
-        if (shouldPreserve) {
-          mergedRow[field] = prevRow[field];
+        if (!shouldPreserve) return;
+
+        // applyManualOverrides (chạy TRƯỚC hàm này) đã xử lý field này rồi (đặt __IsManual = true
+        // hoặc false) → tin tưởng kết quả đó, không ghi đè lại để tránh làm hỏng baseline __orig
+        // nó vừa tính đúng.
+        const alreadyHandledKey = `${field}__IsManual`;
+        if (alreadyHandledKey in mergedRow) return;
+
+        // Field CHƯA từng được applyManualOverrides xử lý — xảy ra khi dữ liệu phiếu đã lưu từ
+        // trước (chưa có cờ __IsManual, vd lưu trước khi có cơ chế này) hoặc đây là lần merge đầu.
+        // Tự phục hồi highlight bằng cách so sánh trực tiếp giá trị đang lưu ở phiếu (prevRow, từ
+        // /api/Phieus) với giá trị NM mới nhất (mergedRow hiện tại, vẫn nguyên bản từ serverRow,
+        // từ DLNMHRC2/filter) — không phụ thuộc cờ đã lưu trước đó nên tự "chữa lành" được cả
+        // những dòng đã lưu từ trước khi có cơ chế đánh dấu __IsManual.
+        const nmValue = mergedRow[field];
+        const phieuValue = prevRow[field];
+        const isDifferent = String(phieuValue ?? "") !== String(nmValue ?? "");
+
+        mergedRow[field] = phieuValue;
+        if (isDifferent) {
+          mergedRow[`${field}__orig`] = nmValue ?? null;
+          mergedRow[alreadyHandledKey] = true;
         }
       });
       return mergedRow;

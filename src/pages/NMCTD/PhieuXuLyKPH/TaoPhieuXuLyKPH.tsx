@@ -736,11 +736,9 @@ const TaoPhieuXuLyKPH = () => {
                 Làm mới
               </Button>
             )}
-            {currentTinhTrang != 2 &&
-              currentTinhTrang != 5 &&
-              currentTinhTrang != 0 &&
-              idphieu &&
-              currentUserInfo.iD_TaiKhoan == phieuInfo.nguoiTaoId && (
+            {idphieu &&
+              currentTinhTrang !== TrangThaiPhieuConst.DaChot &&
+              getThongTinUser().iD_TaiKhoan === phieuInfo.nguoiTaoId && (
                 <Button
                   icon={<ReloadOutlined />}
                   onClick={handleReset}

@@ -9,8 +9,8 @@
   },
   "isoInfo": {
     "code": "BM.14/QT.05.15",
-    "effectiveDate": "10/01/2025",
-    "revision": "00"
+    "effectiveDate": "15/08/2026",
+    "revision": "03"
   },
 
   "headerFields": [
@@ -57,7 +57,7 @@
           "readonly": true
         },
         { "title": "Mẻ nấu số", "dataIndex": "meThoi", "width": 120 ,"editable": false, "readonly": true },
-        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": false, "readonly": true },
+        { "title": "Mác thép", "dataIndex": "macThep", "width": 150 ,"editable": true, "readonly": false },
         { 
           "title": "Khối lượng thép lỏng (Tấn) (Tính cả thùng thép)",
           "dataIndex": "klThepLong", "width": 100, "sum": true, "readonly": true

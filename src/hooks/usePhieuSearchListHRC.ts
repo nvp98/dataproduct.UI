@@ -50,6 +50,7 @@ const defaultTransform = (filters: PhieuFilterValues): Partial<SearchPhieuByUser
   kip: (filters.kip as string | null | undefined) || null,
   scope: normalizeNumber(filters.scope),
   mayDuc: normalizeNumber(filters.mayDuc),
+  tinhTrang: normalizeNumber(filters.tinhTrang),
   searchText: (filters.soPhieu || filters.searchText || null) as string | null,
 });
 
@@ -103,6 +104,14 @@ export const usePhieuSearchListHRC = ({
       .catch(() => setUserQuyenRecords(null));
   }, [effectiveUserId]);
 
+  /** Quyền mở rộng (extraQuyens) của 1 maBm khớp đúng vùng đang xét — xem bmQuyenConfig.ts */
+  const getExtraQuyenValuesForVung = (maBm: string, loaiVung: number): number[] => {
+    const bmDef = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
+    return (bmDef?.extraQuyens ?? [])
+      .filter((q) => q.vung === loaiVung)
+      .map((q) => q.value);
+  };
+
   /**
    * Trả về options cho filter scope của một BM, đã lọc theo MaKhuVuc của user.
    * - isThongKeUser / chưa load records → trả tất cả options trong bmQuyenConfig.
@@ -123,10 +132,11 @@ export const usePhieuSearchListHRC = ({
       if (ctx.isThongKeUser === true || !userQuyenRecords) return allOptions;
 
       const loaiVung = Number(ctx.loaiVung ?? 1);
+      const extraValues = getExtraQuyenValuesForVung(maBm, loaiVung);
       const relevantQuyens =
-        loaiVung === 2 ? new Set([2, 4]) :
-        loaiVung === 3 ? new Set([5]) :
-        new Set([1, 4]); // default loaiVung=1
+        loaiVung === 2 ? new Set([2, 4, ...extraValues]) :
+        loaiVung === 3 ? new Set([5, ...extraValues]) :
+        new Set([1, 4, ...extraValues]); // default loaiVung=1
 
       const bmRecords = userQuyenRecords.filter(
         (r) =>
@@ -150,14 +160,19 @@ export const usePhieuSearchListHRC = ({
       if (ctx.isThongKeUser === true || !userQuyenRecords) return bmOptions;
 
       const loaiVung = Number(ctx.loaiVung ?? 1);
-      const relevantQuyens =
+      const baseQuyens =
         loaiVung === 2 ? new Set([2, 4]) :
         loaiVung === 3 ? new Set([5]) :
         new Set([1, 4]);
 
       const accessibleBms = new Set(
         userQuyenRecords
-          .filter((r) => r.quyenChucNang != null && relevantQuyens.has(Number(r.quyenChucNang)))
+          .filter((r) => {
+            if (r.quyenChucNang == null || !r.maBm) return false;
+            const q = Number(r.quyenChucNang);
+            if (baseQuyens.has(q)) return true;
+            return getExtraQuyenValuesForVung(r.maBm, loaiVung).includes(q);
+          })
           .map((r) => r.maBm)
           .filter(Boolean)
       );
@@ -187,6 +202,14 @@ export const usePhieuSearchListHRC = ({
           : Number.isFinite(Number(rawLv))
             ? Number(rawLv)
             : 1;
+
+      // Quyền mở rộng (extraQuyens) khớp đúng vùng đang query, gộp cho mọi maBm liên quan —
+      // FE tự tính từ bmQuyenConfig.ts, BE chỉ dùng raw list này để lọc, không hard-code giá trị.
+      const relevantMaBms = maBmList ?? (maBm ? [maBm] : []);
+      const extraQuyenChucNangs = [...new Set(
+        relevantMaBms.flatMap((bm) => getExtraQuyenValuesForVung(bm, loaiVung))
+      )];
+
       return {
         page,
         pageSize,
@@ -199,9 +222,11 @@ export const usePhieuSearchListHRC = ({
         scope: null,
         mayDuc: null,
         searchText: null,
+        tinhTrang: null,
         ...effectiveFixedFilters,
         ...overrides,
         loaiVung,
+        extraQuyenChucNangs: extraQuyenChucNangs.length > 0 ? extraQuyenChucNangs : undefined,
       };
     },
     [effectiveFixedFilters, maBm, maBmList]

@@ -1,14 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Checkbox, Grid, Input, InputNumber, Popconfirm, Select, Table, message } from "antd";
+import { Button, Checkbox, ConfigProvider, Grid, Input, InputNumber, Popconfirm, Select, Table, message } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { bbgbThepLongApi } from "../../services/BBGNThepLongApi";
-import { CommonAutocomplete } from "../CommonAutocomplete";
-import type { AutocompleteSearchParams } from "../CommonAutocomplete";
-import { MacThepServiceApi } from "../../services/MacThepServiceApi";
-import type { MacThep } from "../../services/MacThepServiceApi";
-import { NhaMayEnum } from "../../models/SiloModel";
 
 export interface BBGNRow {
   key: string;
@@ -217,41 +212,6 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
     mayDucFetchRunningRef.current = false;
   }, [nhaMay]);
 
-  const macThepSearchApi = useCallback(
-    async (params: AutocompleteSearchParams) => {
-      const res = await MacThepServiceApi.search({
-        searchKey: params.searchKey || undefined,
-        nhaMay: nhaMay as NhaMayEnum,
-        isLock: false,
-        idMayDucs: scopeValue != null ? [scopeValue] : undefined,
-        page: 1,
-        pageSize: params.pageSize ?? 50,
-      });
-      return { data: res.data, totalRecords: res.totalRecords };
-    },
-    [nhaMay, scopeValue]
-  );
-
-  const handleCreateMacThep = useCallback(
-    async (searchText: string): Promise<MacThep | null> => {
-      try {
-        const created = await MacThepServiceApi.create({
-          tenMacThep: searchText,
-          nhaMay: nhaMay as NhaMayEnum,
-          isLock: false,
-          idMayDucs: scopeValue != null ? [scopeValue] : null,
-        });
-        message.success(`Đã tạo mác thép "${created.tenMacThep}"`);
-        return created;
-      } catch (e) {
-        console.error(e);
-        message.error("Không tạo được mác thép");
-        return null;
-      }
-    },
-    [nhaMay, scopeValue]
-  );
-
   const updateRow = useCallback(
     (key: string, updates: Partial<BBGNRow>) => {
       onChange?.(value.map((r) => (r.key === key ? { ...r, ...updates } : r)));
@@ -349,35 +309,6 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
               notFoundContent={meLoading ? "Đang tải..." : "Không có mẻ"}
             />
           </div>
-        );
-      },
-    },
-    {
-      title: "Mác thép",
-      dataIndex: "macThep",
-      key: "macThep",
-      width: 150,
-      render: (val: string | null, record: BBGNRow) => {
-        if (disabled || !canEditOthers) return <span>{val ?? "-"}</span>;
-        return (
-          <CommonAutocomplete<MacThep>
-            value={record.idMacThep}
-            searchApi={macThepSearchApi}
-            mapOption={(item) => ({ value: item.id, label: item.tenMacThep })}
-            fallbackLabelBuilder={() => record.macThep ?? ""}
-            onChange={(newVal, option) =>
-              updateRow(record.key, {
-                idMacThep: newVal as number | null,
-                macThep: option ? (option as MacThep).tenMacThep : null,
-                phanLoaiNhom: option ? ((option as MacThep).tenNhom ?? null) : null,
-              })
-            }
-            placeholder="Chọn mác thép..."
-            style={{ width: "100%" }}
-            size="small"
-            allowCreate
-            onCreate={handleCreateMacThep}
-          />
         );
       },
     },
@@ -736,49 +667,51 @@ const BBGNThepLongTable: React.FC<BBGNThepLongTableProps> = ({
 
   return (
     <div>
-      <Table
-        columns={columns}
-        dataSource={value.map((r, i) => ({ ...r, key: r.key ?? `row-${i}` }))}
-        rowKey="key"
-        onRow={(record) =>
-          record.isTrungMeThoi === true
-            ? {
-                style: { backgroundColor: "#fff1f0" },
-              }
-            : {}
-        }
-        pagination={false}
-        scroll={shouldScrollX ? { x: 1500 } : undefined}
-        size="small"
-        bordered
-        loading={loading}
-        summary={() => (
-          <Table.Summary.Row>
-            {columns.map((col, idx) => {
-              if (idx === 0) {
-                return (
-                  <Table.Summary.Cell key="sum-label" index={idx}>
-                    <b>Tổng</b>
-                  </Table.Summary.Cell>
-                );
-              }
+      <ConfigProvider theme={{ components: { Table: { rowHoverBg: "transparent" } } }}>
+        <Table
+          columns={columns}
+          dataSource={value.map((r, i) => ({ ...r, key: r.key ?? `row-${i}` }))}
+          rowKey="key"
+          onRow={(record) =>
+            record.isTrungMeThoi === true
+              ? {
+                  style: { backgroundColor: "#fff1f0" },
+                }
+              : {}
+          }
+          pagination={false}
+          scroll={shouldScrollX ? { x: 1500 } : undefined}
+          size="small"
+          bordered
+          loading={loading}
+          summary={() => (
+            <Table.Summary.Row>
+              {columns.map((col, idx) => {
+                if (idx === 0) {
+                  return (
+                    <Table.Summary.Cell key="sum-label" index={idx}>
+                      <b>Tổng</b>
+                    </Table.Summary.Cell>
+                  );
+                }
 
-              if (idx === klThepLongColIndex) {
-                const isNegTotal = hasKlThepLong && totalKlThepLong < 0;
-                return (
-                  <Table.Summary.Cell key="sum-klThepLong" index={idx}>
-                    <b style={isNegTotal ? { color: "red" } : undefined}>
-                      {hasKlThepLong ? totalKlThepLong.toFixed(3) : "-"}
-                    </b>
-                  </Table.Summary.Cell>
-                );
-              }
+                if (idx === klThepLongColIndex) {
+                  const isNegTotal = hasKlThepLong && totalKlThepLong < 0;
+                  return (
+                    <Table.Summary.Cell key="sum-klThepLong" index={idx}>
+                      <b style={isNegTotal ? { color: "red" } : undefined}>
+                        {hasKlThepLong ? totalKlThepLong.toFixed(3) : "-"}
+                      </b>
+                    </Table.Summary.Cell>
+                  );
+                }
 
-              return <Table.Summary.Cell key={`sum-empty-${col.key ?? idx}`} index={idx} />;
-            })}
-          </Table.Summary.Row>
-        )}
-      />
+                return <Table.Summary.Cell key={`sum-empty-${col.key ?? idx}`} index={idx} />;
+              })}
+            </Table.Summary.Row>
+          )}
+        />
+      </ConfigProvider>
       {!disabled && canEditOthers && (
         <Button
           type="dashed"

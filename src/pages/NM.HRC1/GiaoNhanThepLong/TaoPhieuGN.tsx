@@ -27,7 +27,7 @@ import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 
 // ── Helper hiển thị ───────────────────────────────────────────────────────────
 
-// Ca 2 (20:00→08:00): thoiGian < "20:00" thuộc ngày hôm sau → cộng thêm 1 ngày vào sort key
+// Ca 2 (19:21→07:19): thoiGian < "19:21" thuộc ngày hôm sau → cộng thêm 1 ngày vào sort key
 const buildMeSortKey = (
   thoiGian: string | null | undefined,
   ca: number | null | undefined,
@@ -35,7 +35,7 @@ const buildMeSortKey = (
 ): string => {
   if (!thoiGian) return "9999-12-31 99:99";
   const base = ngaySX ?? "2000-01-01";
-  const isNextDay = ca === 2 && thoiGian < "20:00";
+  const isNextDay = ca === 2 && thoiGian < "19:21";
   const date = isNextDay ? dayjs(base).add(1, "day").format("YYYY-MM-DD") : base;
   return `${date} ${thoiGian}`;
 };
@@ -71,6 +71,13 @@ const tinhTrangTag = (trangThaiDuc: number | null | undefined, isChot: boolean |
   return <Tag color="default">Chờ xử lý</Tag>;
 };
 
+const tinhTrangPCNTag = (me: Pick<HRC1_MeThepVm, "isThuNghiem" | "trangThaiPCN">) => {
+  if (me.isThuNghiem !== true) return "";
+  if (me.trangThaiPCN === true)  return <Tag color="cyan" style={{ fontSize: 11 }}>Đã XN</Tag>;
+  if (me.trangThaiPCN === false) return <Tag color="red" style={{ fontSize: 11 }}>Không XN</Tag>;
+  return <Tag color="default" style={{ fontSize: 11 }}>Chờ</Tag>;
+};
+
 // Tính klThepLong tự động
 const calcKlThepLong = (dichChuyen: string | null | undefined, kllf: number | null | undefined, klLan1: number | null | undefined, klLan2: number | null | undefined): number | null => {
   if (!klLan2) return null;
@@ -80,7 +87,7 @@ const calcKlThepLong = (dichChuyen: string | null | undefined, kllf: number | nu
 };
 
 // Ghi chú dùng chung cả 3 công đoạn — auto-save khi blur
-const GhiChuInput = ({ meId, value, locked, field }: { meId: number; value?: string | null; locked: boolean; field: "lo" | "tl" | "duc" }) => {
+const GhiChuInput = ({ meId, value, locked, field }: { meId: number; value?: string | null; locked: boolean; field: "lo" | "tl" | "duc" | "pcn" }) => {
   const [local, setLocal] = useState(value ?? "");
   useEffect(() => { setLocal(value ?? ""); }, [value]);
   if (locked) return <>{value ?? ""}</>;
@@ -203,6 +210,11 @@ export const LoThoiPanel = ({
   const [edits, setEdits] = useState<Record<number, Partial<HRC1_LoThoiUpdateRequest>>>({});
   const [saving, setSaving] = useState(false);
   const [xoaBusy, setXoaBusy] = useState<Set<number>>(new Set());
+  const [showChuyenMeCols, setShowChuyenMeCols] = useState(false);
+
+  // Mỗi lần phieuData được nạp lại từ server (mở lại phiếu, "Làm mới", đổi lò...) phải bỏ các
+  // edit cục bộ chưa lưu — nếu không, edits cũ sẽ tiếp tục đè lên dữ liệu mới nhất khi render.
+  useEffect(() => { setEdits({}); }, [phieuData]);
 
   const ghostCount = phieuData.danhSachMe.filter((m) => m.isGhost).length;
   const dirtyCount = Object.keys(edits).length;
@@ -229,13 +241,25 @@ export const LoThoiPanel = ({
     return undefined;
   };
 
-  const setDich = (meId: number, val: string | undefined) => {
+  const setDich = (me: HRC1_MeThepVm, val: string | undefined) => {
+    const meId = me.id;
     if (!val) return;
     if (val.startsWith("TL:")) {
       setEdits((p) => {
-        // Khi chuyển sang tinh_luyen: xóa idMayDucDich, reset thoiGian và klLan2 (chỉ dùng cho len_thang)
+        const wasLenThang = ((p[meId] && "dichChuyen" in p[meId]) ? p[meId].dichChuyen : me.dichChuyen) === "len_thang";
+        // Khi chuyển sang tinh_luyen: xóa idMayDucDich.
+        // Chỉ reset thoiGian/klLan2 nếu trước đó là len_thang (đó là dữ liệu lò thổi tự nhập khi lên thẳng);
+        // nếu mẻ đã ở tinh luyện từ trước thì đây là các cột TL đang lưu dữ liệu đã nhập, không được xóa.
         const { idMayDucDich: _removed, ...rest } = p[meId] ?? {};
-        return { ...p, [meId]: { ...rest, dichChuyen: "tinh_luyen", tlDichSo: Number(val.slice(3)), thoiGian: null, klLan2: null } };
+        return {
+          ...p,
+          [meId]: {
+            ...rest,
+            dichChuyen: "tinh_luyen",
+            tlDichSo: Number(val.slice(3)),
+            ...(wasLenThang ? { thoiGian: null, klLan2: null } : {}),
+          },
+        };
       });
     } else {
       setEdits((p) => ({ ...p, [meId]: { ...p[meId], dichChuyen: "len_thang", tlDichSo: null, idMayDucDich: Number(val.slice(3)) } }));
@@ -300,6 +324,9 @@ export const LoThoiPanel = ({
           const l2   = ("klLan2"      in req ? req.klLan2      : me?.klLan2)      ?? undefined;
           const computed = calcKlThepLong(dich, kllf, me?.klLan1 ?? undefined, l2);
           if (computed != null) finalReq = { ...finalReq, klThepLong: computed };
+          // Chuyển mẻ chỉ có ý nghĩa khi lên thẳng — luôn gửi lại để giữ đúng trạng thái hiện tại (self = không chuyển)
+          const editedChuyen = "chuyenVeMeId" in req ? req.chuyenVeMeId : me?.chuyenVeMeId;
+          finalReq = { ...finalReq, chuyenVeMeId: editedChuyen ?? me?.id ?? null };
         }
         return HRC1Api.updateLoThoi(meId, finalReq);
       }));
@@ -388,6 +415,10 @@ export const LoThoiPanel = ({
           )}
         </Space>
       ),
+    },
+    {
+      title: "Tình trạng PCN", key: "tinhTrangPCN", width: 90, fixed: "left",
+      render: (_, me) => tinhTrangPCNTag(me),
     },
     {
       title: "Mẻ thổi", key: "maMe",   width: 90, fixed: "left",
@@ -530,19 +561,75 @@ export const LoThoiPanel = ({
             value={getDichEncoded(me) ?? undefined}
             options={optsForMe}
             placeholder="Chọn đích..."
-            onChange={(v) => setDich(me.id, v)} />
+            onChange={(v) => setDich(me, v)} />
         );
       },
     },
     {
       title: "Thử nghiệm", key: "isThuNghiem", width: 44,
-      render: (_, me) => (
-        <Checkbox checked={!!get(me, "isThuNghiem")}
-          disabled={lk(me)}
-          onChange={(e) => set(me.id, "isThuNghiem", e.target.checked)} />
-      ),
+      render: (_, me) => {
+        const pcnLocked = me.trangThaiPCN != null;
+        const rowLocked = lk(me);
+        if (pcnLocked && !rowLocked) {
+          // Khóa do PCN — giữ nguyên màu checkbox bình thường (không xám) để còn nhận biết
+          // đã tick hay chưa, chỉ chặn thao tác bằng pointer-events (bọc span để Tooltip vẫn hover được).
+          return (
+            <Tooltip title="Mẻ đã có Xác nhận/Không xác nhận PCN ở máy đúc — Reset xác nhận PCN trước khi đổi" placement="right">
+              <span style={{ display: "inline-block" }}>
+                <Checkbox
+                  checked={!!get(me, "isThuNghiem")}
+                  style={{ pointerEvents: "none" }}
+                  tabIndex={-1}
+                  onChange={() => {}}
+                />
+              </span>
+            </Tooltip>
+          );
+        }
+        return (
+          <Checkbox checked={!!get(me, "isThuNghiem")}
+            disabled={rowLocked}
+            onChange={(e) => set(me.id, "isThuNghiem", e.target.checked)} />
+        );
+      },
     },
     { title: "Máy đúc",   dataIndex: "tenMayDucDich", width: 90, render: (v) => <Input size="small" style={{ width: 84 }} value={v ?? ""} disabled /> },
+    ...(showChuyenMeCols ? [
+      {
+        title: "Chuyển mẻ", key: "chuyenVeMeId", width: 150,
+        onCell: (me: HRC1_MeThepVm) => {
+          const editedVal = edits[me.id]?.chuyenVeMeId;
+          const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
+          return effectiveId != null && effectiveId !== me.id ? { style: { background: "#fffbe6" } } : {};
+        },
+        render: (_: unknown, me: HRC1_MeThepVm) => {
+          if (me.dichChuyen !== "len_thang") return "—";
+          return (
+            <ChuyenMeCell
+              serverMaMe={me.chuyenVeMaMe ?? null}
+              ownMaMe={me.maMe ?? null}
+              locked={lk(me)}
+              onSet={(mid) => set(me.id, "chuyenVeMeId", mid)}
+            />
+          );
+        },
+      },
+      {
+        title: "Máy đúc chuyển", key: "tenMayDucChuyen", width: 110,
+        onCell: (me: HRC1_MeThepVm) => {
+          const editedVal = edits[me.id]?.chuyenVeMeId;
+          const effectiveId = editedVal !== undefined ? editedVal : me.chuyenVeMeId;
+          return effectiveId != null && effectiveId !== me.id ? { style: { background: "#fffbe6" } } : {};
+        },
+        render: (_: unknown, me: HRC1_MeThepVm) => {
+          if (me.dichChuyen !== "len_thang") return "—";
+          const editedChuyen = edits[me.id]?.chuyenVeMeId;
+          const effectiveChuyenId = editedChuyen !== undefined ? editedChuyen : me.chuyenVeMeId;
+          const isSelf = effectiveChuyenId == null || effectiveChuyenId === me.id;
+          return isSelf ? (me.tenMayDucDich ?? "—") : (me.tenMayDucChuyen ?? "—");
+        },
+      },
+    ] as TableColumnsType<HRC1_MeThepVm> : []),
     { title: "Phân loại", dataIndex: "phanLoai",      width: 80, render: (v) => <Input size="small" style={{ width: 74 }} value={v ?? ""} disabled /> },
     { title: "Mác BKMIS", dataIndex: "macThepBKMIS",  width: 110, render: (v) => <Input size="small" style={{ width: 110 }} value={v ?? ""} disabled /> },
     {
@@ -560,7 +647,10 @@ export const LoThoiPanel = ({
     { title: "Ghi chú đúc", key: "ghiChuDuc", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
   ];
 
-  const isLocked = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiLo ?? 0) >= 1 || !!me.isGhost;
+  // Đúc "xác nhận" chỉ là trạng thái tạm (còn "Hủy xác nhận" được) — không khóa lò thổi ở bước này.
+  // Chỉ khi mẻ đã CHỐT (isChot, khóa vĩnh viễn) mới thực sự cấm nhập/lưu. Khớp với klLan3Locked bên dưới
+  // (readOnly || isChot) và với guard IsChot ở BE UpdateMeAsync.
+  const isLocked = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiLo ?? 0) >= 1 || !!me.isGhost || me.trangThaiDuc === 1;
   const columns = buildColumns(isLocked);
 
   // Merge edits vào từng row để rc-table nhận biết thay đổi và re-render cell klThepLong
@@ -582,10 +672,19 @@ export const LoThoiPanel = ({
 
   return (
     <>
+      <div style={{ marginBottom: 6, textAlign: "right" }}>
+        <Button
+          size="small"
+          icon={showChuyenMeCols ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+          onClick={() => setShowChuyenMeCols((v) => !v)}
+        >
+          {showChuyenMeCols ? "Ẩn cột chuyển mẻ" : "Hiện cột chuyển mẻ"}
+        </Button>
+      </div>
       <MeThepTable
         columns={columns}
         dataSource={displayData}
-        scrollX={1850}
+        scrollX={showChuyenMeCols ? 2110 : 1850}
         scrollY="calc(100vh - 207px)"
         onRow={(me) => ({
           style: me.isGhost ? { background: "#fff7e6", opacity: 0.85 } : undefined,
@@ -619,6 +718,10 @@ export const TinhLuyenPanel = ({
 }) => {
   const [edits, setEdits] = useState<Record<number, Partial<HRC1_TinhLuyenUpdateRequest>>>({});
   const [saving, setSaving] = useState(false);
+
+  // Mỗi lần phieuData được nạp lại từ server (mở lại phiếu, "Làm mới", đổi TL...) phải bỏ các
+  // edit cục bộ chưa lưu — nếu không, edits cũ sẽ tiếp tục đè lên dữ liệu mới nhất khi render.
+  useEffect(() => { setEdits({}); }, [phieuData]);
   const [selectedHuyNhan, setSelectedHuyNhan] = useState<number[]>([]);
   const [huyNhanBusy, setHuyNhanBusy] = useState(false);
   const [choNhanRefreshKey, setChoNhanRefreshKey] = useState(0);
@@ -936,6 +1039,10 @@ export const TinhLuyenPanel = ({
         </Space>
       ),
     },
+    {
+      title: "Tình trạng PCN", key: "tinhTrangPCN", width: 90, fixed: "left",
+      render: (_, me) => tinhTrangPCNTag(me),
+    },
     { title: "Mẻ thổi",   dataIndex: "maMe",    width: 90, fixed: "left", render: (v) => v ?? "" },
     {
       title: "Thùng số", key: "thungSo", width: 40,
@@ -1179,7 +1286,6 @@ export const TinhLuyenPanel = ({
   if (!readOnly && !tlSo) return (
     <Empty description="Chọn tinh luyện để xem và nhận mẻ" style={{ padding: "40px 0" }} />
   );
-
   return (
     <Row gutter={16} align="top" style={{ flexWrap: "nowrap" }}>
       {/* Trái: Mẻ chờ nhận */}
@@ -1279,10 +1385,14 @@ export const DucPanel = ({
     [phieuData.danhSachMe, phieuData.ca, phieuData.ngaySX]
   );
 
-  const batchAction = useCallback(async (fn: () => Promise<unknown>) => {
-    if (selected.length === 0) { message.warning("Chưa chọn mẻ nào"); return; }
-    try { await fn(); setSelected([]); await onReload(); }
-    catch (e: any) { message.error(e?.message ?? "Lỗi thao tác"); }
+  const batchAction = useCallback(async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
+    if (selected.length === 0) { message.warning("Chưa chọn mẻ nào"); return undefined; }
+    try {
+      const res = await fn();
+      setSelected([]);
+      await onReload();
+      return res;
+    } catch (e: any) { message.error(e?.message ?? "Lỗi thao tác"); return undefined; }
   }, [selected, onReload]);
 
   // vùng 4 (chốt only): chọn mẻ đã xác nhận (trangThaiDuc >= 1), kể cả đã chốt (cho hủy chốt)
@@ -1326,11 +1436,20 @@ export const DucPanel = ({
               title={`Xác nhận ${selected.length} mẻ?`}
               disabled={selected.length === 0}
               onConfirm={async () => {
-              await batchRef.current?.(async () => {
-                await HRC1Api.xacNhanDuc(selected);
-              });
-
-              message.success("Đã xác nhận");
+              const result = await batchRef.current?.(() => HRC1Api.xacNhanDuc(selected));
+              if (!result) return;
+              // BE re-check điều kiện ngay lúc ghi DB — mẻ có thể vừa bị LT/TL xóa dữ liệu bắt buộc
+              // sau khi FE đã load, nên dù checkbox đang bật vẫn có thể rơi vào thatBai. onReload() ở
+              // batchAction đã tải lại dữ liệu mới nhất, chỉ cần báo cho user biết mẻ nào không xác nhận được.
+              if (result.thatBai.length > 0) {
+                message.warning(
+                  `Không xác nhận được ${result.thatBai.length} mẻ do thiếu dữ liệu (đã tải lại dữ liệu mới nhất): ` +
+                  result.thatBai.map((t) => `${t.maMe || "?"} (${t.lyDo.join(", ")})`).join("; ")
+                );
+              }
+              if (result.thanhCong.length > 0) {
+                message.success(`Đã xác nhận ${result.thanhCong.length} mẻ`);
+              }
             }}
             >
               <Button type="primary" disabled={selected.length === 0}>
@@ -1352,7 +1471,7 @@ export const DucPanel = ({
                 Hủy xác nhận ({selected.length})
               </Button>
             </Popconfirm>
-            
+
           </>
         )}
         {canChot && (
@@ -1386,6 +1505,8 @@ export const DucPanel = ({
                     idMayDuc
                   }).then(() => {
                     message.success("Đã chốt");
+                  }).catch((e: any) => { 
+                    message.error(e ?? "Lỗi chốt mẻ");
                   })
                 );
               }}
@@ -1417,7 +1538,7 @@ export const DucPanel = ({
         )}
       </Space>
     );
-  }, [onExtraChange, readOnly, canXacNhan, canChot, selected.length, idMayDuc, phieuData.idPhieu]);
+  }, [onExtraChange, readOnly, canXacNhan, canChot, selected, idMayDuc, phieuData.idPhieu]);
 
   const columns: TableColumnsType<HRC1_MeThepVm> = [
     {
@@ -1441,7 +1562,7 @@ export const DucPanel = ({
         }
 
         if (me.isChot)
-          return <Tooltip title="Mẻ đã chốt, không thể thao tác"><Checkbox disabled /></Tooltip>;
+          return <Tooltip title="Mẻ đã chốt, không thể thao tác" placement="right"><Checkbox disabled /></Tooltip>;
         const missing = checkDucReady(me);
         if (missing.length > 0 && (me.trangThaiDuc ?? 0) < 1)
           return <Tooltip title={`Thiếu: ${missing.join(", ")}`} placement="right"><Checkbox disabled /></Tooltip>;
@@ -1461,6 +1582,10 @@ export const DucPanel = ({
           )} */}
         </Space>
       ),
+    },
+    {
+      title: "Tình trạng PCN", key: "tinhTrangPCN", width: 90, fixed: "left",
+      render: (_, me) => tinhTrangPCNTag(me),
     },
     { title: "Mẻ thổi",  dataIndex: "maMe",         width: 90, fixed: "left", render: (v) => v ?? "" },
     { title: "Thùng số", dataIndex: "thungSo",      width: 50, render: (v) => v ?? "" },
@@ -1511,7 +1636,10 @@ export const DucPanel = ({
     { title: "Người sửa cuối", dataIndex: "tenCapNhatBoi", width: 150, render: (v) => v ?? "-" },
     {
       title: "Ghi chú đúc", key: "ghiChuDuc", width: 90,
-      render: (_, me) => <GhiChuInput meId={me.id} value={me.ghiChuDuc} locked={readOnly || !!me.isChot} field="duc" />,
+      render: (_, me) => (
+        <GhiChuInput meId={me.id} value={me.ghiChuDuc}
+          locked={readOnly || !!me.isChot || !(canXacNhan || canChot)} field="duc" />
+      ),
     },
     { title: "Ghi chú LT", key: "ghiChuLo2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo ?? "" },
     { title: "Ghi chú TL", key: "ghiChuTL2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuTL ?? "" },
@@ -1522,7 +1650,7 @@ export const DucPanel = ({
       <MeThepTable
         columns={columns}
         dataSource={sortedMes}
-        scrollX={1870}
+        scrollX={1934}
         scrollY={tableScrollY}
         onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
         summary={(pageData) => {
@@ -1531,22 +1659,22 @@ export const DucPanel = ({
           return (
             <Table.Summary fixed>
               <Table.Summary.Row>
-                {/* fixed-left: chk / STT / tinhTrang / maMe */}
-                <Table.Summary.Cell index={0} colSpan={4}>
+                {/* fixed-left: chk / STT / tinhTrang / tinhTrangPCN / maMe */}
+                <Table.Summary.Cell index={0} colSpan={5}>
                   <strong>Tổng</strong>
                 </Table.Summary.Cell>
                 {/* thungSo → klLan3 (6 cols) */}
-                <Table.Summary.Cell index={4} colSpan={6} />
+                <Table.Summary.Cell index={5} colSpan={6} />
                 {/* klThepLong */}
-                <Table.Summary.Cell index={10}>
+                <Table.Summary.Cell index={11}>
                   <strong>{total}</strong>
                 </Table.Summary.Cell>
                 {/* klThepLongChot */}
-                <Table.Summary.Cell index={11}>
+                <Table.Summary.Cell index={12}>
                   <strong>{totalChot > 0 ? totalChot : ""}</strong>
                 </Table.Summary.Cell>
                 {/* remaining 11 cols */}
-                <Table.Summary.Cell index={12} colSpan={11} />
+                <Table.Summary.Cell index={13} colSpan={11} />
               </Table.Summary.Row>
             </Table.Summary>
           );
@@ -1581,8 +1709,9 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
   const [tlSo,  setTlSo]  = useState<number | null>(null);
   const [allowedLoScopes,  setAllowedLoScopes]  = useState<number[]>([]);
   const [allowedTLScopes,  setAllowedTLScopes]  = useState<number[]>([]);
-  const [hasQuyenXacNhanBBGN, setHasQuyenXacNhanBBGN] = useState(false);
-  const [hasQuyenChotBBGN,    setHasQuyenChotBBGN]    = useState(false);
+  // Quyền của user cho HRC1_BBGN_ThepLong theo từng scope (maKhuVuc = TSC/Đúc); lọc theo
+  // scope của phiếu đang xem ở dưới (useMemo) — không được suy ra true/false 1 lần cho mọi scope.
+  const [bbgnQuyenRows, setBbgnQuyenRows] = useState<Array<{ maKhuVuc: string; quyenChucNang: number }>>([]);
 
   const isPKHAdmin = useMemo(() => {
     const u = getThongTinUser();
@@ -1611,14 +1740,26 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
         .filter((n) => n > 0 && n <= 5);
       setAllowedLoScopes([...new Set(loScopes)].sort());
       setAllowedTLScopes([...new Set(tlScopes)].sort());
-      setHasQuyenXacNhanBBGN(
-        list.some((r) => r.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong && Number(r.quyenChucNang) === 2)
-      );
-      setHasQuyenChotBBGN(
-        list.some((r) => r.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong && Number(r.quyenChucNang) === 3)
+      setBbgnQuyenRows(
+        list
+          .filter((r) => r.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)
+          .map((r) => ({ maKhuVuc: String(r.maKhuVuc ?? ""), quyenChucNang: Number(r.quyenChucNang) }))
       );
     }).catch(() => {/* ignore permission load errors */});
   }, []);
+
+  // Scope (máy đúc) của phiếu đang xem — quyền phải khớp đúng scope này, hoặc "ALL"
+  const bbgnScope = phieuData?.scope != null ? String(phieuData.scope) : null;
+  const hasQuyenForScope = useCallback(
+    (quyenChucNang: number) =>
+      bbgnScope != null &&
+      bbgnQuyenRows.some(
+        (r) => r.quyenChucNang === quyenChucNang && (r.maKhuVuc === "ALL" || r.maKhuVuc === bbgnScope)
+      ),
+    [bbgnQuyenRows, bbgnScope]
+  );
+  const hasQuyenXacNhanBBGN = hasQuyenForScope(2);
+  const hasQuyenChotBBGN = hasQuyenForScope(3);
 
   // ── Load nội dung 1 phiếu ────────────────────────────────────────────────────
   const loadPhieu = useCallback(async (
@@ -1868,7 +2009,7 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
                 onReload={handleReload}
                 onExtraChange={setCardExtra}
                 canXacNhan={hasQuyenXacNhanBBGN}
-                canChot={isPKHAdmin || hasQuyenChotBBGN}
+                canChot={hasQuyenChotBBGN}
               />
             )}
           </Card>

@@ -35,10 +35,22 @@ interface TableRow {
   [key: string]: any;
 }
 
-// Lò cao 5 & 6 không có ts0 (số mẻ từ SCADA) → tự sinh soMe = thứ tự dòng (1-based)
-function applyAutoSoMe(rows: TableRow[], scopeId: any): TableRow[] {
-  if (![5, 6].includes(Number(scopeId))) return rows;
-  return rows.map((r, i) => ({ ...r, soMe: i + 1 }));
+// soMe ưu tiên lấy TS0 từ SCADA (nếu có); nếu TS0 null (lò chưa có tag TS0,
+// hoặc SCADA chưa trả dữ liệu) → tự sinh soMe = thứ tự dòng (1-based)
+function applyAutoSoMe(rows: TableRow[]): TableRow[] {
+  return rows.map((row, index) => {
+    const soMe = row.soMe;
+
+    return {
+      ...row,
+      soMe:
+        soMe !== null &&
+        soMe !== undefined &&
+        soMe !== ""
+          ? soMe // Có TS0 -> dùng TS0
+          : index + 1 // Không có TS0 -> tự sinh
+    };
+  });
 }
 
 const TaoPhieuNapLieuLoCao = () => {
@@ -70,6 +82,8 @@ const TaoPhieuNapLieuLoCao = () => {
   const [siloSnapshotOpen, setSiloSnapshotOpen] = useState(false);
   const [siloSnapshotData, setSiloSnapshotData] = useState<LGNLSiloSnapshotDto[]>([]);
   const [siloSnapshotLoading, setSiloSnapshotLoading] = useState(false);
+  const [historyData, setHistoryData] = useState<LGNLMappingDto[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [mapDraftBySilo, setMapDraftBySilo] = useState<Record<number, number | null>>({});
   const [mapNoteBySilo, setMapNoteBySilo] = useState<Record<number, string>>({});
   const [mapSavingSiloId, setMapSavingSiloId] = useState<number | null>(null);
@@ -172,7 +186,12 @@ const TaoPhieuNapLieuLoCao = () => {
           rowMap.get(t)![String(item.idNVL)] = item.giaTri != null ? parseFloat(Number(item.giaTri).toFixed(3)) : null;
         }
         const rows = Array.from(rowMap.values());
-        setTableData(applyAutoSoMe(rows, scope));
+        // Giữ lại các dòng người dùng vừa thêm tay (_isNewRow) mà chưa kịp Lưu —
+        // nếu không sẽ bị mất vì DB chưa có bản ghi nào cho dòng này để tải lại.
+        setTableData((prev) => {
+          const unsavedNewRows = prev.filter((r) => r._isNewRow);
+          return applyAutoSoMe([...rows, ...unsavedNewRows]);
+        });
 
         const restoredDoAm: Record<string, number> = {};
         for (const item of chiTietList) {
@@ -228,7 +247,12 @@ const TaoPhieuNapLieuLoCao = () => {
           }
           return { key: row?.id ?? `row-${index}`, thoiGianNapLieu, ...rounded };
         });
-        setTableData(applyAutoSoMe(rows, scope));
+        // Giữ lại các dòng người dùng vừa thêm tay (_isNewRow) — phiếu chưa lưu nên
+        // chưa có DB nào lưu dòng này, tải lại sẽ mất nếu không merge vào đây.
+        setTableData((prev) => {
+          const unsavedNewRows = prev.filter((r) => r._isNewRow);
+          return applyAutoSoMe([...rows, ...unsavedNewRows]);
+        });
 
         if (rows.length > 0) {
           message.success(`Cập nhật dữ liệu thành công! Có ${rows.length} bản ghi`);
@@ -264,6 +288,64 @@ const TaoPhieuNapLieuLoCao = () => {
     }
   }, []);
 
+  // Lấy toàn bộ các lần cấu hình/đổi NVL (mỗi ThoiDiemBD là một mốc) cho ngày/ca/lò cao
+  // đang xem — để hiển thị lịch sử đổi NVL, khác với snapshot chỉ trả về mốc đang hiệu lực.
+  const refreshHistoryData = useCallback(async (ngay: string, idCa: number, idLoCao: number) => {
+    setHistoryLoading(true);
+    try {
+      const res = await lgnlMappingApi.getList({ ngay, idCa, idLoCao });
+      setHistoryData(Array.isArray(res) ? res : []);
+    } catch {
+      message.error("Không thể tải lịch sử đổi NVL");
+      setHistoryData([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  // Lõi sao chép mapping — dùng chung cho nút bấm tay và luồng tự động
+  // (khi Kiểm tra Silo phát hiện ngày/ca hiện tại chưa có mapping nào).
+  // BE tự lùi qua các ca trước cho đến khi tìm được ca gần nhất có mapping
+  // (không chỉ đúng 1 ca liền kề) — xem LGNLController.CopyMappingFromPreviousShift.
+  const copyMappingFromPreviousShift = useCallback(
+    async (ngay: string, caNum: number, scopeNum: number) => {
+      try {
+        setCopyMappingLoading(true);
+
+        const result = await lgnlMappingApi.copyFromPreviousShift({
+          idLoCao: scopeNum,
+          ngay,
+          idCa: caNum,
+        });
+
+        if (!result.found) {
+          message.info(result.message);
+          return;
+        }
+        if (result.totalToCreate === 0) {
+          message.info(result.message);
+          return;
+        }
+        message.success(result.message);
+
+        const refreshed = await refreshSnapshotData(ngay, caNum, scopeNum);
+        const nextDrafts: Record<number, number | null> = {};
+        const nextNotes: Record<number, string> = {};
+        refreshed.forEach((item) => {
+          nextDrafts[item.idSiLo] = item.idNVL ?? null;
+          nextNotes[item.idSiLo] = "";
+        });
+        setMapDraftBySilo(nextDrafts);
+        setMapNoteBySilo(nextNotes);
+      } catch {
+        message.error("Lỗi khi sao chép mapping ca trước");
+      } finally {
+        setCopyMappingLoading(false);
+      }
+    },
+    [refreshSnapshotData]
+  );
+
   const handleKiemTraSilo = useCallback(async () => {
     const ngaySXValue = form.getFieldValue("NgaySX");
     if (!scope || !ca || !ngaySXValue) {
@@ -290,7 +372,16 @@ const TaoPhieuNapLieuLoCao = () => {
     lgnlNhomNvlApi.getList()
       .then((res) => setNhomNvlOptions(Array.isArray(res) ? res : []))
       .catch(() => setNhomNvlOptions([]));
-  }, [form, scope, ca, refreshSnapshotData]);
+    refreshHistoryData(ngay, caNum, Number(scope));
+
+    // Ngày/ca hiện tại chưa có mapping nào → tự động sao chép từ ca trước,
+    // không cần người dùng bấm nút "Sao chép Ca trước". Nút bấm tay vẫn giữ
+    // nguyên để dùng lại khi luồng tự động gặp lỗi hoặc cần sao chép lại.
+    if (snapshot.length === 0) {
+      await copyMappingFromPreviousShift(ngay, caNum, Number(scope));
+      await refreshHistoryData(ngay, caNum, Number(scope));
+    }
+  }, [form, scope, ca, refreshSnapshotData, refreshHistoryData, copyMappingFromPreviousShift]);
 
   const handleOpenCreateNvl = useCallback(async () => {
     if (!scope) {
@@ -344,7 +435,7 @@ const TaoPhieuNapLieuLoCao = () => {
     }
   }, [createNvlForm, scope]);
 
-  const handleCopyFromPreviousShift = useCallback(async () => {
+  const handleCopyFromPreviousShift = useCallback(() => {
     const ngaySXValue = form.getFieldValue("NgaySX");
     if (!scope || !ca || !ngaySXValue) {
       message.warning("Vui lòng chọn Lò cao, Ca và Ngày sản xuất trước");
@@ -352,77 +443,15 @@ const TaoPhieuNapLieuLoCao = () => {
     }
     const ngay = ngaySXValue?.format ? ngaySXValue.format("YYYY-MM-DD") : String(ngaySXValue);
     const caNum = Number(ca);
-    const prevCa = caNum === 1 ? 2 : 1;
-    const prevNgay = caNum === 1 ? dayjs(ngay).subtract(1, "day").format("YYYY-MM-DD") : ngay;
 
     Modal.confirm({
       title: "Sao chép mapping ca trước",
-      content: `Sao chép toàn bộ mapping từ Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")} (cùng Lò cao) sang Ca ${caNum}? Các Silo đã map ở ca hiện tại sẽ bị bỏ qua.`,
+      content: `Sao chép toàn bộ mapping từ ca liền kề (cùng Lò cao) sang Ca ${caNum}? Nếu ca liền kề chưa có mapping, hệ thống sẽ tự động lùi về ca gần nhất đã có mapping. Các Silo đã map ở ca hiện tại sẽ bị bỏ qua.`,
       okText: "Xác nhận",
       cancelText: "Hủy",
-      onOk: async () => {
-        try {
-          setCopyMappingLoading(true);
-          const prevSnapshotRaw = await lgnlMappingApi.getSnapshotSilo({
-            ngay: prevNgay,
-            idCa: prevCa,
-            idLoCao: Number(scope),
-          });
-          const prevSnapshot: LGNLSiloSnapshotDto[] = Array.isArray(prevSnapshotRaw) ? prevSnapshotRaw : [];
-          const mappedPrev = prevSnapshot.filter((item: LGNLSiloSnapshotDto) => item.idNVL != null);
-          if (mappedPrev.length === 0) {
-            message.info(`Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")} chưa có mapping nào để sao chép`);
-            return;
-          }
-          // Lấy snapshot ca hiện tại để biết Silo nào đã map rồi
-          const currentSnapshotRaw = await lgnlMappingApi.getSnapshotSilo({
-            ngay,
-            idCa: caNum,
-            idLoCao: Number(scope),
-          });
-          const currentSnapshot: LGNLSiloSnapshotDto[] = Array.isArray(currentSnapshotRaw) ? currentSnapshotRaw : [];
-          const alreadyMappedIds = new Set(
-            currentSnapshot.filter((item: LGNLSiloSnapshotDto) => item.idNVL != null).map((item: LGNLSiloSnapshotDto) => item.idSiLo)
-          );
-          const toCreate = mappedPrev.filter((item: LGNLSiloSnapshotDto) => !alreadyMappedIds.has(item.idSiLo));
-          if (toCreate.length === 0) {
-            message.info("Tất cả Silo đã được map ở ca hiện tại, không cần sao chép");
-            return;
-          }
-          let successCount = 0;
-          for (const item of toCreate) {
-            try {
-              await lgnlMappingApi.create({
-                ngay,
-                idCa: caNum,
-                idLoCao: Number(scope),
-                idSiLo: item.idSiLo,
-                idNVL: item.idNVL!,
-                ghiChu: null,
-              });
-              successCount++;
-            } catch {
-              // bỏ qua lỗi từng item, tiếp tục
-            }
-          }
-          message.success(`Đã sao chép ${successCount}/${toCreate.length} mapping từ Ca ${prevCa} ngày ${dayjs(prevNgay).format("DD/MM/YYYY")}`);
-          const refreshed = await refreshSnapshotData(ngay, caNum, Number(scope));
-          const nextDrafts: Record<number, number | null> = {};
-          const nextNotes: Record<number, string> = {};
-          refreshed.forEach((item) => {
-            nextDrafts[item.idSiLo] = item.idNVL ?? null;
-            nextNotes[item.idSiLo] = "";
-          });
-          setMapDraftBySilo(nextDrafts);
-          setMapNoteBySilo(nextNotes);
-        } catch {
-          message.error("Lỗi khi sao chép mapping ca trước");
-        } finally {
-          setCopyMappingLoading(false);
-        }
-      },
+      onOk: () => copyMappingFromPreviousShift(ngay, caNum, Number(scope)),
     });
-  }, [form, scope, ca, refreshSnapshotData]);
+  }, [form, scope, ca, copyMappingFromPreviousShift]);
 
   const handleOpenAddMapping = useCallback(async () => {
     const ngaySXValue = form.getFieldValue("NgaySX");
@@ -484,13 +513,14 @@ const TaoPhieuNapLieuLoCao = () => {
       });
       setMapDraftBySilo(nextDrafts);
       setMapNoteBySilo(nextNotes);
+      await refreshHistoryData(ngay, Number(ca), Number(scope));
     } catch (err: any) {
       if (err?.errorFields) return;
       message.error("Lỗi khi thêm mapping");
     } finally {
       setAddMappingLoading(false);
     }
-  }, [addMappingForm, form, scope, ca, refreshSnapshotData]);
+  }, [addMappingForm, form, scope, ca, refreshSnapshotData, refreshHistoryData]);
 
   const handleMapSiloNVL = useCallback(async (row: LGNLSiloSnapshotDto) => {
     const idNVL = mapDraftBySilo[row.idSiLo];
@@ -570,12 +600,13 @@ const TaoPhieuNapLieuLoCao = () => {
       });
       setMapDraftBySilo(nextDrafts);
       setMapNoteBySilo(nextNotes);
+      await refreshHistoryData(ngay, Number(ca), Number(scope));
     } catch {
       message.error("Lỗi khi lưu mapping Silo - NVL");
     } finally {
       setMapSavingSiloId(null);
     }
-  }, [mapDraftBySilo, mapNoteBySilo, form, scope, ca, refreshSnapshotData]);
+  }, [mapDraftBySilo, mapNoteBySilo, form, scope, ca, refreshSnapshotData, refreshHistoryData]);
 
   const handleOpenDoiNVL = useCallback((row: LGNLSiloSnapshotDto) => {
     setDoiNVLRow(row);
@@ -602,15 +633,16 @@ const TaoPhieuNapLieuLoCao = () => {
       });
       message.success("Đổi NVL thành công");
       setDoiNVLOpen(false);
-      // Làm mới snapshot sau khi đổi
+      // Làm mới snapshot + lịch sử sau khi đổi
       await refreshSnapshotData(ngay, Number(ca), Number(scope));
+      await refreshHistoryData(ngay, Number(ca), Number(scope));
     } catch (err: any) {
       if (err?.errorFields) return;
       message.error("Lỗi khi đổi NVL");
     } finally {
       setDoiNVLLoading(false);
     }
-  }, [doiNVLRow, doiNVLForm, form, scope, ca, refreshSnapshotData]);
+  }, [doiNVLRow, doiNVLForm, form, scope, ca, refreshSnapshotData, refreshHistoryData]);
 
   const handleUndoDoiNVL = useCallback((row: LGNLSiloSnapshotDto) => {
     const ngaySXValue = form.getFieldValue("NgaySX");
@@ -648,6 +680,7 @@ const TaoPhieuNapLieuLoCao = () => {
           });
           setMapDraftBySilo(nextDrafts);
           setMapNoteBySilo(nextNotes);
+          await refreshHistoryData(ngay, Number(ca), Number(scope));
         } catch {
           message.error("Lỗi khi hoàn tác đổi NVL");
         } finally {
@@ -655,7 +688,7 @@ const TaoPhieuNapLieuLoCao = () => {
         }
       },
     });
-  }, [form, scope, ca, refreshSnapshotData]);
+  }, [form, scope, ca, refreshSnapshotData, refreshHistoryData]);
 
   const initData = useCallback(async () => {
     try {
@@ -767,7 +800,7 @@ const TaoPhieuNapLieuLoCao = () => {
                 }
                 rowMap.get(thuTu)![String(item.idNVL)] = item.giaTri != null ? parseFloat(Number(item.giaTri).toFixed(3)) : null;
               }
-              setTableData(applyAutoSoMe(Array.from(rowMap.values()), normalizedData.scope));
+              setTableData(applyAutoSoMe(Array.from(rowMap.values())));
 
               // Restore doAmMap từ chi tiết (lấy DoAm từ bất kỳ record nào của mỗi NVL)
               const restoredDoAm: Record<string, number> = {};
@@ -778,13 +811,13 @@ const TaoPhieuNapLieuLoCao = () => {
               }
               setDoAmMap(restoredDoAm);
             } else {
-              setTableData(applyAutoSoMe(formValues.table1 || [], normalizedData.scope));
+              setTableData(applyAutoSoMe(formValues.table1 || []));
               // Fallback: restore doAm từ JSON nếu có
               if (data.doAm && typeof data.doAm === "object")
                 setDoAmMap(data.doAm as Record<string, number>);
             }
           } catch {
-            setTableData(applyAutoSoMe(formValues.table1 || [], normalizedData.scope));
+            setTableData(applyAutoSoMe(formValues.table1 || []));
           }
           setPhieuInfo({
             tinhTrang,
@@ -903,6 +936,7 @@ const TaoPhieuNapLieuLoCao = () => {
       currentUserTenNgan: userInfo.tenNgan ?? null,
       nguoiTaoId: phieuInfo.nguoiTaoId ?? null,
       phieuPhongBanId: phieuInfo.idphongBan ?? null,
+      phieuMaBm: config.code,
       pheDuyet: phieuInfo.pheDuyet ?? [],
       onStatusChange: handleStatusChange,
       onSuccess: handleActionSuccess,
@@ -911,7 +945,7 @@ const TaoPhieuNapLieuLoCao = () => {
 
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess]);
+  }, [getUserInfo, idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, config.code]);
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -1196,6 +1230,43 @@ const TaoPhieuNapLieuLoCao = () => {
                   </>
                 ),
               },
+              {
+                key: "lich-su-doi-nvl",
+                label: "Lịch sử đổi NVL",
+                children: (
+                  <Table
+                    size="small"
+                    bordered
+                    loading={historyLoading}
+                    dataSource={[...historyData].sort((a, b) => {
+                      const siloCompare = (a.tenSiLo ?? "").localeCompare(b.tenSiLo ?? "");
+                      if (siloCompare !== 0) return siloCompare;
+                      const aTime = a.thoiDiemBD ? new Date(a.thoiDiemBD).getTime() : -Infinity;
+                      const bTime = b.thoiDiemBD ? new Date(b.thoiDiemBD).getTime() : -Infinity;
+                      return aTime - bTime;
+                    })}
+                    rowKey="id"
+                    pagination={false}
+                    locale={{ emptyText: "Chưa có lịch sử đổi NVL cho ngày/ca này" }}
+                    columns={[
+                      { title: "STT", key: "stt", width: 50, align: "center", render: (_v: unknown, _r: unknown, i: number) => i + 1 },
+                      { title: "Silo", dataIndex: "tenSiLo", key: "tenSiLo", width: 160, render: (v: string | null) => v ?? "—" },
+                      { title: "NVL", dataIndex: "tenNVL", key: "tenNVL", width: 200, render: (v: string | null) => v ?? "—" },
+                      {
+                        title: "Hiệu lực từ", dataIndex: "thoiDiemBD", key: "thoiDiemBD", width: 160, align: "center",
+                        render: (v: string | null) => v
+                          ? <Tag color="orange">{dayjs(v).format("DD/MM/YYYY HH:mm")}</Tag>
+                          : <Tag color="blue">Đầu ca</Tag>,
+                      },
+                      { title: "Ghi chú", dataIndex: "ghiChu", key: "ghiChu", render: (v: string | null) => v ?? "" },
+                      {
+                        title: "Ngày cấu hình", dataIndex: "ngayTao", key: "ngayTao", width: 150, align: "center",
+                        render: (v: string | null) => v ? dayjs(v).format("DD/MM/YYYY HH:mm") : "—",
+                      },
+                    ]}
+                  />
+                ),
+              },
             ]}
           />
         </Modal>
@@ -1293,7 +1364,7 @@ const TaoPhieuNapLieuLoCao = () => {
             tableConfig={tableConfig}
             materialColumnsOverride={materialColumnsOverride}
             initialData={tableData}
-            onDataChange={(rows) => setTableData(applyAutoSoMe(rows as TableRow[], scope))}
+            onDataChange={(rows) => setTableData(applyAutoSoMe(rows as TableRow[]))}
             loading={loading}
             editable={!isFormLocked}
             showAddButton={!isFormLocked}
@@ -1301,7 +1372,6 @@ const TaoPhieuNapLieuLoCao = () => {
             minRows={0}
             initialDoAmMap={doAmMap}
             onDoAmChange={setDoAmMap}
-            readonlyFields={[5, 6].includes(Number(scope)) ? ["soMe"] : []}
           />
         )}
 

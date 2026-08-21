@@ -39,10 +39,13 @@ export interface HRC1_MeThepVm {
   idMacThep?: number | null;
   ghiChuTL?: string | null;
   ghiChuDuc?: string | null;
+  ghiChuPCN?: string | null;
   // Trạng thái
   trangThaiLo?: number | null;
   trangThaiTL?: number | null;
   trangThaiDuc?: number | null;
+  trangThaiPCN?: boolean | null;
+  trangThaiChotPCN?: boolean | null;
   // Lò thổi: TL đã nhận (scope TL; null = chưa nhận)
   soTinhLuyenNhan?: number | null;
   // Audit
@@ -134,6 +137,18 @@ export interface HRC1_ChotPhieuBatchResult {
   thatBai: HRC1_ChotPhieuBatchThatBai[];
 }
 
+// Mẻ không xác nhận đúc được vì BE re-check thấy thiếu dữ liệu (LT/TL vừa xóa field bắt buộc)
+export interface HRC1_DucXacNhanThatBai {
+  meId: number;
+  maMe: string;
+  lyDo: string[];
+}
+
+export interface HRC1_DucXacNhanResult {
+  thanhCong: number[];
+  thatBai: HRC1_DucXacNhanThatBai[];
+}
+
 // ── Thống kê types ──────────────────────────────────────────────────────────
 
 export interface HRC1_ExportQuery {
@@ -157,6 +172,10 @@ export interface HRC1_ExportQuery {
   tuNgayLoThoi?: string | null;
   denNgayLoThoi?: string | null;
   maMeChuyenVe?: string | null;
+  isThuNghiem?: boolean | null;
+  trangThaiPCN?: boolean | null;
+  isLenThang?: boolean | null;
+  chuaLenDuc?: boolean | null;
 }
 
 export interface HRC1_ThongKeQuery extends HRC1_ExportQuery {
@@ -181,7 +200,10 @@ export interface HRC1_ThongKeRow {
   ghiChuLo?: string | null;
   ghiChuTL?: string | null;
   ghiChuDuc?: string | null;
+  ghiChuPCN?: string | null;
   isThuNghiem?: boolean | null;
+  trangThaiPCN?: boolean | null;
+  trangThaiChotPCN?: boolean | null;
   tenMayDuc?: string | null;
   macThep?: string | null;
   phanLoai?: string | null;
@@ -249,6 +271,7 @@ export interface HRC1_LoThoiUpdateRequest {
   isThuNghiem?: boolean | null;
   isTrungMeThoi?: boolean | null;
   ghiChuLo?: string | null;
+  chuyenVeMeId?: number | null;  // chỉ áp dụng khi len_thang; null = không chuyển
 }
 
 export interface HRC1_TinhLuyenUpdateRequest {
@@ -309,14 +332,24 @@ export const HRC1Api = {
     apiService.post("/api/hrc1/tinh-luyen/huy-chuyen-ca-duc", { meId }, { headers: userHeaders() }),
 
   // Máy đúc
-  xacNhanDuc: (meIds: number[]) =>
-    apiService.post("/api/hrc1/duc/xac-nhan", { meIds }, { headers: userHeaders() }),
+  xacNhanDuc: (meIds: number[]): Promise<HRC1_DucXacNhanResult> =>
+    apiService.post("/api/hrc1/duc/xac-nhan", { meIds }, { headers: userHeaders() }) as Promise<HRC1_DucXacNhanResult>,
   boXacNhanDuc: (meIds: number[]) =>
     apiService.post("/api/hrc1/duc/bo-xac-nhan", { meIds }, { headers: userHeaders() }),
+  xacNhanPCN: (meIds: number[]) =>
+    apiService.post("/api/hrc1/duc/xac-nhan-pcn", { meIds }, { headers: userHeaders() }),
+  khongXacNhanPCN: (meIds: number[]) =>
+    apiService.post("/api/hrc1/duc/khong-xac-nhan-pcn", { meIds }, { headers: userHeaders() }),
+  resetXacNhanPCN: (meIds: number[]) =>
+    apiService.post("/api/hrc1/duc/reset-xac-nhan-pcn", { meIds }, { headers: userHeaders() }),
   chotMe: (req: { meIds: number[]; idPhieu: string; idMayDuc: number }) =>
     apiService.post("/api/hrc1/duc/chot-me", req, { headers: userHeaders() }),
   boChotMe: (req: { meIds: number[]; idPhieu: string; idMayDuc: number }) =>
     apiService.post("/api/hrc1/duc/bo-chot-me", req, { headers: userHeaders() }),
+  chotPCN: (meIds: number[]) =>
+    apiService.post("/api/hrc1/duc/chot-pcn", { meIds }, { headers: userHeaders() }),
+  boChotPCN: (meIds: number[]) =>
+    apiService.post("/api/hrc1/duc/bo-chot-pcn", { meIds }, { headers: userHeaders() }),
 
   // Đồng bộ mẻ thổi từ gang lỏng → trả về phiếu cập nhật
   syncLoThoi: (idPhieu: string, loSo: number): Promise<HRC1_PhieuDataVm> =>
@@ -340,8 +373,8 @@ export const HRC1Api = {
   xoaMeTay: (mePhanCongId: number): Promise<void> =>
     apiService.delete(`/api/hrc1/tinh-luyen/me-tay/${mePhanCongId}`, { headers: userHeaders() }),
 
-  // Ghi chú — auto-save on blur; field: "lo" | "tl" | "duc"
-  updateGhiChu: (meId: number, ghiChu: string | null, field: "lo" | "tl" | "duc") =>
+  // Ghi chú — auto-save on blur; field: "lo" | "tl" | "duc" | "pcn"
+  updateGhiChu: (meId: number, ghiChu: string | null, field: "lo" | "tl" | "duc" | "pcn") =>
     apiService.put(`/api/hrc1/me/${meId}/ghi-chu`, { ghiChu, field }, { headers: userHeaders() }),
 
   // Chốt / hủy chốt phiếu HRC1_BBGN_ThepLong theo batch (từ ThongKe P.KH)

@@ -4,7 +4,7 @@ export const BM_CONFIG = {
         HRC2_BB_NauLuyen_LF: 'HRC2_BB_NauLuyen_LF',
         HRC2_BB_NauLuyen_RH: 'HRC2_BB_NauLuyen_RH',
         HRC2_BBGN_ThepLong: 'HRC2_BBGN_ThepLong',
-        HRC2_BBGN_PhoiTam: 'HRC2_BBGN_PhoiTam',
+        HRC2_BBSL_PhoiTam: 'HRC2_BBSL_PhoiTam',
         HRC2_STD_NXT: 'HRC2_STD_NXT',
         THONGKE_HRC2: 'THONGKE_HRC2',
     },
@@ -26,6 +26,7 @@ export const BM_CONFIG = {
         HRC1_TinhLuyen: 'HRC1_TinhLuyen',            // phiếu tinh luyện (scope 1-5)
         HRC1_BB_GiaoNhanPhoiNhapKho: 'HRC1_BB_GiaoNhanPhoiNhapKho',
         HRC1_BB_Sanluongphoi: 'HRC1_BB_Sanluongphoi',
+        HRC1_BBSL_PhoiTam: 'HRC1_BBSL_PhoiTam',     // BB giao nhận phôi tấm HRC1
         THONGKE_HRC1: 'THONGKE_HRC1',
         HRC1_BB_TieuHao_BOF: 'HRC1_BB_TieuHao_BOF',
         HRC1_BB_TieuHao_LF: 'HRC1_BB_TieuHao_LF',
@@ -35,6 +36,7 @@ export const BM_CONFIG = {
         NMLG_BM_NapLieuLoCao: 'NMLG_BM_NapLieuLoCao',
         NMLG_BM_TonSiloLoCao: 'NMLG_BM_TonSiloLoCao',
         NMLG_NK_VHPTLC: 'NMLG_NK_VHPTLC',
+        NMLG_BM_PhanBoDuLieu: 'NMLG_BM_PhanBoDuLieu',
     },
     NL: {
         NL_BB_TheoDoiBenPhe: 'NL_BB_TheoDoiBenPhe',

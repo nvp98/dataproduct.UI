@@ -25,8 +25,9 @@ const ChiTietGN = () => {
   const [ducExtraControls, setDucExtraControls] = useState<ReactNode>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [hasQuyenXacNhan, setHasQuyenXacNhan] = useState(false); // quyenChucNang=2
-  const [hasQuyenChot, setHasQuyenChot] = useState(false);       // quyenChucNang=3
+  // Quyền của user cho HRC1_BBGN_ThepLong theo từng scope (maKhuVuc = TSC/Đúc) — lọc theo
+  // scope của phiếu đang xem, không suy ra true/false 1 lần cho mọi scope (nhất quán với TaoPhieuGN).
+  const [bbgnQuyenRows, setBbgnQuyenRows] = useState<Array<{ maKhuVuc: string; quyenChucNang: number }>>([]);
 
   const [loSo, setLoSo] = useState<number | null>(null);
   const [tlSo, setTlSo] = useState<number | null>(null);
@@ -36,9 +37,8 @@ const ChiTietGN = () => {
     return u.tenNgan === "P.KH" || u.iD_PhongBan === 70 || isAdminUser(u);
   }, []);
 
-  // Kiểm tra quyền một lần khi mount (không phụ thuộc scope phiếu, nhất quán với TaoPhieuGN)
+  // Kiểm tra quyền một lần khi mount
   useEffect(() => {
-    if (isPKHAdmin) { setHasQuyenChot(true); return; }
     const u = getThongTinUser();
     const userId = u.iD_TaiKhoan;
     if (!userId) return;
@@ -47,18 +47,28 @@ const ChiTietGN = () => {
       .then((res) => {
         if (cancelled) return;
         const arr: BmQuyenXlModel[] = Array.isArray(res) ? res : ((res as unknown as { data?: BmQuyenXlModel[] })?.data ?? []);
-        const match = (q: number) =>
-          arr.some(
-            (r) =>
-              r.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong &&
-              Number(r.quyenChucNang) === q
-          );
-        setHasQuyenXacNhan(match(2));
-        setHasQuyenChot(match(3));
+        setBbgnQuyenRows(
+          arr
+            .filter((r) => r.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)
+            .map((r) => ({ maKhuVuc: String(r.maKhuVuc ?? ""), quyenChucNang: Number(r.quyenChucNang) }))
+        );
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [isPKHAdmin]);
+  }, []);
+
+  // Scope (máy đúc) của phiếu đang xem — quyền phải khớp đúng scope này, hoặc "ALL"
+  const bbgnScope = data?.scope != null ? String(data.scope) : null;
+  const hasQuyenForScope = useCallback(
+    (quyenChucNang: number) =>
+      bbgnScope != null &&
+      bbgnQuyenRows.some(
+        (r) => r.quyenChucNang === quyenChucNang && (r.maKhuVuc === "ALL" || r.maKhuVuc === bbgnScope)
+      ),
+    [bbgnQuyenRows, bbgnScope]
+  );
+  const hasQuyenXacNhan = hasQuyenForScope(2); // quyenChucNang=2 (PHEDUYET)
+  const hasQuyenChot = hasQuyenForScope(3);    // quyenChucNang=3 (CHOT)
 
   // loadData dùng loSo/tlSo làm dependency → tự reload khi scope thay đổi
   const loadData = useCallback(async () => {
@@ -93,7 +103,7 @@ const ChiTietGN = () => {
     await loadData();
   }, [loadData, data]);
 
-  const effectiveCanChot = isPKHAdmin || hasQuyenChot;
+  const effectiveCanChot =  hasQuyenChot;
   const canDoAnything = effectiveCanChot || hasQuyenXacNhan;
 
   const congDoanLabel = data ? getGroupLabel(data.maBm ?? "") : "";
