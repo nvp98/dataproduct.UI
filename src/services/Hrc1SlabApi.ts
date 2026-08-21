@@ -137,6 +137,21 @@ export interface Hrc1SlabCreateRequest {
   khoiLuong?: number | null;
 }
 
+// Cùng bộ field với Hrc1SlabCreateRequest — dùng cho popup "Sửa" (PUT, full-replace), khác
+// updateSlab (PATCH, chỉ ghiChu/maVatTu, dùng cho inline-edit).
+export interface Hrc1SlabEditRequest {
+  idSlab: string;
+  idPiece?: string | null;
+  maMe?: string | null;
+  macThep?: string | null;
+  mayDuc?: string | null;
+  cutDate?: string | null;
+  chieuDay?: number | null;
+  chieuRong?: number | null;
+  chieuDai?: number | null;
+  khoiLuong?: number | null;
+}
+
 const BASE = "/api/hrc1-slab";
 
 export const Hrc1SlabApi = {
@@ -208,6 +223,10 @@ export const Hrc1SlabApi = {
 
   createSlab: async (payload: Hrc1SlabCreateRequest): Promise<Hrc1SlabItem> => {
     return (await apiService.post(`${BASE}/create`, payload)) as Hrc1SlabItem;
+  },
+
+  editSlab: async (id: number, payload: Hrc1SlabEditRequest): Promise<WorkflowResult> => {
+    return (await apiService.put(`${BASE}/${id}`, payload)) as WorkflowResult;
   },
 
   getTongHopGhiChu: async (idPhieu: string): Promise<Hrc1TongHopGhiChuItem[]> => {

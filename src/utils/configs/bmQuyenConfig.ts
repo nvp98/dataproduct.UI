@@ -76,7 +76,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
-      tenBm: "Biên bản giao nhận phôi tấm",
+      tenBm: "Biên bản sản lượng phôi tấm",
       nhom: "NM.HRC2",
       // Không có scope vùng máy — workflow thống nhất 1 bảng
       // khuVucPhus tạo record BM_QuyenXL riêng cho từng bộ phận
@@ -256,7 +256,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
-      tenBm: "Biên bản giao nhận phôi tấm",
+      tenBm: "Biên bản sản lượng phôi tấm",
       nhom: "NM.HRC1",
       khuVucPhus: [
         { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
