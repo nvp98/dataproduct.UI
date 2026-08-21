@@ -2,15 +2,21 @@ import HRC2_BBSL_PhoiTam from "../../../utils/BM_config/HRC2_BBSL_PhoiTam.json";
 import { Button, Card, Space, Table, Tabs, Tag } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import PhieuFilterCard, { type FilterFieldConfig } from "../../../components/PhieuFilterCard";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import BkHrc2SlabTable from "./BkHrc2SlabTable";
 import { PHOI_TAM_STATUS_CONFIG, PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { renderXacNhanTag } from "../../../utils/helpers/renderXacNhanTag";
 
 const config = HRC2_BBSL_PhoiTam;
+
+// Keyed by React Router location.key — tự động clear khi user navigate forward (key mới), tự
+// động restore khi user bấm Back (key cũ). Nhớ tab đang xem (Tổng hợp phôi tấm / Danh sách
+// phiếu BBSL) để khi quay lại từ trang chi tiết phiếu không bị reset về tab mặc định.
+const _tabCache = new Map<string, string>();
 
 /** Trạng thái tổng hợp BBGN Phôi tấm (BE trả 11 | 12 | 5, xem Hrc2BbgnPhoiTamEnricher) */
 const BBGN_PHOI_TAM_STATUS: Record<string, { text: string; color: string }> = {
@@ -56,7 +62,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
     handleFilter,
     handleClearFilter,
     onPageChange,
-  } = usePhieuSearchListHRC({ maBm: config.code as string, fixedFilters });
+  } = usePhieuSearchListHRC({ maBm: config.code as string, fixedFilters, persistKey: true });
 
   const detailPath = type === "xemphieu" ? "/xemphieu/chitietbbgnphoitam" : "/chitietbbgnphoitam";
 
@@ -101,14 +107,27 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
       ellipsis: true,
     },
     {
-      title: "Người tạo",
-      dataIndex: "nguoiTaoId",
-      key: "nguoiTaoId",
-      width: 220,
-      ellipsis: true,
+      title: "Số lượng ID",
+      dataIndex: "soLuongSlab",
+      key: "soLuongSlab",
+      width: 110,
+      align: "right" as const,
+      render: (value: number | null | undefined) => (value ?? "-"),
     },
     {
-      title: "Tình trạng",
+      title: "Trạng thái chi tiết",
+      key: "tinhTrangChiTiet",
+      width: 340,
+      render: (_: unknown, record: TableRecord) => (
+        <Space size={4} wrap>
+          {renderXacNhanTag("Đúc", record.soLuongXNDuc as number | null | undefined, record.soLuongSlab as number | null | undefined)}
+          {renderXacNhanTag("Kho", record.soLuongXNKho as number | null | undefined, record.soLuongSlab as number | null | undefined)}
+          {renderXacNhanTag("PKH", record.soLuongXNPKH as number | null | undefined, record.soLuongSlab as number | null | undefined)}
+        </Space>
+      ),
+    },
+    {
+      title: "Tình trạng phiếu",
       dataIndex: "tinhTrang",
       key: "tinhTrang",
       width: 150,
@@ -153,6 +172,15 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
           { label: "Ca đêm (2)", value: 2 },
         ],
       },
+      {
+        key: "tinhTrang",
+        label: "Tình trạng phiếu",
+        type: "select",
+        options: Object.entries(BBGN_PHOI_TAM_STATUS).map(([key, cfg]) => ({
+          label: cfg.text,
+          value: key,
+        })),
+      }
     ],
     []
   );
@@ -165,6 +193,7 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        storageKey={true}
         showCreateButton={false}
         onCreateClick={() => navigate("/form-bbgnphoitam")}
         createButtonText="Tạo phiếu mới"
@@ -183,10 +212,10 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: onPageChange,
           }}
-          scroll={{ x: 1100 }}
+          scroll={{ x: 1330 }}
           summary={() => (
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={7} align="right">
+              <Table.Summary.Cell index={0} colSpan={8} align="right">
                 <span style={{ fontWeight: 500 }}>Tổng: {pagination.total} Phiếu</span>
               </Table.Summary.Cell>
             </Table.Summary.Row>
@@ -199,6 +228,9 @@ const PhieuListView = ({ type }: { type?: "taoMoi" | "viecdentoi" | "xemphieu" }
 
 /** Entry point — phân nhánh theo type */
 const BienBanGiaoNhanPhoiTam = ({ type }: { type?: string }) => {
+  const { key: locationKey } = useLocation();
+  const [activeKey, setActiveKey] = useState<string>(() => _tabCache.get(locationKey) ?? "slab");
+
   // viecdentoi: chỉ hiện danh sách phiếu
   if (type === "viecdentoi") {
     return <PhieuListView type={type} />;
@@ -208,10 +240,16 @@ const BienBanGiaoNhanPhoiTam = ({ type }: { type?: string }) => {
   // BkHrc2SlabTable ở chế độ readOnly (ẩn Sync/Chuyển BBSL/Thu hồi + cột tick chọn dòng).
   const readOnly = type === "xemphieu";
 
-  // /bbgnphoitam (mặc định) hoặc /xemphieu/bbgnphoitam: 2 tab
+  // /bbgnphoitam (mặc định) hoặc /xemphieu/bbgnphoitam: 2 tab — activeKey được nhớ theo
+  // location.key (xem _tabCache) để bấm Back từ trang chi tiết phiếu không bị reset về
+  // "Tổng hợp phôi tấm" nếu trước đó đang xem "Danh sách phiếu BBSL".
   return (
     <Tabs
-      defaultActiveKey="slab"
+      activeKey={activeKey}
+      onChange={(key) => {
+        setActiveKey(key);
+        _tabCache.set(locationKey, key);
+      }}
       type="card"
       style={{ padding: "0 8px" }}
       items={[

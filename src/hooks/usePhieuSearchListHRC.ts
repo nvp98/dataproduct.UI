@@ -50,6 +50,7 @@ const defaultTransform = (filters: PhieuFilterValues): Partial<SearchPhieuByUser
   kip: (filters.kip as string | null | undefined) || null,
   scope: normalizeNumber(filters.scope),
   mayDuc: normalizeNumber(filters.mayDuc),
+  tinhTrang: normalizeNumber(filters.tinhTrang),
   searchText: (filters.soPhieu || filters.searchText || null) as string | null,
 });
 
@@ -221,6 +222,7 @@ export const usePhieuSearchListHRC = ({
         scope: null,
         mayDuc: null,
         searchText: null,
+        tinhTrang: null,
         ...effectiveFixedFilters,
         ...overrides,
         loaiVung,

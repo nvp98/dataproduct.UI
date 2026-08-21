@@ -121,6 +121,22 @@ export interface WorkflowResult {
   affectedRows: number;
 }
 
+// NgaySX/CaSX/KipSX KHÔNG gửi từ client — BE tự lấy từ phiếu (idPhieu) để slab mới luôn
+// khớp đúng phiếu đang xem.
+export interface Hrc1SlabCreateRequest {
+  idPhieu: string;
+  idSlab: string;
+  idPiece?: string | null;
+  maMe?: string | null;
+  macThep?: string | null;
+  mayDuc?: string | null;
+  cutDate?: string | null;
+  chieuDay?: number | null;
+  chieuRong?: number | null;
+  chieuDai?: number | null;
+  khoiLuong?: number | null;
+}
+
 const BASE = "/api/hrc1-slab";
 
 export const Hrc1SlabApi = {
@@ -188,6 +204,10 @@ export const Hrc1SlabApi = {
 
   updateSlab: async (id: number, payload: { ghiChu?: string | null; maVatTu?: string | null }): Promise<WorkflowResult> => {
     return (await apiService.patch(`${BASE}/${id}`, payload)) as WorkflowResult;
+  },
+
+  createSlab: async (payload: Hrc1SlabCreateRequest): Promise<Hrc1SlabItem> => {
+    return (await apiService.post(`${BASE}/create`, payload)) as Hrc1SlabItem;
   },
 
   getTongHopGhiChu: async (idPhieu: string): Promise<Hrc1TongHopGhiChuItem[]> => {

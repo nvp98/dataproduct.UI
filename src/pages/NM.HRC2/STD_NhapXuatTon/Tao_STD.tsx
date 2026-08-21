@@ -37,6 +37,10 @@ const Tao_STD = () => {
   const [relatedStatusMap, setRelatedStatusMap] = useState<Record<string, STD_NXT_RelatedPhieuStatusItem>>({});
   const [canPhanBo, setCanPhanBo] = useState(true);
   const [isLockedByChot, setIsLockedByChot] = useState(false);
+  /** Loading riêng cho nút "Làm mới" */
+  const [filterLoading, setFilterLoading] = useState(false);
+  /** Loading riêng cho nút "Đồng bộ lại từ NM" */
+  const [forceSyncLoading, setForceSyncLoading] = useState(false);
   /** Tăng khi BE trả canPhanBo = false để remount SummaryTableSTD, đồng bộ UI với trạng thái khóa phân bổ */
   const [summaryTableRemountKey, setSummaryTableRemountKey] = useState(0);
   const watchedNgaySX = Form.useWatch("NgaySX", form);
@@ -692,7 +696,18 @@ const Tao_STD = () => {
     [form, idphieu, refreshSummaryAndStatus]
   );
 
+  /** Khu vực có phiếu liên quan (BOF/LF/RH) đang Hoàn thành (2) hoặc Đã chốt (5) thì không làm mới dữ liệu của riêng khu vực đó */
+  const isKhuVucLocked = useCallback(
+    (khuVucLabel: string) => {
+      const statusItem = relatedStatusMap[`kv_${khuVucLabel}`];
+      const status = statusItem?.tinhTrang ?? (statusItem as any)?.TinhTrang;
+      return status === 2 || status === 5;
+    },
+    [relatedStatusMap]
+  );
+
   const handleFilterData = useCallback(async () => {
+    setFilterLoading(true);
     try {
       // Chỉ validate Ngày và Ca để tránh yêu cầu các trường ký tên
       const values = await form.validateFields(["NgaySX", "ca"]);
@@ -716,13 +731,23 @@ const Tao_STD = () => {
       });
       // Map dữ liệu trả về từ filter
       const payload = (res as any)?.data ?? res;
-      const resultData = Array.isArray(payload) ? (payload as any[]) : [];
+      const resultDataAll = Array.isArray(payload) ? (payload as any[]) : [];
 
       const kvList = config.layout1?.[0]?.khuVucList || [];
       const findKhuVucLabel = (bieuMau: string | null | undefined, scope: number | null | undefined) => {
         const match = kvList.find((kv: any) => kv?.bieuMau === bieuMau && Number(kv?.scope) === Number(scope));
         return match?.label || match?.value || "";
       };
+      // Bỏ qua các item thuộc khu vực đang bị khóa (phiếu liên quan Hoàn thành/Đã chốt)
+      const resultData = resultDataAll.filter((item: any) => {
+        const khuVucLabel = findKhuVucLabel(item.bieuMau, item.scope);
+        return khuVucLabel ? !isKhuVucLocked(khuVucLabel) : true;
+      });
+      const lockedKhuVucLabels = new Set(
+        kvList
+          .map((kv: any) => String(kv?.label || kv?.value || ""))
+          .filter((label: string) => label && isKhuVucLocked(label))
+      );
       const getKhuVucByScope = (scope: number): string => {
         const kv = kvList.find((kv: any) => {
           const valueNum = kv?.value !== undefined ? Number(kv.value) : NaN;
@@ -790,7 +815,9 @@ const Tao_STD = () => {
           .map((r: any) => ({ ...r, tongThucTe: 0 }));
 
         const currentRows = [
-          ...mappedDetails.map((r) => ({ ...r, tongThucTe: 0 })),
+          ...mappedDetails.map((r) =>
+            lockedKhuVucLabels.has(r.khuVuc) ? r : { ...r, tongThucTe: 0 }
+          ),
           ...manualNewRows,
         ];
         const newUnmappedRows: STD_NXT_Table1Row[] = [];
@@ -843,7 +870,9 @@ const Tao_STD = () => {
       } else {
         // Không có phiếu: giữ logic cũ, đổ filter lên prev
         setTable1Data((prev: STD_NXT_Table1Row[]) => {
-          const currentRows = prev.map((r) => ({ ...r, tongThucTe: 0 }));
+          const currentRows = prev.map((r) =>
+            lockedKhuVucLabels.has(r.khuVuc) ? r : { ...r, tongThucTe: 0 }
+          );
           const newUnmappedRows: STD_NXT_Table1Row[] = [];
 
           resultData.forEach((item: any) => {
@@ -892,8 +921,14 @@ const Tao_STD = () => {
         });
       }
 
-      if (resultData.length === 0) {
+      if (resultDataAll.length === 0) {
         message.info("Không có dữ liệu phụ liệu cho Ngày/Ca đã chọn (đã reset Tổng thực tế sử dụng = 0)");
+      } else if (resultData.length === 0) {
+        message.info("Các khu vực đều đang ở trạng thái Hoàn thành/Đã chốt nên không có dữ liệu nào được làm mới.");
+      } else if (lockedKhuVucLabels.size > 0) {
+        message.success(
+          `Đã làm mới dữ liệu phụ liệu theo ngày/ca (bỏ qua khu vực: ${[...lockedKhuVucLabels].join(", ")} do đã Hoàn thành/Đã chốt).`
+        );
       } else {
         message.success("Đã lọc dữ liệu phụ liệu theo ngày/ca");
       }
@@ -903,8 +938,37 @@ const Tao_STD = () => {
     } catch (error: any) {
       console.error("Lọc dữ liệu thất bại:", error);
       message.error(error?.message || "Không thể lọc dữ liệu");
+    } finally {
+      setFilterLoading(false);
     }
-  }, [form, config.layout1, setTable1Data, table1Data, idphieu, loadRelatedPhieuStatuses]);
+  }, [form, config.layout1, setTable1Data, table1Data, idphieu, loadRelatedPhieuStatuses, isKhuVucLocked]);
+
+  /**
+   * Ép đồng bộ trực tiếp từ NM (bỏ qua cache/cooldown DB) rồi làm mới lại bảng.
+   * Dùng khi nghi ngờ dữ liệu cũ/thiếu mà "Làm mới" (chỉ đọc DB) không phản ánh đúng —
+   * ví dụ NM vừa cập nhật/sửa lại mẻ mà job đồng bộ định kỳ (5 phút/lần) chưa kịp chạy.
+   */
+  const handleForceSyncFromNM = useCallback(async () => {
+    setForceSyncLoading(true);
+    try {
+      const values = await form.validateFields(["NgaySX", "ca"]);
+      const ngay = values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null;
+      const caVal = values.ca;
+      if (!ngay || !caVal) {
+        message.warning("Vui lòng chọn Ngày và Ca trước khi đồng bộ.");
+        return;
+      }
+      await dlnmHRC2Api.forceSyncStdNxt({ NgaySX: ngay, Ca: Number(caVal) });
+      message.success("Đã đồng bộ lại dữ liệu từ NM.");
+      await handleFilterData();
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      console.error("Đồng bộ lại từ NM thất bại:", error);
+      message.error(error?.message || "Không thể đồng bộ lại từ NM.");
+    } finally {
+      setForceSyncLoading(false);
+    }
+  }, [form, handleFilterData]);
 
   const handleExportExcelTieuHaoTheoCa = useCallback(async () => {
     try {
@@ -952,6 +1016,7 @@ const Tao_STD = () => {
         style={{ backgroundColor: "#217346", borderColor: "#217346", color: "#fff" }}
         onClick={handleExportExcelTieuHaoTheoCa}
         loading={loading}
+        disabled={filterLoading || forceSyncLoading}
       >
       Xuất Excel
     </Button>
@@ -1023,6 +1088,8 @@ const Tao_STD = () => {
             <Button
               type="primary"
               onClick={handleFilterData}
+              loading={filterLoading}
+              disabled={forceSyncLoading}
               style={{
                 height: 35,
                 width: "100%",
@@ -1030,6 +1097,21 @@ const Tao_STD = () => {
               }}
             >
               Làm mới
+            </Button>
+          </div>
+          <div style={{ flex: "0 0 180px", maxWidth: 200 }}>
+            <Button
+              onClick={handleForceSyncFromNM}
+              loading={forceSyncLoading}
+              disabled={filterLoading}
+              title="Dùng khi nghi ngờ dữ liệu cũ/thiếu — bấm nút này sẽ chậm hơn 'Làm mới' vì đồng bộ trực tiếp từ NM."
+              style={{
+                height: 35,
+                width: "100%",
+                borderRadius: 8,
+              }}
+            >
+              Đồng bộ lại từ NM
             </Button>
           </div>
         </div>
@@ -1060,7 +1142,7 @@ const Tao_STD = () => {
                         onKhongPhanBo={handleKhongPhanBoSummary}
                         canPhanBo={canPhanBo}
                         idPhieu={idphieu ?? undefined}
-                        editable={true}
+                        editable={!(filterLoading || forceSyncLoading)}
                         loading={loading}
                         lockedTooltip={isLockedByChot ? "Đã có phiếu được chốt" : undefined}
                       />
@@ -1123,7 +1205,7 @@ const Tao_STD = () => {
                       khuVucList={[kvLabel]}
                       defaultNguyenNhienLieu={[]}
                       defaultViTri={layout1.defaultViTri || 1}
-                      editable={true}
+                      editable={!(filterLoading || forceSyncLoading)}
                       loading={loading}
                       ngaySX={form.getFieldValue("NgaySX")}
                       khuVucConfig={kvList}
@@ -1170,12 +1252,12 @@ const Tao_STD = () => {
         </div>
         <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
           {!idphieu && (
-            <Button type="primary" onClick={handleSave} loading={loading}>
+            <Button type="primary" onClick={handleSave} loading={loading} disabled={filterLoading || forceSyncLoading}>
               Tạo phiếu
             </Button>
           )}
           {idphieu && (
-            <Button type="primary" onClick={handleSave} loading={loading}>
+            <Button type="primary" onClick={handleSave} loading={loading} disabled={filterLoading || forceSyncLoading}>
               Lưu
             </Button>
           )}

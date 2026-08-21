@@ -525,15 +525,16 @@ const CustomTableHRC = forwardRef(({
                 const isAdjustColumn = child.variant === "adjust";
                 const isMeThoiColumn = child.dataIndex === "meThoi";
                 const isMacThepColumn = child.dataIndex === "macThep";
-                // Dòng từ NM (IsNM !== false): disable meThoi và macThep
-                // Dòng thêm mới bằng button (IsNM === false): cho nhập tất cả các cột
+                // Dòng từ NM (IsNM !== false): disable meThoi (mã mẻ khớp dữ liệu NM, không cho sửa
+                // tay); macThep vẫn cho sửa vì NM có thể gán sai mác thép cần chỉnh lại thủ công.
+                // Dòng thêm mới bằng button (IsNM === false): cho nhập tất cả các cột.
                 const isNMRow = record.IsNM !== false;
                 const isManualRow = !isNMRow;
                 const canEditThisCell =
                   !isAdjustColumn &&
                   (!child.readonly || isManualRow) &&
                   editable &&
-                  (!isNMRow || (!isMeThoiColumn && !isMacThepColumn));
+                  (!isNMRow || !isMeThoiColumn);
 
                 const origKey = `${child.dataIndex}__orig`;
                 const manualKey = `${child.dataIndex}__IsManual`;
@@ -667,15 +668,16 @@ const CustomTableHRC = forwardRef(({
           const isAdjustColumn = col.variant === "adjust";
           const isMeThoiColumn = col.dataIndex === "meThoi";
           const isMacThepColumn = col.dataIndex === "macThep";
-          // Dòng từ NM (IsNM !== false): disable meThoi và macThep
-          // Dòng thêm mới bằng button (IsNM === false): cho nhập tất cả các cột
+          // Dòng từ NM (IsNM !== false): disable meThoi (mã mẻ khớp dữ liệu NM, không cho sửa
+          // tay); macThep vẫn cho sửa vì NM có thể gán sai mác thép cần chỉnh lại thủ công.
+          // Dòng thêm mới bằng button (IsNM === false): cho nhập tất cả các cột.
           const isNMRow = record.IsNM !== false;
           const isManualRow = !isNMRow;
           const canEditThisCell =
             !isAdjustColumn &&
             (!col.readonly || isManualRow) &&
             editable &&
-            (!isNMRow || (!isMeThoiColumn && !isMacThepColumn));
+            (!isNMRow || !isMeThoiColumn);
           const dataIndex = col.dataIndex || "";
           const origKey = `${dataIndex}__orig`;
           const manualKey = `${dataIndex}__IsManual`;
