@@ -940,13 +940,15 @@ const NvlSiloMappingTab = ({
     [allNvl, selectedMaBM, selectedScope],
   );
 
-  const activeSiloOptions = useMemo(
-    () =>
-      allSilo.filter(
-        (s) => s.trangThai && (!selectedScope || s.scope === selectedScope),
-      ),
-    selectedMaBM === "ALL" || !selectedMaBM,
-  );
+  const activeSiloOptions = useMemo(() => {
+    // selectedScope là code "TK1"; Silo.scope là số "1" → cần chuyển đổi
+    const scopeNum = selectedScope
+      ? (getTKVVScopeByCode(selectedScope)?.scope.toString() ?? null)
+      : null;
+    return allSilo.filter(
+      (s) => s.trangThai && (!scopeNum || s.scope === scopeNum),
+    );
+  }, [allSilo, selectedScope]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -1003,19 +1005,19 @@ const NvlSiloMappingTab = ({
 
   const openEdit = (record: TKVVNvlSiloMappingDto) => {
     setEditing(record);
-    // scopeNVL là code "TK1" (từ NVL) → chuyển sang số "1" để lọc Silo
-    const siloScope = record.scopeNVL
-      ? (getTKVVScopeByCode(record.scopeNVL)?.scope.toString() ?? null)
+    // scope bảng mapping (code "TK1") → chuyển sang số "1" để lọc Silo
+    const siloScope = record.scope
+      ? (getTKVVScopeByCode(record.scope)?.scope.toString() ?? null)
       : null;
     setSelectedNvlScope(siloScope);
     form.setFieldsValue({
-      maBM: record.maBM,
       nguyenVatLieuID: record.nguyenVatLieuID,
+      maBM: record.maBM,
       scope: record.scope,
+      thuTu: record.thuTu,
       siloID: record.siloID,
       ca: record.ca,
       ngaySX: record.ngaySX ? dayjs(record.ngaySX) : null,
-      thuTu: record.thuTu,
       ghiChu: record.ghiChu,
       trangThai: record.trangThai,
     });
@@ -1341,18 +1343,14 @@ const NvlSiloMappingTab = ({
         scroll={{ x: 900 }}
         columns={[
           {
-            title: "Khu vực",
+            title: "Scope",
             dataIndex: "scope",
-            width: 120,
+            width: 80,
             align: "center",
-            render: (v: number | string) =>
-              v ? (
-                <Tag color="blue">
-                  {TKVV_SCOPE_OPTIONS.find((o) => o.value === Number(v))?.label}
-                </Tag>
-              ) : null,
+            render: (v: string | null) =>
+              v ? <Tag color="blue">{v}</Tag> : null,
           },
-          { title: "Mã BM", dataIndex: "maBM", width: 160, ellipsis: true },
+          { title: "Mã BM", dataIndex: "maBM", width: 140, ellipsis: true },
           { title: "Tên NVL", dataIndex: "tenNVL", width: 200, ellipsis: true },
           {
             title: "Silo",
@@ -1562,7 +1560,7 @@ const SiloTagMappingTab = ({ allSilo }: { allSilo: TKVVSiloDto[] }) => {
     try {
       const res = await tkvvSiloTagMappingApi.getList({
         ...(siloFilter ? { siloId: siloFilter } : {}),
-        ...(maBMFilter ? { maBM: maBMFilter } : {}),
+        ...(maBMFilter && maBMFilter !== "ALL" ? { maBM: maBMFilter } : {}),
       });
       setData(Array.isArray(res) ? res : []);
     } catch {
@@ -1972,7 +1970,10 @@ const SiloTagMappingTab = ({ allSilo }: { allSilo: TKVVSiloDto[] }) => {
               rules={[{ required: true, message: "Bắt buộc" }]}
               style={{ flex: 1 }}
             >
-              <Select options={MA_BM_OPTIONS} placeholder="Chọn BM" />
+              <Select
+                options={MA_BM_OPTIONS.filter((o) => o.value !== "ALL")}
+                placeholder="Chọn BM"
+              />
             </Form.Item>
             <Form.Item
               name="loaiDuLieu"

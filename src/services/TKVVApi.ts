@@ -30,7 +30,7 @@ export interface UpdateTKVVNguyenVatLieuDto extends CreateTKVVNguyenVatLieuDto {
 
 export const tkvvNvlApi = {
   getList: (params?: { maBM?: string; scope?: string }): Promise<TKVVNguyenVatLieuDto[]> =>
-    apiService.get("/api/TKVV_BBSL/get-nvl", { params }),
+    apiService.get("/api/TKVV_NVL", { params }),
 
   getById: (id: number): Promise<TKVVNguyenVatLieuDto> =>
     apiService.get(`/api/TKVV_BBSL/get-nvl/${id}`),
@@ -170,6 +170,34 @@ export interface TKVVGiaTriNVLAutoDto {
   thoiGianDen: string | null;
 }
 
+// ─── Dữ liệu cân từ SP_TKVV_GetDuLieuCan — đổ bảng khi tạo phiếu BC SLCP ────
+
+export interface TKVVDuLieuCanDto {
+  ngay: string;
+  ca: number;
+  maBM: string | null;
+  scope: string | null;
+  xuong: string | null;
+  siloID: number | null;
+  maSilo: string | null;
+  nguyenVatLieuID: number;
+  tenNVL: string;
+  donViTinh: string | null;
+  giaTri: number;
+  soLuongSilo: number;
+}
+
+export const tkvvDuLieuCanApi = {
+  getList: (params: {
+    ngay: string;
+    ca: number;
+    maBM: string;
+    loaiDuLieu?: string;
+    scope: number;
+  }): Promise<TKVVDuLieuCanDto[]> =>
+    apiService.get("/api/TKVV_BCSL_ChiPhi/get-dulieu-can", { params }),
+};
+
 export const tkvvGiaTriNVLAutoApi = {
   getList: (params: {
     ngay: string;   // "YYYY-MM-DD"
@@ -255,8 +283,17 @@ export interface UpdateTKVVNvlSiloMappingDto extends CreateTKVVNvlSiloMappingDto
 }
 
 export const tkvvNvlSiloMappingApi = {
-  getList: (params?: { maBM?: string; scope?: number; nvlId?: number; siloId?: number }): Promise<TKVVNvlSiloMappingDto[]> =>
+  getList: (params?: { id?: number; maBM?: string; scope?: string; nvlId?: number; siloId?: number; ngaySX?: string; ca?: number }): Promise<TKVVNvlSiloMappingDto[]> =>
     apiService.get("/api/TKVV_Silo/nvl-silo-mapping", { params }),
+
+  getNearest: (params: { maBM?: string; scope: string; beforeDate: string }): Promise<TKVVNvlSiloMappingDto[]> =>
+    apiService.get("/api/TKVV_Silo/nvl-silo-mapping/nearest", { params }),
+
+  batchCreate: (dto: {
+    maBM: string; scope: string; ngaySX: string;
+    rows: {id: number, nguyenVatLieuID: number; siloID: number | null; ca: number; thuTu: number | null }[];
+  }): Promise<{ count: number }> =>
+    apiService.post("/api/TKVV_Silo/nvl-silo-mapping/batch", dto),
   getById: (id: number): Promise<TKVVNvlSiloMappingDto> =>
     apiService.get(`/api/TKVV_Silo/nvl-silo-mapping/${id}`),
   create: (dto: CreateTKVVNvlSiloMappingDto): Promise<TKVVNvlSiloMappingDto> =>
