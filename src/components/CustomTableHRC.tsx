@@ -8,6 +8,14 @@ import { dlnmHRC2Api } from "../services/DLNMHRC2Api";
 import type { ChuyenMeThoiRequest } from "../models/DLMN_HRC2Model";
 import dayjs from "dayjs";
 import { formatByKind } from "../utils/formatters/numberFormat";
+import { CommonAutocomplete, type AutocompleteSearchApi } from "./CommonAutocomplete";
+import "../styles/customTableHrc.css";
+
+/** Option cho autocomplete meThoi/macThep — value/label đều là chuỗi (không phải id như các autocomplete khác). */
+export interface HRCTextAutocompleteOption {
+  value: string;
+  label: string;
+}
 
 type MappingPayload = HeaderMappingRecord;
 
@@ -71,6 +79,14 @@ export interface HRCChildColumn {
   thuTu?: number | null; // Thứ tự để sắp xếp
   sum?: boolean; // true: tính tổng cột này trong dòng summary
   readonly?: boolean; // true: không cho sửa, bất kể editable của bảng
+  // true: khoá cứng, không cho sửa dù dòng là IsNM=false (isManualRow) — khác `readonly` (vốn vẫn
+  // cho sửa ở dòng thêm tay/manual). Dùng cho các cột như meThoi/macThep ở LF, nơi MỌI dòng đều bị
+  // ép IsNM=false nên `readonly` thường bị "mở khoá" nhầm bởi điều kiện isManualRow.
+  alwaysReadonly?: boolean;
+  // true: cột "không phải phụ liệu" (không có __orig/__IsManual per-cell) nhưng BE có lưu cờ
+  // Hrc1TieuHao.IsEdited ở cấp dòng khi field này thực sự đổi giá trị lúc Lưu — bật cờ này để ô được
+  // tô vàng "đã chỉnh sửa" theo record.IsEdited, thay vì so __orig (vốn không tồn tại cho các cột này).
+  trackRowEdited?: boolean;
 }
 
 export interface HRCParentColumn {
@@ -89,6 +105,8 @@ export interface HRCParentColumn {
   variant?: "source" | "adjust" | "default";
   sum?: boolean; // true: tính tổng cột này trong dòng summary
   readonly?: boolean; // true: không cho sửa, bất kể editable của bảng
+  alwaysReadonly?: boolean; // xem giải thích ở HRCChildColumn
+  trackRowEdited?: boolean; // xem giải thích ở HRCChildColumn
 }
 
 export interface HRCTableRow {
@@ -97,6 +115,11 @@ export interface HRCTableRow {
   _isNewRow?: boolean; // Flag UI: dòng thêm mới bằng button (highlight cả hàng + xếp cuối)
   id?: number; // ID bản ghi DLNM_HRC2 (nếu có)
   isTrungMeThoi?: boolean; // Flag để đánh dấu mẻ thổi bị trùng
+  // Cờ BE Hrc1TieuHao.IsEdited — true nếu dòng đã từng bị sửa tay ở 1 trong các cột "không phải phụ
+  // liệu" (o2/n2/ar/queLayMau/queDoNhiet/ghiChu...), dùng để tô vàng lại các ô đó sau khi Lưu + tải lại
+  // (khác cột phụ liệu vốn tự có __orig/__IsManual theo từng ô). Xem HRC1_BB_TieuHao_*.json:
+  // trackRowEdited đánh dấu cột nào tham gia cờ này.
+  IsEdited?: boolean;
   // Cho phép null để biểu diễn các trường FE cần gửi lên BE (vd __orig khi nền tự động = null).
   [key: string]: string | number | boolean | null | undefined;
 }
@@ -119,6 +142,28 @@ interface CustomTableHRCProps {
   stickyHeaders?: boolean;
   stickyFirstColumn?: boolean;
   stickyColumnKeys?: string[];
+  /** Tắt hiệu ứng hover đổi màu dòng — dùng khi màu hover mặc định đè lên các màu highlight riêng của ô/dòng. */
+  disableRowHover?: boolean;
+  /**
+   * true: sắp xếp toàn bộ dòng theo meThoi tăng dần (không phân biệt NM/thêm tay) — dùng cho các trang
+   * HRC1 Tiêu hao BOF/LF nơi mẻ thêm tay có thể xen giữa các mẻ NM theo đúng thứ tự mẻ thổi.
+   * false (mặc định, giữ hành vi cũ cho HRC2): nhóm dòng thêm tay (IsNM===false) xuống cuối, không
+   * sắp xếp theo giá trị để tránh dòng NM nhảy vị trí khi đang sửa ô.
+   */
+  sortByMeThoi?: boolean;
+  /**
+   * true: cho phép sửa cột macThep kể cả trên dòng từ NM (IsNM===true) — mặc định các dòng NM luôn
+   * khoá cứng meThoi/macThep (xem isMeThoiColumn/isMacThepColumn bên dưới). Không ảnh hưởng meThoi
+   * (vẫn luôn khoá — đó là khoá dùng để match dữ liệu giữa các lần tải).
+   */
+  allowEditMacThepOnNMRow?: boolean;
+  /**
+   * API tìm kiếm autocomplete cho ô meThoi trên dòng thêm tay (IsNM===false). Chưa truyền (mặc định
+   * undefined) → vẫn dùng ô nhập tay thường như hiện tại, không đổi hành vi các trang chưa cần.
+   */
+  meThoiSearchApi?: AutocompleteSearchApi<HRCTextAutocompleteOption>;
+  /** API tìm kiếm autocomplete cho ô macThep trên dòng thêm tay (IsNM===false) — cùng cơ chế với meThoiSearchApi. */
+  macThepSearchApi?: AutocompleteSearchApi<HRCTextAutocompleteOption>;
   maBm?: string;
   ngaySX?: Date;
   ca?: number;
@@ -128,6 +173,15 @@ interface CustomTableHRCProps {
   lyDoValue?: string;
   onLyDoChange?: (value: string) => void;
   onSave?: () => Promise<void>;
+  /** API xóa dòng — mặc định dùng dlnmHRC2Api (giữ hành vi cũ cho các trang HRC2 chưa truyền prop này). */
+  deleteApi?: {
+    deleteRowByKey: (rowKey: number) => Promise<unknown>;
+    deleteRowNM: (rowKey: number) => Promise<unknown>;
+  };
+  /** API chuyển mẻ sang ca khác — mặc định dùng dlnmHRC2Api (giữ hành vi cũ cho các trang HRC2 chưa truyền prop này). */
+  chuyenMeThoiApi?: {
+    chuyenMeThoi: (payload: ChuyenMeThoiRequest) => Promise<{ data: { message?: string } }>;
+  };
 }
 
 const CHUYEN_TOI_CA = {
@@ -135,12 +189,35 @@ const CHUYEN_TOI_CA = {
   CASAU: 2,
 };
 
-const isPhuLieuDataIndex = (dataIndex: string) =>
-  dataIndex.startsWith("phuLieu_") || dataIndex.startsWith("others_") || dataIndex.startsWith("manual_col_");
-
 /** Cột số thứ tự từ JSON (thường là cột đầu) — không dùng làm cột ghi nhãn "Tổng" ở summary */
 const isSttDataIndex = (dataIndex: string) =>
   dataIndex === "stt" || dataIndex === "STT";
+
+/** Cột dạng text (định danh, không phải số liệu) — loại khỏi kiểm tra giá trị âm để tránh báo nhầm
+ * (vd meThoi/macThep có thể bắt đầu bằng ký tự trông giống dấu trừ khi parseFloat). Mọi cột số liệu
+ * còn lại (kể cả KLThepLong, KLGangLongCCT, KLThepPhe, KLThepPheGang, O2, N2, AR, ...) đều bị kiểm tra.
+ */
+const isTextDataIndex = (dataIndex: string) =>
+  isSttDataIndex(dataIndex) || dataIndex === "meThoi" || dataIndex === "macThep";
+
+/**
+ * Sort theo meThoi tăng dần (numeric-aware) — chỉ dùng để sắp lại đúng thứ tự MỘT LẦN khi nhận
+ * initialData mới từ ngoài (API/DB, sau khi Lưu + tải lại), KHÔNG dùng cho sortedRows (mỗi lần rows
+ * đổi do gõ/chọn ô) — nếu không, dòng đang thao tác sẽ nhảy vị trí ngay khi giá trị meThoi thay đổi,
+ * gây khó chịu vì người dùng không biết nó nhảy đi đâu. Xem useEffect sync initialData bên dưới.
+ */
+const sortRowsByMeThoi = (rows: HRCTableRow[]): HRCTableRow[] => {
+  return [...rows].sort((a, b) => {
+    const rawA = a.meThoi;
+    const rawB = b.meThoi;
+    const sa = rawA === undefined || rawA === null || rawA === "" ? null : String(rawA);
+    const sb = rawB === undefined || rawB === null || rawB === "" ? null : String(rawB);
+    if (sa === null && sb === null) return 0;
+    if (sa === null) return 1;
+    if (sb === null) return -1;
+    return sa.localeCompare(sb, undefined, { numeric: true, sensitivity: "base" });
+  });
+};
 
 /** STT luôn theo thứ tự dòng đang hiển thị (sortedRows), 1…n — không đọc từ record/response */
 const resolveSttText = (rows: HRCTableRow[], record: HRCTableRow): string => {
@@ -200,6 +277,11 @@ const CustomTableHRC = forwardRef(({
   stickyHeaders = true,
   stickyFirstColumn = false,
   stickyColumnKeys = [],
+  disableRowHover = false,
+  sortByMeThoi = false,
+  allowEditMacThepOnNMRow = false,
+  meThoiSearchApi,
+  macThepSearchApi,
   maBm = "",
   ngaySX = new Date(),
   ca = 0,
@@ -209,9 +291,16 @@ const CustomTableHRC = forwardRef(({
   lyDoValue = "",
   onLyDoChange,
   onSave,
+  deleteApi = dlnmHRC2Api,
+  chuyenMeThoiApi = dlnmHRC2Api,
 }: CustomTableHRCProps, ref: React.ForwardedRef<CustomTableHRCHandle>) => {
   const [rows, setRows] = useState<HRCTableRow[]>(initialData as HRCTableRow[]);
   const rowsRef = useRef<HRCTableRow[]>(rows);
+  // Đánh dấu mảng vừa emit ra ngoài qua onDataChange (xem emitDataChange bên dưới) — dùng để nhận
+  // biết initialData mới nhận được chỉ là "tiếng vọng" của chính thay đổi cục bộ vừa gửi lên (parent
+  // set state bằng đúng reference này rồi truyền lại làm initialData), KHÔNG phải dữ liệu mới thật sự
+  // từ API/DB. Xem useEffect sync initialData bên dưới.
+  const lastEmittedDataRef = useRef<HRCTableRow[] | null>(null);
 
   // Tính toán chiều cao cho 10 dòng dữ liệu
   // Row height (size="small"): ~32px, Header: ~40px
@@ -236,12 +325,12 @@ const CustomTableHRC = forwardRef(({
 
   useImperativeHandle(ref, () => ({
     validate: () => {
-      const phuLieuKeys = getAllFieldKeys(columns).filter(isPhuLieuDataIndex);
+      const numericKeys = getAllFieldKeys(columns).filter((key) => !isTextDataIndex(key));
       const hasNegative = rows.some((row) =>
-        phuLieuKeys.some((key) => isNegativeValue(row[key]))
+        numericKeys.some((key) => isNegativeValue(row[key]))
       );
       if (hasNegative) {
-        message.error("Các cột phụ liệu không được nhập giá trị âm");
+        message.error("Các cột số liệu không được nhập giá trị âm");
         return false;
       }
       if (lyDoLabel && hasCellChanges && !lyDoValue?.trim()) {
@@ -249,16 +338,33 @@ const CustomTableHRC = forwardRef(({
         setLyDoError(true);
         return false;
       }
+      // Mọi dòng (kể cả IsNM === true từ NM, không chỉ dòng thêm tay) trên các trang có meThoiSearchApi
+      // (BOF/LF tiêu hao) đều bắt buộc có Mẻ thổi + Mác thép — thiếu 1 trong 2 thì BE không match được
+      // dữ liệu ở lượt lưu sau.
+      if (meThoiSearchApi) {
+        const hasInvalidRow = rows.some(
+          (row) => !String(row.meThoi ?? "").trim() || !String(row.macThep ?? "").trim()
+        );
+        if (hasInvalidRow) {
+          message.error("Vui lòng chọn Mẻ thổi và Mác thép cho tất cả các dòng trước khi lưu");
+          return false;
+        }
+      }
       setLyDoError(false);
       return true;
     },
-  }), [lyDoLabel, hasCellChanges, lyDoValue, rows, columns]);
+  }), [lyDoLabel, hasCellChanges, lyDoValue, rows, columns, meThoiSearchApi]);
 
   useEffect(() => {
     if (initialData) {
-      setRows(initialData);
+      // sortByMeThoi: chỉ sort khi initialData thực sự là dữ liệu MỚI từ ngoài (API/DB, sau khi Lưu +
+      // tải lại) — nếu initialData chính là mảng vừa emit ra (parent set state bằng đúng reference đó
+      // rồi truyền lại), đây chỉ là "tiếng vọng" của thao tác đang gõ/chọn ô, KHÔNG sort lại (nếu
+      // không, dòng đang thao tác sẽ tự nhảy vị trí ngay khi giá trị meThoi vừa đổi).
+      const isEchoOfOwnEmit = initialData === lastEmittedDataRef.current;
+      setRows(sortByMeThoi && !isEchoOfOwnEmit ? sortRowsByMeThoi(initialData) : initialData);
     }
-  }, [initialData]);
+  }, [initialData, sortByMeThoi]);
 
   useEffect(() => {
     rowsRef.current = rows;
@@ -267,14 +373,83 @@ const CustomTableHRC = forwardRef(({
   // Helper: emit thay đổi ra ngoài (được gọi từ các event handler / onBlur)
   const emitDataChange = useCallback(
     (data: HRCTableRow[]) => {
+      lastEmittedDataRef.current = data;
       if (!onDataChange) return;
       onDataChange(data);
     },
     [onDataChange]
   );
 
-  // Sắp xếp: dòng nhập tay (IsNM === false) xếp cuối, không di chuyển dòng NM khi edit ô
+  // Sắp xếp hiển thị: mặc định nhóm dòng nhập tay (IsNM === false) xuống cuối (không di chuyển dòng
+  // NM khi đang sửa ô). Khi sortByMeThoi=true (HRC1 Tiêu hao BOF/LF): rows đã được sort đúng thứ tự
+  // meThoi ngay khi nhận initialData mới (xem useEffect ở trên) — ở đây KHÔNG sort lại theo giá trị
+  // nữa, chỉ trả nguyên rows, để dòng đang thao tác (vừa thêm/chọn meThoi) không tự nhảy vị trí giữa
+  // chừng; thứ tự chỉ được áp dụng lại sau khi Lưu + tải lại dữ liệu từ server.
+  // const buildMeSortKey = (
+  //     thoiGian: string | null | undefined,
+  //     ca: number | null | undefined,
+  //     ngaySX: string | null | undefined,
+  //   ): string => {
+  //     if (!thoiGian) return "9999-12-31 99:99";
+  //     const base = ngaySX ?? "2000-01-01";
+  //     const isNextDay = ca === 2 && thoiGian < "20:00";
+  //     const date = isNextDay ? dayjs(base).add(1, "day").format("YYYY-MM-DD") : base;
+  //     return `${date} ${thoiGian}`;
+  //   };
+
+  const buildMeSortKey = (
+  thoiGian: string | null | undefined,
+  ca: number | null | undefined,
+  ngaySX: Date | null | undefined,
+): string => {
+  if (!thoiGian || !ngaySX) {
+    return "9999-12-31 99:99";
+  }
+
+  const isNextDay =
+    ca === 2 && thoiGian < "20:00";
+
+  const date = isNextDay
+    ? dayjs(ngaySX).add(1, "day").format("YYYY-MM-DD")
+    : dayjs(ngaySX).format("YYYY-MM-DD");
+
+  return `${date} ${thoiGian}`;
+};
+ 
+  // const sortedRows = useMemo(() => {
+  //   console.log('sortedRows useMemo called');
+  //   if (sortByMeThoi) {
+  //     console.log('sortByMeThoi is true');
+  //     return rows;
+  //   }
+  //   if(maBm === "HRC1_BB_TieuHao_LF"){
+  //     console.log('LF');
+  //     return [...rows].sort((a, b) => buildMeSortKey(a.thoiGianLF as string, ca, ngaySX)
+  //         .localeCompare(buildMeSortKey(b.thoiGianLF as string, ca, ngaySX)));
+  //   }
+  //   console.log('khac');
+  //   const cloned = [...rows];
+  //   cloned.sort((a, b) => {
+  //     const aManual = a.IsNM === false;
+  //     const bManual = b.IsNM === false;
+  //     if (aManual === bManual) return 0;
+  //     return aManual ? 1 : -1;
+  //   });
+  //   return cloned;
+  // }, [rows, sortByMeThoi, maBm]);
   const sortedRows = useMemo(() => {
+    if (sortByMeThoi) {
+      return rows;
+    }
+
+    if (maBm === "HRC1_BB_TieuHao_LF") {
+      return [...rows].sort((a, b) =>
+        buildMeSortKey(a.thoiGianLF as string, ca, ngaySX).localeCompare(
+          buildMeSortKey(b.thoiGianLF as string, ca, ngaySX)
+        )
+      );
+    }
+
     const cloned = [...rows];
     cloned.sort((a, b) => {
       const aManual = a.IsNM === false;
@@ -283,7 +458,8 @@ const CustomTableHRC = forwardRef(({
       return aManual ? 1 : -1;
     });
     return cloned;
-  }, [rows]);
+  }, [rows, sortByMeThoi, maBm, ca, ngaySX]);
+
   const handleAddRow = () => {
     const fieldKeys = getAllFieldKeys(columns);
     const newRow: HRCTableRow = {
@@ -320,7 +496,7 @@ const CustomTableHRC = forwardRef(({
         MeThoi: meThoi,
         BieuMau: bieuMau,
       };
-      const response = await dlnmHRC2Api.chuyenMeThoi(payload);
+      const response = await chuyenMeThoiApi.chuyenMeThoi(payload);
       if(response.data.message){
         message.success(response.data.message);
         // Sau khi chuyển mẻ thành công, xóa luôn dòng tương ứng trong bảng
@@ -352,10 +528,10 @@ const CustomTableHRC = forwardRef(({
     if (typeof id === "number") {
       try {
         if(record.IsNM === false){
-          await dlnmHRC2Api.deleteRowByKey(id);
+          await deleteApi.deleteRowByKey(id);
         }
         else{
-          await dlnmHRC2Api.deleteRowNM(id);
+          await deleteApi.deleteRowNM(id);
         }
         message.success("Xóa dòng thành công");
         setRows((prev) => {
@@ -365,8 +541,18 @@ const CustomTableHRC = forwardRef(({
         });
         await onSave?.();
         return;
-      } catch (error) {
-        console.error("Delete row error:", error);
+      } catch (error: any) {
+        // 404 = dòng đã bị xóa từ nơi khác trước đó (vd HRC1 LF: mẻ TL hủy nhận đã tự xóa dòng
+        // tiêu hao liên kết) — kết quả mong muốn (dòng biến mất) đã đúng, không nên báo lỗi.
+        if (error?.status === 404 || error?.response?.status === 404) {
+          message.info("Dòng này đã bị xóa từ trước, đang cập nhật lại bảng.");
+          setRows((prev) => {
+            const newRows = prev.filter((row) => row.key !== record.key);
+            emitDataChange(newRows);
+            return newRows;
+          });
+          return;
+        }
         message.error("Không thể xóa dòng trên server");
         return;
       }
@@ -530,20 +716,26 @@ const CustomTableHRC = forwardRef(({
                 // Dòng thêm mới bằng button (IsNM === false): cho nhập tất cả các cột.
                 const isNMRow = record.IsNM !== false;
                 const isManualRow = !isNMRow;
+                const macThepLocked = isMacThepColumn && !allowEditMacThepOnNMRow;
                 const canEditThisCell =
                   !isAdjustColumn &&
+                  !child.alwaysReadonly &&
                   (!child.readonly || isManualRow) &&
                   editable &&
-                  (!isNMRow || !isMeThoiColumn);
+                  (!isNMRow || (!isMeThoiColumn && !macThepLocked));
 
                 const origKey = `${child.dataIndex}__orig`;
                 const manualKey = `${child.dataIndex}__IsManual`;
                 const origValue = record[origKey];
                 const currentValue = record[child.dataIndex];
                 const isManualFlag = (record as HRCRowWithManualFlags)[manualKey] === true;
-                const isCellChanged =
+                const isPerCellDiff =
                   isManualFlag ||
                   (origValue !== undefined && String(currentValue ?? "") !== String(origValue ?? ""));
+                // Cột không có __orig per-cell (không phải phụ liệu) — dùng cờ IsEdited cấp dòng do BE
+                // lưu lại (record.IsEdited) để highlight vẫn còn sau khi Lưu + tải lại dữ liệu.
+                const isRowEditedCell = child.trackRowEdited === true && record.IsEdited === true;
+                const isCellChanged = isPerCellDiff || isRowEditedCell;
 
                 const cellValue = record[child.dataIndex];
                 const displayValue = !canEditThisCell
@@ -554,19 +746,22 @@ const CustomTableHRC = forwardRef(({
                 const isTrungMeThoi =
                   record.isTrungMeThoi === true ||
                   (record as Record<string, unknown>).IsTrungMeThoi === true;
-                const isNegative = isPhuLieuDataIndex(child.dataIndex) && isNegativeValue(currentValue);
+                const isNegative = !isTextDataIndex(child.dataIndex) && isNegativeValue(currentValue);
 
                 const tooltipTitle = isNegative
                   ? "Không được âm"
-                  : isCellChanged
+                  : isPerCellDiff
                     ? `Tự động: ${origValue === null ? "0" : String(origValue ?? "")} | Chỉnh sửa: ${String(currentValue ?? "")}`
-                    : undefined;
+                    : isRowEditedCell
+                      ? "Đã chỉnh sửa thủ công"
+                      : undefined;
 
                 const isKeyColumn = isMeThoiColumn || isMacThepColumn;
 
                 // Style chung cho ô editable (highlight vàng sau khi blur)
                 const editableStyle: React.CSSProperties = {
                   textAlign: child.align ?? "right",
+                  width: "100%",
                   ...(isKeyColumn && record.IsNM === false ? { backgroundColor: "#fffbe6" } : {}),
                   ...(!(isMeThoiColumn && isTrungMeThoi) && child.highlight
                     ? { backgroundColor: "#fff1f0" }
@@ -575,10 +770,39 @@ const CustomTableHRC = forwardRef(({
                   ...(!(isMeThoiColumn && isTrungMeThoi) && isCellChanged
                     ? { backgroundColor: "#fff7b3" }
                     : {}),
-                  ...(isNegative ? { backgroundColor: "#ffeded", borderColor: "#ff4d4f" } : {}),
+                  ...(isNegative ? { backgroundColor: "tomato" } : {}),
                 };
 
-                const inputNode = canEditThisCell ? (
+                const activeTextAutocompleteApi = isManualRow
+                  ? isMeThoiColumn
+                    ? meThoiSearchApi
+                    : isMacThepColumn
+                      ? macThepSearchApi
+                      : undefined
+                  : undefined;
+
+                const inputNode = canEditThisCell && activeTextAutocompleteApi ? (
+                  <CommonAutocomplete<HRCTextAutocompleteOption>
+                    value={cellValue !== undefined && cellValue !== null && cellValue !== "" ? String(cellValue) : null}
+                    onChange={(v) => applyAndEmitCellChange(v !== null ? String(v) : "", record.key, child.dataIndex)}
+                    searchApi={activeTextAutocompleteApi}
+                    mapOption={(item) => ({ value: item.value, label: item.label })}
+                    fallbackLabelBuilder={(v) => String(v)}
+                    size="small"
+                    allowClear={false}
+                    style={editableStyle}
+                    selectProps={{
+                      className: [
+                        "hrc-select-key-column",
+                        isMeThoiColumn && isTrungMeThoi ? "hrc-select-trung-me-thoi" : "",
+                      ].filter(Boolean).join(" "),
+                    }}
+                    placeholder={
+                      child.placeholder ??
+                      (typeof child.title === "string" ? child.title : undefined)
+                    }
+                  />
+                ) : canEditThisCell ? (
                   <EditableCellInput
                     initialValue={displayValue}
                     onCommit={(v) => applyAndEmitCellChange(v, record.key, child.dataIndex)}
@@ -673,20 +897,26 @@ const CustomTableHRC = forwardRef(({
           // Dòng thêm mới bằng button (IsNM === false): cho nhập tất cả các cột.
           const isNMRow = record.IsNM !== false;
           const isManualRow = !isNMRow;
+          const macThepLocked = isMacThepColumn && !allowEditMacThepOnNMRow;
           const canEditThisCell =
             !isAdjustColumn &&
+            !col.alwaysReadonly &&
             (!col.readonly || isManualRow) &&
             editable &&
-            (!isNMRow || !isMeThoiColumn);
+            (!isNMRow || (!isMeThoiColumn && !macThepLocked));
           const dataIndex = col.dataIndex || "";
           const origKey = `${dataIndex}__orig`;
           const manualKey = `${dataIndex}__IsManual`;
           const origValue = record[origKey];
           const currentValue = record[dataIndex];
           const isManualFlag = (record as HRCRowWithManualFlags)[manualKey] === true;
-          const isCellChanged =
+          const isPerCellDiff =
             isManualFlag ||
             (origValue !== undefined && String(currentValue ?? "") !== String(origValue ?? ""));
+          // Cột không có __orig per-cell (không phải phụ liệu) — dùng cờ IsEdited cấp dòng do BE
+          // lưu lại (record.IsEdited) để highlight vẫn còn sau khi Lưu + tải lại dữ liệu.
+          const isRowEditedCell = col.trackRowEdited === true && record.IsEdited === true;
+          const isCellChanged = isPerCellDiff || isRowEditedCell;
 
           const cellValue = record[dataIndex];
           const displayValue = !canEditThisCell
@@ -697,24 +927,60 @@ const CustomTableHRC = forwardRef(({
           const isTrungMeThoi =
             record.isTrungMeThoi === true ||
             (record as Record<string, unknown>).IsTrungMeThoi === true;
-          const isNegative = isPhuLieuDataIndex(dataIndex) && isNegativeValue(currentValue);
+          const isNegative = !isTextDataIndex(dataIndex) && isNegativeValue(currentValue);
 
           const isKeyColumn = isMeThoiColumn || isMacThepColumn;
+          // Mác thép của dòng NM (sync tự động) về null ngay lần đầu — tô đỏ nhạt để user để ý bổ sung.
+          // Hết đỏ ngay khi có giá trị (kể cả giá trị rỗng do gõ tay xoá lại thì lại đỏ tiếp — đúng ý
+          // nghĩa "đang thiếu"). Không áp dụng dòng thêm tay (isManualRow đã luôn cho autocomplete rồi).
+          const isMacThepMissing =
+            isMacThepColumn && isNMRow &&
+            (currentValue === null || currentValue === undefined || currentValue === "");
 
           const editableStyle: React.CSSProperties = {
             textAlign: col.align ?? "right",
+            width: "100%",
             ...(isKeyColumn && record.IsNM === false ? { backgroundColor: "#fffbe6" } : {}),
             ...(!(isMeThoiColumn && isTrungMeThoi) && col.highlight
               ? { backgroundColor: "#fff1f0" }
               : {}),
+            ...(isMacThepMissing ? { backgroundColor: "#fff1f0" } : {}),
             ...(isMeThoiColumn && isTrungMeThoi ? { backgroundColor: "tomato" } : {}),
             ...(!(isMeThoiColumn && isTrungMeThoi) && isCellChanged
               ? { backgroundColor: "#fff7b3" }
               : {}),
-            ...(isNegative ? { backgroundColor: "#ffeded", borderColor: "#ff4d4f" } : {}),
+            ...(isNegative ? { backgroundColor: "tomato" } : {}),
           };
 
-          const inputNode = canEditThisCell ? (
+          // Autocomplete cho meThoi/macThep trên dòng thêm tay — chỉ bật khi đã truyền searchApi tương
+          // ứng (mặc định chưa có API thật, giữ nguyên ô nhập tay). Value/onChange đều làm việc trên
+          // chuỗi (giống EditableCellInput), tái dùng applyAndEmitCellChange sẵn có. Mác thép còn bật
+          // thêm cho dòng NM khi đang null — cho user chọn/tạo ngay từ danh mục thay vì gõ tay tự do.
+          const activeTextAutocompleteApi = isMeThoiColumn
+            ? (isManualRow ? meThoiSearchApi : undefined)
+            : isMacThepColumn && (isManualRow || isMacThepMissing)
+              ? macThepSearchApi
+              : undefined;
+
+          const inputNode = canEditThisCell && activeTextAutocompleteApi ? (
+            <CommonAutocomplete<HRCTextAutocompleteOption>
+              value={cellValue !== undefined && cellValue !== null && cellValue !== "" ? String(cellValue) : null}
+              onChange={(v) => applyAndEmitCellChange(v !== null ? String(v) : "", record.key, dataIndex)}
+              searchApi={activeTextAutocompleteApi}
+              mapOption={(item) => ({ value: item.value, label: item.label })}
+              fallbackLabelBuilder={(v) => String(v)}
+              size="small"
+              allowClear={false}
+              style={editableStyle}
+              selectProps={{
+                className: [
+                  "hrc-select-key-column",
+                  isMeThoiColumn && isTrungMeThoi ? "hrc-select-trung-me-thoi" : "",
+                ].filter(Boolean).join(" "),
+              }}
+              placeholder={typeof baseTitle === "string" ? baseTitle : undefined}
+            />
+          ) : canEditThisCell ? (
             <EditableCellInput
               initialValue={displayValue}
               onCommit={(v) => applyAndEmitCellChange(v, record.key, dataIndex)}
@@ -731,7 +997,11 @@ const CustomTableHRC = forwardRef(({
                 backgroundColor:
                   isMeThoiColumn && isTrungMeThoi
                     ? "tomato"
-                    : (isCellChanged ? "#fff7b3" : "#f5f5f5"),
+                    : isCellChanged
+                      ? "#fff7b3"
+                      : isMacThepMissing
+                        ? "#fff1f0"
+                        : "#f5f5f5",
                 cursor: "not-allowed",
               }}
             />
@@ -739,9 +1009,13 @@ const CustomTableHRC = forwardRef(({
 
           const flatTooltip = isNegative
             ? "Không được âm"
-            : isCellChanged
-              ? `Cũ: ${origValue === null ? "0" : String(origValue ?? "")} | Mới: ${String(currentValue ?? "")}`
-              : undefined;
+            : isPerCellDiff
+              ? `Cũ: ${origValue === null ? (isTextDataIndex(dataIndex) ? "(trống)" : "0") : String(origValue ?? "")} | Mới: ${String(currentValue ?? "")}`
+              : isRowEditedCell
+                ? "Đã chỉnh sửa thủ công"
+                : isMacThepMissing
+                  ? "Mác thép đang trống — vui lòng chọn hoặc nhập"
+                  : undefined;
 
           return flatTooltip ? (
             <Tooltip title={flatTooltip}>
@@ -855,7 +1129,7 @@ const CustomTableHRC = forwardRef(({
           <Table
             bordered
             pagination={false}
-            className={className}
+            className={`hrc-table ${className} ${disableRowHover ? "hrc-table-no-hover" : ""}`.trim()}
             size="small"
             columns={tableColumns}
             dataSource={sortedRows}

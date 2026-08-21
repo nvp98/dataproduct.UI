@@ -57,6 +57,8 @@ export interface HRC1_MeThepVm {
   chuyenVeMeId?: number | null;
   chuyenVeMaMe?: string | null;
   tenMayDucChuyen?: string | null;
+  // Chuyển ca Đúc (routing sang phiếu Đúc ca sau) — không đổi Ca của chính công đoạn TL
+  isChuyenCaDuc?: boolean | null;
 }
 
 export interface HRC1_ChoNhanMeVm {
@@ -322,6 +324,12 @@ export const HRC1Api = {
     apiService.post("/api/hrc1/tinh-luyen/them-dong", { meId, idPhieu }, { headers: userHeaders() }),
   huyNhanMe: (meId: number, idPhieu: string, scopePhieu?: number | null) =>
     apiService.post("/api/hrc1/tinh-luyen/huy-nhan-me", { meId, idPhieu, scopePhieu }, { headers: userHeaders() }),
+  // Chuyển routing mẻ sang phiếu Đúc ca trước/sau (mẻ luyện xong sát ranh giới ca, đúc rơi vào ca khác).
+  // Không đổi Ca của chính công đoạn TL/Tiêu hao LF.
+  chuyenCaDuc: (meId: number, huong: "truoc" | "sau") =>
+    apiService.post("/api/hrc1/tinh-luyen/chuyen-ca-duc", { meId, huong }, { headers: userHeaders() }),
+  huyChuyenCaDuc: (meId: number) =>
+    apiService.post("/api/hrc1/tinh-luyen/huy-chuyen-ca-duc", { meId }, { headers: userHeaders() }),
 
   // Máy đúc
   xacNhanDuc: (meIds: number[]): Promise<HRC1_DucXacNhanResult> =>

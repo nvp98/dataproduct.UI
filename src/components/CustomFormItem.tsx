@@ -11,6 +11,8 @@ interface CustomFormItemProps {
   readOnly?: boolean;
   initialValue?: any;
   maBm?: string; // mã biểu mẫu để lọc danh sách người ký theo BmQuyenXl
+  // Khu vực/Lò/Tinh luyện của phiếu đang mở — truyền xuống CustomChonNguoiKy để lọc người ký đúng scope.
+  scope?: number | string | null;
 }
 
 const CustomFormItem: React.FC<CustomFormItemProps> = ({
@@ -19,6 +21,7 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
   disabled,
   readOnly = false,
   maBm,
+  scope,
   // initialValue,
 }) => {
   const isDisabled = disabled ?? field.disabled ?? false;
@@ -76,6 +79,7 @@ const CustomFormItem: React.FC<CustomFormItemProps> = ({
             maBm={maBm}
             loaiQuyen={loaiQuyen}
             maphongBan={field.maphongBan}
+            scope={scope}
             disabled={isDisabled}
           />
         );

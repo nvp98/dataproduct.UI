@@ -6,6 +6,9 @@ interface CustomChonNguoiKyProps {
   maBm?: string;
   loaiQuyen?: number; // 1 = người xử lý (quyền 1|4), 2 = người phê duyệt (quyền 2|4)
   maphongBan?: string; // fallback cũ khi chưa có maBm
+  // Khu vực/Lò/Tinh luyện của phiếu đang mở (vd scope 1-5) — optional, chỉ lọc danh sách người ký
+  // theo đúng khu vực đó (hoặc người được cấp "ALL") khi có giá trị. Không truyền = giữ hành vi cũ.
+  scope?: number | string | null;
   value?: any;
   onChange?: (value: any) => void;
   disabled?: boolean;
@@ -15,6 +18,7 @@ export default function CustomChonNguoiKy({
   maBm,
   loaiQuyen,
   maphongBan,
+  scope,
   value,
   onChange,
   disabled = false,
@@ -28,7 +32,7 @@ export default function CustomChonNguoiKy({
       try {
         let res: any;
         if (maBm && loaiQuyen != null) {
-          res = await TaiKhoanApi.getListKyDuyet(maBm, loaiQuyen);
+          res = await TaiKhoanApi.getListKyDuyet(maBm, loaiQuyen, scope);
         } else if (maphongBan) {
           const params = maphongBan === "All" ? {} : { maphongBan };
           res = await TaiKhoanApi.getData(params);
@@ -49,7 +53,7 @@ export default function CustomChonNguoiKy({
     };
 
     fetchOptions();
-  }, [maBm, loaiQuyen, maphongBan]);
+  }, [maBm, loaiQuyen, maphongBan, scope]);
 
   return (
     <Select

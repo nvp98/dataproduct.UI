@@ -24,6 +24,10 @@ import TaoBangTheoDoiBenPhe from "../pages/NM.NL/BangTheoDoiBenPhe/TaoBangTheoDo
 import ChiTietBangTheoDoiBenPhe from "../pages/NM.NL/BangTheoDoiBenPhe/ChiTietBangTheoDoiBenPhe";
 import TieuHaoLoThoi from "../pages/NM.HRC1/TieuHaoLoThoi/TieuHaoLoThoi";
 import TaoTieuHaoLoThoi from "../pages/NM.HRC1/TieuHaoLoThoi/TaoTieuHaoLoThoi";
+import ChiTietTieuHaoLoThoi_BOF from "../pages/NM.HRC1/TieuHaoLoThoi/ChiTietBOF";
+import TieuHaoTinhLuyenLF from "../pages/NM.HRC1/TieuHaoTinhLuyenLF/TieuHaoTinhLuyenLF";
+import TaoTieuHaoTinhLuyenLF from "../pages/NM.HRC1/TieuHaoTinhLuyenLF/TaoTieuHaoTinhLuyenLF";
+import ChiTietTieuHaoTinhLuyenLF from "../pages/NM.HRC1/TieuHaoTinhLuyenLF/ChiTietLF";
 import ChiTietPhieuPhoiNong from "../pages/NMCTD/BienBanPhoiNong/ChiTietPhieuPhoiNong";
 import SanLuongPhoi from "../pages/KhoDuLieu/NM.CTD/SanLuongPhoi";
 import BKNguyenLieu from "../pages/KhoDuLieu/NM.NL/BKNguyenLieu";
@@ -45,6 +49,9 @@ import ChiTietTieuHaoNauLuyen_BOF from "../pages/NM.HRC2/Tieu Hao NauLuyen_BOF/C
 import STD_NhapXuatTon from "../pages/NM.HRC2/STD_NhapXuatTon/STD_NhapXuatTon";
 import Tao_STD from "../pages/NM.HRC2/STD_NhapXuatTon/Tao_STD";
 import ChiTiet_STD from "../pages/NM.HRC2/STD_NhapXuatTon/ChiTiet_STD";
+import STD_NhapXuatTon_HRC1 from "../pages/NM.HRC1/STD_NhapXuatTon/STD_NhapXuatTon";
+import Tao_STD_HRC1 from "../pages/NM.HRC1/STD_NhapXuatTon/Tao_STD";
+import ChiTiet_STD_HRC1 from "../pages/NM.HRC1/STD_NhapXuatTon/ChiTiet_STD";
 import ChiTietPhieuPhoiNguoi from "../pages/NMCTD/BienBanPhoiNguoi/ChiTietPhieuPhoiNguoi";
 import PhanQuyenBieuMau from "../pages/Settings/PhanQuyenBieuMau";
 import ChiTietPhoiNhapKho from "../pages/NMCTD/BienBanPhoiNhapKho/ChiTietPhoiNhapKho";
@@ -99,6 +106,7 @@ import QuanLyTaiKhoan from "../pages/Settings/QuanLyTaiKhoan";
 import ThongKePhieuCTD from "../pages/NMCTD/ThongKe/ThongKePhieuCTD";
 import ThongKePhieuLG from "../pages/NMLG/ThongKe/ThongKePhieuLG";
 import PhanBoDuLieuPage from "../pages/NMLG/PhanBoDuLieu/PhanBoDuLieuPage";
+import PhuLieuHRC1 from "../pages/KhoDuLieu/NM.HRC1/PhuLieuHRC1";
 
 export const routes = [
   {
@@ -532,7 +540,7 @@ export const routes = [
         ),
       },
       {
-        path: "tieuhaolothoi",
+        path: "hrc1_tieuhaolothoi",
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
@@ -542,11 +550,91 @@ export const routes = [
         ),
       },
       {
-        path: "taotieuhaolothoi",
+        path: "hrc1_taotieuhaolothoi",
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <TaoTieuHaoLoThoi />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1_chitiettieuhaolothoi_bof",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoLoThoi_BOF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/hrc1_tieuhaolothoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoLoThoi type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/hrc1_tieuhaolothoi",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoLoThoi type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1_tieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoTinhLuyenLF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1_taotieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoTieuHaoTinhLuyenLF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1_chitiettieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietTieuHaoTinhLuyenLF />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/hrc1_tieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoTinhLuyenLF type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/hrc1_tieuhaotinhluyenlf",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TieuHaoTinhLuyenLF type="xemphieu" />
             </RequireRole>
           </RequireAuth>
         ),
@@ -657,6 +745,46 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <ChiTiet_STD />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1_std_nhapxuatton",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <STD_NhapXuatTon_HRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/hrc1_std_nhapxuatton",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <STD_NhapXuatTon_HRC1 type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "tao_std_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <Tao_STD_HRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chi_tiet_std_hrc1",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTiet_STD_HRC1 />
             </RequireRole>
           </RequireAuth>
         ),
@@ -1551,6 +1679,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <QuanLyTaiKhoan />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1-phulieu",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <PhuLieuHRC1 />
             </RequireRole>
           </RequireAuth>
         ),

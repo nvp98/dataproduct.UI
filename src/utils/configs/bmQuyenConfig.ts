@@ -76,7 +76,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
-      tenBm: "Biên bản giao nhận phôi tấm",
+      tenBm: "Biên bản sản lượng phôi tấm",
       nhom: "NM.HRC2",
       // Không có scope vùng máy — workflow thống nhất 1 bảng
       // khuVucPhus tạo record BM_QuyenXL riêng cho từng bộ phận
@@ -127,6 +127,30 @@ export const bmQuyenConfig = {
       maBm: BM_CONFIG.HRC1.HRC1_BB_Sanluongphoi,
       tenBm: "Biên bản sản lượng phôi",
       nhom: "NM.HRC1",
+    },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+      tenBm: "Biên bản tiêu hao nấu luyện lò thổi BOF",
+      nhom: "NM.HRC1",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Lò thổi 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Lò thổi 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Lò thổi 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Lò thổi 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Lò thổi 5" },
+      ]
+    },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+      tenBm: "Biên bản tiêu hao nấu luyện tinh luyện LF",
+      nhom: "NM.HRC1",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Tinh luyện 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Tinh luyện 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Tinh luyện 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Tinh luyện 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Tinh luyện 5" },
+      ]
     },
     {
       maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
@@ -232,13 +256,19 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
-      tenBm: "Biên bản giao nhận phôi tấm",
+      tenBm: "Biên bản sản lượng phôi tấm",
       nhom: "NM.HRC1",
       khuVucPhus: [
         { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
         { khuVucPhu: "Can", tenKhuVuc: "Bộ phận Cán Tấm" },
         { khuVucPhu: "C4", tenKhuVuc: "GĐ/PGĐ NM" },
       ]
-    }
+    },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_STD_NXT,
+      tenBm: "STD - Nhập xuất tồn HRC1",
+      nhom: "NM.HRC1",
+    },
+
   ] as BieuMauQuyenItem[],
 };

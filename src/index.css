@@ -29,7 +29,6 @@ a {
 /* HRC2 Slab — row highlight */
 .row-trung-idslab > td { background-color: #fffbe6 !important; }
 .row-trung-idslab:hover > td { background-color: #fff1b8 !important; }
-
 /* Scrollbar mảnh, tự ẩn — chỉ hiện khi hover/scroll vào vùng chứa */
 * {
   scrollbar-width: thin;

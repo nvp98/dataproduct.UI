@@ -27,6 +27,7 @@ import {
   ArrowRightOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  EditOutlined,
   PlusOutlined,
   ReloadOutlined,
   SnippetsOutlined,
@@ -148,10 +149,14 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
     setFilterPKH("all");
   };
 
-  // ── Thêm mới slab thủ công (tab "Chi tiết") ──────────────────────────────
+  // ── Thêm mới / Sửa slab thủ công (tab "Chi tiết") ────────────────────────
+  // Dùng chung 1 Modal/Form cho cả 2 chế độ — bộ field giống hệt nhau, chỉ khác nguồn dữ liệu
+  // fill vào form lúc mở (rỗng khi Thêm mới, fill từ dòng đang chọn khi Sửa) và API gọi lúc Lưu.
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [addForm] = Form.useForm();
+  const [formMode, setFormMode] = useState<"add" | "edit">("add");
+  const [editingSlabId, setEditingSlabId] = useState<number | null>(null);
 
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
@@ -244,15 +249,22 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
     }
   }, [idphieu, data, loadSlabs]);
 
-  // ── Thêm mới slab thủ công — NgaySX/CaSX/KipSX lấy từ thông tin phiếu (data), không
-  // cho user nhập, để slab mới luôn khớp đúng phiếu đang xem (BE cũng tự lấy lại từ phiếu).
-  const handleAddSlab = useCallback(async () => {
+  // ── Thêm mới / Sửa slab thủ công — NgaySX/CaSX/KipSX lấy từ thông tin phiếu (data) khi thêm
+  // mới, không cho user nhập, để slab mới luôn khớp đúng phiếu đang xem (BE cũng tự lấy lại từ
+  // phiếu). Khi Sửa, các field này giữ nguyên (không gửi lên, BE không đụng tới).
+  const closeSlabFormModal = useCallback(() => {
+    setAddModalOpen(false);
+    addForm.resetFields();
+    setFormMode("add");
+    setEditingSlabId(null);
+  }, [addForm]);
+
+  const handleSubmitSlabForm = useCallback(async () => {
     if (!idphieu) return;
     try {
       const values = await addForm.validateFields();
       setAddLoading(true);
-      await Hrc1SlabApi.createSlab({
-        idPhieu: idphieu,
+      const payload = {
         idSlab: values.idSlab,
         idPiece: values.idPiece || null,
         maMe: values.maMe || null,
@@ -263,18 +275,30 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
         chieuRong: values.chieuRong ?? null,
         chieuDai: values.chieuDai ?? null,
         khoiLuong: values.khoiLuong ?? null,
-      });
-      message.success("Đã thêm slab mới");
-      setAddModalOpen(false);
-      addForm.resetFields();
+      };
+      if (formMode === "edit" && editingSlabId != null) {
+        await Hrc1SlabApi.editSlab(editingSlabId, payload);
+        message.success("Đã cập nhật slab");
+      } else {
+        await Hrc1SlabApi.createSlab({ idPhieu: idphieu, ...payload });
+        message.success("Đã thêm slab mới");
+      }
+      closeSlabFormModal();
       await loadSlabs();
     } catch (err: any) {
       if (err?.errorFields) return; // lỗi validate form, không phải lỗi API
-      message.error(err?.message ?? "Lỗi thêm slab mới");
+      message.error(err?.message ?? (formMode === "edit" ? "Lỗi cập nhật slab" : "Lỗi thêm slab mới"));
     } finally {
       setAddLoading(false);
     }
-  }, [idphieu, addForm, loadSlabs]);
+  }, [idphieu, addForm, formMode, editingSlabId, closeSlabFormModal, loadSlabs]);
+
+  const openAddModal = useCallback(() => {
+    setFormMode("add");
+    setEditingSlabId(null);
+    addForm.resetFields();
+    setAddModalOpen(true);
+  }, [addForm]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -323,6 +347,28 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
     [slabDetails, selectedRowKeys],
   );
   const selectedCount = selectedRowKeys.length;
+
+  // Chỉ cho phép Sửa khi tick đúng 1 dòng — fill toàn bộ field từ dòng đang chọn vào form, y hệt
+  // popup "Thêm mới" nhưng đổi tiêu đề + hành vi Lưu (gọi editSlab thay vì createSlab).
+  const openEditModal = useCallback(() => {
+    const row = selectedRows[0];
+    if (!row) return;
+    setFormMode("edit");
+    setEditingSlabId(row.id);
+    addForm.setFieldsValue({
+      idSlab: row.idSlab,
+      idPiece: row.idPiece ?? null,
+      maMe: row.maMe ?? null,
+      macThep: row.macThep ?? null,
+      mayDuc: row.mayDuc ?? null,
+      cutDate: row.cutDate ? dayjs(row.cutDate) : null,
+      chieuDay: row.chieuDay ?? null,
+      chieuRong: row.chieuRong ?? null,
+      chieuDai: row.chieuDai ?? null,
+      khoiLuong: row.khoiLuong ?? null,
+    });
+    setAddModalOpen(true);
+  }, [selectedRows, addForm]);
 
   const parseSearchTerms = (text: string) =>
     text.split(/[\n\t,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -900,11 +946,23 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                         <Button
                           size="small"
                           icon={<PlusOutlined />}
-                          onClick={() => setAddModalOpen(true)}
+                          onClick={openAddModal}
                           disabled={data?.tinhTrang === 5}
                         >
                           Thêm mới
                         </Button>
+                      )}
+                      {!readOnly && (
+                        <Tooltip title={selectedCount === 1 ? undefined : "Chọn đúng 1 dòng để sửa"}>
+                          <Button
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={openEditModal}
+                            disabled={data?.tinhTrang === 5 || selectedCount !== 1}
+                          >
+                            Sửa
+                          </Button>
+                        </Tooltip>
                       )}
 
                       {/* Đúc: chuyển ca + xác nhận Đúc */}
@@ -1153,12 +1211,12 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
         </div>
       )} */}
 
-      {/* Popup thêm mới slab thủ công (tab "Chi tiết") */}
+      {/* Popup thêm mới / sửa slab thủ công (tab "Chi tiết") — dùng chung 1 Form cho cả 2 chế độ */}
       <Modal
-        title="Thêm mới slab"
+        title={formMode === "edit" ? "Sửa slab" : "Thêm mới slab"}
         open={addModalOpen}
-        onOk={() => void handleAddSlab()}
-        onCancel={() => { setAddModalOpen(false); addForm.resetFields(); }}
+        onOk={() => void handleSubmitSlabForm()}
+        onCancel={closeSlabFormModal}
         okText="Lưu"
         cancelText="Hủy"
         confirmLoading={addLoading}

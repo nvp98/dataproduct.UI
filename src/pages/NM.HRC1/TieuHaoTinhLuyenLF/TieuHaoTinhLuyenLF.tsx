@@ -1,4 +1,4 @@
-import HRC1_BB_TieuHao_BOF from "../../../utils/BM_config/HRC1_BB_TieuHao_BOF.json";
+import HRC1_BB_TieuHao_LF from "../../../utils/BM_config/HRC1_BB_TieuHao_LF.json";
 import { Button, Card, Space, Table, Tag } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -9,8 +9,8 @@ import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { PHIEU_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 
-const TieuHaoLoThoi = ({ type }: { type?: string }) => {
-  const config = HRC1_BB_TieuHao_BOF;
+const TieuHaoTinhLuyenLF = ({ type }: { type?: string }) => {
+  const config = HRC1_BB_TieuHao_LF;
   const navigate = useNavigate();
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
@@ -74,14 +74,14 @@ const TieuHaoLoThoi = ({ type }: { type?: string }) => {
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
             if (type === "viecdentoi" || type === "xemphieu") {
-              return navigate("/hrc1_chitiettieuhaolothoi_bof", {
+              return navigate("/hrc1_chitiettieuhaotinhluyenlf", {
                 state: {
                   idphieu: record.idphieu,
                   pheduyet: record?.pheDuyet?.[0] ?? null,
                 },
               });
             } else {
-              return navigate("/hrc1_taotieuhaolothoi", {
+              return navigate("/hrc1_taotieuhaotinhluyenlf", {
                 state: { idphieu: record.idphieu },
               });
             }
@@ -100,14 +100,14 @@ const TieuHaoLoThoi = ({ type }: { type?: string }) => {
       ellipsis: true,
     },
     {
-      title: "Lò thổi",
+      title: "Tinh luyện",
       dataIndex: "tenScope",
       key: "tenScope",
       width: 120,
       ellipsis: true,
       render: (value: string | null | undefined, record: { scope?: number | string | null }) => {
         if (value) return value;
-        if (record.scope !== null && record.scope !== undefined) return "Lò thổi " + String(record.scope);
+        if (record.scope !== null && record.scope !== undefined) return "Tinh luyện " + String(record.scope);
         return null;
       },
     },
@@ -200,7 +200,7 @@ const TieuHaoLoThoi = ({ type }: { type?: string }) => {
             type="text"
             icon={<EyeOutlined twoToneColor="#1890ff" />}
             onClick={() =>
-              navigate("/hrc1_chitiettieuhaolothoi_bof", {
+              navigate("/hrc1_chitiettieuhaotinhluyenlf", {
                 state: { idphieu: record.idphieu },
               })
             }
@@ -234,7 +234,7 @@ const TieuHaoLoThoi = ({ type }: { type?: string }) => {
     },
     {
       key: "scope",
-      label: "Lò thổi",
+      label: "Tinh luyện",
       type: "select",
       options: getAllowedScopeOptions(config.code as string),
     },
@@ -261,7 +261,7 @@ const TieuHaoLoThoi = ({ type }: { type?: string }) => {
         storageKey={true}
         showCreateButton={isAdmin}
         onCreateClick={() => {
-          navigate("/hrc1_taotieuhaolothoi");
+          navigate("/hrc1_taotieuhaotinhluyenlf");
         }}
         createButtonText="Tạo phiếu mới"
         singleRow
@@ -297,4 +297,4 @@ const TieuHaoLoThoi = ({ type }: { type?: string }) => {
   );
 };
 
-export default TieuHaoLoThoi;
+export default TieuHaoTinhLuyenLF;

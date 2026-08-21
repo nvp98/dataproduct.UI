@@ -62,7 +62,17 @@ export const MenuDataDashboard = [
         code: "bbgnphoitam_hrc1",
         title: "BM.29/QT.05.12 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
         maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
-      }
+      },
+      {
+        code: "hrc1_tieuhaolothoi",
+        title: "BM.07/QT.05.10 BIÊN BẢN TIÊU HAO NẤU LUYỆN LÒ THỔI BOF",
+        maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+      },
+      {
+        code: "hrc1_tieuhaotinhluyenlf",
+        title: "BM.14/QT.05.10 BIÊN BẢN TIÊU HAO NẤU LUYỆN TINH LUYỆN LF",
+        maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+      },
     ],
   },
   {

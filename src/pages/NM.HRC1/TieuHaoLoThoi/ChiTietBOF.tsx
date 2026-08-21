@@ -2,56 +2,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { HRCChildColumn, HRCParentColumn } from "../../../components/CustomTableHRC";
 import {
-  hrc2TableService,
+  hrc1TableService,
   type AdjustColumnMeta,
   type DynamicColumnMeta,
-} from "../../../services/HRC2TableService";
-import {
-  Button,
-  Card,
-  Descriptions,
-  Table,
-  Tooltip,
-  Typography,
-  Row,
-  Col,
-  message,
-} from "antd";
+} from "../../../services/HRC1TableService";
+import { Button, Card, Descriptions, Table, Tooltip, Typography, Row, Col, message } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { formatNumberGroup } from "../../../utils/formatters/numberFormat";
 import { usePhieuNavigation } from "../../../hooks/usePhieuNavigation";
 import { PhieuApi } from "../../../services/PhieuApi";
-import HRC2_BB_NauLuyen_LF from "../../../utils/BM_config/HRC2_BB_NauLuyen_LF.json";
+import HRC1_BB_TieuHao_BOF from "../../../utils/BM_config/HRC1_BB_TieuHao_BOF.json";
 import { getBmQuyenUiFlags } from "../../../utils/helpers/checkAdminRole";
 import { phieuActionService } from "../../../services/PhieuActionService";
-import { hrc2PhuLieuService } from "../../../services/HRC2PhuLieuService";
-import HRC2ExportBienBanButtons from "../../../components/HRC2ExportBienBanButtons";
-import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
-import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
+import { DETAIL_HIDDEN_BUTTON_KEYS, PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
+import { hrc1PhuLieuService } from "../../../services/HRC1PhuLieuService";
 import logoHP from "../../../assets/images/LogoPDF.png";
 
 const { Title, Text } = Typography;
 
-/** Giống TaoPhieuLF — khớp excludedAdjustKeys khi generate cột điều chỉnh */
-const DEFAULT_EXCLUDED_KEYS = [
-  "meThoi",
-  "macThep",
-  "queLayMau",
-  "queDoNhiet",
-  "ghiChu",
-  "stt",
-  "STT",
-];
-
 function mergeAdjustColumnValuesIntoRows(
   rows: any[],
   adjustMetas: (DynamicColumnMeta & {
-    values?: Array<{
-      rowId?: number | null;
-      meThoi?: string | null;
-      value?: string | number | null;
-    }>;
+    values?: Array<{ rowId?: number | null; meThoi?: string | null; value?: string | number | null }>;
   })[] | undefined
 ): any[] {
   if (!rows?.length || !adjustMetas?.length) return rows || [];
@@ -61,9 +34,7 @@ function mergeAdjustColumnValuesIntoRows(
     if (!values?.length || !meta.dataIndex) return;
     values.forEach((v) => {
       const row = list.find(
-        (r) =>
-          (v.rowId != null && r.id === v.rowId) ||
-          (v.meThoi != null && r.meThoi === v.meThoi)
+        (r) => (v.rowId != null && r.id === v.rowId) || (v.meThoi != null && r.meThoi === v.meThoi)
       );
       if (row) row[meta.dataIndex] = v.value;
     });
@@ -118,25 +89,17 @@ const formatSum = (value: number): string => {
   return isInteger ? `${sign}${intFormatted}` : `${sign}${intFormatted}.${fracRaw}`;
 };
 
-function buildBaseColumnsAndEditableFields(layoutConfig: typeof HRC2_BB_NauLuyen_LF): {
+function buildBaseColumnsAndEditableFields(layoutConfig: typeof HRC1_BB_TieuHao_BOF): {
   baseColumns: HRCParentColumn[];
   editableFields: string[];
 } {
   const alignType = (a: unknown): "left" | "center" | "right" | undefined =>
     a === "left" || a === "center" || a === "right" ? a : undefined;
   const rawBase =
-    layoutConfig.layout.find((l: any) => l.sectionType === "table" && l.key === "table1")?.columns ||
-    [];
+    layoutConfig.layout.find((l: any) => l.sectionType === "table" && l.key === "table1")?.columns || [];
   const baseColumns: HRCParentColumn[] = rawBase.map((col: any) => {
     if (Array.isArray(col.children)) {
-      return {
-        ...col,
-        align: alignType(col.align),
-        children: col.children.map((c: any) => ({
-          ...c,
-          align: alignType(c.align),
-        })),
-      };
+      return { ...col, align: alignType(col.align), children: col.children.map((c: any) => ({ ...c, align: alignType(c.align) })) };
     }
     return { ...col, align: alignType(col.align) };
   });
@@ -151,9 +114,7 @@ function buildBaseColumnsAndEditableFields(layoutConfig: typeof HRC2_BB_NauLuyen
         if (!child.dataIndex) return;
         const editableParent = col.editable !== false;
         const editableChild = child.editable !== false;
-        if (editableParent && editableChild) {
-          editableFieldSet.add(child.dataIndex);
-        }
+        if (editableParent && editableChild) editableFieldSet.add(child.dataIndex);
       });
     }
   });
@@ -162,18 +123,16 @@ function buildBaseColumnsAndEditableFields(layoutConfig: typeof HRC2_BB_NauLuyen
 
 type NmColumnsPack = {
   phuGiaColumns: HRCChildColumn[];
-  chatHopKimColumns: HRCChildColumn[];
-  khacColumns: HRCChildColumn[];
   adjustMetas: AdjustColumnMeta[];
 };
 
-const ChiTietTieuHaoNauLuyen_LF = () => {
+const ChiTietTieuHaoLoThoi_BOF = () => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } = usePhieuNavigation(
-    "phieu_lf_id",
-    "/viecdentoi/tieuhaonauluyen_lf"
+    "phieu_hrc1_bof_id",
+    "/viecdentoi/hrc1_tieuhaolothoi"
   );
 
-  const config = HRC2_BB_NauLuyen_LF;
+  const config = HRC1_BB_TieuHao_BOF;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -196,11 +155,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
         fd.table1 || [],
         fd.table1DynamicColumns?.adjust as
           | (DynamicColumnMeta & {
-              values?: Array<{
-                rowId?: number | null;
-                meThoi?: string | null;
-                value?: string | number | null;
-              }>;
+              values?: Array<{ rowId?: number | null; meThoi?: string | null; value?: string | number | null }>;
             })[]
           | undefined
       );
@@ -208,30 +163,17 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       const ngay = fd.NgaySX;
       const ca = fd.ca;
       const scope = fd.scope;
-      // Phiếu đã Chốt: dùng snapshot table1/table1DynamicColumns đã lưu, KHÔNG load lại từ NM
-      // theo config Header_Key hiện tại — tránh "mất" cột phụ liệu nếu sau này ai đó bỏ tick
-      // Excel/ThongKe cho header đã dùng trong phiếu Chốt (dữ liệu lịch sử phải cố định).
-      const isChot = payload?.tinhTrang === TrangThaiPhieuConst.DaChot;
-      if (isChot || !ngay || ca == null || scope == null) {
-        setTable1DisplayRows(savedWithAdjust);
+      if (!ngay || ca == null || scope == null) {
+        setTable1DisplayRows(hrc1TableService.sortRowsByMeThoi(savedWithAdjust));
         setNmColumnsPack(null);
         return;
       }
 
       try {
         const { baseColumns, editableFields } = buildBaseColumnsAndEditableFields(config);
-        const result = await hrc2PhuLieuService.fetchAndProcessPhuLieus(
-          {
-            NgaySX: dayjs(ngay).format("YYYY-MM-DD"),
-            Ca: Number(ca),
-            LoaiBM: "LF",
-            Scope: Number(scope),
-          },
-          {
-            onOpenMappingModal: () => {},
-            baseColumns,
-            mergeMappedPhuLieus: true,
-          }
+        const result = await hrc1PhuLieuService.fetchAndProcessPhuLieus(
+          { NgaySX: dayjs(ngay).format("YYYY-MM-DD"), Ca: Number(ca), Scope: Number(scope) },
+          { baseColumns }
         );
 
         const isEmpty =
@@ -239,24 +181,18 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           (result.tableData.length === 1 && result.tableData[0]?.key === "row-empty");
 
         if (isEmpty) {
-          setTable1DisplayRows(savedWithAdjust);
+          setTable1DisplayRows(hrc1TableService.sortRowsByMeThoi(savedWithAdjust));
           setNmColumnsPack(null);
           return;
         }
 
-        const rowsWithOverrides = hrc2TableService.applyManualOverrides(
+        const rowsWithOverrides = hrc1TableService.applyManualOverrides(
           result.tableData || [],
           savedWithAdjust,
-          {
-            rowIdField: "id",
-            fallbackKeyField: "meThoi",
-          }
+          { rowIdField: "id", fallbackKeyField: "meThoi" }
         );
-        const finalRows = hrc2TableService.mergeServerRows(
-          rowsWithOverrides,
-          savedWithAdjust,
-          "meThoi",
-          editableFields
+        const finalRows = hrc1TableService.sortRowsByMeThoi(
+          hrc1TableService.mergeServerRows(rowsWithOverrides, savedWithAdjust, "meThoi", editableFields)
         );
 
         const phanBoMetas: AdjustColumnMeta[] = (result.phanBoColumns ?? []).map((col: any) => ({
@@ -276,28 +212,23 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           isManuallyAdded: false,
         }));
 
+        // Cột "thêm tay" (phuLieu_*) đã lưu luôn giữ nguyên trong nhóm điều chỉnh, không tự gộp/ẩn khi có dữ liệu —
+        // loại trùng với cột phụ liệu tự động (nếu id trùng) được xử lý riêng ở tableColumns (effectivePhuGiaCols).
         const dynAdjust = fd.table1DynamicColumns?.adjust as DynamicColumnMeta[] | undefined;
-        const fromSavedAdjust = dynAdjust?.length
-          ? hrc2TableService.adjustMetaFromDynamic(dynAdjust)
-          : [];
+        const fromSavedAdjust = dynAdjust?.length ? hrc1TableService.adjustMetaFromDynamic(dynAdjust) : [];
         const manualOnlyFromSaved = fromSavedAdjust.filter((m) => m.isManuallyAdded);
-        const mergedAdjustMetas = hrc2TableService.dedupeAdjustMetas(
-          hrc2TableService.mergeAdjustMetas(
-            [...phanBoMetas, ...manualMetasFromApi],
-            manualOnlyFromSaved
-          )
+        const mergedAdjustMetas = hrc1TableService.dedupeAdjustMetas(
+          hrc1TableService.mergeAdjustMetas([...phanBoMetas, ...manualMetasFromApi], manualOnlyFromSaved)
         );
 
         setTable1DisplayRows(finalRows);
         setNmColumnsPack({
           phuGiaColumns: (result.phuGiaColumns ?? []).map((c) => ({ ...c, editable: false })),
-          chatHopKimColumns: (result.chatHopKimColumns ?? []).map((c) => ({ ...c, editable: false })),
-          khacColumns: (result.khacColumns ?? []).map((c) => ({ ...c, editable: false })),
           adjustMetas: mergedAdjustMetas,
         });
       } catch (nmErr) {
         console.error("Lỗi tải/merge dữ liệu NM (filter):", nmErr);
-        setTable1DisplayRows(savedWithAdjust);
+        setTable1DisplayRows(hrc1TableService.sortRowsByMeThoi(savedWithAdjust));
         setNmColumnsPack(null);
       }
     } catch (error) {
@@ -315,49 +246,33 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
   const formData = data?.jsonData || {};
   const table2Data = formData?.table2 || [];
 
-  const tableSection = config.layout.find(
-    (section: any) =>
-      section.sectionType === "table" && section.key === "table1"
-  );
+  const tableSection = config.layout.find((section: any) => section.sectionType === "table" && section.key === "table1");
 
   const renderDynamicColumnTitle = useCallback((label: string) => label, []);
 
   const tableColumns = useMemo(() => {
-    const dyn =
-      (formData?.table1DynamicColumns as Record<string, DynamicColumnMeta[]> | undefined) ||
-      {};
-    const { adjust: adjustFromDyn, ...restDyn } = dyn;
+    const dyn = (formData?.table1DynamicColumns as Record<string, DynamicColumnMeta[]> | undefined) || {};
+    const { adjust: adjustFromDyn, BOF_PhuGia: savedPhuGiaCols } = dyn;
 
-    let phuGiaCols: HRCChildColumn[];
-    let chatHopKimCols: HRCChildColumn[];
-    let khacCols: HRCChildColumn[];
+    // Ưu tiên snapshot BOF_PhuGia đã lưu (đúng bộ + thứ tự phụ liệu tại thời điểm lưu phiếu) cho nhóm cột
+    // phụ liệu CHUẨN — KHÔNG dùng danh mục live hiện tại (nmColumnsPack.phuGiaColumns, luôn lọc theo
+    // DangSuDung/ThuTu_Excel_BOF hiện tại), tránh mất/lệch cột khi danh mục HRC1_PhuLieuNM đổi sau này.
+    // Nhóm Phân bổ/Điều chỉnh tay (adjustMetas) vẫn ưu tiên live vì bản chất động hơn (Phân bổ tính lại
+    // mỗi lần load) — chỉ fallback về snapshot khi live thất bại/rỗng, như trước.
+    const phuGiaCols: HRCChildColumn[] = savedPhuGiaCols?.length
+      ? hrc1TableService.columnsFromMeta(savedPhuGiaCols, renderDynamicColumnTitle)
+      : nmColumnsPack?.phuGiaColumns ?? [];
+
     let adjustMetas: AdjustColumnMeta[];
-
     if (nmColumnsPack) {
-      phuGiaCols = nmColumnsPack.phuGiaColumns;
-      chatHopKimCols = nmColumnsPack.chatHopKimColumns;
-      khacCols = nmColumnsPack.khacColumns;
       adjustMetas = nmColumnsPack.adjustMetas;
     } else {
-      const restored = hrc2TableService.restoreDynamicGroups(
-        Object.keys(restDyn).length ? restDyn : undefined,
-        renderDynamicColumnTitle
-      );
-      phuGiaCols = restored.PG ?? [];
-      chatHopKimCols = restored.KL ?? [];
-      khacCols = restored.others ?? [];
-
       adjustMetas = adjustFromDyn?.length
-        ? hrc2TableService.dedupeAdjustMetas(
-            hrc2TableService.adjustMetaFromDynamic(adjustFromDyn)
-          )
+        ? hrc1TableService.dedupeAdjustMetas(hrc1TableService.adjustMetaFromDynamic(adjustFromDyn))
         : [];
 
-      adjustMetas = hrc2TableService.dedupeAdjustMetas(
-        hrc2TableService.mergeAdjustMetas(
-          adjustMetas,
-          inferPhanBoMetasFromRows(table1DisplayRows)
-        )
+      adjustMetas = hrc1TableService.dedupeAdjustMetas(
+        hrc1TableService.mergeAdjustMetas(adjustMetas, inferPhanBoMetasFromRows(table1DisplayRows))
       );
     }
 
@@ -383,46 +298,38 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
         variant: "adjust" as const,
         metaLabel: meta.headerKeyLabel ?? "Điều chỉnh",
         headerKeyId: meta.headerKeyId ?? null,
+        sum: true,
       }));
 
-    const tableLayout = config.layout.find(
-      (l: any) => l.sectionType === "table" && l.key === "table1"
-    );
+    const tableLayout = config.layout.find((l: any) => l.sectionType === "table" && l.key === "table1");
     const alignType = (a: unknown): "left" | "center" | "right" | undefined =>
       a === "left" || a === "center" || a === "right" ? a : undefined;
     const normalizeAlign = (cols: any[]): HRCParentColumn[] =>
       cols.map((col) => {
         if (Array.isArray(col.children)) {
-          return {
-            ...col,
-            align: alignType(col.align),
-            children: col.children.map((c: any) => ({
-              ...c,
-              align: alignType(c.align),
-            })),
-          };
+          return { ...col, align: alignType(col.align), children: col.children.map((c: any) => ({ ...c, align: alignType(c.align) })) };
         }
         return { ...col, align: alignType(col.align) };
       });
-    const rawBaseColumns: HRCParentColumn[] = normalizeAlign(
-      (tableLayout?.columns || []) as any[]
-    );
-    const baseColumns = rawBaseColumns.filter((col) => {
-      if (col.dataIndex === "KL" && chatHopKimCols.length === 0) return false;
-      if (col.dataIndex === "PG" && phuGiaCols.length === 0) return false;
-      return true;
-    });
+    const baseColumns: HRCParentColumn[] = normalizeAlign((tableLayout?.columns || []) as any[]);
 
     const showAdjustColumns = adjustChildColumns.length > 0;
 
-    const built = hrc2TableService.buildColumnsWithAdjust({
+    // Phụ liệu đang được quản lý ở cột "thêm tay" (Điều chỉnh số liệu) — loại khỏi nhóm phụ liệu tự động (BOF_PhuGia)
+    // để tránh render 2 cột cho cùng 1 phụ liệu. Cột thêm tay luôn đứng riêng, không gộp vào nhóm NM dù đã có dữ liệu.
+    const manuallyManagedPhuLieuIds = new Set(
+      adjustMetas
+        .filter((m) => m.isManuallyAdded === true && m.dataIndex.startsWith("phuLieu_") && typeof m.headerKeyId === "number")
+        .map((m) => m.headerKeyId as number)
+    );
+    const effectivePhuGiaCols =
+      manuallyManagedPhuLieuIds.size === 0
+        ? phuGiaCols
+        : phuGiaCols.filter((c) => !(typeof c.headerKeyId === "number" && manuallyManagedPhuLieuIds.has(c.headerKeyId)));
+
+    const built = hrc1TableService.buildColumnsWithAdjust({
       baseColumns,
-      slotColumns: {
-        PG: phuGiaCols,
-        KL: chatHopKimCols,
-        others: khacCols,
-      },
-      excludedAdjustKeys: DEFAULT_EXCLUDED_KEYS,
+      slotColumns: { BOF_PhuGia: effectivePhuGiaCols },
       showAdjustColumns,
       manualAdjustColumns: adjustChildColumns,
       phanBoColumns: phanBoChildColumns,
@@ -432,9 +339,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
     const applyHighlightRender = (col: any) => {
       if (!col || !col.dataIndex) return col;
       const dataIndex = col.dataIndex;
-      const baseRender = col.format === "number-group"
-        ? (value: unknown) => formatNumberGroup(value)
-        : undefined;
+      const baseRender = col.format === "number-group" ? (value: unknown) => formatNumberGroup(value) : undefined;
       return {
         ...col,
         render: (value: any, record: any) => {
@@ -443,18 +348,10 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           const origValue = record[`${dataIndex}__orig`];
           const isManualFlag = record[`${dataIndex}__IsManual`] === true;
           const isCellChanged =
-            isManualFlag ||
-            (origValue !== undefined && String(value ?? "") !== String(origValue ?? ""));
-          const displayed = baseRender
-            ? baseRender(value)
-            : value !== undefined && value !== null
-            ? String(value)
-            : "";
+            isManualFlag || (origValue !== undefined && String(value ?? "") !== String(origValue ?? ""));
+          const displayed = baseRender ? baseRender(value) : value !== undefined && value !== null ? String(value) : "";
           if (isCellChanged) {
-            const editedLabel =
-              value !== undefined && value !== null && value !== ""
-                ? String(value)
-                : "(đã xóa)";
+            const editedLabel = value !== undefined && value !== null && value !== "" ? String(value) : "(đã xóa)";
             return (
               <Tooltip title={`Tự động: ${String(origValue ?? "")} | Chỉnh sửa: ${editedLabel}`}>
                 <span
@@ -470,6 +367,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
               </Tooltip>
             );
           }
+
           if (isManualRow) {
             return (
               <span
@@ -484,22 +382,15 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
               </span>
             );
           }
-          if (isDuplicateMe) {
-            return <span style={{ color: "red", fontWeight: 600 }}>{displayed}</span>;
-          }
+
+          if (isDuplicateMe) return <span style={{ color: "red", fontWeight: 600 }}>{displayed}</span>;
           return displayed;
         },
       };
     };
 
     return mapColumnsWithHighlight(built as any[], applyHighlightRender);
-  }, [
-    formData?.table1DynamicColumns,
-    table1DisplayRows,
-    nmColumnsPack,
-    renderDynamicColumnTitle,
-    config.layout,
-  ]);
+  }, [formData?.table1DynamicColumns, table1DisplayRows, nmColumnsPack, renderDynamicColumnTitle, config.layout]);
 
   const leafColumns = useMemo(() => {
     const result: Array<{ dataIndex: string; sum?: boolean; align?: string }> = [];
@@ -527,10 +418,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
     return sums;
   }, [leafColumns, table1DisplayRows]);
 
-  const tableSection2 = config.layout2.find(
-    (section: any) =>
-      section.sectionType === "table" && section.key === "table2"
-  );
+  const tableSection2 = config.layout2.find((section: any) => section.sectionType === "table" && section.key === "table2");
 
   const columns2 = useMemo(() => {
     const raw = (tableSection2?.columns || []) as any[];
@@ -538,14 +426,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       a === "left" || a === "center" || a === "right" ? a : undefined;
     return raw.map((col) => {
       if (Array.isArray(col.children)) {
-        return {
-          ...col,
-          align: alignType(col.align),
-          children: col.children.map((c: any) => ({
-            ...c,
-            align: alignType(c.align),
-          })),
-        };
+        return { ...col, align: alignType(col.align), children: col.children.map((c: any) => ({ ...c, align: alignType(c.align) })) };
       }
       return { ...col, align: alignType(col.align) };
     });
@@ -559,7 +440,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
       if (context?.newPhieuId) {
-        navigateToDetail(context.newPhieuId, "/taophieutieuhaonauluyen_lf");
+        navigateToDetail(context.newPhieuId, "/taotieuhaolothoi");
         return;
       }
       await loadData();
@@ -581,14 +462,6 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       nguoiTaoId: data.nguoiTaoId ?? null,
       phieuPhongBanId: data.idphongBan ?? null,
       pheDuyet: data.pheDuyet ?? [],
-      preConfirmCheck: async () => {
-        const isChot = await hrc2TableService.checkChotPhieuTieuHao(formData?.NgaySX, formData?.ca);
-        if (isChot) {
-          return true;
-        }
-        message.error("Sổ theo dõi nhập xuất tồn chưa được chốt.");
-        return false;
-      },
       redirectToList,
       onSuccess: handleActionSuccess,
       onError: (error) => {
@@ -596,65 +469,34 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
         message.error((error as any)?.message ?? "Không thể thực hiện thao tác");
       },
     });
-    const filteredButtons = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
+
+    // ExportExcel nằm trong DETAIL_HIDDEN_BUTTON_KEYS (dùng chung cho mọi trang Chi tiết), nhưng
+    // HRC1_BB_TieuHao_BOF/LF đã có exporter riêng (HRC1TieuHaoExcelExporter/HRC1TieuHaoPdfExporter,
+    // trùng chính xác template biên bản trước đây dùng HRC1ExportBienBanButtons) nên không cần ẩn ở đây.
+    const filteredButtons = buttons.filter(
+      (btn) => btn.key === PhieuActionButtonKeys.ExportExcel || !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key)
+    );
     if (filteredButtons.length === 0) return null;
     return phieuActionService.renderActionButtons(filteredButtons, idphieu || "");
-  }, [data,
-    idphieu,
-    config.code,
-    formData?.NgaySX,
-    formData?.ca,
-    getUserInfo,
-    handleActionSuccess,
-    redirectToList,]);
+  }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
 
   return (
     <Card bordered style={{ padding: 24, background: "#fff" }} loading={loading}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 12,
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <img src={logoHP} alt="logo" style={{ height: "auto", width: 220 }} />
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-end",
-            gap: 10,
-          }}
-        >
-          {idphieu && (
-            <HRC2ExportBienBanButtons
-              templateCode={config.code}
-              bieuMau={config.loaiBm}
-              idPhieu={idphieu}
-              soPhieu={data?.soPhieu}
-              ngaySX={formData?.NgaySX}
-              ca={formData?.ca ?? null}
-              scope={formData?.scope ?? null}
-              disabled={loading}
-            />
-          )}
-          <Button
-            type="primary"
-            icon={<ReloadOutlined />}
-            onClick={() => void loadData()}
-            loading={loading}
-          >
-            Làm mới
-          </Button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <Button type="primary" icon={<ReloadOutlined />} onClick={() => void loadData()} loading={loading}>
+              Làm mới
+            </Button>
+            {actionButtons}
+          </div>
           {config.isoInfo && (
             <div style={{ fontSize: 13, textAlign: "right", lineHeight: "20px" }}>
-              <div>
-                <b>{config.isoInfo.code}</b>
-              </div>
+              <div><b>{config.isoInfo.code}</b></div>
               <div>Ngày hiệu lực: {config.isoInfo.effectiveDate}</div>
               <div>Lần sửa đổi: {config.isoInfo.revision}</div>
             </div>
@@ -663,9 +505,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
       </div>
 
       <div style={{ textAlign: "center", marginBottom: 16 }}>
-        <Title level={4} style={{ marginBottom: 0 }}>
-          {config.title}
-        </Title>
+        <Title level={4} style={{ marginBottom: 0 }}>{config.title}</Title>
         {idphieu && <b>Số phiếu: {data?.soPhieu}</b>}
       </div>
       <Descriptions bordered size="small" column={2}>
@@ -673,18 +513,14 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
         <Descriptions.Item label="Ngày SX">
           {formData?.NgaySX ? dayjs(formData.NgaySX).format("DD/MM/YYYY") : ""}
         </Descriptions.Item>
-        <Descriptions.Item label="Ca sản xuất">{formData?.ca == 1 ? "Ca ngày" : "Ca đêm" }   </Descriptions.Item>
-        <Descriptions.Item label="Khu vực">{"Tinh luyện "+formData?.scope || ""}</Descriptions.Item>
+        <Descriptions.Item label="Ca sản xuất">{formData?.ca == 1 ? "Ca ngày" : "Ca đêm"}</Descriptions.Item>
+        <Descriptions.Item label="Lò thổi">{"Lò thổi " + formData?.scope || ""}</Descriptions.Item>
       </Descriptions>
 
       <Table
         bordered
         columns={tableColumns}
-        dataSource={table1DisplayRows?.map((r: any, i: number) => ({
-          key: i,
-          stt: i + 1,
-          ...r,
-        }))}
+        dataSource={table1DisplayRows?.map((r: any, i: number) => ({ key: i, stt: i + 1, ...r }))}
         pagination={false}
         size="small"
         scroll={{ x: "max-content" }}
@@ -700,11 +536,7 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
             <Table.Summary fixed>
               <Table.Summary.Row>
                 {leafColumns.map(({ dataIndex, sum, align }, idx) => (
-                  <Table.Summary.Cell
-                    key={dataIndex}
-                    index={idx}
-                    align={(align as "left" | "center" | "right") ?? "right"}
-                  >
+                  <Table.Summary.Cell key={dataIndex} index={idx} align={(align as "left" | "center" | "right") ?? "right"}>
                     {idx === tongLabelIndex ? (
                       <strong>Tổng</strong>
                     ) : sum && columnSums[dataIndex] !== undefined ? (
@@ -725,17 +557,12 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           <span style={{ paddingTop: 4 }}>{formData.table1_lyDo}</span>
         </div>
       )}
-
       {table2Data && table2Data.length > 0 && (
         <Table
           bordered
           style={{ marginTop: 16 }}
           columns={columns2}
-          dataSource={table2Data.map((r: any, i: number) => ({
-            key: i,
-            stt: i + 1,
-            ...r,
-          }))}
+          dataSource={table2Data?.map((r: any, i: number) => ({ key: i, stt: i + 1, ...r }))}
           pagination={false}
           size="small"
         />
@@ -756,21 +583,8 @@ const ChiTietTieuHaoNauLuyen_LF = () => {
           );
         })}
       </Row>
-
-      <div
-        style={{
-          textAlign: "center",
-          marginTop: 32,
-          display: "flex",
-          gap: 8,
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        {actionButtons}
-      </div>
     </Card>
   );
 };
 
-export default ChiTietTieuHaoNauLuyen_LF;
+export default ChiTietTieuHaoLoThoi_BOF;

@@ -7,6 +7,10 @@ import type {
 import type { HeaderMappingRecord } from "../components/HeaderMapping";
 import { PhieuApi } from "./PhieuApi";
 
+// Bản sao riêng cho HRC1 (BOF/LF), tách khỏi HRC2TableService.ts để sửa logic riêng cho HRC1
+// (vd merge dữ liệu bảng) mà không ảnh hưởng tới các trang HRC2 đang dùng file gốc.
+// KHÔNG import ngược từ HRC2TableService.ts — giữ 2 module hoàn toàn độc lập.
+
 export type DynamicColumnMeta = {
   dataIndex: string;
   width?: number;
@@ -17,6 +21,8 @@ export type DynamicColumnMeta = {
   variant?: "source" | "adjust" | "default";
   highlight?: boolean;
   headerKeyId?: number | null;
+  // true: cột này được tính vào dòng Tổng (Table.Summary) — phải lưu/khôi phục qua snapshot
+  // table1DynamicColumns, nếu không dòng Tổng sẽ ngưng cộng cột này sau khi tải lại phiếu đã lưu.
   sum?: boolean;
 };
 
@@ -31,9 +37,8 @@ export type AdjustColumnMeta = {
 
 const DEFAULT_EXCLUDED_KEYS = ["meThoi", "macThep", "ghiChu", "stt", "STT"];
 
-// Cột "thêm tay" qua nút Thêm cột điều chỉnh: manual_col_* (HRC2, dựa Header_Key) hoặc
-// phuLieu_* khi được lưu trong nhóm meta "adjust" (HRC1, dựa HRC1_PhuLieuNM — xem TaoTieuHaoLoThoi.tsx).
-// HRC2 không bao giờ lưu phuLieu_* vào nhóm "adjust" (chỉ dùng ở nhóm BOF_PhuGia/others), nên broaden này an toàn cho cả 2 module.
+// Cột "thêm tay" qua nút Thêm cột điều chỉnh: manual_col_* (chưa resolve) hoặc phuLieu_* (đã chọn/tạo
+// phụ liệu — xem TaoTieuHaoLoThoi.tsx/TaoTieuHaoTinhLuyenLF.tsx).
 const isManuallyAddedAdjustDataIndex = (dataIndex?: string | null): boolean =>
   (dataIndex ?? "").startsWith("manual_col_") || (dataIndex ?? "").startsWith("phuLieu_");
 
@@ -92,7 +97,7 @@ const mapChildWithAdjust = (
   return { ...child, editable: false };
 };
 
-export const hrc2TableService = {
+export const hrc1TableService = {
   canCurrentUserMap,
   mergeAdjustMetas(
     prev: AdjustColumnMeta[] = [],
@@ -117,7 +122,7 @@ export const hrc2TableService = {
       byDataIndex.set(norm.dataIndex, existing ? { ...norm, ...existing } : norm);
     });
 
-    return hrc2TableService.dedupeAdjustMetas(Array.from(byDataIndex.values()));
+    return hrc1TableService.dedupeAdjustMetas(Array.from(byDataIndex.values()));
   },
   renameRowColumnKey(
     row: HRCTableRow,
@@ -230,7 +235,10 @@ export const hrc2TableService = {
       metaGroup: item.metaGroup,
       variant: item.variant ?? "source",
       headerKeyId: item.headerKeyId ?? undefined,
-      sum: item.sum,
+      // Mặc định true nếu snapshot cũ (lưu trước khi field `sum` được thêm vào DynamicColumnMeta)
+      // không có field này — mọi cột phụ liệu BOF_PhuGia/LF_PhuGia phục hồi qua columnsFromMeta
+      // luôn phải được cộng vào dòng Tổng, không có trường hợp nào cố tình để false.
+      sum: item.sum ?? true,
     }));
   },
 
@@ -243,7 +251,7 @@ export const hrc2TableService = {
     }
     const result: Record<string, HRCChildColumn[]> = {};
     Object.entries(metaMap).forEach(([key, items]) => {
-      result[key] = hrc2TableService.columnsFromMeta(items, renderTitle);
+      result[key] = hrc1TableService.columnsFromMeta(items, renderTitle);
     });
     return result;
   },
@@ -277,6 +285,27 @@ export const hrc2TableService = {
       mappingPayload: null,
       headerKeyId: meta.headerKeyId ?? null,
     }));
+  },
+
+  /**
+   * Sắp xếp lại toàn bộ dòng theo MeThoi tăng dần — áp dụng ở bước render cuối cùng, sau mọi merge
+   * (mergeServerRows/applyManualOverrides chỉ nối [...merged, ...manualRows]/[...result, ...unsavedNewRows],
+   * KHÔNG tự sắp xếp lại), để mẻ thêm tay (IsNM=false) không bị dồn thành khối riêng ở cuối bảng dù
+   * MeThoi của nó nhỏ hơn các mẻ tự động. Dùng localeCompare numeric để đúng thứ tự cả khi MeThoi lẫn
+   * chữ (vd "B10" > "B9"), không chỉ so sánh chuỗi thuần (sẽ sai "10" < "9"). Dòng thiếu MeThoi (mới
+   * thêm, chưa nhập) luôn rơi xuống cuối thay vì chen vào giữa.
+   */
+  sortRowsByMeThoi(rows: HRCTableRow[], keyField = "meThoi"): HRCTableRow[] {
+    return [...rows].sort((a, b) => {
+      const rawA = a[keyField];
+      const rawB = b[keyField];
+      const sa = rawA === undefined || rawA === null || rawA === "" ? null : String(rawA);
+      const sb = rawB === undefined || rawB === null || rawB === "" ? null : String(rawB);
+      if (sa === null && sb === null) return 0;
+      if (sa === null) return 1;
+      if (sb === null) return -1;
+      return sa.localeCompare(sb, undefined, { numeric: true, sensitivity: "base" });
+    });
   },
 
   mergeServerRows(
@@ -316,32 +345,10 @@ export const hrc2TableService = {
       }
       const mergedRow: HRCTableRow = { ...serverRow };
       Object.keys(prevRow).forEach((field) => {
-        if (field.endsWith("__orig") || field.endsWith("__IsManual")) return;
-
         const shouldPreserve =
           preserveSet !== null ? preserveSet.has(field) : field.endsWith("_adjust");
-        if (!shouldPreserve) return;
-
-        // applyManualOverrides (chạy TRƯỚC hàm này) đã xử lý field này rồi (đặt __IsManual = true
-        // hoặc false) → tin tưởng kết quả đó, không ghi đè lại để tránh làm hỏng baseline __orig
-        // nó vừa tính đúng.
-        const alreadyHandledKey = `${field}__IsManual`;
-        if (alreadyHandledKey in mergedRow) return;
-
-        // Field CHƯA từng được applyManualOverrides xử lý — xảy ra khi dữ liệu phiếu đã lưu từ
-        // trước (chưa có cờ __IsManual, vd lưu trước khi có cơ chế này) hoặc đây là lần merge đầu.
-        // Tự phục hồi highlight bằng cách so sánh trực tiếp giá trị đang lưu ở phiếu (prevRow, từ
-        // /api/Phieus) với giá trị NM mới nhất (mergedRow hiện tại, vẫn nguyên bản từ serverRow,
-        // từ DLNMHRC2/filter) — không phụ thuộc cờ đã lưu trước đó nên tự "chữa lành" được cả
-        // những dòng đã lưu từ trước khi có cơ chế đánh dấu __IsManual.
-        const nmValue = mergedRow[field];
-        const phieuValue = prevRow[field];
-        const isDifferent = String(phieuValue ?? "") !== String(nmValue ?? "");
-
-        mergedRow[field] = phieuValue;
-        if (isDifferent) {
-          mergedRow[`${field}__orig`] = nmValue ?? null;
-          mergedRow[alreadyHandledKey] = true;
+        if (shouldPreserve) {
+          mergedRow[field] = prevRow[field];
         }
       });
       return mergedRow;
@@ -504,7 +511,13 @@ export const hrc2TableService = {
         };
       }
 
-      if (replacement && replacement.length) {
+      // Cột slot động (vd BOF_PhuGia/LF_PhuGia): nếu là dataIndex có đăng ký slot nhưng không có
+      // phụ liệu nào (vd Lò thổi 5 chưa có dữ liệu NM), ẩn hẳn cột thay vì render placeholder gốc
+      // từ config JSON (cột đó không có tác dụng gì vì không map tới dữ liệu nào).
+      if (dataIndex && dataIndex in slotColumns) {
+        if (!replacement || replacement.length === 0) {
+          return { ...col, children: [] };
+        }
         return {
           ...col,
           children: replacement.map((child) =>
@@ -545,7 +558,7 @@ export const hrc2TableService = {
       .filter(
         (c) =>
           !(
-            c.dataIndex === "dieuChinh" &&
+            (c.dataIndex === "dieuChinh" || (c.dataIndex && c.dataIndex in slotColumns)) &&
             (!c.children || c.children.length === 0)
           )
       );
@@ -567,5 +580,3 @@ export const hrc2TableService = {
     return res.data === 2 ? true : false;
   },
 };
-
-
