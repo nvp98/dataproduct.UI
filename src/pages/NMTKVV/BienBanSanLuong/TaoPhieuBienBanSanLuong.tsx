@@ -1,20 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import TKVV_BB_SanLuong from "../../../utils/BM_config/TKVV_BB_SanLuong.json";
-import { Button, Card, Form, Input, Space, Typography, message } from "antd";
+import { Button, Card, Form, Input, InputNumber, Space, Typography, message } from "antd";
 import { ReloadOutlined, UndoOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomFormItem from "../../../components/CustomFormItem";
-import CustomFormTable, { type FormColumnDef } from "../../../components/CustomFormTable";
+import TKVVBBSLTable, { type FormColumnDef } from "../../../components/TKVVBBSLTable";
 import { PhieuApi } from "../../../services/PhieuApi";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 import {
   tkvvNvlApi,
-  tkvvDuLieuPivotApi,
   tkvvChiTietApi,
+  tkvvSyncDuLieuApi,
+  tkvvTongTuDongApi,
   type TKVVNguyenVatLieuDto,
   type TKVVChiTietDto,
 } from "../../../services/TKVVApi";
@@ -39,16 +40,13 @@ const PHAN_LOAI_KEYS = ["1", "2", "3", "4"] as const;
 // Người dùng vẫn thêm/xóa dòng tự do, đây chỉ là khung sẵn để đỡ phải bấm "+ Thêm dòng" nhiều lần.
 const SO_DONG_MAC_DINH = 4;
 
-const buildBlankRow = (
-  idx: number,
-  defaultNvlId: number | null = null,
-  defaultDvt = "",
-): TableRow => ({
+// Không gán sẵn NVL mặc định — người dùng tự chọn "Sản lượng" cho từng dòng.
+const buildBlankRow = (idx: number): TableRow => ({
   key: `blank-${idx}-${Date.now()}`,
   thuTuDong: idx,
   thoiGian: "",
-  tenSanPham: defaultNvlId,
-  donViTinh: defaultDvt,
+  tenSanPham: null,
+  donViTinh: "",
   ghiChu: "",
   "1": "",
   "2": "",
@@ -66,6 +64,8 @@ const TaoPhieuBienBanSanLuong = () => {
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [syncingDuLieu, setSyncingDuLieu] = useState(false);
+  const [tongTuDongPLC, setTongTuDongPLC] = useState<number | null>(null);
   const [soPhieu, setSoPhieu] = useState("");
   const [nvlOptions, setNvlOptions] = useState<TKVVNguyenVatLieuDto[]>([]);
   const [phieuInfo, setPhieuInfo] = useState<{
@@ -104,13 +104,6 @@ const TaoPhieuBienBanSanLuong = () => {
     return map;
   }, [nvlOptions]);
 
-  // nvlOptions đọc được trong initData mà không cần đưa vào deps (tránh initData
-  // đổi identity mỗi lần danh mục tải xong, khiến toàn bộ phiếu bị load lại).
-  const nvlOptionsRef = useRef<TKVVNguyenVatLieuDto[]>([]);
-  useEffect(() => {
-    nvlOptionsRef.current = nvlOptions;
-  }, [nvlOptions]);
-
   // ─── Nạp danh mục sản phẩm (NVL) cho biểu mẫu này ─────────────────────────
   useEffect(() => {
     tkvvNvlApi
@@ -130,71 +123,25 @@ const TaoPhieuBienBanSanLuong = () => {
     if (opt?.tenScope) form.setFieldsValue({ tenScope: opt.tenScope });
   }, [scopeValue, config, form]);
 
-  // Danh mục NVL thường tải xong SAU khi 4 dòng mặc định đã được dựng (còn trống
-  // sản phẩm) — khi đó điền lại sản phẩm mặc định vào các dòng còn trống, chỉ áp
-  // dụng cho phiếu MỚI (chưa lưu) để không đụng vào dữ liệu đã tải từ DB.
-  useEffect(() => {
-    if (idphieu || nvlOptions.length === 0) return;
-    setTableData((prev) => {
-      if (prev.length === 0 || !prev.every((r) => !r.tenSanPham)) return prev;
-      const defaultNvl = nvlOptions[0];
-      return prev.map((r) => ({ ...r, tenSanPham: defaultNvl.id, donViTinh: defaultNvl.donViTinh ?? "" }));
-    });
-  }, [nvlOptions, idphieu]);
-
   // ─── Chuyển chi tiết đã lưu (DB) -> dòng bảng hiển thị ─────────────────────
+  // Wide-format: mỗi TKVVChiTietDto đã LÀ đúng 1 dòng bảng (4 cột Loại 1/2/3/Phế phẩm
+  // nằm ngang trên cùng bản ghi) — không group theo thuTuDong như thiết kế cũ nữa.
   const chiTietToRows = useCallback((chiTiet: TKVVChiTietDto[]): TableRow[] => {
-    const groups = new Map<number, TKVVChiTietDto[]>();
-    chiTiet.forEach((c) => {
-      const key = c.thuTuDong ?? 0;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(c);
-    });
-
-    return Array.from(groups.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([thuTu, items]) => {
-        const first = items[0];
-        const row: TableRow = {
-          key: `row-${thuTu}`,
-          thuTuDong: thuTu,
-          thoiGian: first.thoiGian ?? "",
-          tenSanPham: first.nguyenVatLieuID,
-          donViTinh: nvlById.get(first.nguyenVatLieuID)?.donViTinh ?? "",
-          ghiChu: first.ghiChu ?? "",
-        };
-        items.forEach((it) => {
-          const k = String(it.phanLoai);
-          row[k] = it.giaTriHienTai ?? "";
-          if (it.isEdited) {
-            row[`_manual_${k}`] = true;
-            row[`_goc_${k}`] = it.giaTriTuDong ?? null;
-          }
-        });
-        return row;
-      });
+    return [...chiTiet]
+      .sort((a, b) => (a.thuTuDong ?? 0) - (b.thuTuDong ?? 0))
+      .map((c) => ({
+        key: `row-${c.id}`,
+        thuTuDong: c.thuTuDong ?? undefined,
+        thoiGian: c.thoiGian ?? "",
+        tenSanPham: c.nguyenVatLieuID,
+        donViTinh: nvlById.get(c.nguyenVatLieuID)?.donViTinh ?? "",
+        ghiChu: c.ghiChu ?? "",
+        "1": c.loai1 ?? "",
+        "2": c.loai2 ?? "",
+        "3": c.loai3 ?? "",
+        "4": c.phePham ?? "",
+      }));
   }, [nvlById]);
-
-  // ─── Chuyển pivot PLC (chưa lưu) -> dòng bảng hiển thị ─────────────────────
-  const pivotToRows = useCallback(
-    (rows: Record<string, unknown>[]): TableRow[] =>
-      rows.map((r, idx) => {
-        const nguyenVatLieuID = Number(r["nguyenVatLieuID"] ?? 0) || null;
-        const row: TableRow = {
-          key: `row-${idx + 1}`,
-          thuTuDong: idx + 1,
-          thoiGian: String(r["thoiGian"] ?? ""),
-          tenSanPham: nguyenVatLieuID,
-          donViTinh: nguyenVatLieuID ? nvlById.get(nguyenVatLieuID)?.donViTinh ?? "" : "",
-          ghiChu: "",
-        };
-        PHAN_LOAI_KEYS.forEach((k) => {
-          if (r[k] !== undefined && r[k] !== null) row[k] = Number(r[k]);
-        });
-        return row;
-      }),
-    [nvlById]
-  );
 
   // ─── initData: tải phiếu khi mở trang ──────────────────────────────────────
   const initData = useCallback(async () => {
@@ -252,11 +199,9 @@ const TaoPhieuBienBanSanLuong = () => {
         }
       } else {
         setPhieuInfo({});
-        const defaultNvl = nvlOptionsRef.current[0];
+        // Không gán sẵn NVL mặc định — người dùng tự chọn "Sản lượng" cho từng dòng.
         setTableData(
-          Array.from({ length: SO_DONG_MAC_DINH }, (_, i) =>
-            buildBlankRow(i + 1, defaultNvl?.id ?? null, defaultNvl?.donViTinh ?? ""),
-          ),
+          Array.from({ length: SO_DONG_MAC_DINH }, (_, i) => buildBlankRow(i + 1)),
         );
         setTimeout(() => {
           const overrides: Record<string, any> = { ca: 1, NgaySX: dayjs() };
@@ -280,8 +225,44 @@ const TaoPhieuBienBanSanLuong = () => {
     initData();
   }, [initData]);
 
-  // ─── Cập nhật dữ liệu từ PLC ────────────────────────────────────────────────
-  const handleCapNhatDuLieu = useCallback(async () => {
+  // ─── Tổng tự động (PLC) theo Ngày/Ca/Xưởng — hiển thị ở dòng "TỔNG CỘNG" ───
+  // Đọc GetTongTuDongAsync (ưu tiên GiaTriDieuChinh, fallback GiaTriTuDong per-tag,
+  // tính từ TKVV_SanLuongDuLieu theo mapping) — chỉ để xem/đối chiếu, không tự điền
+  // vào Loại 1/2/3/Phế phẩm.
+  const fetchTongTuDong = useCallback(async () => {
+    const formData = form.getFieldsValue();
+    const ngay = formData.NgaySX ? dayjs(formData.NgaySX).format("YYYY-MM-DD") : null;
+    const ca = formData.ca ?? null;
+    const scope = formData.scope ?? null;
+    if (!ngay || ca === null || scope === null) {
+      setTongTuDongPLC(null);
+      return;
+    }
+    try {
+      const res = await tkvvTongTuDongApi.get({ ngay, ca, scope });
+      const tong = res.tongTuDong ?? 0;
+      setTongTuDongPLC(tong);
+      // Chỉ tự điền vào ô "Tổng cộng" nếu đang trống — không ghi đè giá trị người dùng
+      // đã tự chỉnh tay, để làm điểm khởi đầu cho việc xem/điều chỉnh.
+      if (form.getFieldValue("tongCongDieuChinh") == null) {
+        form.setFieldValue("tongCongDieuChinh", tong);
+      }
+    } catch {
+      setTongTuDongPLC(null);
+    }
+  }, [form]);
+
+  const NgaySXValue = Form.useWatch("NgaySX", form);
+  const caValue = Form.useWatch("ca", form);
+  useEffect(() => {
+    fetchTongTuDong();
+  }, [NgaySXValue, caValue, scopeValue, fetchTongTuDong]);
+
+  // ─── Tải dữ liệu cân/PLC thô về TKVV_SanLuongDuLieu ────────────────────────
+  // Gọi SP_TKVV_GetDuLieuCan_TuMapping (join TKVV_SanLuongMapping với EMS_DATA_CAN theo
+  // Ngày/Ca/Xưởng đang chọn) — chỉ đồng bộ dữ liệu thô vào DB, KHÔNG tự điền vào bảng chi
+  // tiết bên dưới (Loại 1/2/3/Phế phẩm vẫn do KTV/KCS tự nhập).
+  const handleTaiDuLieu = useCallback(async () => {
     const formData = form.getFieldsValue();
     const ngay = formData.NgaySX ? dayjs(formData.NgaySX).format("YYYY-MM-DD") : null;
     const ca = formData.ca ?? null;
@@ -293,33 +274,23 @@ const TaoPhieuBienBanSanLuong = () => {
     }
 
     try {
-      setLoading(true);
-      if (idphieu) {
-        await tkvvDuLieuPivotApi.syncChiTiet(idphieu);
-        const chiTiet = await tkvvChiTietApi.getByPhieu(idphieu);
-        setTableData(chiTietToRows(chiTiet || []));
-      } else {
-        const pivot = await tkvvDuLieuPivotApi.getPivot({ ngay, ca, scope });
-        setTableData(pivotToRows(pivot.rows || []));
-      }
-      message.success("Cập nhật dữ liệu thành công!");
+      setSyncingDuLieu(true);
+      const res = await tkvvSyncDuLieuApi.syncTuEms({ ngay, ca, scope });
+      message.success(res.message);
+      await fetchTongTuDong();
     } catch (error: any) {
-      message.error(error?.response?.data?.message || error?.message || "Không thể cập nhật dữ liệu!");
+      message.error(error?.response?.data?.message || error?.message || "Không thể tải dữ liệu!");
     } finally {
-      setLoading(false);
+      setSyncingDuLieu(false);
     }
-  }, [form, idphieu, chiTietToRows, pivotToRows]);
+  }, [form, fetchTongTuDong]);
 
   // ─── Thêm dòng thủ công (KTV/KCS lấy mẫu thêm) ──────────────────────────────
   // Thời gian để trống — người dùng tự ghi mốc giờ lấy mẫu thực tế, không suy ra
-  // từ đồng hồ hệ thống lúc bấm nút.
+  // từ đồng hồ hệ thống lúc bấm nút. Không gán sẵn NVL — người dùng tự chọn.
   const handleAddRow = useCallback(() => {
-    const defaultNvl = nvlOptions[0];
-    setTableData((prev) => [
-      ...prev,
-      buildBlankRow(prev.length + 1, defaultNvl?.id ?? null, defaultNvl?.donViTinh ?? ""),
-    ]);
-  }, [nvlOptions]);
+    setTableData((prev) => [...prev, buildBlankRow(prev.length + 1)]);
+  }, []);
 
   const handleTableChange = useCallback(
     (rows: any[]) => {
@@ -452,7 +423,7 @@ const TaoPhieuBienBanSanLuong = () => {
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
   }, [getUserInfo, idphieu, phieuInfo, getFormData, handleStatusChange, handleActionSuccess, config.code]);
 
-  // ─── Cột bảng (CustomFormTable) ─────────────────────────────────────────────
+  // ─── Cột bảng (TKVVBBSLTable) ───────────────────────────────────────────────
   const tableColumns: FormColumnDef[] = useMemo(
     () => [
       { title: "Thời gian", dataIndex: "thoiGian", width: 110, align: "center", type: "time" },
@@ -472,6 +443,10 @@ const TaoPhieuBienBanSanLuong = () => {
     [nvlOptions]
   );
 
+  // Dòng "TỔNG CỘNG": bên trái hiển thị số tự động (PLC, GetTongTuDongAsync — ưu tiên
+  // GiaTriDieuChinh nếu KTV/KCS đã chỉnh ở dữ liệu thô), bên phải là ô cho phép nhập số
+  // tổng cộng thực tế (lưu cùng phiếu qua field "tongCongDieuChinh", không phải cột riêng
+  // trên bảng chi tiết).
   const tableSummary = useCallback((data: readonly any[]) => {
     const totals: Record<string, number> = { "1": 0, "2": 0, "3": 0, "4": 0 };
     data.forEach((row) => {
@@ -481,19 +456,37 @@ const TaoPhieuBienBanSanLuong = () => {
       });
     });
     return (
-      <tr>
-        <td style={{ fontWeight: 600, textAlign: "center" }} colSpan={3}>
-          TỔNG
-        </td>
-        {PHAN_LOAI_KEYS.map((k) => (
-          <td key={k} style={{ fontWeight: 600, textAlign: "right" }}>
-            {totals[k] ? totals[k].toLocaleString("en-US", { maximumFractionDigits: 3 }) : ""}
+      <>
+        <tr>
+          <td style={{ fontWeight: 600, textAlign: "center" }} colSpan={3}>
+            TỔNG
           </td>
-        ))}
-        <td />
-      </tr>
+          {PHAN_LOAI_KEYS.map((k) => (
+            <td key={k} style={{ fontWeight: 600, textAlign: "right" }}>
+              {totals[k] ? totals[k].toLocaleString("en-US", { maximumFractionDigits: 3 }) : ""}
+            </td>
+          ))}
+          <td />
+        </tr>
+        <tr>
+          <td style={{ fontWeight: 600, textAlign: "center" }} colSpan={3}>
+            TỔNG CỘNG
+          </td>
+          <td colSpan={4}>
+            <Form.Item name="tongCongDieuChinh" noStyle>
+              <InputNumber
+                style={{ width: "100%" }}
+                precision={3}
+                placeholder="Nhập số thực tế"
+                disabled={isFormLocked}
+              />
+            </Form.Item>
+          </td>
+          <td />
+        </tr>
+      </>
     );
-  }, []);
+  }, [tongTuDongPLC, isFormLocked]);
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -527,8 +520,8 @@ const TaoPhieuBienBanSanLuong = () => {
         <div style={{ marginTop: 16, marginBottom: 16 }}>
           <Space style={{ justifyContent: "center", width: "100%" }}>
             {!isFormLocked && (
-              <Button icon={<ReloadOutlined />} onClick={handleCapNhatDuLieu} loading={loading}>
-                Cập nhật dữ liệu
+              <Button icon={<ReloadOutlined />} loading={syncingDuLieu} onClick={handleTaiDuLieu}>
+                Tải dữ liệu
               </Button>
             )}
             {actionButtons}
@@ -539,7 +532,7 @@ const TaoPhieuBienBanSanLuong = () => {
         </div>
 
         <div style={{ width: "100%", overflowX: "auto", marginBottom: 8 }}>
-          <CustomFormTable
+          <TKVVBBSLTable
             columns={tableColumns}
             initialData={tableData}
             onDataChange={handleTableChange}

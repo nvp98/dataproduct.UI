@@ -2183,6 +2183,255 @@ const DanhMucCanTab = ({ defaultXuong }: { defaultXuong?: string }) => {
   );
 };
 
+// ─── Tab 4: Mapping Cân (EMS) → Xưởng theo Ngày/Ca/Kíp ───────────────────────
+// Cấu hình Tag của cân nào (trong "Danh mục Cân") tính vào Xưởng nào, hiệu lực
+// trong khoảng Từ ngày/Đến ngày — dùng cho "Tổng tự động (PLC)" trên phiếu Biên
+// bản sản lượng. Kíp chỉ để ghi chú/lọc hiển thị, chưa được dùng khi tính tổng.
+
+// TKVV_SanLuongMapping.Scope lưu MÃ XƯỞNG DẠNG CHUỖI ("TK1".."VV2", khớp EMS_DATA_CAN.Xuong
+// và SP_TKVV_GetDuLieuCan_TuMapping) — khác với NvlTab/MappingTab dùng value SỐ (1-6) của
+// SCOPE_OPTIONS. Không dùng chung options số ở đây, phải map sang mã chuỗi qua tenScope.
+const SCOPE_CODE_OPTIONS = SCOPE_OPTIONS.map(({ label, tenScope }) => ({ label, value: tenScope }));
+
+const SanLuongMappingTab = ({ defaultScope }: { defaultScope?: string }) => {
+  const [data, setData] = useState<TKVVSanLuongMappingDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [emsTags, setEmsTags] = useState<EMSMappingTagDto[]>([]);
+  const [scopeFilter, setScopeFilter] = useState<string | undefined>(defaultScope);
+  const [form] = Form.useForm();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<TKVVSanLuongMappingDto | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const fetchData = useCallback(async (scope?: string) => {
+    setLoading(true);
+    try {
+      const res = await tkvvSanLuongMappingApi.getList(scope ? { scope } : undefined);
+      setData(Array.isArray(res) ? res : []);
+    } catch {
+      message.error("Lỗi khi tải danh sách mapping cân → xưởng");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData(scopeFilter);
+  }, [fetchData, scopeFilter]);
+
+  useEffect(() => {
+    tkvvEmsTagApi.getList().then((res) => setEmsTags(Array.isArray(res) ? res : [])).catch(() => {});
+  }, []);
+
+  const openCreate = () => {
+    setEditing(null);
+    form.resetFields();
+    if (scopeFilter) form.setFieldValue("scope", scopeFilter);
+    setModalOpen(true);
+  };
+
+  const openEdit = (record: TKVVSanLuongMappingDto) => {
+    setEditing(record);
+    form.setFieldsValue({
+      tagID: record.tagID,
+      scope: record.scope,
+      ca: record.ca,
+      kip: record.kip,
+      tuNgay: record.tuNgay ? dayjs(record.tuNgay) : null,
+      denNgay: record.denNgay ? dayjs(record.denNgay) : null,
+      trangThai: record.trangThai,
+      ghiChu: record.ghiChu,
+    });
+    setModalOpen(true);
+  };
+
+  // Khi chọn Tag EMS: auto-fill Ca từ thông tin tag (Ca ngày=1, Ca đêm=2)
+  const handleTagChange = (tagIDEMS: string) => {
+    const tag = emsTags.find((t) => t.tagIDEMS === tagIDEMS);
+    if (tag?.ca != null) form.setFieldValue("ca", tag.ca);
+  };
+
+  // Lọc danh mục cân theo Xưởng đang chọn trong form
+  const selectedScope = Form.useWatch("scope", form);
+  const selectedScopeCode = getScopeCodeText(selectedScope);
+  const filteredEmsTags = selectedScopeCode
+    ? emsTags.filter((t) => t.xuong === selectedScopeCode)
+    : emsTags;
+
+  const handleSubmit = async () => {
+    const values = await form.validateFields();
+    const dto = {
+      ...values,
+      tuNgay: values.tuNgay ? values.tuNgay.format("YYYY-MM-DD") : null,
+      denNgay: values.denNgay ? values.denNgay.format("YYYY-MM-DD") : null,
+    };
+    setSaving(true);
+    try {
+      if (editing) {
+        await tkvvSanLuongMappingApi.update(editing.id, dto);
+        message.success("Cập nhật mapping thành công");
+      } else {
+        await tkvvSanLuongMappingApi.create(dto);
+        message.success("Thêm mapping thành công");
+      }
+      setModalOpen(false);
+      fetchData(scopeFilter);
+    } catch (err: any) {
+      message.error(err?.message || "Không thể lưu mapping");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await tkvvSanLuongMappingApi.delete(id);
+      message.success("Đã ngừng mapping");
+      fetchData(scopeFilter);
+    } catch (err: any) {
+      message.error(err?.message || "Không thể xóa mapping");
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Space>
+          <span style={{ fontWeight: 500 }}>Xưởng:</span>
+          <Select
+            allowClear
+            placeholder="Tất cả xưởng"
+            style={{ width: 220 }}
+            options={SCOPE_CODE_OPTIONS}
+            value={scopeFilter}
+            onChange={(v) => setScopeFilter(v)}
+          />
+        </Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+          Thêm mapping
+        </Button>
+      </div>
+      <Table
+        rowKey="id"
+        loading={loading}
+        dataSource={data}
+        pagination={{ pageSize: 20, showSizeChanger: true }}
+        size="small"
+        scroll={{ x: 1000 }}
+        columns={[
+          { title: "Xưởng", dataIndex: "scope", width: 90, align: "center" },
+          {
+            title: "Cân (Tag ID)",
+            key: "tagID",
+            width: 220,
+            render: (_: unknown, r: TKVVSanLuongMappingDto) => (
+              <span>{r.tagID}{r.tenCan ? ` — ${r.tenCan}` : ""}</span>
+            ),
+          },
+          {
+            title: "Ca",
+            dataIndex: "ca",
+            width: 100,
+            align: "center",
+            render: (v: number) => (v === 1 ? <Tag color="orange">Ca ngày</Tag> : <Tag color="blue">Ca đêm</Tag>),
+          },
+          {
+            title: "Kíp",
+            dataIndex: "kip",
+            width: 80,
+            align: "center",
+            render: (v: string | null) => v ? <Tag>{v}</Tag> : "—",
+          },
+          {
+            title: "Từ ngày",
+            dataIndex: "tuNgay",
+            width: 110,
+            render: (v: string | null) => v ? dayjs(v).format("DD/MM/YYYY") : "—",
+          },
+          {
+            title: "Đến ngày",
+            dataIndex: "denNgay",
+            width: 110,
+            render: (v: string | null) => v ? dayjs(v).format("DD/MM/YYYY") : "—",
+          },
+          {
+            title: "Trạng thái",
+            dataIndex: "trangThai",
+            width: 110,
+            align: "center",
+            render: (v: boolean) => <Tag color={v ? "green" : "default"}>{v ? "Đang dùng" : "Ngừng"}</Tag>,
+          },
+          { title: "Ghi chú", dataIndex: "ghiChu" },
+          {
+            title: "Thao tác",
+            key: "action",
+            width: 90,
+            render: (_: unknown, record: TKVVSanLuongMappingDto) => (
+              <Space>
+                <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)} />
+                <Popconfirm title="Ngừng mapping này?" onConfirm={() => handleDelete(record.id)}>
+                  <Button type="text" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              </Space>
+            ),
+          },
+        ]}
+      />
+
+      <Modal
+        title={editing ? "Sửa mapping" : "Thêm mapping"}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onOk={handleSubmit}
+        confirmLoading={saving}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="scope" label="Xưởng" rules={[{ required: true, message: "Bắt buộc" }]}>
+            <Select placeholder="Chọn xưởng" options={SCOPE_CODE_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="tagID" label="Cân (Tag ID EMS)" rules={[{ required: true, message: "Bắt buộc" }]}>
+            <Select
+              placeholder={selectedScope ? `Cân của xưởng ${selectedScope}` : "Chọn xưởng trước để lọc cân"}
+              showSearch
+              optionFilterProp="label"
+              onChange={handleTagChange}
+              options={filteredEmsTags.map((t) => ({
+                label: `${t.tagIDEMS} — ${t.tenCan ?? t.tagName}`,
+                value: t.tagIDEMS,
+              }))}
+            />
+          </Form.Item>
+          <Space style={{ width: "100%" }} size="middle">
+            <Form.Item name="ca" label="Ca" style={{ flex: 1 }} rules={[{ required: true, message: "Bắt buộc" }]}>
+              <Select options={CA_OPTIONS} placeholder="Tự động điền khi chọn cân" />
+            </Form.Item>
+            <Form.Item name="kip" label="Kíp" style={{ flex: 1 }}>
+              <Select allowClear options={KIP_OPTIONS} placeholder="Không bắt buộc" />
+            </Form.Item>
+          </Space>
+          <Space style={{ width: "100%" }} size="middle">
+            <Form.Item name="tuNgay" label="Từ ngày" style={{ flex: 1 }}>
+              <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="Không giới hạn" />
+            </Form.Item>
+            <Form.Item name="denNgay" label="Đến ngày" style={{ flex: 1 }}>
+              <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="Không giới hạn" />
+            </Form.Item>
+          </Space>
+          {editing && (
+            <Form.Item name="trangThai" label="Trạng thái" valuePropName="checked">
+              <Switch checkedChildren="Đang dùng" unCheckedChildren="Ngừng" />
+            </Form.Item>
+          )}
+          <Form.Item name="ghiChu" label="Ghi chú">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+};
+
 // ─── Trang chính ─────────────────────────────────────────────────────────────
 
 const QuanLyNVLTKVV = () => {
@@ -2306,6 +2555,11 @@ const QuanLyNVLTKVV = () => {
             key: "danh-muc-can",
             label: "Danh mục Cân (EMS)",
             children: <DanhMucCanTab defaultXuong={scopeFilter} />,
+          },
+          {
+            key: "mapping-can-xuong",
+            label: "Mapping Cân → Xưởng",
+            children: <SanLuongMappingTab defaultScope={scopeFilter} />,
           },
         ]}
       />
