@@ -30,7 +30,7 @@ export interface UpdateTKVVNguyenVatLieuDto extends CreateTKVVNguyenVatLieuDto {
 
 export const tkvvNvlApi = {
   getList: (params?: { maBM?: string; scope?: string }): Promise<TKVVNguyenVatLieuDto[]> =>
-    apiService.get("/api/TKVV_BBSL/get-nvl", { params }),
+    apiService.get("/api/TKVV_NVL", { params }),
 
   getById: (id: number): Promise<TKVVNguyenVatLieuDto> =>
     apiService.get(`/api/TKVV_BBSL/get-nvl/${id}`),
@@ -225,6 +225,34 @@ export interface TKVVGiaTriNVLAutoDto {
   thoiGianDen: string | null;
 }
 
+// ─── Dữ liệu cân từ SP_TKVV_GetDuLieuCan — đổ bảng khi tạo phiếu BC SLCP ────
+
+export interface TKVVDuLieuCanDto {
+  ngay: string;
+  ca: number;
+  maBM: string | null;
+  scope: string | null;
+  xuong: string | null;
+  siloID: number | null;
+  maSilo: string | null;
+  nguyenVatLieuID: number;
+  tenNVL: string;
+  donViTinh: string | null;
+  giaTri: number;
+  soLuongSilo: number;
+}
+
+export const tkvvDuLieuCanApi = {
+  getList: (params: {
+    ngay: string;
+    ca: number;
+    maBM: string;
+    loaiDuLieu?: string;
+    scope: number;
+  }): Promise<TKVVDuLieuCanDto[]> =>
+    apiService.get("/api/TKVV_BCSL_ChiPhi/get-dulieu-can", { params }),
+};
+
 export const tkvvGiaTriNVLAutoApi = {
   getList: (params: {
     ngay: string;   // "YYYY-MM-DD"
@@ -233,6 +261,225 @@ export const tkvvGiaTriNVLAutoApi = {
     maBM: string;
   }): Promise<TKVVGiaTriNVLAutoDto[]> =>
     apiService.get("/api/TKVV_BCSL_ChiPhi/get-giatri-nvl-auto", { params }),
+};
+
+// ─── TKVV_Silo ──────────────────────────────────────────────────────────────
+
+export interface TKVVSiloDto {
+  id: number;
+  maXuong: string | null;
+  scope: string | null;
+  tenScope: string | null;
+  maSilo: string | null;
+  tenSilo: string;
+  ghiChu: string | null;
+  trangThai: boolean;
+  ngayCapNhat: string;
+}
+
+export interface CreateTKVVSiloDto {
+  maXuong?: string | null;
+  scope?: string | null;
+  tenScope?: string | null;
+  maSilo?: string | null;
+  tenSilo: string;
+  ghiChu?: string | null;
+}
+
+export interface UpdateTKVVSiloDto extends CreateTKVVSiloDto {
+  trangThai: boolean;
+}
+
+export const tkvvSiloApi = {
+  getList: (params?: { scope?: string }): Promise<TKVVSiloDto[]> =>
+    apiService.get("/api/TKVV_Silo/silo", { params }),
+  getById: (id: number): Promise<TKVVSiloDto> =>
+    apiService.get(`/api/TKVV_Silo/silo/${id}`),
+  create: (dto: CreateTKVVSiloDto): Promise<TKVVSiloDto> =>
+    apiService.post("/api/TKVV_Silo/silo", dto),
+  update: (id: number, dto: UpdateTKVVSiloDto): Promise<TKVVSiloDto> =>
+    apiService.put(`/api/TKVV_Silo/silo/${id}`, dto),
+  delete: (id: number) => apiService.delete(`/api/TKVV_Silo/silo/${id}`),
+};
+
+// ─── TKVV_NVL_SiloMapping ────────────────────────────────────────────────────
+
+export interface TKVVNvlSiloMappingDto {
+  id: number;
+  maBM: string | null;
+  nguyenVatLieuID: number;
+  tenNVL: string | null;
+  scopeNVL: string | null;
+  scope: string | null;
+  siloID: number | null;
+  tenSilo: string | null;
+  maSilo: string | null;
+  ca: number;
+  ngaySX: string;
+  thuTu: number | null;
+  ghiChu: string | null;
+  trangThai: boolean;
+  ngayCapNhat: string;
+}
+
+export interface CreateTKVVNvlSiloMappingDto {
+  maBM?: string | null;
+  nguyenVatLieuID: number;
+  scope?: string | null;
+  siloID?: number | null;
+  ca: number;
+  ngaySX: string;
+  thuTu?: number | null;
+  ghiChu?: string | null;
+}
+
+export interface UpdateTKVVNvlSiloMappingDto extends CreateTKVVNvlSiloMappingDto {
+  trangThai: boolean;
+}
+
+export const tkvvNvlSiloMappingApi = {
+  getList: (params?: { id?: number; maBM?: string; scope?: string; nvlId?: number; siloId?: number; ngaySX?: string; ca?: number }): Promise<TKVVNvlSiloMappingDto[]> =>
+    apiService.get("/api/TKVV_Silo/nvl-silo-mapping", { params }),
+
+  getNearest: (params: { maBM?: string; scope: string; beforeDate: string }): Promise<TKVVNvlSiloMappingDto[]> =>
+    apiService.get("/api/TKVV_Silo/nvl-silo-mapping/nearest", { params }),
+
+  batchCreate: (dto: {
+    maBM: string; scope: string; ngaySX: string;
+    rows: {id: number, nguyenVatLieuID: number; siloID: number | null; ca: number; thuTu: number | null }[];
+  }): Promise<{ count: number }> =>
+    apiService.post("/api/TKVV_Silo/nvl-silo-mapping/batch", dto),
+  getById: (id: number): Promise<TKVVNvlSiloMappingDto> =>
+    apiService.get(`/api/TKVV_Silo/nvl-silo-mapping/${id}`),
+  create: (dto: CreateTKVVNvlSiloMappingDto): Promise<TKVVNvlSiloMappingDto> =>
+    apiService.post("/api/TKVV_Silo/nvl-silo-mapping", dto),
+  update: (id: number, dto: UpdateTKVVNvlSiloMappingDto): Promise<TKVVNvlSiloMappingDto> =>
+    apiService.put(`/api/TKVV_Silo/nvl-silo-mapping/${id}`, dto),
+  delete: (id: number) => apiService.delete(`/api/TKVV_Silo/nvl-silo-mapping/${id}`),
+};
+
+// ─── TKVV_Silo_TagMapping ────────────────────────────────────────────────────
+
+export interface TKVVSiloTagMappingDto {
+  id: number;
+  siloID: number;
+  tenSilo: string | null;
+  scopeNVL: string | null;
+  maBM: string;
+  loaiDuLieu: string;
+  tagIDEMS: string | null;
+  tagName: string | null;
+  tagIDEMS_Ngay: string | null;
+  tagName_Ngay: string | null;
+  tagIDEMS_Dem: string | null;
+  tagName_Dem: string | null;
+  ghiChu: string | null;
+  trangThai: boolean;
+  ngayCapNhat: string;
+}
+
+export interface CreateTKVVSiloTagMappingDto {
+  siloID: number;
+  maBM: string;
+  loaiDuLieu: string;
+  tagIDEMS?: string | null;
+  tagName?: string | null;
+  tagIDEMS_Ngay?: string | null;
+  tagName_Ngay?: string | null;
+  tagIDEMS_Dem?: string | null;
+  tagName_Dem?: string | null;
+  ghiChu?: string | null;
+}
+
+export interface UpdateTKVVSiloTagMappingDto extends CreateTKVVSiloTagMappingDto {
+  trangThai: boolean;
+}
+
+export const tkvvSiloTagMappingApi = {
+  getList: (params?: { siloId?: number; maBM?: string }): Promise<TKVVSiloTagMappingDto[]> =>
+    apiService.get("/api/TKVV_Silo/silo-tag-mapping", { params }),
+  getById: (id: number): Promise<TKVVSiloTagMappingDto> =>
+    apiService.get(`/api/TKVV_Silo/silo-tag-mapping/${id}`),
+  create: (dto: CreateTKVVSiloTagMappingDto): Promise<TKVVSiloTagMappingDto> =>
+    apiService.post("/api/TKVV_Silo/silo-tag-mapping", dto),
+  update: (id: number, dto: UpdateTKVVSiloTagMappingDto): Promise<TKVVSiloTagMappingDto> =>
+    apiService.put(`/api/TKVV_Silo/silo-tag-mapping/${id}`, dto),
+  delete: (id: number) => apiService.delete(`/api/TKVV_Silo/silo-tag-mapping/${id}`),
+};
+
+// ─── TKVV_BaoCaoSanLuongChiPhi — load + save dữ liệu cân với IsAdjusted ──────
+
+export interface TKVVBaoCaoSanLuongChiPhiDto {
+  id: number;
+  phieuID: string | null;
+  ngaySX: string;
+  ca: number;
+  kip: string | null;
+  scope: number | null;        // INT 1-6
+  thuTu: number | null;
+  nguyenVatLieuID: number;
+  tenNVL: string | null;
+  klAm: number | null;
+  klAmAuto: number | null;
+  doAm: number | null;
+  quyKho: number | null;
+  thanhPhamL1: number | null;
+  thanhPhamL2: number | null;
+  ghiChu: string | null;
+  isAdjusted: boolean;
+  adjustedBy: number | null;
+  adjustedDate: string | null;
+}
+
+export interface LoadDuLieuCanResultDto {
+  table1: TKVVBaoCaoSanLuongChiPhiDto[]; // Ca ngày
+  table2: TKVVBaoCaoSanLuongChiPhiDto[]; // Ca đêm
+}
+
+export interface SaveBcSlRowDto {
+  id?: number | null;
+  ngaySX: string;
+  ca: number;
+  scope: number | null;        // INT 1-6
+  nguyenVatLieuID: number;
+  kip?: string | null;
+  thuTu: number;
+  klAm?: number | null;
+  klAmAuto?: number | null;
+  doAm?: number | null;
+  quyKho?: number | null;
+  thanhPhamL1?: number | null;
+  thanhPhamL2?: number | null;
+  ghiChu?: string | null;
+}
+
+export const tkvvBcSlChiPhiApi = {
+  loadDuLieu: (request: {
+    ngaySX: string;
+    maBM: string;
+    loaiDuLieu?: string;
+    scope: number;
+    createdBy?: number | null;
+  }): Promise<LoadDuLieuCanResultDto> =>
+    apiService.post("/api/TKVV_BCSL_ChiPhi/load-dulieu", {
+      ...request,
+      loaiDuLieu: request.loaiDuLieu ?? "SANLUONG",
+    }),
+
+  getBaoCaoData: (params: {
+    ngaySX: string;
+    maBM: string;
+    scope: number;
+  }): Promise<LoadDuLieuCanResultDto> =>
+    apiService.get("/api/TKVV_BCSL_ChiPhi/get-baocao-data", { params }),
+
+  savePhieuRows: (request: {
+    maBM: string;
+    phieuID?: string | null;
+    currentUserId: number;
+    rows: SaveBcSlRowDto[];
+  }): Promise<void> =>
+    apiService.post("/api/TKVV_BCSL_ChiPhi/save-phieu-rows", request),
 };
 
 // ─── Chi tiết sản lượng theo phiếu ────────────────────────────────────────────

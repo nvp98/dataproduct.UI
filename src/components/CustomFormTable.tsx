@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Button,
@@ -8,6 +8,7 @@ import {
   Space,
   Spin,
   Tag,
+  Tooltip,
 } from "antd";
 import { DeleteOutlined, CopyOutlined } from "@ant-design/icons";
 
@@ -63,6 +64,11 @@ interface CustomFormTableProps {
   showCloneButton?: boolean;
   cloneRowButtonText?: string;
   showRowCloneButton?: boolean;
+  /** Trả về style bổ sung và tooltip cho một ô cụ thể. */
+  cellDecorator?: (
+    dataIndex: string,
+    record: any,
+  ) => { style?: React.CSSProperties; tooltip?: string | null } | null | undefined;
 }
 
 export default function CustomFormTable({
@@ -94,6 +100,7 @@ export default function CustomFormTable({
   showCloneButton = false,
   cloneRowButtonText = "+ Nhân dòng trên",
   showRowCloneButton = false,
+  cellDecorator,
 }: CustomFormTableProps) {
   // Validate và filter input theo type
   const validateAndFormatInput = (
@@ -180,6 +187,28 @@ export default function CustomFormTable({
     }
 
     return style;
+  };
+
+  /** Wrap một phần tử cell với Tooltip + style bổ sung từ cellDecorator */
+  const wrapCell = (
+    node: React.ReactElement,
+    dataIndex: string,
+    record: any,
+    baseStyle: React.CSSProperties,
+  ): React.ReactElement => {
+    const deco = cellDecorator?.(dataIndex, record);
+    if (!deco) return node;
+    const decorated = deco.style
+      ? React.cloneElement(node, { style: { ...baseStyle, ...deco.style } })
+      : node;
+    if (deco.tooltip) {
+      return (
+        <Tooltip title={deco.tooltip} color="#faad14">
+          {decorated}
+        </Tooltip>
+      );
+    }
+    return decorated;
   };
 
   // Sync với initialData khi có thay đổi
@@ -402,14 +431,16 @@ export default function CustomFormTable({
         width: col.width,
         fixed: col.fixed,
         render: (_: any, record: any, idx: number) => {
+              const baseStyleRo = getCellStyle(dataIndex, record[dataIndex], record, true);
           if (isReadonly) {
-            return (
+            return wrapCell(
               <Input
                 placeholder={col.title}
                 value={formatIfNeeded(col.format, record[dataIndex])}
                 readOnly
-                style={getCellStyle(dataIndex, record[dataIndex], record, true)}
-              />
+                style={baseStyleRo}
+              />,
+              dataIndex, record, baseStyleRo,
             );
           }
           if (col.options) {
@@ -424,7 +455,8 @@ export default function CustomFormTable({
               />
             );
           }
-          return (
+          const baseStyle = getCellStyle(dataIndex, record[dataIndex], record, false);
+          return wrapCell(
             <Input
               placeholder={col.title}
               value={record[dataIndex] ?? ""}
@@ -433,8 +465,9 @@ export default function CustomFormTable({
                 handleCellChange(validated, idx, dataIndex);
               }}
               disabled={!editable}
-              style={getCellStyle(dataIndex, record[dataIndex], record, false)}
-            />
+              style={baseStyle}
+            />,
+            dataIndex, record, baseStyle,
           );
         },
       };

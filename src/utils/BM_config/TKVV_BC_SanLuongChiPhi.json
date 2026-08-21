@@ -11,27 +11,13 @@
     "effectiveDate": "01/06/2023"
   },
 
-  "headerFields": [
-    {
-      "label": "Từ 8h00 ngày",
-      "type": "date",
-      "key": "tuNgay",
-      "required": true
-    },
-    {
-      "label": "Đến 8h00 ngày",
-      "type": "date",
-      "key": "denNgay",
-      "required": true
-    }
-  ],
+  "headerFields": [],
 
   "layout": [
     {
       "sectionType": "table",
       "key": "table1",
       "columns": [
-        { "title": "Kíp", "dataIndex": "kip", "width": 90 },
         {
           "title": "Nguyên nhiên vật liệu đầu vào",
           "dataIndex": "nguyenLieu",
