@@ -47,7 +47,7 @@ import {
 
 interface TableRow {
   key: string | number;
-  dbId?: number | null;         // TKVV_BaoCaoSanLuongChiPhi.ID
+  dbId?: number | null; // TKVV_BaoCaoSanLuongChiPhi.ID
   nguyenVatLieuID?: number;
   siloID?: number | null;
   maSilo?: string | null;
@@ -55,7 +55,7 @@ interface TableRow {
   nguyenLieu?: string;
   donViTinh?: string | null;
   klAm?: number | string;
-  klAmAuto?: number | string;   // KLAmAuto từ hệ thống cân — chỉ tham chiếu, không sửa
+  klAmAuto?: number | string; // KLAmAuto từ hệ thống cân — chỉ tham chiếu, không sửa
   isAdjusted?: boolean;
   doAm?: number | string;
   quyKho?: number | string;
@@ -107,7 +107,10 @@ const buildBlankRow = (idx: number): TableRow => ({
   ghiChu: "",
 });
 
-const fromDbRecord = (item: TKVVBaoCaoSanLuongChiPhiDto, idx: number): TableRow => ({
+const fromDbRecord = (
+  item: TKVVBaoCaoSanLuongChiPhiDto,
+  idx: number,
+): TableRow => ({
   key: `db-${item.id}-${idx}`,
   dbId: item.id,
   nguyenVatLieuID: item.nguyenVatLieuID,
@@ -177,16 +180,26 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
   }>({});
 
   const phieuInfoRef = useRef(phieuInfo);
-  useEffect(() => { phieuInfoRef.current = phieuInfo; }, [phieuInfo]);
+  useEffect(() => {
+    phieuInfoRef.current = phieuInfo;
+  }, [phieuInfo]);
 
   const tableDataNgayRef = useRef(tableDataNgay);
-  useEffect(() => { tableDataNgayRef.current = tableDataNgay; }, [tableDataNgay]);
+  useEffect(() => {
+    tableDataNgayRef.current = tableDataNgay;
+  }, [tableDataNgay]);
   const tableDataDemRef = useRef(tableDataDem);
-  useEffect(() => { tableDataDemRef.current = tableDataDem; }, [tableDataDem]);
+  useEffect(() => {
+    tableDataDemRef.current = tableDataDem;
+  }, [tableDataDem]);
   const ngaySXRef = useRef(ngaySXFilter);
-  useEffect(() => { ngaySXRef.current = ngaySXFilter; }, [ngaySXFilter]);
+  useEffect(() => {
+    ngaySXRef.current = ngaySXFilter;
+  }, [ngaySXFilter]);
   const selectedScopeRef = useRef(selectedScope);
-  useEffect(() => { selectedScopeRef.current = selectedScope; }, [selectedScope]);
+  useEffect(() => {
+    selectedScopeRef.current = selectedScope;
+  }, [selectedScope]);
 
   const currentUserInfo = useMemo(() => getThongTinUser(), []);
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
@@ -526,7 +539,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       table1: processRows(tableDataNgay),
       table2: processRows(tableDataDem),
       scope: selectedScope ?? null,
-      NgaySX: (ngaySXFilter ?? dayjs()).format("YYYY-MM-DD"),
+      ngaySX: (ngaySXFilter ?? dayjs()).format("YYYY-MM-DD"),
       pheDuyet: pheDuyetFlow,
       prefix: config.prefix,
     };
@@ -540,53 +553,60 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     ngaySXFilter,
   ]);
 
-  const saveBcSlRows = useCallback(async (phieuId?: string) => {
-    const userInfo = getUserInfo();
-    const userId = userInfo.iD_TaiKhoan;
-    if (!userId) return;
+  const saveBcSlRows = useCallback(
+    async (phieuId?: string) => {
+      const userInfo = getUserInfo();
+      const userId = userInfo.iD_TaiKhoan;
+      if (!userId) return;
 
-    const ngaySX = ngaySXRef.current;
-    const scope = selectedScopeRef.current;
-    if (!ngaySX || !scope) return;
+      const ngaySX = ngaySXRef.current;
+      const scope = selectedScopeRef.current;
+      if (!ngaySX || !scope) return;
 
-    const ngayStr = ngaySX.format("YYYY-MM-DD");
-    const toNum = (v: any) => (v !== "" && v != null ? Number(v) : null);
+      const ngayStr = ngaySX.format("YYYY-MM-DD");
+      const toNum = (v: any) => (v !== "" && v != null ? Number(v) : null);
 
-    const toSaveRow = (row: TableRow, ca: number, idx: number) => ({
-      id: row.dbId ?? null,
-      ngaySX: ngayStr,
-      ca,
-      scope,                         // INT — gửi thẳng giá trị number
-      nguyenVatLieuID: row.nguyenVatLieuID ?? 0,
-      kip: row.kip ?? null,
-      thuTu: idx + 1,
-      klAm: toNum(row.klAm),
-      klAmAuto: toNum(row.klAmAuto),
-      doAm: toNum(row.doAm),
-      quyKho: toNum(row.quyKho),
-      thanhPhamL1: toNum(row.thanhPhamL1),
-      thanhPhamL2: toNum(row.thanhPhamL2),
-      ghiChu: row.ghiChu ?? null,
-    });
-
-    // Chỉ lưu các dòng có dbId (đã được load từ DB) hoặc có nguyenVatLieuID hợp lệ
-    const rows = [
-      ...tableDataNgayRef.current.filter(r => r.dbId || r.nguyenVatLieuID).map((r, i) => toSaveRow(r, 1, i)),
-      ...tableDataDemRef.current.filter(r => r.dbId || r.nguyenVatLieuID).map((r, i) => toSaveRow(r, 2, i)),
-    ];
-    if (rows.length === 0) return;
-
-    try {
-      await tkvvBcSlChiPhiApi.savePhieuRows({
-        maBM: MA_BM,
-        phieuID: phieuId ?? idphieu ?? null,
-        currentUserId: userId,
-        rows,
+      const toSaveRow = (row: TableRow, ca: number, idx: number) => ({
+        id: row.dbId ?? null,
+        ngaySX: ngayStr,
+        ca,
+        scope, // INT — gửi thẳng giá trị number
+        nguyenVatLieuID: row.nguyenVatLieuID ?? 0,
+        kip: row.kip ?? null,
+        thuTu: idx + 1,
+        klAm: toNum(row.klAm),
+        klAmAuto: toNum(row.klAmAuto),
+        doAm: toNum(row.doAm),
+        quyKho: toNum(row.quyKho),
+        thanhPhamL1: toNum(row.thanhPhamL1),
+        thanhPhamL2: toNum(row.thanhPhamL2),
+        ghiChu: row.ghiChu ?? null,
       });
-    } catch {
-      // không block phiếu nếu lưu BCSL lỗi
-    }
-  }, [getUserInfo, idphieu]);
+
+      // Chỉ lưu các dòng có dbId (đã được load từ DB) hoặc có nguyenVatLieuID hợp lệ
+      const rows = [
+        ...tableDataNgayRef.current
+          .filter((r) => r.dbId || r.nguyenVatLieuID)
+          .map((r, i) => toSaveRow(r, 1, i)),
+        ...tableDataDemRef.current
+          .filter((r) => r.dbId || r.nguyenVatLieuID)
+          .map((r, i) => toSaveRow(r, 2, i)),
+      ];
+      if (rows.length === 0) return;
+
+      try {
+        await tkvvBcSlChiPhiApi.savePhieuRows({
+          maBM: MA_BM,
+          phieuID: phieuId ?? idphieu ?? null,
+          currentUserId: userId,
+          rows,
+        });
+      } catch {
+        // không block phiếu nếu lưu BCSL lỗi
+      }
+    },
+    [getUserInfo, idphieu],
+  );
 
   const handleActionSuccess = useCallback(
     async (context?: { newPhieuId?: string }) => {
@@ -650,18 +670,15 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     return (section?.columns || []) as FormColumnDef[];
   }, [config]);
 
-  const bcSlCellDecorator = useCallback(
-    (dataIndex: string, record: any) => {
-      if (dataIndex === "klAm" && record.isAdjusted && record.klAmAuto != null) {
-        return {
-          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
-          tooltip: `KL ẩm Auto: ${Number(record.klAmAuto).toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
-        };
-      }
-      return null;
-    },
-    [],
-  );
+  const bcSlCellDecorator = useCallback((dataIndex: string, record: any) => {
+    if (dataIndex === "klAm" && record.isAdjusted && record.klAmAuto != null) {
+      return {
+        style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+        tooltip: `KL ẩm Auto: ${Number(record.klAmAuto).toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
+      };
+    }
+    return null;
+  }, []);
 
   const handleCellChangeNgay = useCallback(
     (rowIndex: number, dataIndex: string, value: any) => {
