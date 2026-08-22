@@ -12,6 +12,7 @@ import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import useRowSelection from "../../../hooks/useRowSelection";
 import useCheckPhieu from "../../../hooks/useCheckPhieu";
+import { tkvvScopeToLabel } from "../../../utils/constants/TKVV_constant";
 
 const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
   const config = TKVV_BC_SanLuongChiPhi as any;
@@ -30,18 +31,30 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
       userId: currentUserId,
       loaiVung: type === "xemphieu" ? 3 : type === "viecdentoi" ? 2 : 1,
     }),
-    [currentUserId, type]
+    [currentUserId, type],
   );
 
-  const { data, loading, pagination, handleFilter, handleClearFilter, onPageChange, refetch } =
-    usePhieuSearchListHRC({
-      maBm: config.code as string,
-      fixedFilters,
-      persistKey: true,
-    });
+  const {
+    data,
+    loading,
+    pagination,
+    handleFilter,
+    handleClearFilter,
+    onPageChange,
+    refetch,
+  } = usePhieuSearchListHRC({
+    maBm: config.code as string,
+    fixedFilters,
+    persistKey: true,
+  });
 
-  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } = useRowSelection(data as any[]);
-  const { checkLoading, handleCheckPhieu } = useCheckPhieu(selectedRowKeys, () => setSelectedRowKeys([]), refetch);
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } =
+    useRowSelection(data as any[]);
+  const { checkLoading, handleCheckPhieu } = useCheckPhieu(
+    selectedRowKeys,
+    () => setSelectedRowKeys([]),
+    refetch,
+  );
 
   const statusConfig: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -53,11 +66,12 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
     6: { color: "gray", text: "Đang phê duyệt" },
   };
 
-  const approvalStatusConfig: Record<number, { color: string; text: string }> = {
-    0: { color: "default", text: "Chưa xác nhận" },
-    1: { color: "green", text: "Đã ký" },
-    2: { color: "red", text: "Từ chối" },
-  };
+  const approvalStatusConfig: Record<number, { color: string; text: string }> =
+    {
+      0: { color: "default", text: "Chưa xác nhận" },
+      1: { color: "green", text: "Đã ký" },
+      2: { color: "red", text: "Từ chối" },
+    };
 
   type TableRecord = SearchPhieuResponseModel & {
     pheDuyet?: Array<Record<string, unknown>>;
@@ -78,7 +92,11 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
               return navigate(`/chitietbaocaoslcptkvv/${record.idphieu}`);
             }
 
-            if (record.tinhTrang === 0 || record.tinhTrang === 3 || record.tinhTrang === 7) {
+            if (
+              record.tinhTrang === 0 ||
+              record.tinhTrang === 3 ||
+              record.tinhTrang === 7
+            ) {
               return navigate(`/taophieubaocaoslcptkvv/${record.idphieu}`);
             }
 
@@ -98,18 +116,19 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
       ellipsis: true,
     },
     {
-      title: "Từ ngày",
-      dataIndex: "tuNgay",
-      key: "tuNgay",
+      title: "Ngày sản xuất",
+      dataIndex: "ngaySX",
+      key: "ngaySX",
       width: 130,
-      render: (value: string) => (value ? dayjs(value).format("DD/MM/YYYY") : "-"),
+      render: (value: string) =>
+        value ? dayjs(value).format("DD/MM/YYYY") : "-",
     },
     {
-      title: "Đến ngày",
-      dataIndex: "denNgay",
-      key: "denNgay",
+      title: "Xưởng",
+      dataIndex: "scope",
+      key: "scope",
       width: 130,
-      render: (value: string) => (value ? dayjs(value).format("DD/MM/YYYY") : "-"),
+      render: (value: number) => (value ? tkvvScopeToLabel(value) : "-"),
     },
     {
       title: "Trạng thái",
@@ -138,7 +157,8 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
           );
           if (!approvalItem) return <Tag color="default">Chưa gán</Tag>;
           const status: number = approvalItem.tinhTrang ?? 0;
-          const statusText = approvalStatusConfig[status]?.text || `Trạng thái ${status}`;
+          const statusText =
+            approvalStatusConfig[status]?.text || `Trạng thái ${status}`;
           const fullText = `${statusText}-${approvalItem.hoVaTen || "N/A"}`;
           return (
             <Tooltip title={fullText}>
@@ -220,21 +240,26 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
           columns={columns}
           dataSource={data as TableRecord[]}
           loading={loading}
-          rowClassName={(record: any) => record.isCheck === 1 ? "row-checked" : ""}
+          rowClassName={(record: any) =>
+            record.isCheck === 1 ? "row-checked" : ""
+          }
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
             total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} phiếu`,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: onPageChange,
           }}
           scroll={{ x: 1100 }}
           summary={() => (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={9} align="right">
-                <span style={{ fontWeight: 500 }}>Tổng: {pagination.total} Phiếu</span>
+                <span style={{ fontWeight: 500 }}>
+                  Tổng: {pagination.total} Phiếu
+                </span>
               </Table.Summary.Cell>
             </Table.Summary.Row>
           )}

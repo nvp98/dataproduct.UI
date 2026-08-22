@@ -283,7 +283,8 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
               : [],
           );
           if (data.scope) setSelectedScope(Number(data.scope));
-          if (data.ngaySX) setNgaySXFilter(dayjs(data.ngaySX));
+          const ngaySXValue = data.ngaySX || data.NgaySX;
+          if (ngaySXValue) setNgaySXFilter(dayjs(ngaySXValue));
 
           setPhieuInfo({
             tinhTrang,
@@ -671,11 +672,15 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
   }, [config]);
 
   const bcSlCellDecorator = useCallback((dataIndex: string, record: any) => {
-    if (dataIndex === "klAm" && record.isAdjusted && record.klAmAuto != null) {
-      return {
-        style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
-        tooltip: `KL ẩm Auto: ${Number(record.klAmAuto).toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
-      };
+    if (dataIndex === "klAm" && record.klAmAuto != null && record.klAmAuto !== "") {
+      const klAmNum = parseFloat(String(record.klAm));
+      const klAmAutoNum = parseFloat(String(record.klAmAuto));
+      if (!isNaN(klAmNum) && !isNaN(klAmAutoNum) && klAmNum !== klAmAutoNum) {
+        return {
+          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          tooltip: `KL ẩm Auto: ${klAmAutoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
+        };
+      }
     }
     return null;
   }, []);
@@ -758,37 +763,37 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
           <Input type="hidden" />
         </Form.Item>
 
-        {/* ─── Ngày SX + Xưởng (chỉ hiển thị khi chỉnh sửa) ─────────────────── */}
-        {!isFormLocked && (
-          <Space wrap align="end" style={{ marginBottom: 8 }}>
-            <div>
-              <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 14 }}>
-                Ngày sản xuất
-              </div>
-              <DatePicker
-                value={ngaySXFilter}
-                onChange={setNgaySXFilter}
-                format="DD/MM/YYYY"
-                style={{ width: 160 }}
-                placeholder="Chọn ngày SX"
-                allowClear={false}
-              />
+        {/* ─── Ngày SX + Xưởng ────────────────────────────────────────────────── */}
+        <Space wrap align="end" style={{ marginBottom: 8 }}>
+          <div>
+            <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 14 }}>
+              Ngày sản xuất
             </div>
-            <div>
-              <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 14 }}>
-                Xưởng
-              </div>
-              <Select
-                value={selectedScope}
-                onChange={setSelectedScope}
-                options={SCOPE_OPTIONS}
-                placeholder="Chọn xưởng"
-                style={{ width: 220 }}
-                allowClear
-              />
+            <DatePicker
+              value={ngaySXFilter}
+              onChange={setNgaySXFilter}
+              format="DD/MM/YYYY"
+              style={{ width: 160 }}
+              placeholder="Chọn ngày SX"
+              allowClear={false}
+              disabled={!!idphieu}
+            />
+          </div>
+          <div>
+            <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 14 }}>
+              Xưởng
             </div>
-          </Space>
-        )}
+            <Select
+              value={selectedScope}
+              onChange={setSelectedScope}
+              options={SCOPE_OPTIONS}
+              placeholder="Chọn xưởng"
+              style={{ width: 220 }}
+              allowClear
+              disabled={!!idphieu}
+            />
+          </div>
+        </Space>
 
         {/* ─── Hàng action: nút quy trình + Tải EMS + Quay lại ──────────────── */}
         <div
