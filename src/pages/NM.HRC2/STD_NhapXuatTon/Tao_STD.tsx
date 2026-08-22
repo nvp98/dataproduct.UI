@@ -696,12 +696,12 @@ const Tao_STD = () => {
     [form, idphieu, refreshSummaryAndStatus]
   );
 
-  /** Khu vực có phiếu liên quan (BOF/LF/RH) đang Hoàn thành (2) hoặc Đã chốt (5) thì không làm mới dữ liệu của riêng khu vực đó */
+  /** Khu vực có phiếu liên quan (BOF/LF/RH) đang Đã chốt (5) thì không làm mới dữ liệu của riêng khu vực đó */
   const isKhuVucLocked = useCallback(
     (khuVucLabel: string) => {
       const statusItem = relatedStatusMap[`kv_${khuVucLabel}`];
       const status = statusItem?.tinhTrang ?? (statusItem as any)?.TinhTrang;
-      return status === 2 || status === 5;
+      return status === 5;
     },
     [relatedStatusMap]
   );
@@ -738,7 +738,7 @@ const Tao_STD = () => {
         const match = kvList.find((kv: any) => kv?.bieuMau === bieuMau && Number(kv?.scope) === Number(scope));
         return match?.label || match?.value || "";
       };
-      // Bỏ qua các item thuộc khu vực đang bị khóa (phiếu liên quan Hoàn thành/Đã chốt)
+      // Bỏ qua các item thuộc khu vực đang bị khóa (phiếu liên quan Đã chốt)
       const resultData = resultDataAll.filter((item: any) => {
         const khuVucLabel = findKhuVucLabel(item.bieuMau, item.scope);
         return khuVucLabel ? !isKhuVucLocked(khuVucLabel) : true;
@@ -924,10 +924,10 @@ const Tao_STD = () => {
       if (resultDataAll.length === 0) {
         message.info("Không có dữ liệu phụ liệu cho Ngày/Ca đã chọn (đã reset Tổng thực tế sử dụng = 0)");
       } else if (resultData.length === 0) {
-        message.info("Các khu vực đều đang ở trạng thái Hoàn thành/Đã chốt nên không có dữ liệu nào được làm mới.");
+        message.info("Các khu vực đều đang ở trạng thái Đã chốt nên không có dữ liệu nào được làm mới.");
       } else if (lockedKhuVucLabels.size > 0) {
         message.success(
-          `Đã làm mới dữ liệu phụ liệu theo ngày/ca (bỏ qua khu vực: ${[...lockedKhuVucLabels].join(", ")} do đã Hoàn thành/Đã chốt).`
+          `Đã làm mới dữ liệu phụ liệu theo ngày/ca (bỏ qua khu vực: ${[...lockedKhuVucLabels].join(", ")} do đã Chốt).`
         );
       } else {
         message.success("Đã lọc dữ liệu phụ liệu theo ngày/ca");
