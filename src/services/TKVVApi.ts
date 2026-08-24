@@ -456,3 +456,71 @@ export const tkvvChiTietApi = {
   getByPhieu: (idPhieu: string): Promise<TKVVChiTietDto[]> =>
     apiService.get(`/api/TKVV_BBSL/get-chitiet/${idPhieu}`),
 };
+
+// ─── TKVV_TonSilo — Sổ theo dõi Xuất Nhập Tồn Silo ───────────────────────────
+// 1 phiếu = 1 Kíp. 1 dòng bảng = 1 Silo (không gộp theo NVL).
+
+export interface TKVVTonSiloRowDto {
+  id: number;
+  phieuID: string | null;
+  ngaySX: string;
+  ca: number;
+  kip: string | null;
+  scope: number | null;
+  thuTu: number | null;
+  siloID: number;
+  maSilo: string | null;
+  tenSilo: string | null;
+  nguyenVatLieuID: number | null;
+  tenNVL: string | null;
+  doAm: number | null;
+  tonDau: number | null;
+  nhap: number | null;
+  xuat: number | null;
+  tonCuoi: number | null;
+  tonCuoiAuto: number | null;
+  ghiChu: string | null;
+  isAdjusted: boolean;
+  adjustedBy: number | null;
+  adjustedDate: string | null;
+}
+
+export interface SaveTonSiloRowDto {
+  id?: number | null;
+  ngaySX: string;
+  ca: number;
+  scope: number;
+  siloID: number;
+  nguyenVatLieuID?: number | null;
+  kip?: string | null;
+  thuTu?: number | null;
+  doAm?: number | null;
+  tonDau?: number | null;
+  nhap?: number | null;
+  xuat?: number | null;
+  tonCuoi?: number | null;
+  tonCuoiAuto?: number | null;
+  ghiChu?: string | null;
+}
+
+export const tkvvTonSiloApi = {
+  initRows: (request: {
+    ngaySX: string;
+    ca: number;
+    scope: number;
+    currentUserId?: number | null;
+    phieuID?: string | null;
+  }): Promise<TKVVTonSiloRowDto[]> =>
+    apiService.post("/api/TKVV_TonSilo/init-rows", request),
+
+  getRowsByPhieu: (phieuId: string): Promise<TKVVTonSiloRowDto[]> =>
+    apiService.get(`/api/TKVV_TonSilo/rows-by-phieu/${phieuId}`),
+
+  saveRows: (request: {
+    maBM: string;
+    phieuID?: string | null;
+    currentUserId: number;
+    rows: SaveTonSiloRowDto[];
+  }): Promise<void> =>
+    apiService.post("/api/TKVV_TonSilo/save-phieu-rows", request),
+};
