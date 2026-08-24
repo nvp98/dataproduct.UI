@@ -1,4 +1,8 @@
 import apiService from "./ApiService";
+import type {
+  AutocompleteSearchParams,
+  AutocompleteSearchResult,
+} from "../components/CommonAutocomplete";
 
 // ─── Danh mục NVL (sản phẩm theo biểu mẫu) ───────────────────────────────────
 
@@ -523,4 +527,73 @@ export const tkvvTonSiloApi = {
     rows: SaveTonSiloRowDto[];
   }): Promise<void> =>
     apiService.post("/api/TKVV_TonSilo/save-phieu-rows", request),
+};
+
+// ─── Tra cứu Vật tư SAP (PRODUCTDATA.Tbl_VatTu) ──────────────────────────────
+
+export interface VatTuLookupDto {
+  idVatTu: number;
+  tenVatTu: string | null;
+  maVatTuSap: string | null;
+  tenVatTuSap: string | null;
+  donViTinh: string | null;
+  idNhomVatTu: number | null;
+  phongBan: string | null;
+  idTrangThai: number | null;
+}
+
+// Khớp shape AutocompleteSearchApi<T> — dùng trực tiếp làm searchApi cho CommonAutocomplete.
+export const tkvvVatTuApi = {
+  search: (
+    params: AutocompleteSearchParams,
+  ): Promise<AutocompleteSearchResult<VatTuLookupDto>> =>
+    apiService.get("/api/TKVV_Silo/vattu-search", {
+      params: {
+        searchKey: params.searchKey,
+        page: params.page,
+        pageSize: params.pageSize,
+      },
+    }),
+};
+
+// ─── TKVV_NVL_BBGN_Mapping — NVL (TKVV_NguyenVatLieu) ↔ Vật tư BBGN ──────────
+
+export interface TKVVNvlBbgnMappingDto {
+  id: number;
+  tkvvNvlId: number;
+  tenNVL: string | null;
+  idVatTuBBGN: number;
+  tenVatTu: string | null;
+  maVatTuSap: string | null;
+  tenVatTuSap: string | null;
+  donViTinh: string | null;
+  trangThai: boolean;
+  ghiChu: string | null;
+  ngayTao: string;
+}
+
+export interface CreateTKVVNvlBbgnMappingDto {
+  tkvvNvlId: number;
+  idVatTuBBGN: number;
+  ghiChu?: string | null;
+}
+
+export interface UpdateTKVVNvlBbgnMappingDto {
+  trangThai: boolean;
+  ghiChu?: string | null;
+}
+
+export const tkvvNvlBbgnMappingApi = {
+  getList: (tkvvNvlId?: number): Promise<TKVVNvlBbgnMappingDto[]> =>
+    apiService.get("/api/TKVV_Silo/nvl-vattu-mapping", {
+      params: tkvvNvlId ? { tkvvNvlId } : undefined,
+    }),
+
+  create: (dto: CreateTKVVNvlBbgnMappingDto): Promise<TKVVNvlBbgnMappingDto> =>
+    apiService.post("/api/TKVV_Silo/nvl-vattu-mapping", dto),
+
+  update: (id: number, dto: UpdateTKVVNvlBbgnMappingDto): Promise<TKVVNvlBbgnMappingDto> =>
+    apiService.put(`/api/TKVV_Silo/nvl-vattu-mapping/${id}`, dto),
+
+  delete: (id: number) => apiService.delete(`/api/TKVV_Silo/nvl-vattu-mapping/${id}`),
 };
