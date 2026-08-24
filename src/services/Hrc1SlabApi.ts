@@ -229,6 +229,14 @@ export const Hrc1SlabApi = {
     return (await apiService.put(`${BASE}/${id}`, payload)) as WorkflowResult;
   },
 
+  deleteSlabs: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/xoa`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  },
+
+  restoreSlabs: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/khoi-phuc`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  },
+
   getTongHopGhiChu: async (idPhieu: string): Promise<Hrc1TongHopGhiChuItem[]> => {
     return (await apiService.get(`${BASE}/tonghop-ghi-chu/${idPhieu}`)) as Hrc1TongHopGhiChuItem[];
   },

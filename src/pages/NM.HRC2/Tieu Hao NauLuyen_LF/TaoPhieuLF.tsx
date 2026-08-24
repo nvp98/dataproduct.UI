@@ -869,6 +869,7 @@ const TaoPhieuTieuHaoNauLuyen_LF = () => {
                 showDeleteButton={!isFormLocked}
                 minRows={1}
                 editable={!isFormLocked && (layout as any).editable !== false}
+                allowEditMacThepOnNMRow
                 loading={loading}
                 stickyHeaders
                 stickyFirstColumn
