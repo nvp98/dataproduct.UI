@@ -7,6 +7,10 @@ export type HRC2MainData = {
   scope: number | string | null;
   meThoi: string | null;
   macThep: string | null;
+  /** true nếu macThep hiện tại đang là giá trị sửa tay (khác giá trị gốc từ NM) — dùng để dựng lại macThep__orig/__IsManual trên row phục vụ highlight "đã sửa". */
+  isManualMacThep?: boolean | null;
+  /** Giá trị macThep GỐC từ NM (chỉ có ý nghĩa khi isManualMacThep=true). */
+  macThepGoc?: string | null;
   o2: number | string | null;
   ar_RH: number | string | null;
   n2: number | string | null;
@@ -146,6 +150,8 @@ export const normalizeHRC2GroupedResponse = (
       scope: getValue<number>("scope", "Scope"),
       meThoi: getValue<string>("meThoi", "MeThoi"),
       macThep: getValue<string>("macThep", "MacThep"),
+      isManualMacThep: getValue<boolean>("isManualMacThep", "IsManualMacThep"),
+      macThepGoc: getValue<string>("macThepGoc", "MacThepGoc"),
       o2: getValue<number>("o2", "O2"),
       ar_RH: getValue<number>("aR_RH", "ar_RH", "AR_RH"),
       n2: getValue<number>("n2", "N2"),

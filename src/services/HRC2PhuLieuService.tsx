@@ -322,6 +322,16 @@ export const hrc2PhuLieuService = {
         }
       });
 
+      // macThep: dựng lại __orig/__IsManual từ isManualMacThep/macThepGoc (BE trả kèm ở API
+      // filter/grouped-detail, KHÔNG có ở search-thongke/export vì các API đó chỉ trả hiệu lực) để
+      // CustomTableHRC highlight đúng ô đã sửa tay ngay từ lần load đầu (không phụ thuộc phiếu đã có
+      // sẵn macThep__orig trong DataJson từ trước hay chưa) — giống hệt cách mappedPhuLieus bên dưới
+      // dựng __orig/__IsManual cho cột phụ liệu từ klPhuGia/isManual.
+      if (item.data?.isManualMacThep === true) {
+        row.macThep__IsManual = true;
+        row.macThep__orig = item.data?.macThepGoc ?? "";
+      }
+
       // Map các phụ liệu đã mapped (cả PG và KL)
       mappedPhuLieus.forEach(phuLieu => {
         const dataIndex = `phuLieu_${phuLieu.idHeaderKey}`;

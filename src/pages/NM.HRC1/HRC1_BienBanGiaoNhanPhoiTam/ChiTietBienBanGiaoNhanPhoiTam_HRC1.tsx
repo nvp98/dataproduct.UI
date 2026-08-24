@@ -27,6 +27,7 @@ import {
   ArrowRightOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
   EditOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -128,6 +129,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
   const [syncLoading, setSyncLoading] = useState(false);
 
   const [chuyenLoading, setChuyenLoading] = useState<"truoc" | "sau" | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [tongHopRefreshLoading, setTongHopRefreshLoading] = useState(false);
 
   // Search client-side (không gọi API) cho cột Số Mẻ / ID Slab trong tab chi tiết —
@@ -369,6 +371,23 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
     });
     setAddModalOpen(true);
   }, [selectedRows, addForm]);
+
+  // Xóa mềm: slab bị ẩn khỏi phiếu và không bị SyncAsync hồi sinh ở lần "Làm mới dữ liệu" kế
+  // tiếp (khác xóa cứng trước đây — TSC luôn trả đủ slab của ca nên sẽ bị insert lại ngay).
+  const handleDeleteSlabs = useCallback(async () => {
+    if (selectedRows.length === 0) return;
+    try {
+      setDeleteLoading(true);
+      const ids = selectedRows.map((r) => r.id);
+      const result = await Hrc1SlabApi.deleteSlabs(ids, getUserId());
+      message.success(result.message || `Đã xóa ${result.affectedRows} slab`);
+      await loadSlabs();
+    } catch (err: any) {
+      message.error(err?.message ?? "Lỗi xóa slab");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [selectedRows, loadSlabs]);
 
   const parseSearchTerms = (text: string) =>
     text.split(/[\n\t,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -963,6 +982,23 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                             Sửa
                           </Button>
                         </Tooltip>
+                      )}
+                      {!readOnly && (
+                        <Popconfirm
+                          title={`Xóa ${selectedCount} slab đã chọn? Slab sẽ bị ẩn khỏi phiếu và không hiện lại khi Làm mới dữ liệu.`}
+                          onConfirm={() => void handleDeleteSlabs()}
+                          disabled={selectedCount === 0}
+                        >
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            loading={deleteLoading}
+                            disabled={data?.tinhTrang === 5 || selectedCount === 0}
+                          >
+                            Xóa
+                          </Button>
+                        </Popconfirm>
                       )}
 
                       {/* Đúc: chuyển ca + xác nhận Đúc */}
