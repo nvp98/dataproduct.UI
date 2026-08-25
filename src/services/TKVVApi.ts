@@ -112,13 +112,64 @@ export const tkvvEmsTagApi = {
     apiService.get("/api/TKVV_BBSL/get-ems-tags", { params }),
 };
 
+// ─── Mapping Cân (EMS) → Xưởng theo Ngày/Ca/Kíp (TKVV_SanLuongMapping) ──────
+// Xác định Tag của cân nào (trong "Danh mục Cân") tính vào Xưởng nào, hiệu lực
+// trong khoảng (TuNgay, DenNgay) — dùng bởi GetTongTuDongAsync (Tổng tự động PLC).
+// Kíp chỉ để ghi chú/lọc hiển thị, KHÔNG được lọc khi tính tổng tự động hiện tại.
+
+export interface TKVVSanLuongMappingDto {
+  id: number;
+  tagID: string;
+  scope: string;
+  ca: number;
+  kip: string | null;
+  tuNgay: string | null;
+  denNgay: string | null;
+  trangThai: boolean;
+  ghiChu: string | null;
+  ngayTao: string;
+  nguoiTaoID: number | null;
+  tenCan: string | null; // join hiển thị từ danh mục Cân EMS theo tagID, có thể null nếu không khớp
+}
+
+export interface CreateTKVVSanLuongMappingDto {
+  tagID: string;
+  scope: string;
+  ca: number;
+  kip?: string | null;
+  tuNgay?: string | null;
+  denNgay?: string | null;
+  ghiChu?: string | null;
+  nguoiTaoID?: number | null;
+}
+
+export interface UpdateTKVVSanLuongMappingDto extends CreateTKVVSanLuongMappingDto {
+  trangThai: boolean;
+}
+
+export const tkvvSanLuongMappingApi = {
+  getList: (params?: { scope?: string }): Promise<TKVVSanLuongMappingDto[]> =>
+    apiService.get("/api/TKVV_BBSL/get-sanluong-mapping", { params }),
+
+  getById: (id: number): Promise<TKVVSanLuongMappingDto> =>
+    apiService.get(`/api/TKVV_BBSL/get-sanluong-mapping/${id}`),
+
+  create: (dto: CreateTKVVSanLuongMappingDto): Promise<TKVVSanLuongMappingDto> =>
+    apiService.post("/api/TKVV_BBSL/create-sanluong-mapping", dto),
+
+  update: (id: number, dto: UpdateTKVVSanLuongMappingDto): Promise<TKVVSanLuongMappingDto> =>
+    apiService.put(`/api/TKVV_BBSL/update-sanluong-mapping/${id}`, dto),
+
+  delete: (id: number) => apiService.delete(`/api/TKVV_BBSL/delete-sanluong-mapping/${id}`),
+};
+
 // ─── Dữ liệu PLC thô ──────────────────────────────────────────────────────────
 
 export interface TKVVDuLieuRawDto {
   id: number;
   tagID: string;
-  maKey: string | null;
-  value: number | null;
+  giaTriTuDong: number | null; // giá trị PLC gốc, ghi đè mỗi lần "Tải dữ liệu"
+  giaTriDieuChinh: number | null; // KTV/KCS chỉnh tay khi nghi ngờ PLC báo sai; null nếu chưa chỉnh
   ngay: string;
   ca: number;
   scope: string;
@@ -132,28 +183,32 @@ export const tkvvDuLieuApi = {
     ngayKetThuc?: string;
   }): Promise<TKVVDuLieuRawDto[]> =>
     apiService.get("/api/TKVV_BBSL/get-datasanluong-filter", { params }),
+
+  updateGiaTriDieuChinh: (id: number, giaTriDieuChinh: number | null): Promise<{ message: string }> =>
+    apiService.put(`/api/TKVV_BBSL/dulieu-tho/${id}/dieu-chinh`, { giaTriDieuChinh }),
 };
 
-// ─── Pivot dữ liệu PLC theo Ngay/Ca/Scope — đổ vào bảng khi tạo phiếu ─────────
+// ─── Đồng bộ dữ liệu cân/PLC thô (SP_TKVV_GetDuLieuCan_TuMapping) → TKVV_SanLuongDuLieu ─
+// Nút "Tải dữ liệu": SP join TKVV_SanLuongMapping với EMS_DATA_CAN (theo Ngày/Ca/Xưởng),
+// backend ghi các dòng mới (bỏ qua dòng đã có sẵn theo TagID+ThoiGian) vào TKVV_SanLuongDuLieu.
+// Chỉ đồng bộ dữ liệu thô — KHÔNG ghi/tự điền bất cứ gì vào bảng chi tiết của phiếu.
 
-export interface TKVVSanPhamDto {
-  nguyenVatLieuID: number;
-  tenNVL: string | null;
-  donViTinh: string | null;
+export const tkvvSyncDuLieuApi = {
+  syncTuEms: (dto: { ngay: string; ca: number; scope: number }): Promise<{ message: string; soDongMoi: number }> =>
+    apiService.post("/api/TKVV_BBSL/sync-dulieu-ems", dto),
+};
+
+// ─── Tổng tự động (PLC) theo Ngay/Ca/Scope — chỉ 1 số tổng/ca (ưu tiên GiaTriDieuChinh,
+// fallback GiaTriTuDong per-tag), hiển thị ở dòng "TỔNG CỘNG" của bảng phiếu để xem/đối
+// chiếu với số người dùng tự nhập, KHÔNG tự điền vào Loại 1/2/3/Phế phẩm.
+
+export interface TKVVTongTuDongDto {
+  tongTuDong: number;
 }
 
-export interface TKVVDuLieuPivotResult {
-  sanPham: TKVVSanPhamDto[];
-  rows: Record<string, unknown>[];
-  ngayHieuLuc: string | null;
-}
-
-export const tkvvDuLieuPivotApi = {
-  getPivot: (params: { ngay: string; ca: number; scope: number }): Promise<TKVVDuLieuPivotResult> =>
-    apiService.get("/api/TKVV_BBSL/get-dulieu-pivot", { params }),
-
-  syncChiTiet: (idPhieu: string): Promise<TKVVDuLieuPivotResult> =>
-    apiService.post(`/api/TKVV_BBSL/sync-chitiet/${idPhieu}`, null),
+export const tkvvTongTuDongApi = {
+  get: (params: { ngay: string; ca: number; scope: number }): Promise<TKVVTongTuDongDto> =>
+    apiService.get("/api/TKVV_BBSL/get-tong-tudong", { params }),
 };
 
 // ─── Giá trị NVL tự động từ EMS (SP_TKVV_GetGiaTriNVL_Auto) ─────────────────
@@ -433,6 +488,8 @@ export const tkvvBcSlChiPhiApi = {
 
 // ─── Chi tiết sản lượng theo phiếu ────────────────────────────────────────────
 
+// Wide-format: 1 dòng chi tiết = 1 dòng trên bảng UI, 4 cột Loại 1/2/3/Phế phẩm nằm
+// ngang trên cùng dòng (không nổ thành nhiều dòng theo phanLoai như thiết kế cũ).
 export interface TKVVChiTietDto {
   id: number;
   idPhieu: string;
@@ -441,14 +498,12 @@ export interface TKVVChiTietDto {
   ca: number | null;
   nguyenVatLieuID: number;
   tenNVL: string | null;
-  mappingID: number | null;
-  tagID: string | null;
-  maKey: string | null;
-  phanLoai: TKVVPhanLoai;
   thuTuDong: number | null;
   thoiGian: string | null;
-  giaTriTuDong: number | null;
-  giaTriHienTai: number | null;
+  loai1: number | null;
+  loai2: number | null;
+  loai3: number | null;
+  phePham: number | null;
   isEdited: boolean;
   nguoiSuaID: number | null;
   ngaySua: string | null;

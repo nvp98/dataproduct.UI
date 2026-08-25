@@ -543,7 +543,6 @@ export const phieuActionService = {
       : "Bạn có chắc chắn muốn lưu và gửi phiếu này?";
 
     // Quy tắc cho PKH hoặc user có quyền chốt: chỉ thấy Chốt/Hủy chốt ở trạng thái phù hợp
-    console.log(canChot, isPKH, allowedChotBmList, phieuMaBm);
     if (isPKH || canChot) {
       if (tinhTrang === TrangThaiPhieuConst.HoanThanh) {
         buttons.push({
