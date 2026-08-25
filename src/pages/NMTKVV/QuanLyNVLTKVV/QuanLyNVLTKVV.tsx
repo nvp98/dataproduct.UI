@@ -42,6 +42,7 @@ import {
   tkvvSiloApi,
   tkvvNvlSiloMappingApi,
   tkvvSiloTagMappingApi,
+  tkvvSanLuongMappingApi,
   tkvvVatTuApi,
   tkvvNvlBbgnMappingApi,
   type TKVVNguyenVatLieuDto,
@@ -49,6 +50,7 @@ import {
   type TKVVSiloDto,
   type TKVVNvlSiloMappingDto,
   type TKVVSiloTagMappingDto,
+  type TKVVSanLuongMappingDto,
   type VatTuLookupDto,
   type TKVVNvlBbgnMappingDto,
 } from "../../../services/TKVVApi";
@@ -2425,8 +2427,15 @@ const DanhMucCanTab = ({ defaultXuong }: { defaultXuong?: string }) => {
 
 // TKVV_SanLuongMapping.Scope lưu MÃ XƯỞNG DẠNG CHUỖI ("TK1".."VV2", khớp EMS_DATA_CAN.Xuong
 // và SP_TKVV_GetDuLieuCan_TuMapping) — khác với NvlTab/MappingTab dùng value SỐ (1-6) của
-// SCOPE_OPTIONS. Không dùng chung options số ở đây, phải map sang mã chuỗi qua tenScope.
-const SCOPE_CODE_OPTIONS = SCOPE_OPTIONS.map(({ label, tenScope }) => ({ label, value: tenScope }));
+// TKVV_SCOPE_OPTIONS. Dùng lại SCOPE_STRING_OPTIONS (mã chuỗi) đã định nghĩa ở trên.
+const SCOPE_CODE_OPTIONS = SCOPE_STRING_OPTIONS;
+
+// Kíp chỉ để ghi chú/lọc hiển thị (theo quy ước chung toàn hệ thống — Kíp A/B/C).
+const KIP_OPTIONS = [
+  { label: "Kíp A", value: "A" },
+  { label: "Kíp B", value: "B" },
+  { label: "Kíp C", value: "C" },
+];
 
 const SanLuongMappingTab = ({ defaultScope }: { defaultScope?: string }) => {
   const [data, setData] = useState<TKVVSanLuongMappingDto[]>([]);
@@ -2486,11 +2495,11 @@ const SanLuongMappingTab = ({ defaultScope }: { defaultScope?: string }) => {
     if (tag?.ca != null) form.setFieldValue("ca", tag.ca);
   };
 
-  // Lọc danh mục cân theo Xưởng đang chọn trong form
+  // Lọc danh mục cân theo Xưởng đang chọn trong form — field "scope" đã lưu mã
+  // chuỗi ("TK1".."VV2") qua SCOPE_CODE_OPTIONS nên dùng thẳng, không cần quy đổi.
   const selectedScope = Form.useWatch("scope", form);
-  const selectedScopeCode = getScopeCodeText(selectedScope);
-  const filteredEmsTags = selectedScopeCode
-    ? emsTags.filter((t) => t.xuong === selectedScopeCode)
+  const filteredEmsTags = selectedScope
+    ? emsTags.filter((t) => t.xuong === selectedScope)
     : emsTags;
 
   const handleSubmit = async () => {
@@ -2639,7 +2648,7 @@ const SanLuongMappingTab = ({ defaultScope }: { defaultScope?: string }) => {
           </Form.Item>
           <Space style={{ width: "100%" }} size="middle">
             <Form.Item name="ca" label="Ca" style={{ flex: 1 }} rules={[{ required: true, message: "Bắt buộc" }]}>
-              <Select options={CA_OPTIONS} placeholder="Tự động điền khi chọn cân" />
+              <Select options={TKVV_CA_OPTIONS} placeholder="Tự động điền khi chọn cân" />
             </Form.Item>
             <Form.Item name="kip" label="Kíp" style={{ flex: 1 }}>
               <Select allowClear options={KIP_OPTIONS} placeholder="Không bắt buộc" />

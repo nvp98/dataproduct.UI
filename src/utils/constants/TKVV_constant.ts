@@ -51,6 +51,6 @@ export const tkvvScopeToLabel = (scope: number): string =>
 export const TKVV_CA_OPTIONS = [
   { label: "Ca ngày (1)", value: 1 },
   { label: "Ca đêm (2)", value: 2 },
-] as const;
+];
 
 export type TKVVCa = 1 | 2;
