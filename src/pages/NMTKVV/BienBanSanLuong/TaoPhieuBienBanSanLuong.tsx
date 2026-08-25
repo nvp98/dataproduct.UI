@@ -307,6 +307,77 @@ const TaoPhieuBienBanSanLuong = () => {
 
   const hasRowsToDelete = tableData.length > 0; // minRows=0 cho phép xóa hết
 
+  // ─── Tự động cân bằng dòng cuối theo TỔNG CỘNG ─────────────────────────────
+  // Dòng CUỐI CÙNG có 4 ô Loại 1/2/3/Phế phẩm — người dùng tự nhập tay 3 trong 4 ô,
+  // ô còn lại ĐỂ TRỐNG sẽ được xác định là "ô tự tính": = TỔNG CỘNG - tổng tất cả ô
+  // Loại 1/2/3/Phế phẩm còn lại (mọi dòng khác + 3 ô đã nhập của chính dòng cuối).
+  // Nếu dòng cuối để trống 0 hoặc ≥2 ô thì KHÔNG xác định được ô nào → không tự điền,
+  // người dùng tự nhập hết. Ô đang được xác định là "tự tính" hiển thị readonly để
+  // tránh gõ đè (xem isCellReadonly/isLastRowAutoCell bên dưới).
+  const tongCongDieuChinhValue = Form.useWatch("tongCongDieuChinh", form);
+  const lastRow = tableData[tableData.length - 1];
+  const lastRowKey = lastRow?.key;
+
+  // Cột đang được chỉ định tự tính cho dòng cuối hiện tại — reset khi đổi sang dòng
+  // cuối khác (thêm/xóa dòng) để buộc xác định lại từ đầu.
+  const [autoColKey, setAutoColKey] = useState<string | null>(null);
+  const prevLastRowKeyRef = useRef<string | number | null>(null);
+  useEffect(() => {
+    if (prevLastRowKeyRef.current !== lastRowKey) {
+      prevLastRowKeyRef.current = lastRowKey;
+      setAutoColKey(null);
+    }
+  }, [lastRowKey]);
+
+  useEffect(() => {
+    if (isFormLocked) return;
+    if (!lastRow) return;
+    if (tongCongDieuChinhValue === null || tongCongDieuChinhValue === undefined || tongCongDieuChinhValue === "") return;
+    const target = Number(tongCongDieuChinhValue);
+    if (Number.isNaN(target)) return;
+
+    // Ô đang là autoColKey coi như luôn "trống" (do hệ thống tự điền, không tính là đã nhập tay)
+    // khi xét xem dòng cuối có đúng 1 ô trống hay không.
+    const blankKeys = PHAN_LOAI_KEYS.filter((k) => {
+      if (k === autoColKey) return true;
+      const v = lastRow[k];
+      return v === "" || v === null || v === undefined;
+    });
+    const targetKey = blankKeys.length === 1 ? blankKeys[0] : null;
+
+    if (targetKey !== autoColKey) setAutoColKey(targetKey);
+    if (!targetKey) return;
+
+    const lastIdx = tableData.length - 1;
+    let othersSum = 0;
+    tableData.forEach((row, idx) => {
+      PHAN_LOAI_KEYS.forEach((k) => {
+        if (idx === lastIdx && k === targetKey) return; // bỏ qua chính ô sẽ được suy ra
+        const v = Number(row[k]);
+        if (!Number.isNaN(v)) othersSum += v;
+      });
+    });
+
+    const computed = Math.round((target - othersSum) * 1000) / 1000;
+    const current = lastRow[targetKey];
+    const currentNum = current === "" || current === null || current === undefined ? null : Number(current);
+    if (currentNum === computed) return; // đã khớp — tránh set lại gây lặp vô hạn
+
+    setTableData((prev) => {
+      if (prev.length === 0) return prev;
+      const li = prev.length - 1;
+      const updated = [...prev];
+      updated[li] = { ...updated[li], [targetKey]: computed };
+      return updated;
+    });
+  }, [tableData, tongCongDieuChinhValue, isFormLocked, autoColKey, lastRow]);
+
+  const isLastRowAutoCell = useCallback(
+    (_record: any, dataIndex: string, rowIndex: number) =>
+      rowIndex === tableData.length - 1 && dataIndex === autoColKey,
+    [tableData.length, autoColKey]
+  );
+
   // ─── getFormData ────────────────────────────────────────────────────────────
   const getFormData = useCallback(async () => {
     const userInfo = getUserInfo();
@@ -542,9 +613,17 @@ const TaoPhieuBienBanSanLuong = () => {
             showAddButton={false}
             showDeleteButton={!isFormLocked && hasRowsToDelete}
             manualTrackPattern={/^[1-4]$/}
+            isCellReadonly={isLastRowAutoCell}
             summary={tableSummary}
           />
         </div>
+        {tableData.length > 0 && (
+          <div style={{ marginBottom: 8, fontSize: 12, color: "#888" }}>
+            * Ở dòng cuối cùng, nếu để trống đúng 1 trong 4 ô Loại 1/2/3/Phế phẩm, ô đó sẽ tự động tính bù trừ
+            (= TỔNG CỘNG - tổng các ô còn lại) để tổng toàn bảng luôn khớp TỔNG CỘNG. Để trống 0 hoặc từ 2 ô trở lên
+            thì không ô nào tự điền — tự nhập tay hết.
+          </div>
+        )}
         {!isFormLocked && (
           <Button onClick={handleAddRow} type="dashed" style={{ marginBottom: 24 }}>
             + Thêm dòng
