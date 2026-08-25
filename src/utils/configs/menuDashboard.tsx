@@ -171,6 +171,11 @@ export const MenuDataDashboard = [
         title: "BÁO CÁO SẢN LƯỢNG & CHI PHÍ",
         maBm: BM_CONFIG.TKVV.TKVV_BC_SanLuongChiPhi,
       },
+      {
+        code: "tonsilotkvv",
+        title: "BM.05/QT.05.03 SỔ THEO DÕI XUẤT NHẬP TỒN SILO",
+        maBm: BM_CONFIG.TKVV.TKVV_TonSilo,
+      },
     ],
   },
 ];

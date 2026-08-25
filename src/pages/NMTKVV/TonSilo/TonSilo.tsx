@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import TKVV_BC_SanLuongChiPhi from "../../../utils/BM_config/TKVV_BC_SanLuongChiPhi.json";
+import TKVV_TonSilo from "../../../utils/BM_config/TKVV_TonSilo.json";
 import { Button, Card, Space, Table, Tag, Tooltip } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import PhieuFilterCard, {
@@ -14,8 +14,8 @@ import useRowSelection from "../../../hooks/useRowSelection";
 import useCheckPhieu from "../../../hooks/useCheckPhieu";
 import { tkvvScopeToLabel } from "../../../utils/constants/TKVV_constant";
 
-const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
-  const config = TKVV_BC_SanLuongChiPhi as any;
+const TonSilo = ({ type }: { type?: string }) => {
+  const config = TKVV_TonSilo as any;
   const navigate = useNavigate();
   const userInfoStr = localStorage.getItem("userinfo");
   const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
@@ -89,7 +89,7 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
             if (type === "viecdentoi" || type === "xemphieu") {
-              return navigate(`/chitietbaocaoslcptkvv/${record.idphieu}`);
+              return navigate(`/chitiettonsilotkvv/${record.idphieu}`);
             }
 
             if (
@@ -97,10 +97,10 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
               record.tinhTrang === 3 ||
               record.tinhTrang === 7
             ) {
-              return navigate(`/taophieubaocaoslcptkvv/${record.idphieu}`);
+              return navigate(`/taophieutonsilotkvv/${record.idphieu}`);
             }
 
-            return navigate(`/chitietbaocaoslcptkvv/${record.idphieu}`);
+            return navigate(`/chitiettonsilotkvv/${record.idphieu}`);
           }}
         >
           {text}
@@ -122,6 +122,14 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
       width: 130,
       render: (value: string) =>
         value ? dayjs(value).format("DD/MM/YYYY") : "-",
+    },
+    {
+      title: "Ca",
+      dataIndex: "ca",
+      key: "ca",
+      width: 130,
+      render: (value: number) =>
+        value ? `Ca ${value == 1 ? "Ngày" : "Đêm"}` : "-",
     },
     {
       title: "Xưởng",
@@ -188,7 +196,7 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
           <Button
             type="text"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/chitietbaocaoslcptkvv/${record.idphieu}`)}
+            onClick={() => navigate(`/chitiettonsilotkvv/${record.idphieu}`)}
           />
         </Space>
       ),
@@ -229,7 +237,7 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => navigate("/taophieubaocaoslcptkvv")}
+              onClick={() => navigate("/taophieutonsilotkvv")}
             >
               Tạo phiếu mới
             </Button>
@@ -269,4 +277,4 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
   );
 };
 
-export default BaoCaoSanLuongChiPhi;
+export default TonSilo;

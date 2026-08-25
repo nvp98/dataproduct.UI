@@ -21,9 +21,11 @@ import {
 import {
   DeleteOutlined,
   EditOutlined,
+  LinkOutlined,
   PlusOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
+import { CommonAutocomplete } from "../../../components/CommonAutocomplete";
 import dayjs from "dayjs";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import {
@@ -41,12 +43,16 @@ import {
   tkvvNvlSiloMappingApi,
   tkvvSiloTagMappingApi,
   tkvvSanLuongMappingApi,
+  tkvvVatTuApi,
+  tkvvNvlBbgnMappingApi,
   type TKVVNguyenVatLieuDto,
   type EMSMappingTagDto,
   type TKVVSiloDto,
   type TKVVNvlSiloMappingDto,
   type TKVVSiloTagMappingDto,
   type TKVVSanLuongMappingDto,
+  type VatTuLookupDto,
+  type TKVVNvlBbgnMappingDto,
 } from "../../../services/TKVVApi";
 
 const { Title } = Typography;
@@ -101,6 +107,29 @@ const NvlTab = ({
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteSaving, setPasteSaving] = useState(false);
+  const [mappingNvl, setMappingNvl] = useState<TKVVNguyenVatLieuDto | null>(
+    null,
+  );
+  const [bbgnByNvl, setBbgnByNvl] = useState<
+    Record<number, TKVVNvlBbgnMappingDto[]>
+  >({});
+
+  const fetchBbgnMappings = useCallback(async () => {
+    try {
+      const res = await tkvvNvlBbgnMappingApi.getList();
+      const grouped: Record<number, TKVVNvlBbgnMappingDto[]> = {};
+      (Array.isArray(res) ? res : []).forEach((m) => {
+        (grouped[m.tkvvNvlId] ??= []).push(m);
+      });
+      setBbgnByNvl(grouped);
+    } catch {
+      // không chặn trang nếu lỗi tải mapping — chỉ ảnh hưởng cột hiển thị
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBbgnMappings();
+  }, [fetchBbgnMappings]);
 
   const openCreate = () => {
     setEditing(null);
@@ -339,7 +368,7 @@ const NvlTab = ({
             render: (_: unknown, __: unknown, i: number) => i + 1,
           },
           { title: "Mã BM", dataIndex: "maBM", width: 140, ellipsis: true },
-          { title: "Tên NVL", dataIndex: "tenNVL" },
+          { title: "Tên NVL", dataIndex: "tenNVL", width: 140 },
           { title: "ĐVT", dataIndex: "donViTinh", width: 90, align: "center" },
           {
             title: "Scope",
@@ -362,7 +391,31 @@ const NvlTab = ({
               </Tag>
             ),
           },
-          { title: "Ghi chú", dataIndex: "ghiChu" },
+          {
+            title: "Vật tư BBGN",
+            key: "bbgnMapping",
+            width: 240,
+            render: (_: unknown, record: TKVVNguyenVatLieuDto) => {
+              const items = bbgnByNvl[record.id] || [];
+              if (items.length === 0)
+                return (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Chưa ánh xạ
+                  </Typography.Text>
+                );
+              return (
+                <Space size={[4, 4]} wrap>
+                  {items.map((m) => (
+                    <Tag key={m.id} color={m.trangThai ? "blue" : "default"}>
+                      {m.tenVatTu ?? `#${m.idVatTuBBGN}`}
+                      {m.maVatTuSap ? ` (${m.maVatTuSap})` : ""}
+                    </Tag>
+                  ))}
+                </Space>
+              );
+            },
+          },
+          { title: "Ghi chú", dataIndex: "ghiChu", width: 90 },
           {
             title: "Thao tác",
             key: "action",
@@ -373,6 +426,12 @@ const NvlTab = ({
                   type="text"
                   icon={<EditOutlined />}
                   onClick={() => openEdit(record)}
+                />
+                <Button
+                  type="text"
+                  icon={<LinkOutlined />}
+                  title="Ánh xạ Vật tư BBGN"
+                  onClick={() => setMappingNvl(record)}
                 />
                 <Popconfirm
                   title="Xóa NVL này?"
@@ -488,7 +547,183 @@ const NvlTab = ({
           />
         </Space>
       </Modal>
+
+      <NvlBbgnMappingModal
+        nvl={mappingNvl}
+        onClose={() => setMappingNvl(null)}
+        onChanged={fetchBbgnMappings}
+      />
     </div>
+  );
+};
+
+// ─── Modal: Ánh xạ NVL ↔ Vật tư BBGN (Tbl_VatTu, PRODUCTDATA) ─────────────────
+
+const NvlBbgnMappingModal = ({
+  nvl,
+  onClose,
+  onChanged,
+}: {
+  nvl: TKVVNguyenVatLieuDto | null;
+  onClose: () => void;
+  onChanged: () => void;
+}) => {
+  const [data, setData] = useState<TKVVNvlBbgnMappingDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [pendingVatTuId, setPendingVatTuId] = useState<number | null>(null);
+  const [ghiChu, setGhiChu] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!nvl) return;
+    setLoading(true);
+    try {
+      const res = await tkvvNvlBbgnMappingApi.getList(nvl.id);
+      setData(Array.isArray(res) ? res : []);
+    } catch {
+      message.error("Lỗi khi tải danh sách ánh xạ");
+    } finally {
+      setLoading(false);
+    }
+  }, [nvl]);
+
+  useEffect(() => {
+    if (nvl) {
+      setPendingVatTuId(null);
+      setGhiChu("");
+      fetchData();
+    }
+  }, [nvl, fetchData]);
+
+  const handleAdd = async () => {
+    if (!nvl || !pendingVatTuId) return;
+    setAdding(true);
+    try {
+      await tkvvNvlBbgnMappingApi.create({
+        tkvvNvlId: nvl.id,
+        idVatTuBBGN: pendingVatTuId,
+        ghiChu: ghiChu || undefined,
+      });
+      message.success("Đã thêm ánh xạ");
+      setPendingVatTuId(null);
+      setGhiChu("");
+      fetchData();
+      onChanged();
+    } catch (err: any) {
+      message.error(err?.message || "Không thể thêm ánh xạ");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleToggleTrangThai = async (record: TKVVNvlBbgnMappingDto) => {
+    try {
+      await tkvvNvlBbgnMappingApi.update(record.id, {
+        trangThai: !record.trangThai,
+        ghiChu: record.ghiChu,
+      });
+      fetchData();
+      onChanged();
+    } catch {
+      message.error("Không thể cập nhật trạng thái");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await tkvvNvlBbgnMappingApi.delete(id);
+      message.success("Đã xóa ánh xạ");
+      fetchData();
+      onChanged();
+    } catch {
+      message.error("Không thể xóa ánh xạ");
+    }
+  };
+
+  return (
+    <Modal
+      title={`Ánh xạ Vật tư BBGN — ${nvl?.tenNVL ?? ""}`}
+      open={!!nvl}
+      onCancel={onClose}
+      footer={null}
+      width={760}
+      destroyOnClose
+    >
+      <Space style={{ width: "100%", marginBottom: 16 }} align="start" wrap>
+        <CommonAutocomplete<VatTuLookupDto>
+          searchApi={tkvvVatTuApi.search}
+          mapOption={(vt) => ({
+            value: vt.idVatTu,
+            label: vt.maVatTuSap
+              ? `${vt.tenVatTu ?? ""} — ${vt.maVatTuSap}`
+              : (vt.tenVatTu ?? `#${vt.idVatTu}`),
+          })}
+          value={pendingVatTuId}
+          onChange={(value) => setPendingVatTuId((value as number) ?? null)}
+          placeholder="Tìm vật tư theo tên hoặc mã SAP..."
+          style={{ width: 320 }}
+        />
+        <Input
+          placeholder="Ghi chú (tùy chọn)"
+          value={ghiChu}
+          onChange={(e) => setGhiChu(e.target.value)}
+          style={{ width: 200 }}
+        />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          loading={adding}
+          disabled={!pendingVatTuId}
+          onClick={handleAdd}
+        >
+          Thêm
+        </Button>
+      </Space>
+      <Table<TKVVNvlBbgnMappingDto>
+        rowKey="id"
+        size="small"
+        loading={loading}
+        dataSource={data}
+        pagination={false}
+        columns={[
+          {
+            title: "Tên vật tư",
+            dataIndex: "tenVatTu",
+            render: (v: string | null, r) => v ?? `#${r.idVatTuBBGN}`,
+          },
+          { title: "Mã SAP", dataIndex: "maVatTuSap", width: 120 },
+          { title: "ĐVT", dataIndex: "donViTinh", width: 80, align: "center" },
+          { title: "Ghi chú", dataIndex: "ghiChu" },
+          {
+            title: "Trạng thái",
+            dataIndex: "trangThai",
+            width: 110,
+            align: "center",
+            render: (v: boolean, record) => (
+              <Switch
+                checked={v}
+                checkedChildren="Dùng"
+                unCheckedChildren="Ngừng"
+                onChange={() => handleToggleTrangThai(record)}
+              />
+            ),
+          },
+          {
+            title: "",
+            key: "action",
+            width: 50,
+            render: (_: unknown, record) => (
+              <Popconfirm
+                title="Xóa ánh xạ này?"
+                onConfirm={() => handleDelete(record.id)}
+              >
+                <Button type="text" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            ),
+          },
+        ]}
+      />
+    </Modal>
   );
 };
 
