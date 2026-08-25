@@ -39,7 +39,9 @@ interface TableRow {
   doAm?: number | string;
   tonDau?: number | string;
   nhap?: number | string;
+  nhapAuto?: number | string;
   xuat?: number | string;
+  xuatAuto?: number | string;
   tonCuoi?: number | string;
   tonCuoiAuto?: number | string;
   isAdjusted?: boolean;
@@ -64,8 +66,10 @@ const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => {
     nguyenLieu: item.tenNVL ?? "",
     doAm: item.doAm ?? "",
     tonDau: item.tonDau ?? "",
-    nhap: item.nhap ?? "",
-    xuat: item.xuat ?? "",
+    nhap: item.nhap ?? item.nhapAuto ?? "",
+    nhapAuto: item.nhapAuto ?? "",
+    xuat: item.xuat ?? item.xuatAuto ?? "",
+    xuatAuto: item.xuatAuto ?? "",
     tonCuoi: item.tonCuoi ?? item.tonCuoiAuto ?? "",
     tonCuoiAuto: item.tonCuoiAuto ?? "",
     isAdjusted: item.isAdjusted ?? false,
@@ -319,7 +323,9 @@ const TaoPhieuTonSilo = () => {
         doAm: toNum(row.doAm),
         tonDau: toNum(row.tonDau),
         nhap: toNum(row.nhap),
+        nhapAuto: toNum(row.nhapAuto),
         xuat: toNum(row.xuat),
+        xuatAuto: toNum(row.xuatAuto),
         tonCuoi: toNum(row.tonCuoi),
         tonCuoiAuto: toNum(row.tonCuoiAuto),
         ghiChu: row.ghiChu ?? null,
@@ -424,6 +430,26 @@ const TaoPhieuTonSilo = () => {
         style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
         tooltip: `Tồn cuối Auto: ${isNaN(autoNum) ? record.tonCuoiAuto : autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
       };
+    }
+    if (dataIndex === "nhap" && record.nhapAuto != null && record.nhapAuto !== "") {
+      const nhapNum = parseFloat(String(record.nhap));
+      const autoNum = parseFloat(String(record.nhapAuto));
+      if (!isNaN(nhapNum) && !isNaN(autoNum) && nhapNum !== autoNum) {
+        return {
+          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          tooltip: `Nhập BBGN (Auto): ${autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
+        };
+      }
+    }
+    if (dataIndex === "xuat" && record.xuatAuto != null && record.xuatAuto !== "") {
+      const xuatNum = parseFloat(String(record.xuat));
+      const autoNum = parseFloat(String(record.xuatAuto));
+      if (!isNaN(xuatNum) && !isNaN(autoNum) && xuatNum !== autoNum) {
+        return {
+          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          tooltip: `Xuất Auto: ${autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
+        };
+      }
     }
     return undefined;
   }, []);

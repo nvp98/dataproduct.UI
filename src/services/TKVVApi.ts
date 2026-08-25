@@ -480,7 +480,9 @@ export interface TKVVTonSiloRowDto {
   doAm: number | null;
   tonDau: number | null;
   nhap: number | null;
+  nhapAuto: number | null;
   xuat: number | null;
+  xuatAuto: number | null;
   tonCuoi: number | null;
   tonCuoiAuto: number | null;
   ghiChu: string | null;
@@ -501,7 +503,9 @@ export interface SaveTonSiloRowDto {
   doAm?: number | null;
   tonDau?: number | null;
   nhap?: number | null;
+  nhapAuto?: number | null;
   xuat?: number | null;
+  xuatAuto?: number | null;
   tonCuoi?: number | null;
   tonCuoiAuto?: number | null;
   ghiChu?: string | null;
