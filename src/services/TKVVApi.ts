@@ -1,4 +1,8 @@
 import apiService from "./ApiService";
+import type {
+  AutocompleteSearchParams,
+  AutocompleteSearchResult,
+} from "../components/CommonAutocomplete";
 
 // ─── Danh mục NVL (sản phẩm theo biểu mẫu) ───────────────────────────────────
 
@@ -510,4 +514,145 @@ export interface TKVVChiTietDto {
 export const tkvvChiTietApi = {
   getByPhieu: (idPhieu: string): Promise<TKVVChiTietDto[]> =>
     apiService.get(`/api/TKVV_BBSL/get-chitiet/${idPhieu}`),
+};
+
+// ─── TKVV_TonSilo — Sổ theo dõi Xuất Nhập Tồn Silo ───────────────────────────
+// 1 phiếu = 1 Kíp. 1 dòng bảng = 1 Silo (không gộp theo NVL).
+
+export interface TKVVTonSiloRowDto {
+  id: number;
+  phieuID: string | null;
+  ngaySX: string;
+  ca: number;
+  kip: string | null;
+  scope: number | null;
+  thuTu: number | null;
+  siloID: number;
+  maSilo: string | null;
+  tenSilo: string | null;
+  nguyenVatLieuID: number | null;
+  tenNVL: string | null;
+  doAm: number | null;
+  tonDau: number | null;
+  nhap: number | null;
+  nhapAuto: number | null;
+  xuat: number | null;
+  xuatAuto: number | null;
+  tonCuoi: number | null;
+  tonCuoiAuto: number | null;
+  ghiChu: string | null;
+  isAdjusted: boolean;
+  adjustedBy: number | null;
+  adjustedDate: string | null;
+}
+
+export interface SaveTonSiloRowDto {
+  id?: number | null;
+  ngaySX: string;
+  ca: number;
+  scope: number;
+  siloID: number;
+  nguyenVatLieuID?: number | null;
+  kip?: string | null;
+  thuTu?: number | null;
+  doAm?: number | null;
+  tonDau?: number | null;
+  nhap?: number | null;
+  nhapAuto?: number | null;
+  xuat?: number | null;
+  xuatAuto?: number | null;
+  tonCuoi?: number | null;
+  tonCuoiAuto?: number | null;
+  ghiChu?: string | null;
+}
+
+export const tkvvTonSiloApi = {
+  initRows: (request: {
+    ngaySX: string;
+    ca: number;
+    scope: number;
+    currentUserId?: number | null;
+    phieuID?: string | null;
+  }): Promise<TKVVTonSiloRowDto[]> =>
+    apiService.post("/api/TKVV_TonSilo/init-rows", request),
+
+  getRowsByPhieu: (phieuId: string): Promise<TKVVTonSiloRowDto[]> =>
+    apiService.get(`/api/TKVV_TonSilo/rows-by-phieu/${phieuId}`),
+
+  saveRows: (request: {
+    maBM: string;
+    phieuID?: string | null;
+    currentUserId: number;
+    rows: SaveTonSiloRowDto[];
+  }): Promise<void> =>
+    apiService.post("/api/TKVV_TonSilo/save-phieu-rows", request),
+};
+
+// ─── Tra cứu Vật tư SAP (PRODUCTDATA.Tbl_VatTu) ──────────────────────────────
+
+export interface VatTuLookupDto {
+  idVatTu: number;
+  tenVatTu: string | null;
+  maVatTuSap: string | null;
+  tenVatTuSap: string | null;
+  donViTinh: string | null;
+  idNhomVatTu: number | null;
+  phongBan: string | null;
+  idTrangThai: number | null;
+}
+
+// Khớp shape AutocompleteSearchApi<T> — dùng trực tiếp làm searchApi cho CommonAutocomplete.
+export const tkvvVatTuApi = {
+  search: (
+    params: AutocompleteSearchParams,
+  ): Promise<AutocompleteSearchResult<VatTuLookupDto>> =>
+    apiService.get("/api/TKVV_Silo/vattu-search", {
+      params: {
+        searchKey: params.searchKey,
+        page: params.page,
+        pageSize: params.pageSize,
+      },
+    }),
+};
+
+// ─── TKVV_NVL_BBGN_Mapping — NVL (TKVV_NguyenVatLieu) ↔ Vật tư BBGN ──────────
+
+export interface TKVVNvlBbgnMappingDto {
+  id: number;
+  tkvvNvlId: number;
+  tenNVL: string | null;
+  idVatTuBBGN: number;
+  tenVatTu: string | null;
+  maVatTuSap: string | null;
+  tenVatTuSap: string | null;
+  donViTinh: string | null;
+  trangThai: boolean;
+  ghiChu: string | null;
+  ngayTao: string;
+}
+
+export interface CreateTKVVNvlBbgnMappingDto {
+  tkvvNvlId: number;
+  idVatTuBBGN: number;
+  ghiChu?: string | null;
+}
+
+export interface UpdateTKVVNvlBbgnMappingDto {
+  trangThai: boolean;
+  ghiChu?: string | null;
+}
+
+export const tkvvNvlBbgnMappingApi = {
+  getList: (tkvvNvlId?: number): Promise<TKVVNvlBbgnMappingDto[]> =>
+    apiService.get("/api/TKVV_Silo/nvl-vattu-mapping", {
+      params: tkvvNvlId ? { tkvvNvlId } : undefined,
+    }),
+
+  create: (dto: CreateTKVVNvlBbgnMappingDto): Promise<TKVVNvlBbgnMappingDto> =>
+    apiService.post("/api/TKVV_Silo/nvl-vattu-mapping", dto),
+
+  update: (id: number, dto: UpdateTKVVNvlBbgnMappingDto): Promise<TKVVNvlBbgnMappingDto> =>
+    apiService.put(`/api/TKVV_Silo/nvl-vattu-mapping/${id}`, dto),
+
+  delete: (id: number) => apiService.delete(`/api/TKVV_Silo/nvl-vattu-mapping/${id}`),
 };
