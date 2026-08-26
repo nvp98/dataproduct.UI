@@ -34,11 +34,55 @@
             { "label": "Bụi Coke", "value": "Bụi Coke" }
           ]
         },
-        { "title": "KL ẩm (Tấn)", "dataIndex": "klAm", "width": 100, "type": "float", "align": "right" },
-        { "title": "Độ ẩm (%)", "dataIndex": "doAm", "width": 90, "type": "float", "align": "right" },
-        { "title": "Quy khô (Tấn)", "dataIndex": "quyKho", "width": 110, "type": "float", "align": "right" },
-        { "title": "Thành phẩm L1 (Tấn)", "dataIndex": "thanhPhamL1", "width": 130, "type": "float", "align": "right" },
-        { "title": "Thành phẩm L2 (Tấn)", "dataIndex": "thanhPhamL2", "width": 130, "type": "float", "align": "right" },
+        {
+          "title": "KL ẩm (Tấn)",
+          "dataIndex": "klAm",
+          "width": 100,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Độ ẩm (%)",
+          "dataIndex": "doAm",
+          "width": 90,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Quy khô (Tấn)",
+          "dataIndex": "quyKho",
+          "width": 110,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Vận chuyển",
+          "dataIndex": "thanhPham_Note",
+          "width": 130,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Thành phẩm L1 (Tấn)",
+          "dataIndex": "thanhPhamL1",
+          "width": 130,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Thành phẩm L2 (Tấn)",
+          "dataIndex": "thanhPhamL2",
+          "width": 130,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Thành phẩm L3 (Tấn)",
+          "dataIndex": "thanhPhamL3",
+          "width": 130,
+          "type": "float",
+          "align": "right"
+        },
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 160 }
       ]
     }

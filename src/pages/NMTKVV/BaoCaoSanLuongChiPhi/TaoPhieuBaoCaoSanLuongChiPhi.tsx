@@ -61,6 +61,7 @@ interface TableRow {
   quyKho?: number | string;
   thanhPhamL1?: number | string;
   thanhPhamL2?: number | string;
+  thanhPham_Note?: string;
   ghiChu?: string;
   [key: string]: any;
 }
@@ -74,7 +75,13 @@ interface SiloMappingModalRow {
   thuTu: number;
 }
 
-const SUM_KEYS = ["klAm", "quyKho", "thanhPhamL1", "thanhPhamL2"] as const;
+const SUM_KEYS = [
+  "klAm",
+  "quyKho",
+  "thanhPhamL1",
+  "thanhPhamL2",
+  "thanhPhamL3",
+] as const;
 
 const MA_BM = "TKVV_BC_SanLuongChiPhi";
 const LOAI_DU_LIEU = "SANLUONG";
@@ -124,6 +131,7 @@ const fromDbRecord = (
   quyKho: item.quyKho ?? calcQuyKho(item.klAm, item.doAm),
   thanhPhamL1: item.thanhPhamL1 ?? "",
   thanhPhamL2: item.thanhPhamL2 ?? "",
+  thanhPham_Note: item.thanhPham_Note ?? "",
   ghiChu: item.ghiChu ?? "",
 });
 
@@ -581,6 +589,8 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         quyKho: toNum(row.quyKho),
         thanhPhamL1: toNum(row.thanhPhamL1),
         thanhPhamL2: toNum(row.thanhPhamL2),
+        thanhPhamL3: toNum(row.thanhPhamL3),
+        thanhPham_Note: row.thanhPham_Note ?? null,
         ghiChu: row.ghiChu ?? null,
       });
 
@@ -672,7 +682,11 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
   }, [config]);
 
   const bcSlCellDecorator = useCallback((dataIndex: string, record: any) => {
-    if (dataIndex === "klAm" && record.klAmAuto != null && record.klAmAuto !== "") {
+    if (
+      dataIndex === "klAm" &&
+      record.klAmAuto != null &&
+      record.klAmAuto !== ""
+    ) {
       const klAmNum = parseFloat(String(record.klAm));
       const klAmAutoNum = parseFloat(String(record.klAmAuto));
       if (!isNaN(klAmNum) && !isNaN(klAmAutoNum) && klAmNum !== klAmAutoNum) {
@@ -719,6 +733,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       quyKho: 0,
       thanhPhamL1: 0,
       thanhPhamL2: 0,
+      thanhPhamL3: 0,
     };
     data.forEach((row) => {
       SUM_KEYS.forEach((k) => {
@@ -738,11 +753,15 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         <td style={{ fontWeight: 600, textAlign: "right" }}>
           {fmt(totals.quyKho)}
         </td>
+        <td />
         <td style={{ fontWeight: 600, textAlign: "right" }}>
           {fmt(totals.thanhPhamL1)}
         </td>
         <td style={{ fontWeight: 600, textAlign: "right" }}>
           {fmt(totals.thanhPhamL2)}
+        </td>
+        <td style={{ fontWeight: 600, textAlign: "right" }}>
+          {fmt(totals.thanhPhamL3)}
         </td>
         <td />
       </tr>
