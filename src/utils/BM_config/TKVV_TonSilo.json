@@ -12,14 +12,31 @@
   },
 
   "headerFields": [
-    { "label": "Kíp", "type": "text", "key": "kip", "required": true },
-    { "label": "Ca", "type": "select", "key": "ca", "required": true,
+    {
+      "label": "Ngày sản xuất",
+      "type": "date",
+      "key": "ngaySX",
+      "required": true,
+      "lockOnEdit": true
+    },
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
       "options": [
         { "label": "Ca ngày", "value": 1 },
         { "label": "Ca đêm", "value": 2 }
       ]
     },
-    { "label": "Áp dụng cho", "type": "text", "key": "apDungCho" }
+    {
+      "label": "Xưởng",
+      "type": "select",
+      "key": "scope",
+      "required": true,
+      "lockOnEdit": true,
+      "options": []
+    }
   ],
 
   "layout": [
@@ -27,13 +44,53 @@
       "sectionType": "table",
       "key": "table1",
       "columns": [
-        { "title": "Silo", "dataIndex": "maSilo", "width": 70, "readonly": true },
-        { "title": "Tên Nguyên Liệu", "dataIndex": "nguyenLieu", "width": 180, "readonly": true },
-        { "title": "Độ ẩm %", "dataIndex": "doAm", "width": 80, "type": "float", "align": "right" },
-        { "title": "Tồn đầu (Tấn)", "dataIndex": "tonDau", "width": 100, "type": "float", "align": "right" },
-        { "title": "Nhập (Tấn)", "dataIndex": "nhap", "width": 100, "type": "float", "align": "right" },
-        { "title": "Xuất (Tấn)", "dataIndex": "xuat", "width": 100, "type": "float", "align": "right" },
-        { "title": "Tồn cuối (Tấn)", "dataIndex": "tonCuoi", "width": 100, "type": "float", "align": "right" },
+        {
+          "title": "Silo",
+          "dataIndex": "maSilo",
+          "width": 70,
+          "readonly": true
+        },
+        {
+          "title": "Tên Nguyên Liệu",
+          "dataIndex": "nguyenLieu",
+          "width": 180,
+          "readonly": true
+        },
+        {
+          "title": "Độ ẩm %",
+          "dataIndex": "doAm",
+          "width": 80,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Tồn đầu (Tấn)",
+          "dataIndex": "tonDau",
+          "width": 100,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Nhập (Tấn)",
+          "dataIndex": "nhap",
+          "width": 100,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Xuất (Tấn)",
+          "dataIndex": "xuat",
+          "width": 100,
+          "type": "float",
+          "align": "right"
+        },
+        {
+          "title": "Tồn cuối (Tấn)",
+          "dataIndex": "tonCuoi",
+          "width": 100,
+          "type": "float",
+          "align": "right"
+        },
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 160 }
       ]
     }
