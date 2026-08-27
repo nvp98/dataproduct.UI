@@ -68,13 +68,8 @@ const MA_BM_OPTIONS = [
   },
 ];
 
-// Dùng cho NVL, DanhMucCan, page filter — lưu DB dạng code "TK1"
-const SCOPE_STRING_OPTIONS = TKVV_SCOPES.map((s) => ({
-  label: s.label,
-  value: s.code,
-}));
-
-// Dùng riêng cho Silo — lưu DB dạng số "1", "2"…
+// Dùng chung cho NVL và Silo — cả 2 đều lưu DB dạng số "1".."6" (TKVV_NguyenVatLieu.Scope
+// đổi sang số từ 2026-08-27 để khớp TKVV_Silo/TKVV_NVL_SiloMapping.Scope).
 const SILO_SCOPE_OPTIONS = TKVV_SCOPES.map((s) => ({
   label: s.label,
   value: s.scope.toString(),
@@ -144,7 +139,7 @@ const NvlTab = ({
   };
 
   const handleScopeChange = (value: string) => {
-    const s = TKVV_SCOPES.find((x) => x.code === value);
+    const s = TKVV_SCOPES.find((x) => x.scope.toString() === value);
     if (s) form.setFieldValue("tenScope", s.label);
   };
 
@@ -372,9 +367,9 @@ const NvlTab = ({
             width: 80,
             align: "center",
             render: (v: string | null) =>
-              v ? <Tag color="blue">{v}</Tag> : null,
+              v ? <Tag color="blue">{tkvvScopeToCode(Number(v))}</Tag> : null,
           },
-          { title: "Tên scope", dataIndex: "tenScope", width: 160 },
+          { title: "Tên xưởng", dataIndex: "tenScope", width: 160 },
           { title: "Thứ tự", dataIndex: "thuTu", width: 75, align: "center" },
           {
             title: "Trạng thái",
@@ -483,7 +478,7 @@ const NvlTab = ({
               <Select
                 allowClear
                 placeholder="Chọn scope"
-                options={SCOPE_STRING_OPTIONS}
+                options={SILO_SCOPE_OPTIONS}
                 onChange={handleScopeChange}
               />
             </Form.Item>
@@ -1173,15 +1168,10 @@ const NvlSiloMappingTab = ({
     [allNvl, selectedMaBM, selectedScope],
   );
 
-  const activeSiloOptions = useMemo(() => {
-    // selectedScope là code "TK1"; Silo.scope là số "1" → cần chuyển đổi
-    const scopeNum = selectedScope
-      ? (getTKVVScopeByCode(selectedScope)?.scope.toString() ?? null)
-      : null;
-    return allSilo.filter(
-      (s) => s.trangThai && (!scopeNum || s.scope === scopeNum),
-    );
-  }, [allSilo, selectedScope]);
+  const activeSiloOptions = useMemo(
+    () => allSilo.filter((s) => s.trangThai && (!selectedScope || s.scope === selectedScope)),
+    [allSilo, selectedScope],
+  );
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -1217,11 +1207,7 @@ const NvlSiloMappingTab = ({
 
   const handleNvlChange = (nvlId: number) => {
     const nvl = allNvl.find((n) => n.id === nvlId);
-    // NVL.scope = code "TK1"; Silo.scope = số "1" → cần chuyển đổi
-    const siloScope = nvl?.scope
-      ? (getTKVVScopeByCode(nvl.scope)?.scope.toString() ?? null)
-      : null;
-    setSelectedNvlScope(siloScope);
+    setSelectedNvlScope(nvl?.scope ?? null);
     form.setFieldValue("maBM", nvl?.maBM ?? selectedMaBM ?? null);
     form.setFieldValue("scope", nvl?.scope ?? selectedScope ?? null);
     form.setFieldValue("thuTu", nvl?.thuTu ?? null);
@@ -1238,11 +1224,7 @@ const NvlSiloMappingTab = ({
 
   const openEdit = (record: TKVVNvlSiloMappingDto) => {
     setEditing(record);
-    // scope bảng mapping (code "TK1") → chuyển sang số "1" để lọc Silo
-    const siloScope = record.scope
-      ? (getTKVVScopeByCode(record.scope)?.scope.toString() ?? null)
-      : null;
-    setSelectedNvlScope(siloScope);
+    setSelectedNvlScope(record.scope ?? null);
     form.setFieldsValue({
       nguyenVatLieuID: record.nguyenVatLieuID,
       maBM: record.maBM,
@@ -1522,7 +1504,7 @@ const NvlSiloMappingTab = ({
             placeholder="Tất cả NVL"
             style={{ width: 260 }}
             options={activeNvlOptions.map((n) => ({
-              label: `[${n.scope ?? "?"}] ${n.tenNVL}`,
+              label: `[${n.scope ? tkvvScopeToCode(Number(n.scope)) : "?"}] ${n.tenNVL}`,
               value: n.id,
             }))}
             value={nvlFilter}
@@ -1581,7 +1563,7 @@ const NvlSiloMappingTab = ({
             width: 80,
             align: "center",
             render: (v: string | null) =>
-              v ? <Tag color="blue">{v}</Tag> : null,
+              v ? <Tag color="blue">{tkvvScopeToCode(Number(v))}</Tag> : null,
           },
           { title: "Mã BM", dataIndex: "maBM", width: 140, ellipsis: true },
           { title: "Tên NVL", dataIndex: "tenNVL", width: 200, ellipsis: true },
@@ -1671,7 +1653,7 @@ const NvlSiloMappingTab = ({
               optionFilterProp="label"
               placeholder="Chọn NVL"
               options={allNvl.map((n) => ({
-                label: `[${n.scope ?? "?"}] ${n.tenNVL}`,
+                label: `[${n.scope ? tkvvScopeToCode(Number(n.scope)) : "?"}] ${n.tenNVL}`,
                 value: n.id,
               }))}
               onChange={handleNvlChange}
@@ -2369,7 +2351,7 @@ const QuanLyNVLTKVV = () => {
           allowClear
           placeholder="Tất cả scope"
           style={{ width: 200 }}
-          options={SCOPE_STRING_OPTIONS}
+          options={SILO_SCOPE_OPTIONS}
           value={scopeFilter}
           onChange={(v) => setScopeFilter(v)}
         />
