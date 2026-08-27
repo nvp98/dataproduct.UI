@@ -429,6 +429,7 @@ export interface TKVVBaoCaoSanLuongChiPhiDto {
   quyKho: number | null;
   thanhPhamL1: number | null;
   thanhPhamL2: number | null;
+  thanhPham_Note: string | null;
   ghiChu: string | null;
   isAdjusted: boolean;
   adjustedBy: number | null;
