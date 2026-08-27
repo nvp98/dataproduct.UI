@@ -466,6 +466,16 @@ const TaoPhieuBienBanSanLuong = () => {
         scope,
       });
 
+      // Chưa có dữ liệu Ngày + Ca + Xưởng
+      if (!res.hasData) {
+        setTongTuDongPLC(null);
+
+        message.warning(res.message || "Chưa có dữ liệu sản lượng.");
+
+        return;
+      }
+
+      // Đã có dữ liệu → lấy Tổng PLC
       const tong = res.tongTuDong ?? 0;
 
       setTongTuDongPLC(tong);
@@ -1239,14 +1249,14 @@ const TaoPhieuBienBanSanLuong = () => {
             manualTrackPattern={/^[1-4]$/}
             summary={tableSummary}
             isCellReadonly={(record, dataIndex, rowIndex) => {
-            const lastIndex = tableData.length - 1;
+              const lastIndex = tableData.length - 1;
 
-            return (
-              rowIndex === lastIndex &&
-              autoCalculatedRef.current.rowKey === record.key &&
-              autoCalculatedRef.current.columnKey === dataIndex
-            );
-          }}
+              return (
+                rowIndex === lastIndex &&
+                autoCalculatedRef.current.rowKey === record.key &&
+                autoCalculatedRef.current.columnKey === dataIndex
+              );
+            }}
           />
         </div>
 
