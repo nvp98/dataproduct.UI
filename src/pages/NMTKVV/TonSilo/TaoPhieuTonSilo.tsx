@@ -1,16 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import TKVV_TonSilo from "../../../utils/BM_config/TKVV_TonSilo.json";
-import {
-  Button,
-  Card,
-  DatePicker,
-  Form,
-  Input,
-  Select,
-  Space,
-  Typography,
-  message,
-} from "antd";
+import { Button, Card, Form, Input, Space, Typography, message } from "antd";
 import { CloudDownloadOutlined, UndoOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -27,11 +17,11 @@ import {
   tkvvTonSiloApi,
   type TKVVTonSiloRowDto,
 } from "../../../services/TKVVApi";
-import { TKVV_SCOPES } from "../../../utils/constants/TKVV_constant";
+import { TKVV_SCOPE_OPTIONS } from "../../../utils/constants/TKVV_constant";
 
 interface TableRow {
   key: string | number;
-  dbId?: number | null; // TKVV_TonSilo.ID
+  dbId?: number | null;
   siloID?: number | null;
   nguyenVatLieuID?: number | null;
   maSilo?: string;
@@ -51,31 +41,24 @@ interface TableRow {
 
 const MA_BM = "TKVV_TONSILO";
 
-const SCOPE_OPTIONS = TKVV_SCOPES.map((s) => ({
-  label: s.label,
-  value: s.scope,
-}));
-
-const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => {
-  return {
-    key: `silo-${item.siloID}-${idx}`,
-    dbId: item.id > 0 ? item.id : null,
-    siloID: item.siloID,
-    nguyenVatLieuID: item.nguyenVatLieuID,
-    maSilo: item.maSilo ?? "",
-    nguyenLieu: item.tenNVL ?? "",
-    doAm: item.doAm ?? "",
-    tonDau: item.tonDau ?? "",
-    nhap: item.nhap ?? item.nhapAuto ?? "",
-    nhapAuto: item.nhapAuto ?? "",
-    xuat: item.xuat ?? item.xuatAuto ?? "",
-    xuatAuto: item.xuatAuto ?? "",
-    tonCuoi: item.tonCuoi ?? item.tonCuoiAuto ?? "",
-    tonCuoiAuto: item.tonCuoiAuto ?? "",
-    isAdjusted: item.isAdjusted ?? false,
-    ghiChu: item.ghiChu ?? "",
-  };
-};
+const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => ({
+  key: `silo-${item.siloID}-${idx}`,
+  dbId: item.id > 0 ? item.id : null,
+  siloID: item.siloID,
+  nguyenVatLieuID: item.nguyenVatLieuID,
+  maSilo: item.maSilo ?? "",
+  nguyenLieu: item.tenNVL ?? "",
+  doAm: item.doAm ?? "",
+  tonDau: item.tonDau ?? "",
+  nhap: item.nhap ?? item.nhapAuto ?? "",
+  nhapAuto: item.nhapAuto ?? "",
+  xuat: item.xuat ?? item.xuatAuto ?? "",
+  xuatAuto: item.xuatAuto ?? "",
+  tonCuoi: item.tonCuoi ?? item.tonCuoiAuto ?? "",
+  tonCuoiAuto: item.tonCuoiAuto ?? "",
+  isAdjusted: item.isAdjusted ?? false,
+  ghiChu: item.ghiChu ?? "",
+});
 
 // Có NVL lên trước, nhóm cùng NVL ở gần nhau; chưa gán NVL xuống dưới giữ thứ tự gốc
 const sortSiloRows = (rows: TableRow[]): TableRow[] => {
@@ -84,7 +67,11 @@ const sortSiloRows = (rows: TableRow[]): TableRow[] => {
   withNvl.sort((a, b) => {
     if (a.nguyenVatLieuID !== b.nguyenVatLieuID)
       return (a.nguyenVatLieuID as number) - (b.nguyenVatLieuID as number);
-    return String(a.maSilo ?? "").localeCompare(String(b.maSilo ?? ""), undefined, { numeric: true });
+    return String(a.maSilo ?? "").localeCompare(
+      String(b.maSilo ?? ""),
+      undefined,
+      { numeric: true },
+    );
   });
   return [...withNvl, ...withoutNvl];
 };
@@ -101,9 +88,6 @@ const TaoPhieuTonSilo = () => {
   const [loading, setLoading] = useState(false);
   const [loadingInit, setLoadingInit] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
-
-  const [ngaySXFilter, setNgaySXFilter] = useState<dayjs.Dayjs | null>(dayjs());
-  const [selectedScope, setSelectedScope] = useState<number | undefined>();
 
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -123,14 +107,10 @@ const TaoPhieuTonSilo = () => {
   useEffect(() => {
     tableDataRef.current = tableData;
   }, [tableData]);
-  const ngaySXRef = useRef(ngaySXFilter);
-  useEffect(() => {
-    ngaySXRef.current = ngaySXFilter;
-  }, [ngaySXFilter]);
-  const selectedScopeRef = useRef(selectedScope);
-  useEffect(() => {
-    selectedScopeRef.current = selectedScope;
-  }, [selectedScope]);
+
+  // Form.useWatch để reactive disable nút "Tải dữ liệu"
+  const ngaySXWatch = Form.useWatch("ngaySX", form);
+  const scopeWatch = Form.useWatch("scope", form);
 
   const currentUserInfo = useMemo(() => getThongTinUser(), []);
   const currentTinhTrang = phieuInfo.tinhTrang ?? TrangThaiPhieuConst.DangLuu;
@@ -169,11 +149,13 @@ const TaoPhieuTonSilo = () => {
           });
 
           const tinhTrang = res.tinhTrang ?? 0;
+          const ngaySXValue = data.ngaySX || data.NgaySX;
 
           form.setFieldsValue({
-            kip: data.kip,
+            ngaySX: ngaySXValue ? dayjs(ngaySXValue) : null,
             ca: data.ca,
-            apDungCho: data.apDungCho,
+            scope: data.scope ? Number(data.scope) : undefined,
+            kip: data.kip,
             ...signatureFields,
           });
 
@@ -191,10 +173,6 @@ const TaoPhieuTonSilo = () => {
           const siloRows = await tkvvTonSiloApi.getRowsByPhieu(idphieu);
           setTableData(sortSiloRows(siloRows.map(fromInitRecord)));
 
-          if (data.scope) setSelectedScope(Number(data.scope));
-          const ngaySXValue = data.ngaySX || data.NgaySX;
-          if (ngaySXValue) setNgaySXFilter(dayjs(ngaySXValue));
-
           setPhieuInfo({
             tinhTrang,
             nguoiTaoId: res.nguoiTaoId ?? null,
@@ -209,7 +187,7 @@ const TaoPhieuTonSilo = () => {
         setPhieuInfo({});
         setTableData([]);
         setTimeout(() => {
-          const overrides: Record<string, any> = {};
+          const overrides: Record<string, any> = { ngaySX: dayjs() };
           config.signatures
             .filter((s: any) => s.capDuyet === 0)
             .forEach((s: any) => {
@@ -231,11 +209,13 @@ const TaoPhieuTonSilo = () => {
   }, [initData]);
 
   const handleLoadRows = useCallback(async () => {
-    if (!ngaySXFilter) {
+    const ngaySXValue: dayjs.Dayjs | null = form.getFieldValue("ngaySX");
+    if (!ngaySXValue) {
       message.warning("Chọn ngày sản xuất");
       return;
     }
-    if (!selectedScope) {
+    const scopeValue: number | undefined = form.getFieldValue("scope");
+    if (!scopeValue) {
       message.warning("Chọn xưởng (scope)");
       return;
     }
@@ -244,13 +224,13 @@ const TaoPhieuTonSilo = () => {
       message.warning("Chọn Ca");
       return;
     }
+
     setLoadingInit(true);
     try {
-      const ngayStr = ngaySXFilter.format("YYYY-MM-DD");
       const rows = await tkvvTonSiloApi.initRows({
-        ngaySX: ngayStr,
+        ngaySX: ngaySXValue.format("YYYY-MM-DD"),
         ca: caValue,
-        scope: selectedScope,
+        scope: scopeValue,
         currentUserId: currentUserInfo?.iD_TaiKhoan ?? null,
         phieuID: idphieu ?? null,
       });
@@ -261,7 +241,7 @@ const TaoPhieuTonSilo = () => {
     } finally {
       setLoadingInit(false);
     }
-  }, [ngaySXFilter, selectedScope, form, currentUserInfo, idphieu]);
+  }, [form, currentUserInfo, idphieu]);
 
   const getFormData = useCallback(async () => {
     const userInfo = getUserInfo();
@@ -289,12 +269,14 @@ const TaoPhieuTonSilo = () => {
       idphongBan: userInfo.iD_PhongBan ?? null,
       nguoiTaoId: userInfo.iD_TaiKhoan ?? null,
       table1: processRows(tableData),
-      scope: selectedScope ?? null,
-      ngaySX: (ngaySXFilter ?? dayjs()).format("YYYY-MM-DD"),
+      scope: formData.scope ?? null,
+      ngaySX: formData.ngaySX
+        ? dayjs(formData.ngaySX).format("YYYY-MM-DD")
+        : dayjs().format("YYYY-MM-DD"),
       pheDuyet: pheDuyetFlow,
       prefix: config.prefix,
     };
-  }, [getUserInfo, form, config, tableData, selectedScope, ngaySXFilter]);
+  }, [getUserInfo, form, config, tableData]);
 
   const saveTonSiloRows = useCallback(
     async (phieuId?: string) => {
@@ -302,8 +284,8 @@ const TaoPhieuTonSilo = () => {
       const userId = userInfo.iD_TaiKhoan;
       if (!userId) return;
 
-      const ngaySX = ngaySXRef.current;
-      const scope = selectedScopeRef.current;
+      const ngaySX: dayjs.Dayjs | null = form.getFieldValue("ngaySX");
+      const scope: number | undefined = form.getFieldValue("scope");
       const caValue = form.getFieldValue("ca");
       const kipValue = form.getFieldValue("kip");
       if (!ngaySX || !scope || !caValue) return;
@@ -424,14 +406,23 @@ const TaoPhieuTonSilo = () => {
   );
 
   const cellDecorator = useCallback((dataIndex: string, record: any) => {
-    if (dataIndex === "tonCuoi" && record.isAdjusted && record.tonCuoiAuto != null && record.tonCuoiAuto !== "") {
+    if (
+      dataIndex === "tonCuoi" &&
+      record.isAdjusted &&
+      record.tonCuoiAuto != null &&
+      record.tonCuoiAuto !== ""
+    ) {
       const autoNum = parseFloat(String(record.tonCuoiAuto));
       return {
         style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
         tooltip: `Tồn cuối Auto: ${isNaN(autoNum) ? record.tonCuoiAuto : autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
       };
     }
-    if (dataIndex === "nhap" && record.nhapAuto != null && record.nhapAuto !== "") {
+    if (
+      dataIndex === "nhap" &&
+      record.nhapAuto != null &&
+      record.nhapAuto !== ""
+    ) {
       const nhapNum = parseFloat(String(record.nhap));
       const autoNum = parseFloat(String(record.nhapAuto));
       if (!isNaN(nhapNum) && !isNaN(autoNum) && nhapNum !== autoNum) {
@@ -441,7 +432,11 @@ const TaoPhieuTonSilo = () => {
         };
       }
     }
-    if (dataIndex === "xuat" && record.xuatAuto != null && record.xuatAuto !== "") {
+    if (
+      dataIndex === "xuat" &&
+      record.xuatAuto != null &&
+      record.xuatAuto !== ""
+    ) {
       const xuatNum = parseFloat(String(record.xuat));
       const autoNum = parseFloat(String(record.xuatAuto));
       if (!isNaN(xuatNum) && !isNaN(autoNum) && xuatNum !== autoNum) {
@@ -455,7 +450,12 @@ const TaoPhieuTonSilo = () => {
   }, []);
 
   const buildSummary = useCallback((data: readonly any[]) => {
-    const totals: Record<string, number> = { tonDau: 0, nhap: 0, xuat: 0, tonCuoi: 0 };
+    const totals: Record<string, number> = {
+      tonDau: 0,
+      nhap: 0,
+      xuat: 0,
+      tonCuoi: 0,
+    };
     data.forEach((row) => {
       (["tonDau", "nhap", "xuat", "tonCuoi"] as const).forEach((k) => {
         const v = Number(row[k]);
@@ -500,46 +500,35 @@ const TaoPhieuTonSilo = () => {
           <Input type="hidden" />
         </Form.Item>
 
-        {/* ─── Ngày SX + Xưởng + headerFields (Kíp/Ca/Áp dụng cho) ────────────── */}
-        <Space wrap align="end" style={{ marginBottom: 8 }}>
-          <div>
-            <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 14 }}>
-              Ngày sản xuất
-            </div>
-            <DatePicker
-              value={ngaySXFilter}
-              onChange={setNgaySXFilter}
-              format="DD/MM/YYYY"
-              style={{ width: 160 }}
-              placeholder="Chọn ngày SX"
-              allowClear={false}
-              disabled={!!idphieu}
-            />
-          </div>
-          <div>
-            <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 14 }}>
-              Xưởng
-            </div>
-            <Select
-              value={selectedScope}
-              onChange={setSelectedScope}
-              options={SCOPE_OPTIONS}
-              placeholder="Chọn xưởng"
-              style={{ width: 220 }}
-              allowClear
-              disabled={!!idphieu}
-            />
-          </div>
-          {config.headerFields.map((f: any, idx: number) => (
-            <div key={f.key} style={{ minWidth: 160 }}>
+        {/* ─── headerFields: NgaySX, Ca, Xưởng, Kíp — dàn full width 1 hàng ──── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 12,
+            marginBottom: 8,
+          }}
+        >
+          {config.headerFields.map((f: any, idx: number) => {
+            const field = {
+              ...f,
+              options:
+                f.type === "select" && f.key === "scope"
+                  ? TKVV_SCOPE_OPTIONS.length > 0
+                    ? TKVV_SCOPE_OPTIONS
+                    : f.options
+                  : f.options,
+            };
+            return (
               <CustomFormItem
-                field={f}
+                key={f.key}
+                field={field}
                 idx={idx}
-                disabled={isFormLocked}
+                disabled={isFormLocked || (f.lockOnEdit && !!idphieu)}
               />
-            </div>
-          ))}
-        </Space>
+            );
+          })}
+        </div>
 
         {/* ─── Hàng action: nút quy trình + Tải dữ liệu + Quay lại ──────────── */}
         <div
@@ -556,7 +545,7 @@ const TaoPhieuTonSilo = () => {
                 icon={<CloudDownloadOutlined />}
                 loading={loadingInit}
                 onClick={handleLoadRows}
-                disabled={!ngaySXFilter || !selectedScope}
+                disabled={!ngaySXWatch || !scopeWatch}
               >
                 Tải dữ liệu
               </Button>
