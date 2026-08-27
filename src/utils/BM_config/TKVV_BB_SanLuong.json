@@ -60,7 +60,7 @@
       },
 
       "columns": [
-        { "title": "Thời gian", "dataIndex": "thoiGian", "width": 100, "align": "center", "type": "time" },
+        { "title": "Thời gian", "dataIndex": "thoiGian", "width": 100, "align": "center", "type": "time","format":"HH:mm"},
         { "title": "Sản lượng", "dataIndex": "tenSanPham", "width": 180 },
         { "title": "ĐVT", "dataIndex": "donViTinh", "width": 70, "align": "center", "readonly": true },
         { "title": "Loại 1", "dataIndex": "1", "width": 100, "type": "float", "align": "right" },

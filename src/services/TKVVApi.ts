@@ -78,6 +78,8 @@ export const tkvvDuLieuApi = {
 // chiếu với số người dùng tự nhập, KHÔNG tự điền vào Loại 1/2/3/Phế phẩm.
 
 export interface TKVVTongTuDongDto {
+  hasData: any;
+  message: any;
   tongTuDong: number;
 }
 

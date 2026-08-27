@@ -8,8 +8,10 @@ import {
   Space,
   Spin,
   Tag,
+  TimePicker,
 } from "antd";
 import { DeleteOutlined, CopyOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 
 // Bảng chi tiết riêng cho Biên bản sản lượng (NM.TKVV) — tách khỏi CustomFormTable dùng
 // chung toàn hệ thống để đổi/mở rộng riêng cho module này mà không ảnh hưởng các trang
@@ -70,7 +72,11 @@ interface TKVVBBSLTableProps {
   showRowCloneButton?: boolean;
   // Readonly theo từng ô (record + dataIndex + rowIndex) — dùng cho các cột suy ra tự động
   // theo dòng cụ thể (vd: dòng cuối bảng tự tính bù trừ), khác với readonly cả cột.
-  isCellReadonly?: (record: any, dataIndex: string, rowIndex: number) => boolean;
+  isCellReadonly?: (
+    record: any,
+    dataIndex: string,
+    rowIndex: number,
+  ) => boolean;
 }
 
 export default function TKVVBBSLTable({
@@ -310,67 +316,48 @@ export default function TKVVBBSLTable({
           title: col.title,
           width: col.width,
           fixed: col.fixed,
-          children: col.children.map(
-            (child: FormColumnDef) => {
-              const key = child.dataIndex ?? "";
-              return {
-                title: child.title,
-                dataIndex: key,
-                width: child.width,
-                render: (_: any, record: any, idx: number) =>
-                  readonlyFields.includes(key) ? (
-                    <Input
-                      placeholder={child.title}
-                      value={formatIfNeeded(
-                        (child as any)?.format,
-                        record[key],
-                      )}
-                      readOnly
-                      style={getCellStyle(
-                        key,
-                        record[key],
-                        record,
-                        true,
-                      )}
-                    />
-                  ) : (child as any).options ? (
-                    <Select
-                      placeholder={child.title}
-                      value={record[key] ?? undefined}
-                      onChange={(value) => {
-                        handleCellChange(value, idx, key);
-                      }}
-                      options={(child as any).options}
-                      disabled={!editable}
-                      style={{ width: "100%" }}
-                    />
-                  ) : (
-                    <Input
-                      placeholder={child.title}
-                      value={record[key] ?? ""}
-                      onChange={(e) => {
-                        const validated = validateAndFormatInput(
-                          e.target.value,
-                          (child as any)?.type,
-                        );
-                        handleCellChange(
-                          validated,
-                          idx,
-                          key,
-                        );
-                      }}
-                      disabled={!editable}
-                      style={getCellStyle(
-                        key,
-                        record[key],
-                        record,
-                        false,
-                      )}
-                    />
-                  ),
-              };
-            },
-          ),
+          children: col.children.map((child: FormColumnDef) => {
+            const key = child.dataIndex ?? "";
+            return {
+              title: child.title,
+              dataIndex: key,
+              width: child.width,
+              render: (_: any, record: any, idx: number) =>
+                readonlyFields.includes(key) ? (
+                  <Input
+                    placeholder={child.title}
+                    value={formatIfNeeded((child as any)?.format, record[key])}
+                    readOnly
+                    style={getCellStyle(key, record[key], record, true)}
+                  />
+                ) : (child as any).options ? (
+                  <Select
+                    placeholder={child.title}
+                    value={record[key] ?? undefined}
+                    onChange={(value) => {
+                      handleCellChange(value, idx, key);
+                    }}
+                    options={(child as any).options}
+                    disabled={!editable}
+                    style={{ width: "100%" }}
+                  />
+                ) : (
+                  <Input
+                    placeholder={child.title}
+                    value={record[key] ?? ""}
+                    onChange={(e) => {
+                      const validated = validateAndFormatInput(
+                        e.target.value,
+                        (child as any)?.type,
+                      );
+                      handleCellChange(validated, idx, key);
+                    }}
+                    disabled={!editable}
+                    style={getCellStyle(key, record[key], record, false)}
+                  />
+                ),
+            };
+          }),
         };
       }
 
@@ -403,7 +390,10 @@ export default function TKVVBBSLTable({
       }
 
       const dataIndex = col.dataIndex as string;
-      const isColumnReadonly = col.readonly === true || col.editable === false || readonlyFields.includes(String(dataIndex));
+      const isColumnReadonly =
+        col.readonly === true ||
+        col.editable === false ||
+        readonlyFields.includes(String(dataIndex));
 
       return {
         title: col.title,
@@ -411,7 +401,9 @@ export default function TKVVBBSLTable({
         width: col.width,
         fixed: col.fixed,
         render: (_: any, record: any, idx: number) => {
-          const isReadonly = isColumnReadonly || isCellReadonly?.(record, dataIndex, idx) === true;
+          const isReadonly =
+            isColumnReadonly ||
+            isCellReadonly?.(record, dataIndex, idx) === true;
           if (isReadonly) {
             return (
               <Input
@@ -436,12 +428,23 @@ export default function TKVVBBSLTable({
           }
           if (col.type === "time") {
             return (
-              <Input
-                type="time"
-                value={record[dataIndex] ?? ""}
-                onChange={(e) => handleCellChange(e.target.value, idx, dataIndex)}
+              <TimePicker
+                format="HH:mm"
+                value={
+                  record[dataIndex] ? dayjs(record[dataIndex], "HH:mm") : null
+                }
+                onChange={(time) => {
+                  handleCellChange(
+                    time ? time.format("HH:mm") : "",
+                    idx,
+                    dataIndex,
+                  );
+                }}
                 disabled={!editable}
-                style={getCellStyle(dataIndex, record[dataIndex], record, false)}
+                style={{
+                  width: "100%",
+                  ...getCellStyle(dataIndex, record[dataIndex], record, false),
+                }}
               />
             );
           }
@@ -450,7 +453,10 @@ export default function TKVVBBSLTable({
               placeholder={col.title}
               value={record[dataIndex] ?? ""}
               onChange={(e) => {
-                const validated = validateAndFormatInput(e.target.value, col.type as "number" | "text" | "float" | undefined);
+                const validated = validateAndFormatInput(
+                  e.target.value,
+                  col.type as "number" | "text" | "float" | undefined,
+                );
                 handleCellChange(validated, idx, dataIndex);
               }}
               disabled={!editable}
