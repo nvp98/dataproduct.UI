@@ -406,7 +406,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       const [[today, nvls, silos]] = await Promise.all([
         Promise.all([
           tkvvNvlSiloMappingApi.getList({ scope: scopeNum, ngaySX: ngayStr }),
-          tkvvNvlApi.getList({ scope: scopeNum }),
+          tkvvNvlApi.getListnvlbyBM({ scope: scopeNum }),
           tkvvSiloApi.getList({ scope: scopeNum }),
         ]),
       ]);

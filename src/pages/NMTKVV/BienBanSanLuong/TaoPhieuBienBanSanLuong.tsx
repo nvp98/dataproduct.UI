@@ -14,7 +14,6 @@ import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore"
 import {
   tkvvNvlApi,
   tkvvChiTietApi,
-  tkvvSyncDuLieuApi,
   tkvvTongTuDongApi,
   type TKVVNguyenVatLieuDto,
   type TKVVChiTietDto,
@@ -64,7 +63,7 @@ const TaoPhieuBienBanSanLuong = () => {
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [syncingDuLieu, setSyncingDuLieu] = useState(false);
+  const [loadingTongTuDong, setLoadingTongTuDong] = useState(false);
   const [tongTuDongPLC, setTongTuDongPLC] = useState<number | null>(null);
   const [soPhieu, setSoPhieu] = useState("");
   const [nvlOptions, setNvlOptions] = useState<TKVVNguyenVatLieuDto[]>([]);
@@ -104,18 +103,25 @@ const TaoPhieuBienBanSanLuong = () => {
     return map;
   }, [nvlOptions]);
 
-  // ─── Nạp danh mục sản phẩm (NVL) cho biểu mẫu này ─────────────────────────
-  useEffect(() => {
-    tkvvNvlApi
-      .getList({ maBM: config.code })
-      .then((list) => setNvlOptions((list || []).filter((n) => n.trangThai)))
-      .catch(() => message.error("Không thể tải danh mục sản lượng!"));
-  }, [config.code]);
-
   // Scope (số) trùng nhau giữa 2 nhóm ở tầng hiển thị (không trùng thật — xem ghi chú
   // ở BM_config) nên không cần tenScope để tránh trùng; tenScope chỉ dùng để hiển thị
   // tên xưởng dễ đọc (BmPhieu.TenScope) — tự động gán theo lựa chọn "Xưởng".
   const scopeValue = Form.useWatch("scope", form);
+
+  // ─── Nạp danh mục sản phẩm (NVL) cho biểu mẫu này ─────────────────────────
+  // Chỉ gọi API sau khi đã chọn Xưởng (scope) — trước đó danh mục để trống, tránh
+  // gọi API với scope rỗng rồi phải lọc/đổi lại ngay khi người dùng chọn Xưởng.
+  useEffect(() => {
+    if (!scopeValue) {
+      setNvlOptions([]);
+      return;
+    }
+    tkvvNvlApi
+      .getListnvlbyBM({ maBM: config.code, scope: scopeValue })
+      .then((list) => setNvlOptions((list || []).filter((n) => n.trangThai)))
+      .catch(() => message.error("Không thể tải danh mục sản lượng!"));
+  }, [config.code, scopeValue]);
+  //console.log("scopeValue", scopeValue);
   useEffect(() => {
     const opt = config.headerFields
       .find((f: any) => f.key === "scope")
@@ -258,10 +264,10 @@ const TaoPhieuBienBanSanLuong = () => {
     fetchTongTuDong();
   }, [NgaySXValue, caValue, scopeValue, fetchTongTuDong]);
 
-  // ─── Tải dữ liệu cân/PLC thô về TKVV_SanLuongDuLieu ────────────────────────
-  // Gọi SP_TKVV_GetDuLieuCan_TuMapping (join TKVV_SanLuongMapping với EMS_DATA_CAN theo
-  // Ngày/Ca/Xưởng đang chọn) — chỉ đồng bộ dữ liệu thô vào DB, KHÔNG tự điền vào bảng chi
-  // tiết bên dưới (Loại 1/2/3/Phế phẩm vẫn do KTV/KCS tự nhập).
+  // ─── Nút "Tải dữ liệu": người dùng chủ động lấy lại Tổng tự động (PLC) từ
+  // TKVV_SanLuongDuLieu theo Ngày/Ca/Xưởng đang chọn — khác useEffect ở trên chỉ
+  // điền vào ô "Tổng cộng" khi đang trống, bấm nút này sẽ GHI ĐÈ ô "Tổng cộng"
+  // bằng giá trị mới nhất, vì đây là hành động chủ động yêu cầu làm mới số liệu.
   const handleTaiDuLieu = useCallback(async () => {
     const formData = form.getFieldsValue();
     const ngay = formData.NgaySX ? dayjs(formData.NgaySX).format("YYYY-MM-DD") : null;
@@ -274,16 +280,18 @@ const TaoPhieuBienBanSanLuong = () => {
     }
 
     try {
-      setSyncingDuLieu(true);
-      const res = await tkvvSyncDuLieuApi.syncTuEms({ ngay, ca, scope });
-      message.success(res.message);
-      await fetchTongTuDong();
+      setLoadingTongTuDong(true);
+      const res = await tkvvTongTuDongApi.get({ ngay, ca, scope });
+      const tong = res.tongTuDong ?? 0;
+      setTongTuDongPLC(tong);
+      form.setFieldValue("tongCongDieuChinh", tong);
+      message.success("Đã tải dữ liệu tổng sản lượng mới nhất.");
     } catch (error: any) {
       message.error(error?.response?.data?.message || error?.message || "Không thể tải dữ liệu!");
     } finally {
-      setSyncingDuLieu(false);
+      setLoadingTongTuDong(false);
     }
-  }, [form, fetchTongTuDong]);
+  }, [form]);
 
   // ─── Thêm dòng thủ công (KTV/KCS lấy mẫu thêm) ──────────────────────────────
   // Thời gian để trống — người dùng tự ghi mốc giờ lấy mẫu thực tế, không suy ra
@@ -462,8 +470,6 @@ const TaoPhieuBienBanSanLuong = () => {
     [navigate, initData]
   );
 
-  // Chỉ validate form trước khi đổi trạng thái — giống hệt TaoPhieuNapLieuLoCao.tsx (NM.LG),
-  // TKVV không có bảng phụ trợ riêng cần đồng bộ thêm khi đổi trạng thái (khác CTD KCS).
   const handleStatusChange = useCallback(async () => {
     try {
       await form.validateFields();
@@ -514,10 +520,6 @@ const TaoPhieuBienBanSanLuong = () => {
     [nvlOptions]
   );
 
-  // Dòng "TỔNG CỘNG": bên trái hiển thị số tự động (PLC, GetTongTuDongAsync — ưu tiên
-  // GiaTriDieuChinh nếu KTV/KCS đã chỉnh ở dữ liệu thô), bên phải là ô cho phép nhập số
-  // tổng cộng thực tế (lưu cùng phiếu qua field "tongCongDieuChinh", không phải cột riêng
-  // trên bảng chi tiết).
   const tableSummary = useCallback((data: readonly any[]) => {
     const totals: Record<string, number> = { "1": 0, "2": 0, "3": 0, "4": 0 };
     data.forEach((row) => {
@@ -591,7 +593,7 @@ const TaoPhieuBienBanSanLuong = () => {
         <div style={{ marginTop: 16, marginBottom: 16 }}>
           <Space style={{ justifyContent: "center", width: "100%" }}>
             {!isFormLocked && (
-              <Button icon={<ReloadOutlined />} loading={syncingDuLieu} onClick={handleTaiDuLieu}>
+              <Button icon={<ReloadOutlined />} loading={loadingTongTuDong} onClick={handleTaiDuLieu}>
                 Tải dữ liệu
               </Button>
             )}
