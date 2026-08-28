@@ -19,6 +19,7 @@ import { CommonAutocomplete } from "./CommonAutocomplete";
 import { SiloServiceApi } from "../services/SiloServiceApi";
 import type { Silo } from "../models/SiloModel";
 import { isAdmin } from "../utils/helpers/checkAdminRole";
+import { Hrc1PhuLieuNmServiceApi } from "../services/Hrc1PhuLieuNmServiceApi";
 
 /* ======================= CONSTANTS ======================= */
 const NGOAI_SILO_ID = -1;
@@ -26,6 +27,15 @@ const NGOAI_SILO_OPTION = { id: NGOAI_SILO_ID, tenSilo: "Ngoài silo" };
 const PASTE_COLUMNS = ["nhapTrongCa", "tonCuoiCa"];
 
 /* ======================= UTILITY FUNCTIONS ======================= */
+
+const getCurrentUser = (): any => {
+  try {
+    const raw = localStorage.getItem("userinfo");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 export const canUnlockMonthly = (date = new Date()) => {
   const day = date.getDate();
@@ -40,7 +50,9 @@ export const canUnlockMonthly = (date = new Date()) => {
   const isLastDayEvening = day === lastDayOfMonth && hour >= 20;
   const isFirstDayMorning = day === 1 && hour < 8;
 
-  return isLastDayEvening || isFirstDayMorning || isAdmin;
+  // isAdmin là hàm (user) => boolean — phải gọi với user hiện tại, không phải tham chiếu hàm trần
+  // (tham chiếu hàm luôn truthy trong JS nên trước đây canUnlockMonthly() luôn trả về true).
+  return isLastDayEvening || isFirstDayMorning || isAdmin(getCurrentUser());
 };
 
 /* ======================= EDITABLE CELLS ======================= */
@@ -192,6 +204,51 @@ export default function GroupedTableSTD_HRC1({
     },
     [onDataChange],
   );
+
+  /* ================= RECONCILE TÊN PHỤ LIỆU ================= */
+  // row.nguyenNhienLieu là chuỗi SNAPSHOT lưu từ lúc user chọn phụ liệu (qua idPhuLieu) — không tự
+  // cập nhật khi tên phụ liệu bị đổi ở danh mục HRC1_PhuLieuNM (xem Hrc1PhuLieuNmController.Update).
+  // Tải danh mục (kể cả phụ liệu đã ngưng dùng — không truyền dangSuDung) 1 lần để đối chiếu lại tên
+  // hiện tại theo idPhuLieu, thay giá trị cũ trên rows nếu khác — và emit lên để table1Data trên
+  // Tao_STD.tsx (nguồn table1Data của SummaryTableSTD_HRC1) cũng nhận đúng tên mới, không chỉ riêng
+  // ô autocomplete tự sửa hiển thị của nó (xem Hrc1PhuLieuNmAutocomplete.resolvedLabel).
+  const [phuLieuNameMap, setPhuLieuNameMap] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    Hrc1PhuLieuNmServiceApi.getAll({})
+      .then((list) => {
+        if (cancelled) return;
+        const map: Record<number, string> = {};
+        (list || []).forEach((item) => {
+          if (item?.id != null && item.tenPhuLieu) map[item.id] = item.tenPhuLieu;
+        });
+        setPhuLieuNameMap(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!Object.keys(phuLieuNameMap).length) return;
+    setRows((prev) => {
+      let changed = false;
+      const next = prev.map((row: any) => {
+        const liveName = row?.idPhuLieu != null ? phuLieuNameMap[row.idPhuLieu] : undefined;
+        if (liveName && liveName !== row.nguyenNhienLieu) {
+          changed = true;
+          return { ...row, nguyenNhienLieu: liveName };
+        }
+        return row;
+      });
+      if (!changed) return prev;
+      rowsRef.current = next;
+      emitData(next);
+      return next;
+    });
+  }, [rows, phuLieuNameMap, emitData]);
 
   /* ================= ADD / DELETE ================= */
   const addRow = useCallback(

@@ -193,12 +193,14 @@ const CHUYEN_TOI_CA = {
 const isSttDataIndex = (dataIndex: string) =>
   dataIndex === "stt" || dataIndex === "STT";
 
-/** Cột dạng text (định danh, không phải số liệu) — loại khỏi kiểm tra giá trị âm để tránh báo nhầm
- * (vd meThoi/macThep có thể bắt đầu bằng ký tự trông giống dấu trừ khi parseFloat). Mọi cột số liệu
- * còn lại (kể cả KLThepLong, KLGangLongCCT, KLThepPhe, KLThepPheGang, O2, N2, AR, ...) đều bị kiểm tra.
+/** Cột dạng text (định danh/ghi chú, không phải số liệu) — loại khỏi kiểm tra giá trị âm (tránh báo
+ * nhầm, vd meThoi/macThep có thể bắt đầu bằng ký tự trông giống dấu trừ khi parseFloat) VÀ khỏi chuẩn
+ * hoá dấu thập phân "," -> "." ở applyAndEmitCellChange (ghiChu là ghi chú tự do, có thể chứa dấu phẩy
+ * thật trong câu — không phải số). Mọi cột số liệu còn lại (kể cả KLThepLong, KLGangLongCCT, KLThepPhe,
+ * KLThepPheGang, O2, N2, AR, ...) đều bị kiểm tra/chuẩn hoá.
  */
 const isTextDataIndex = (dataIndex: string) =>
-  isSttDataIndex(dataIndex) || dataIndex === "meThoi" || dataIndex === "macThep";
+  isSttDataIndex(dataIndex) || dataIndex === "meThoi" || dataIndex === "macThep" || dataIndex === "ghiChu";
 
 /**
  * Sort theo meThoi tăng dần (numeric-aware) — chỉ dùng để sắp lại đúng thứ tự MỘT LẦN khi nhận
@@ -225,9 +227,29 @@ const resolveSttText = (rows: HRCTableRow[], record: HRCTableRow): string => {
   return i >= 0 ? String(i + 1) : "";
 };
 
+/** Chuẩn hoá số nhập tay về 1 kiểu duy nhất (dấu chấm thập phân) — người dùng có thể gõ "12.23" hoặc
+ * "12,23" tuỳ thói quen (VN dùng dấu phẩy, số khác dùng dấu chấm). App không dùng "."/"," để nhóm
+ * hàng nghìn ở đâu cả (hiển thị nhóm bằng khoảng trắng, xem formatSum) nên chỉ 1 dấu xuất hiện luôn
+ * được hiểu là dấu thập phân. Nếu cả 2 cùng xuất hiện (paste từ nguồn khác, vd "1.234,56" hoặc
+ * "1,234.56"), dấu đứng SAU CÙNG là thập phân, dấu còn lại là phân tách hàng nghìn nên bị loại bỏ. */
+const normalizeDecimalInput = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  const lastComma = trimmed.lastIndexOf(",");
+  const lastDot = trimmed.lastIndexOf(".");
+  if (lastComma === -1 && lastDot === -1) return trimmed;
+  if (lastComma !== -1 && lastDot !== -1) {
+    return lastComma > lastDot
+      ? trimmed.replace(/\./g, "").replace(",", ".")
+      : trimmed.replace(/,/g, "");
+  }
+  if (lastComma !== -1) return trimmed.replace(",", ".");
+  return trimmed;
+};
+
 const isNegativeValue = (value: unknown): boolean => {
   if (value === null || value === undefined || value === "") return false;
-  const num = parseFloat(String(value).replace(/[\s,]/g, ""));
+  const num = parseFloat(normalizeDecimalInput(String(value)).replace(/\s/g, ""));
   return !isNaN(num) && num < 0;
 };
 
@@ -567,7 +589,10 @@ const CustomTableHRC = forwardRef(({
 
   // Áp dụng thay đổi cell và emit ra ngoài - chỉ gọi khi blur (từ EditableCellInput.onCommit)
   const applyAndEmitCellChange = useCallback(
-    (value: string, rowKey: string | number, dataIndex: string) => {
+    (rawValue: string, rowKey: string | number, dataIndex: string) => {
+      // Chuẩn hoá "12,23"/"12.23" về cùng 1 kiểu (dấu chấm) ngay khi chốt giá trị (blur) — giá trị lưu
+      // vào state từ đây trở đi luôn sạch, nên tổng cột/kiểm tra âm/payload Lưu không cần tự xử lý lại.
+      const value = isTextDataIndex(dataIndex) ? rawValue : normalizeDecimalInput(rawValue);
       const origKey = `${dataIndex}__orig`;
       const manualKey = `${dataIndex}__IsManual`;
       const newData = rowsRef.current.map((row) => {
@@ -650,7 +675,7 @@ const CustomTableHRC = forwardRef(({
     leafColumns.forEach(({ dataIndex, sum }) => {
       if (!sum || isSttDataIndex(dataIndex)) return;
       sums[dataIndex] = sortedRows.reduce((acc, row) => {
-        const val = parseFloat(String(row[dataIndex] ?? "").replace(/,/g, ""));
+        const val = parseFloat(normalizeDecimalInput(String(row[dataIndex] ?? "")));
         return acc + (isNaN(val) ? 0 : val);
       }, 0);
     });
