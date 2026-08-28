@@ -58,21 +58,24 @@
         },
         {
           "title": "Độ ẩm %",
-          "dataIndex": "doAm",
+          "dataIndex": "doAmText",
           "width": 80,
           "type": "float",
-          "align": "right"
+          "align": "right",
+          "readonly": true
         },
         {
           "title": "Tồn đầu (Tấn)",
           "dataIndex": "tonDau",
           "width": 100,
           "type": "float",
-          "align": "right"
+          "align": "right",
+          "readonly": true
         },
         {
           "title": "Nhập (Tấn)",
           "dataIndex": "nhap",
+          "readonly": true,
           "width": 100,
           "type": "float",
           "align": "right"
@@ -82,7 +85,8 @@
           "dataIndex": "xuat",
           "width": 100,
           "type": "float",
-          "align": "right"
+          "align": "right",
+          "readonly": true
         },
         {
           "title": "Tồn cuối (Tấn)",

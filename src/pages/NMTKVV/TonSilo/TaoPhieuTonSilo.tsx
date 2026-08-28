@@ -27,6 +27,7 @@ interface TableRow {
   maSilo?: string;
   nguyenLieu?: string;
   doAm?: number | string;
+  doAmText?: string;
   tonDau?: number | string;
   nhap?: number | string;
   nhapAuto?: number | string;
@@ -49,6 +50,7 @@ const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => ({
   maSilo: item.maSilo ?? "",
   nguyenLieu: item.tenNVL ?? "",
   doAm: item.doAm ?? "",
+  doAmText: item.doAmText ?? "",
   tonDau: item.tonDau ?? "",
   nhap: item.nhap ?? item.nhapAuto ?? "",
   nhapAuto: item.nhapAuto ?? "",
@@ -75,6 +77,7 @@ const sortSiloRows = (rows: TableRow[]): TableRow[] => {
   });
   return [...withNvl, ...withoutNvl];
 };
+
 
 const TaoPhieuTonSilo = () => {
   const { id } = useParams<{ id: string }>();
@@ -571,7 +574,7 @@ const TaoPhieuTonSilo = () => {
             {tableData.length} Silo
           </Typography.Text>
         </div>
-        <div style={{ width: "100%", overflowX: "auto", marginBottom: 4 }}>
+        <div style={{ width: "100%", marginBottom: 4 }}>
           <CustomFormTable
             columns={tableColumns}
             initialData={tableData}
@@ -584,6 +587,7 @@ const TaoPhieuTonSilo = () => {
             showDeleteButton={false}
             summary={buildSummary}
             cellDecorator={cellDecorator}
+            stickyHeader
           />
         </div>
 

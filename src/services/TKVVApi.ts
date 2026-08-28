@@ -534,6 +534,7 @@ export interface TKVVTonSiloRowDto {
   nguyenVatLieuID: number | null;
   tenNVL: string | null;
   doAm: number | null;
+  doAmText: string | null;
   tonDau: number | null;
   nhap: number | null;
   nhapAuto: number | null;
@@ -557,6 +558,7 @@ export interface SaveTonSiloRowDto {
   kip?: string | null;
   thuTu?: number | null;
   doAm?: number | null;
+  doAmText?: string | null;
   tonDau?: number | null;
   nhap?: number | null;
   nhapAuto?: number | null;
