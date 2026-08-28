@@ -199,7 +199,7 @@ export default function CustomFormTable({
     const deco = cellDecorator?.(dataIndex, record);
     if (!deco) return node;
     const decorated = deco.style
-      ? React.cloneElement(node, { style: { ...baseStyle, ...deco.style } })
+      ? React.cloneElement(node as React.ReactElement<{ style?: React.CSSProperties }>, { style: { ...baseStyle, ...deco.style } })
       : node;
     if (deco.tooltip) {
       return (
