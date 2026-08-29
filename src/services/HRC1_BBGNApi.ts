@@ -231,6 +231,9 @@ export interface HRC1_ThongKeRow {
   isManualTL?: boolean | null;
   chuyenVeMaMe?: string | null;
   tenMayDucChuyen?: string | null;
+  // Ngày/Ca của phiếu Đúc chứa mẻ này (đã áp dụng NgaySXDucChuyen/CaDucChuyen nếu TL đã "Chuyển ca")
+  ngayDuc?: string | null;
+  caDuc?: number | null;
 }
 
 export interface HRC1_ThongKeResult {

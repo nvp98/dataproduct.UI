@@ -393,14 +393,14 @@ const ThongKeBBGNThepLongHRC1 = () => {
     {
       title: "Ngày đúc", key: "ngayDuc", width: 110, fixed: "left", align: "center",
       render: (_: unknown, r: HRC1_ThongKeRow) => {
-        const v = r.ngayNhanTL ?? r.ngayTao;
+        const v = r.ngayDuc ?? r.ngayNhanTL ?? r.ngayTao;
         return v ? dayjs(v).format("DD/MM/YYYY") : "-";
       },
     },
     {
       title: "Ca Đúc", key: "caDuc", width: 70, fixed: "left", align: "center",
       render: (_: unknown, r: HRC1_ThongKeRow) => {
-        const v = r.caTinhLuyen ?? r.ca;
+        const v = r.caDuc ?? r.caTinhLuyen ?? r.ca;
         return v === 1 ? "Ngày" : v === 2 ? "Đêm" : "-";
       },
     },
