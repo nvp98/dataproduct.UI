@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import TKVV_TonSilo from "../../../utils/BM_config/TKVV_TonSilo.json";
-import { Button, Card, Form, Input, Space, Typography, message } from "antd";
+import { Button, Card, Form, Input, Space, Table, Typography, message } from "antd";
 import { CloudDownloadOutlined, UndoOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -56,7 +56,7 @@ const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => ({
   nhapAuto: item.nhapAuto ?? "",
   xuat: item.xuat ?? item.xuatAuto ?? "",
   xuatAuto: item.xuatAuto ?? "",
-  tonCuoi: item.tonCuoi ?? item.tonCuoiAuto ?? "",
+  tonCuoi: (item.tonCuoi != null && item.tonCuoi !== 0) ? item.tonCuoi : (item.tonCuoiAuto ?? ""),
   tonCuoiAuto: item.tonCuoiAuto ?? "",
   isAdjusted: item.isAdjusted ?? false,
   ghiChu: item.ghiChu ?? "",
@@ -110,6 +110,27 @@ const TaoPhieuTonSilo = () => {
   useEffect(() => {
     tableDataRef.current = tableData;
   }, [tableData]);
+
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const signaturesRef = useRef<HTMLDivElement>(null);
+  const [tableScrollY, setTableScrollY] = useState(400);
+
+  const recalcTableHeight = useCallback(() => {
+    if (!tableWrapperRef.current) return;
+    const rect = tableWrapperRef.current.getBoundingClientRect();
+    const sigH = signaturesRef.current?.offsetHeight ?? 160;
+    const y = Math.max(200, Math.floor(window.innerHeight - rect.top - sigH - 100));
+    setTableScrollY(y);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(recalcTableHeight, 50);
+    window.addEventListener("resize", recalcTableHeight);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", recalcTableHeight);
+    };
+  }, [loading, recalcTableHeight]);
 
   // Form.useWatch để reactive disable nút "Tải dữ liệu"
   const ngaySXWatch = Form.useWatch("ngaySX", form);
@@ -411,15 +432,17 @@ const TaoPhieuTonSilo = () => {
   const cellDecorator = useCallback((dataIndex: string, record: any) => {
     if (
       dataIndex === "tonCuoi" &&
-      record.isAdjusted &&
       record.tonCuoiAuto != null &&
       record.tonCuoiAuto !== ""
     ) {
+      const cuoiNum = parseFloat(String(record.tonCuoi));
       const autoNum = parseFloat(String(record.tonCuoiAuto));
-      return {
-        style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
-        tooltip: `Tồn cuối Auto: ${isNaN(autoNum) ? record.tonCuoiAuto : autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
-      };
+      if (!isNaN(cuoiNum) && !isNaN(autoNum) && cuoiNum !== autoNum) {
+        return {
+          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          tooltip: `Tồn cuối Auto: ${autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
+        };
+      }
     }
     if (
       dataIndex === "nhap" &&
@@ -468,24 +491,28 @@ const TaoPhieuTonSilo = () => {
     const fmt = (n: number) =>
       n ? n.toLocaleString("en-US", { maximumFractionDigits: 3 }) : "";
     return (
-      <tr>
-        <td style={{ fontWeight: 600, textAlign: "center" }}>TỔNG</td>
-        <td />
-        <td />
-        <td style={{ fontWeight: 600, textAlign: "right" }}>
-          {fmt(totals.tonDau)}
-        </td>
-        <td style={{ fontWeight: 600, textAlign: "right" }}>
-          {fmt(totals.nhap)}
-        </td>
-        <td style={{ fontWeight: 600, textAlign: "right" }}>
-          {fmt(totals.xuat)}
-        </td>
-        <td style={{ fontWeight: 600, textAlign: "right" }}>
-          {fmt(totals.tonCuoi)}
-        </td>
-        <td />
-      </tr>
+      <Table.Summary fixed="bottom">
+        <Table.Summary.Row>
+          <Table.Summary.Cell index={0} align="center">
+            <b>TỔNG</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={1} />
+          <Table.Summary.Cell index={2} />
+          <Table.Summary.Cell index={3} align="right">
+            <b>{fmt(totals.tonDau)}</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={4} align="right">
+            <b>{fmt(totals.nhap)}</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={5} align="right">
+            <b>{fmt(totals.xuat)}</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={6} align="right">
+            <b>{fmt(totals.tonCuoi)}</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={7} />
+        </Table.Summary.Row>
+      </Table.Summary>
     );
   }, []);
 
@@ -574,7 +601,7 @@ const TaoPhieuTonSilo = () => {
             {tableData.length} Silo
           </Typography.Text>
         </div>
-        <div style={{ width: "100%", marginBottom: 4 }}>
+        <div ref={tableWrapperRef} style={{ width: "100%", marginBottom: 4 }}>
           <CustomFormTable
             columns={tableColumns}
             initialData={tableData}
@@ -587,7 +614,7 @@ const TaoPhieuTonSilo = () => {
             showDeleteButton={false}
             summary={buildSummary}
             cellDecorator={cellDecorator}
-            stickyHeader
+            scrollY={tableScrollY}
           />
         </div>
 
@@ -600,6 +627,7 @@ const TaoPhieuTonSilo = () => {
         )}
 
         <div
+          ref={signaturesRef}
           style={{
             marginTop: 20,
             display: "flex",

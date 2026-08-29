@@ -227,7 +227,7 @@ export const tkvvNvlSiloMappingApi = {
 
   batchCreate: (dto: {
     maBM: string; scope: string; ngaySX: string;
-    rows: {id: number, nguyenVatLieuID: number; siloID: number | null; ca: number; thuTu: number | null }[];
+    rows: { id?: number | null; maBM?: string | null; nguyenVatLieuID: number; siloID: number | null; ca: number; thuTu: number | null }[];
   }): Promise<{ count: number }> =>
     apiService.post("/api/TKVV_Silo/nvl-silo-mapping/batch", dto),
   getById: (id: number): Promise<TKVVNvlSiloMappingDto> =>

@@ -78,6 +78,24 @@ const SILO_SCOPE_OPTIONS = TKVV_SCOPES.map((s) => ({
 const siloScopeLabel = (v: string | null) =>
   TKVV_SCOPES.find((s) => s.scope.toString() === v)?.label ?? v ?? "";
 
+// "1,2,3" hoặc "1 2 3" → ["1","2","3"]
+const parseScopeStr = (v: string | null | undefined): string[] =>
+  v
+    ? v
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
+// ["1","2"] hoặc "1,2" → "1,2" lưu DB; array rỗng/null → null
+const joinScopes = (
+  arr: string[] | string | null | undefined,
+): string | null => {
+  if (!arr) return null;
+  if (Array.isArray(arr)) return arr.length ? arr.join(",") : null;
+  return arr || null;
+};
+
 // ─── Tab 1: Danh mục NVL ─────────────────────────────────────────────────────
 
 const NvlTab = ({
@@ -134,17 +152,20 @@ const NvlTab = ({
 
   const openEdit = (record: TKVVNguyenVatLieuDto) => {
     setEditing(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({ ...record, scope: parseScopeStr(record.scope) });
     setModalOpen(true);
   };
 
-  const handleScopeChange = (value: string) => {
-    const s = TKVV_SCOPES.find((x) => x.scope.toString() === value);
-    if (s) form.setFieldValue("tenScope", s.label);
+  const handleScopeChange = (values: string[]) => {
+    const labels = values
+      .map((v) => TKVV_SCOPES.find((s) => s.scope.toString() === v)?.label ?? v)
+      .join(", ");
+    form.setFieldValue("tenScope", labels);
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
+    const raw = await form.validateFields();
+    const values = { ...raw, scope: joinScopes(raw.scope) };
     setSaving(true);
     try {
       if (editing) {
@@ -364,10 +385,20 @@ const NvlTab = ({
           {
             title: "Scope",
             dataIndex: "scope",
-            width: 80,
-            align: "center",
-            render: (v: string | null) =>
-              v ? <Tag color="blue">{tkvvScopeToCode(Number(v))}</Tag> : null,
+            width: 120,
+            render: (v: string | null) => {
+              const scopes = parseScopeStr(v);
+              if (!scopes.length) return null;
+              return (
+                <Space size={2} wrap>
+                  {scopes.map((s) => (
+                    <Tag key={s} color="blue">
+                      {tkvvScopeToCode(Number(s))}
+                    </Tag>
+                  ))}
+                </Space>
+              );
+            },
           },
           { title: "Tên xưởng", dataIndex: "tenScope", width: 160 },
           { title: "Thứ tự", dataIndex: "thuTu", width: 75, align: "center" },
@@ -472,10 +503,11 @@ const NvlTab = ({
           <Space style={{ width: "100%" }} size="middle">
             <Form.Item
               name="scope"
-              label="Scope (mã khu vực)"
-              style={{ width: 200 }}
+              label="Scope (có thể chọn nhiều)"
+              style={{ minWidth: 260 }}
             >
               <Select
+                mode="multiple"
                 allowClear
                 placeholder="Chọn scope"
                 options={SILO_SCOPE_OPTIONS}
@@ -1131,6 +1163,278 @@ const SiloTab = () => {
   );
 };
 
+// ─── Batch add modal: thêm nhiều NVL-Silo cùng lúc ──────────────────────────
+
+interface BatchRow {
+  key: number;
+  nvlId: number | null;
+  siloId: number | null;
+  ca: number | null;
+  thuTu: number | null;
+}
+
+const newBatchRow = (): BatchRow => ({
+  key: Date.now() + Math.random(),
+  nvlId: null,
+  siloId: null,
+  ca: null,
+  thuTu: null,
+});
+
+const BatchMappingModal = ({
+  open,
+  onClose,
+  onSaved,
+  allNvl,
+  allSilo,
+  defaultMaBM,
+  defaultScope,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  allNvl: TKVVNguyenVatLieuDto[];
+  allSilo: TKVVSiloDto[];
+  defaultMaBM?: string;
+  defaultScope?: string;
+}) => {
+  const [scope, setScope] = useState<string | null>(defaultScope ?? null);
+  const [ngaySX, setNgaySX] = useState<dayjs.Dayjs>(dayjs());
+  const [maBM, setMaBM] = useState<string>(defaultMaBM ?? "ALL");
+  const [rows, setRows] = useState<BatchRow[]>([newBatchRow()]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setScope(defaultScope ?? null);
+      setMaBM(defaultMaBM ?? "ALL");
+      setNgaySX(dayjs());
+      setRows([newBatchRow()]);
+    }
+  }, [open, defaultMaBM, defaultScope]);
+
+  const nvlOptions = useMemo(
+    () =>
+      allNvl.filter(
+        (n) =>
+          n.trangThai &&
+          (!maBM || maBM === "ALL" || n.maBM === maBM) &&
+          (!scope || parseScopeStr(n.scope).includes(scope)),
+      ),
+    [allNvl, maBM, scope],
+  );
+
+  const siloOptions = useMemo(
+    () =>
+      scope ? allSilo.filter((s) => s.trangThai && s.scope === scope) : [],
+    [allSilo, scope],
+  );
+
+  const updateRow = (key: number, patch: Partial<BatchRow>) =>
+    setRows((prev) =>
+      prev.map((r) => (r.key === key ? { ...r, ...patch } : r)),
+    );
+
+  const removeRow = (key: number) =>
+    setRows((prev) => prev.filter((r) => r.key !== key));
+
+  const handleScopeChange = (v: string) => {
+    setScope(v ?? null);
+    setRows((prev) => prev.map((r) => ({ ...r, siloId: null })));
+  };
+
+  const handleSave = async () => {
+    if (!scope) {
+      message.warning("Chọn scope");
+      return;
+    }
+    if (!ngaySX) {
+      message.warning("Chọn ngày SX");
+      return;
+    }
+    const validRows = rows.filter((r) => r.nvlId && r.siloId && r.ca);
+    if (validRows.length === 0) {
+      message.warning("Chưa có dòng hợp lệ (cần NVL + Silo + Ca)");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await tkvvNvlSiloMappingApi.batchCreate({
+        maBM: maBM === "ALL" ? "ALL" : maBM,
+        scope,
+        ngaySX: ngaySX.format("YYYY-MM-DD"),
+        rows: validRows.map((r) => {
+          const nvl = allNvl.find((n) => n.id === r.nvlId);
+          return {
+            nguyenVatLieuID: r.nvlId!,
+            siloID: r.siloId,
+            ca: r.ca!,
+            thuTu: r.thuTu,
+          };
+        }),
+      });
+      message.success(`Đã thêm ${result.count} mapping`);
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      message.error(err?.message || "Không thể lưu");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const scopeLabel = scope ? tkvvScopeToCode(Number(scope)) : "";
+
+  return (
+    <Modal
+      title="Thêm nhiều NVL-Silo"
+      open={open}
+      onCancel={onClose}
+      onOk={handleSave}
+      confirmLoading={saving}
+      okText={`Lưu ${rows.filter((r) => r.nvlId && r.siloId && r.ca).length || ""} mapping`}
+      width={900}
+      destroyOnClose
+    >
+      {/* ── Header chung ─────────────────────────────────────────────────── */}
+      <Space wrap style={{ marginBottom: 12 }}>
+        <Form.Item label="Scope" style={{ marginBottom: 0 }} required>
+          <Select
+            style={{ width: 200 }}
+            placeholder="Chọn scope"
+            options={SILO_SCOPE_OPTIONS}
+            value={scope ?? undefined}
+            onChange={handleScopeChange}
+            allowClear
+          />
+        </Form.Item>
+        <Form.Item label="Ngày SX" style={{ marginBottom: 0 }} required>
+          <DatePicker
+            value={ngaySX}
+            onChange={(v) => setNgaySX(v ?? dayjs())}
+            format="DD/MM/YYYY"
+          />
+        </Form.Item>
+        <Form.Item label="Mã BM" style={{ marginBottom: 0 }}>
+          <Select
+            style={{ width: 200 }}
+            options={MA_BM_OPTIONS}
+            value={maBM}
+            onChange={setMaBM}
+          />
+        </Form.Item>
+      </Space>
+
+      {/* ── Bảng dòng mapping ────────────────────────────────────────────── */}
+      <Table<BatchRow>
+        dataSource={rows}
+        rowKey="key"
+        pagination={false}
+        size="small"
+        scroll={{ x: 700 }}
+        columns={[
+          {
+            title: "STT",
+            width: 45,
+            align: "center",
+            render: (_: unknown, __: unknown, i: number) => i + 1,
+          },
+          {
+            title: "NVL",
+            dataIndex: "nvlId",
+            render: (v: number | null, record) => (
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="Chọn NVL"
+                style={{ width: 220 }}
+                value={v ?? undefined}
+                options={nvlOptions.map((n) => ({
+                  label: n.tenNVL,
+                  value: n.id,
+                }))}
+                onChange={(val) => updateRow(record.key, { nvlId: val })}
+              />
+            ),
+          },
+          {
+            title: `Silo${scopeLabel ? ` (${scopeLabel})` : ""}`,
+            dataIndex: "siloId",
+            render: (v: number | null, record) => (
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder={scope ? "Chọn Silo" : "Chọn scope trước"}
+                disabled={!scope}
+                style={{ width: 220 }}
+                value={v ?? undefined}
+                options={siloOptions.map((s) => ({
+                  label: s.maSilo
+                    ? `[${s.maXuong ?? ""}] ${s.maSilo} — ${s.tenSilo}`
+                    : s.tenSilo,
+                  value: s.id,
+                }))}
+                onChange={(val) => updateRow(record.key, { siloId: val })}
+              />
+            ),
+          },
+          {
+            title: "Ca",
+            dataIndex: "ca",
+            width: 120,
+            render: (v: number | null, record) => (
+              <Select
+                style={{ width: 110 }}
+                placeholder="Ca"
+                value={v ?? undefined}
+                options={TKVV_CA_OPTIONS}
+                onChange={(val) => updateRow(record.key, { ca: val })}
+              />
+            ),
+          },
+          {
+            title: "Thứ tự",
+            dataIndex: "thuTu",
+            width: 85,
+            render: (v: number | null, record) => (
+              <InputNumber
+                style={{ width: 75 }}
+                value={v}
+                min={0}
+                onChange={(val) => updateRow(record.key, { thuTu: val })}
+              />
+            ),
+          },
+          {
+            title: "",
+            key: "del",
+            width: 40,
+            render: (_: unknown, record) => (
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => removeRow(record.key)}
+                disabled={rows.length <= 1}
+              />
+            ),
+          },
+        ]}
+        footer={() => (
+          <Button
+            type="dashed"
+            icon={<PlusOutlined />}
+            onClick={() => setRows((prev) => [...prev, newBatchRow()])}
+            block
+          >
+            Thêm dòng
+          </Button>
+        )}
+      />
+    </Modal>
+  );
+};
+
 // ─── Tab 3: NVL ↔ Silo theo Ca ───────────────────────────────────────────────
 
 const NvlSiloMappingTab = ({
@@ -1156,20 +1460,29 @@ const NvlSiloMappingTab = ({
   const [pasteText, setPasteText] = useState("");
   const [pasteSaving, setPasteSaving] = useState(false);
   const [selectedNvlScope, setSelectedNvlScope] = useState<string | null>(null);
+  const [selectedMappingScope, setSelectedMappingScope] = useState<
+    string | null
+  >(null);
+  const [batchOpen, setBatchOpen] = useState(false);
 
   const activeNvlOptions = useMemo(
     () =>
       allNvl.filter(
         (n) =>
           n.trangThai &&
-          (!selectedMaBM || n.maBM === selectedMaBM) &&
-          (!selectedScope || n.scope === selectedScope),
+          (!selectedMaBM ||
+            selectedMaBM === "ALL" ||
+            n.maBM === selectedMaBM) &&
+          (!selectedScope || parseScopeStr(n.scope).includes(selectedScope)),
       ),
     [allNvl, selectedMaBM, selectedScope],
   );
 
   const activeSiloOptions = useMemo(
-    () => allSilo.filter((s) => s.trangThai && (!selectedScope || s.scope === selectedScope)),
+    () =>
+      allSilo.filter(
+        (s) => s.trangThai && (!selectedScope || s.scope === selectedScope),
+      ),
     [allSilo, selectedScope],
   );
 
@@ -1197,26 +1510,45 @@ const NvlSiloMappingTab = ({
   }, [fetchData]);
 
   // selectedNvlScope lưu dạng số string ("1","2"...) để khớp với Silo.scope
-  const filteredSiloOptions = useMemo(
-    () =>
-      selectedNvlScope
-        ? allSilo.filter((s) => s.scope === selectedNvlScope && s.trangThai)
-        : allSilo.filter((s) => s.trangThai),
-    [allSilo, selectedNvlScope],
-  );
+  const filteredSiloOptions = useMemo(() => {
+    if (!selectedMappingScope) return [];
+    return allSilo.filter(
+      (s) => s.trangThai && s.scope === selectedMappingScope,
+    );
+  }, [allSilo, selectedMappingScope]);
 
   const handleNvlChange = (nvlId: number) => {
     const nvl = allNvl.find((n) => n.id === nvlId);
+    const scopes = parseScopeStr(nvl?.scope);
     setSelectedNvlScope(nvl?.scope ?? null);
     form.setFieldValue("maBM", nvl?.maBM ?? selectedMaBM ?? null);
-    form.setFieldValue("scope", nvl?.scope ?? selectedScope ?? null);
     form.setFieldValue("thuTu", nvl?.thuTu ?? null);
     form.setFieldValue("siloID", undefined);
+    if (scopes.length === 1) {
+      // NVL chỉ có 1 scope → tự điền luôn
+      setSelectedMappingScope(scopes[0]);
+      form.setFieldValue("scope", scopes[0]);
+    } else {
+      // NVL nhiều scope → user phải chọn scope trước
+      setSelectedMappingScope(null);
+      form.setFieldValue("scope", undefined);
+    }
+  };
+
+  const handleMappingScopeChange = (scopeVal: string) => {
+    setSelectedMappingScope(scopeVal ?? null);
+    form.setFieldValue("siloID", undefined); // reset silo khi đổi scope
+  };
+
+  const handleSiloChange = (siloId: number) => {
+    const silo = allSilo.find((s) => s.id === siloId);
+    if (silo?.scope) form.setFieldValue("scope", silo.scope);
   };
 
   const openCreate = () => {
     setEditing(null);
     setSelectedNvlScope(null);
+    setSelectedMappingScope(selectedScope ?? null);
     form.resetFields();
     form.setFieldsValue({ maBM: selectedMaBM, scope: selectedScope ?? null });
     setModalOpen(true);
@@ -1224,7 +1556,9 @@ const NvlSiloMappingTab = ({
 
   const openEdit = (record: TKVVNvlSiloMappingDto) => {
     setEditing(record);
-    setSelectedNvlScope(record.scope ?? null);
+    const nvl = allNvl.find((n) => n.id === record.nguyenVatLieuID);
+    setSelectedNvlScope(nvl?.scope ?? record.scope ?? null);
+    setSelectedMappingScope(record.scope ?? null);
     form.setFieldsValue({
       nguyenVatLieuID: record.nguyenVatLieuID,
       maBM: record.maBM,
@@ -1539,15 +1873,32 @@ const NvlSiloMappingTab = ({
             Dán nhanh
           </Button>
           <Button
+            icon={<PlusOutlined />}
+            onClick={() => setBatchOpen(true)}
+            disabled={allNvl.length === 0 || allSilo.length === 0}
+          >
+            Thêm nhiều
+          </Button>
+          <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={openCreate}
             disabled={allNvl.length === 0 || allSilo.length === 0}
           >
-            Thêm mapping
+            Thêm 1 mapping
           </Button>
         </Space>
       </div>
+
+      <BatchMappingModal
+        open={batchOpen}
+        onClose={() => setBatchOpen(false)}
+        onSaved={fetchData}
+        allNvl={allNvl}
+        allSilo={allSilo}
+        defaultMaBM={selectedMaBM}
+        defaultScope={selectedScope}
+      />
 
       <Table
         rowKey="id"
@@ -1570,9 +1921,14 @@ const NvlSiloMappingTab = ({
           {
             title: "Silo",
             key: "silo",
-            width: 180,
-            render: (_: unknown, r: TKVVNvlSiloMappingDto) =>
-              r.maSilo ? `${r.maSilo} — ${r.tenSilo}` : (r.tenSilo ?? ""),
+            width: 220,
+            render: (_: unknown, r: TKVVNvlSiloMappingDto) => {
+              const maXuong = allSilo.find((s) => s.id === r.siloID)?.maXuong;
+              const siloLabel = r.maSilo
+                ? `${r.maSilo} — ${r.tenSilo}`
+                : (r.tenSilo ?? "");
+              return maXuong ? `[${maXuong}] ${siloLabel}` : siloLabel;
+            },
           },
           { title: "Thứ tự", dataIndex: "thuTu", width: 80, align: "center" },
           {
@@ -1653,7 +2009,9 @@ const NvlSiloMappingTab = ({
               optionFilterProp="label"
               placeholder="Chọn NVL"
               options={allNvl.map((n) => ({
-                label: `[${n.scope ? tkvvScopeToCode(Number(n.scope)) : "?"}] ${n.tenNVL}`,
+                label: `[${parseScopeStr(n.scope)
+                  .map((s) => tkvvScopeToCode(Number(s)))
+                  .join(",")}] ${n.tenNVL}`,
                 value: n.id,
               }))}
               onChange={handleNvlChange}
@@ -1663,8 +2021,31 @@ const NvlSiloMappingTab = ({
             <Form.Item name="maBM" label="Mã BM" style={{ width: 180 }}>
               <Input disabled />
             </Form.Item>
-            <Form.Item name="scope" label="Scope" style={{ width: 160 }}>
-              <Input disabled />
+            <Form.Item
+              name="scope"
+              label="Scope (xưởng)"
+              rules={[{ required: true, message: "Bắt buộc" }]}
+              style={{ width: 200 }}
+            >
+              {(() => {
+                const nvlScopes = parseScopeStr(selectedNvlScope);
+                const opts = nvlScopes.length
+                  ? SILO_SCOPE_OPTIONS.filter((o) =>
+                      nvlScopes.includes(o.value),
+                    )
+                  : SILO_SCOPE_OPTIONS;
+                return (
+                  <Select
+                    placeholder={
+                      nvlScopes.length > 1 ? "Chọn scope cho mapping này" : "—"
+                    }
+                    options={opts}
+                    disabled={nvlScopes.length <= 1}
+                    onChange={handleMappingScopeChange}
+                    allowClear={nvlScopes.length > 1}
+                  />
+                );
+              })()}
             </Form.Item>
             <Form.Item name="thuTu" label="Thứ tự" style={{ width: 120 }}>
               <InputNumber style={{ width: "100%" }} />
@@ -1672,17 +2053,27 @@ const NvlSiloMappingTab = ({
           </Space>
           <Form.Item
             name="siloID"
-            label={`Silo${selectedNvlScope ? ` (lọc theo scope ${selectedNvlScope})` : ""}`}
+            label={
+              selectedMappingScope
+                ? `Silo (scope ${tkvvScopeToCode(Number(selectedMappingScope))})`
+                : parseScopeStr(selectedNvlScope).length > 1
+                  ? "Silo (chọn scope trước)"
+                  : "Silo"
+            }
             rules={[{ required: true, message: "Bắt buộc" }]}
           >
             <Select
               showSearch
               optionFilterProp="label"
-              placeholder="Chọn Silo"
+              placeholder={
+                selectedMappingScope ? "Chọn Silo" : "Chọn scope trước"
+              }
+              disabled={!selectedMappingScope}
               options={filteredSiloOptions.map((s) => ({
                 label: s.maSilo ? `${s.maSilo} — ${s.tenSilo}` : s.tenSilo,
                 value: s.id,
               }))}
+              onChange={handleSiloChange}
             />
           </Form.Item>
           <Space style={{ width: "100%" }}>
