@@ -826,7 +826,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub3-6-4",
+            key: "sub3-6-5",
             maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
             label: (
               <Tooltip title="BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)">
@@ -837,7 +837,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub3-6-5",
+            key: "sub3-6-6",
             maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
             label: (
               <Tooltip title="BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)">
@@ -973,7 +973,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub4-1-2",
+            key: "sub4-1-3",
             maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
             label: (
               <Tooltip title="BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)">
@@ -984,7 +984,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub4-1-3",
+            key: "sub4-1-4",
             maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
             label: (
               <Tooltip title="BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)">
@@ -995,7 +995,7 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub4-1-4",
+            key: "sub4-1-5",
             maBM: BM_CONFIG.HRC1.THONGKE_HRC1,
             strictMaBM: true,
             label: (

@@ -15,9 +15,10 @@ import { PhieuApi } from "../../../services/PhieuApi";
 import HRC1_BB_TieuHao_BOF from "../../../utils/BM_config/HRC1_BB_TieuHao_BOF.json";
 import { getBmQuyenUiFlags } from "../../../utils/helpers/checkAdminRole";
 import { phieuActionService } from "../../../services/PhieuActionService";
-import { DETAIL_HIDDEN_BUTTON_KEYS, PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
+import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
 import { hrc1PhuLieuService } from "../../../services/HRC1PhuLieuService";
 import logoHP from "../../../assets/images/LogoPDF.png";
+import HRC1ExportBienBanButtons from "../../../components/HRC1ExportBienBanButtons";
 
 const { Title, Text } = Typography;
 
@@ -170,30 +171,21 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
       }
 
       try {
-        const { baseColumns, editableFields } = buildBaseColumnsAndEditableFields(config);
+        const { baseColumns } = buildBaseColumnsAndEditableFields(config);
         const result = await hrc1PhuLieuService.fetchAndProcessPhuLieus(
           { NgaySX: dayjs(ngay).format("YYYY-MM-DD"), Ca: Number(ca), Scope: Number(scope) },
           { baseColumns }
         );
 
-        const isEmpty =
-          !result.tableData?.length ||
-          (result.tableData.length === 1 && result.tableData[0]?.key === "row-empty");
-
-        if (isEmpty) {
-          setTable1DisplayRows(hrc1TableService.sortRowsByMeThoi(savedWithAdjust));
-          setNmColumnsPack(null);
-          return;
-        }
-
-        const rowsWithOverrides = hrc1TableService.applyManualOverrides(
-          result.tableData || [],
-          savedWithAdjust,
-          { rowIdField: "id", fallbackKeyField: "meThoi" }
-        );
-        const finalRows = hrc1TableService.sortRowsByMeThoi(
-          hrc1TableService.mergeServerRows(rowsWithOverrides, savedWithAdjust, "meThoi", editableFields)
-        );
+        // Trang Chi tiết CHỈ render thẳng từ live api/DLNMHRC1/filter — không merge với savedWithAdjust
+        // (JSON đã lưu trên phiếu). Filter API đã là nguồn sự thật đầy đủ (BE lưu thẳng macThep/
+        // klThepPhe/phụ liệu đã sửa tay + IsManual/*Orig vào chính dòng Hrc1TieuHao, kể cả dòng thêm
+        // tay đã lưu — filter đọc lại đúng, không cần FE tự merge lại). Trang này không có form nhập/
+        // "+ Thêm dòng" nên không có draft cần giữ. Merge theo JSON cũ trước đây khiến mẻ đã bị xóa/
+        // đổi ở nơi khác (JSON không tự cập nhật ngoài luồng Lưu) vẫn hiện lại.
+        const isPlaceholderRow =
+          result.tableData?.length === 1 && result.tableData[0]?.key === "row-empty";
+        const finalRows = hrc1TableService.sortRowsByMeThoi(isPlaceholderRow ? [] : result.tableData || []);
 
         const phanBoMetas: AdjustColumnMeta[] = (result.phanBoColumns ?? []).map((col: any) => ({
           key: col.dataIndex || `phanBo_${col.headerKeyId}`,
@@ -470,18 +462,28 @@ const ChiTietTieuHaoLoThoi_BOF = () => {
       },
     });
 
-    // ExportExcel nằm trong DETAIL_HIDDEN_BUTTON_KEYS (dùng chung cho mọi trang Chi tiết), nhưng
-    // HRC1_BB_TieuHao_BOF/LF đã có exporter riêng (HRC1TieuHaoExcelExporter/HRC1TieuHaoPdfExporter,
-    // trùng chính xác template biên bản trước đây dùng HRC1ExportBienBanButtons) nên không cần ẩn ở đây.
-    const filteredButtons = buttons.filter(
-      (btn) => btn.key === PhieuActionButtonKeys.ExportExcel || !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key)
-    );
+    // ExportExcel nằm trong DETAIL_HIDDEN_BUTTON_KEYS (dùng chung cho mọi trang Chi tiết) — HRC1_BB_
+    // TieuHao_BOF/LF giờ đã có HRC1ExportBienBanButtons riêng (xem return bên dưới) nên không cần giữ
+    // ngoại lệ hiện ExportExcel ở đây nữa, mirror HRC2 ChiTietBOF.tsx.
+    const filteredButtons = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
     if (filteredButtons.length === 0) return null;
     return phieuActionService.renderActionButtons(filteredButtons, idphieu || "");
   }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
 
   return (
     <Card bordered style={{ padding: 24, background: "#fff" }} loading={loading}>
+      {idphieu && (
+        <HRC1ExportBienBanButtons
+          templateCode={config.code}
+          bieuMau={config.loaiBm}
+          idPhieu={idphieu}
+          soPhieu={data?.soPhieu}
+          ngaySX={formData?.NgaySX}
+          ca={formData?.ca ?? null}
+          scope={formData?.scope ?? null}
+          containerStyle={{ marginBottom: 8 }}
+        />
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <img src={logoHP} alt="logo" style={{ height: "auto", width: 220 }} />

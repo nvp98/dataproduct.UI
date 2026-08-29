@@ -23,6 +23,7 @@ import { Hrc1PhuLieuNmServiceApi, type Hrc1PhuLieuNm } from "../../../services/H
 import { hrc1MeThoiMacThepServiceApi } from "../../../services/Hrc1MeThoiMacThepServiceApi";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
+import HRC1ExportBienBanButtons from "../../../components/HRC1ExportBienBanButtons";
 
 const TaoTieuHaoTinhLuyenLF = () => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } = usePhieuNavigation(
@@ -309,8 +310,12 @@ const TaoTieuHaoTinhLuyenLF = () => {
       // (hàm đó coi mọi dòng IsNM=false trong state cũ là "thêm tay cần giữ lại" khi không thấy trên
       // server; nhưng ở LF MỌI dòng đều IsNM=false theo quy ước riêng — nếu dùng chung sẽ khiến mẻ đã
       // bị xóa thật (vd TL hủy nhận bên BBGN_ThepLong) bị "hồi sinh" lại mỗi lần Làm mới dữ liệu).
-      // Chỉ giữ lại đúng những dòng user vừa "+ Thêm dòng" nhưng CHƯA lưu (chưa có id thật từ DB),
-      // để không mất draft đang gõ dở khi bấm Làm mới.
+      // Chỉ giữ lại đúng những dòng user vừa "+ Thêm dòng" nhưng CHƯA lưu (_isNewRow, xem
+      // CustomTableHRC.handleAddRow) — KHÔNG dùng "chưa có id" để nhận diện: DataJson.table1 lưu
+      // verbatim payload FE gửi lên (PhieuService), còn id thật của dòng thêm tay mới chỉ được gán
+      // SAU ĐÓ khi RunJsonInitializersAsync ghi vào bảng Hrc1TieuHao — id này không bao giờ được ghi
+      // ngược lại vào DataJson, nên dòng thêm tay đã lưu vẫn mãi "không có id" trong JSON, khiến check
+      // theo id coi nó là draft vĩnh viễn → trùng dòng với chính nó đọc từ filter (có id thật).
       const isEmpty = !result.tableData ||
         result.tableData.length === 0 ||
         (result.tableData.length === 1 && result.tableData[0]?.key === "row-empty");
@@ -318,13 +323,13 @@ const TaoTieuHaoTinhLuyenLF = () => {
       if (isEmpty) {
         message.info("Chưa có dữ liệu đã lưu cho Ngày/Ca/Tinh luyện này — có thể bắt đầu thêm dòng mới.");
         setTableData((prev) =>
-          hrc1TableService.sortRowsByMeThoi(prev.filter((row) => typeof row.id !== "number"))
+          hrc1TableService.sortRowsByMeThoi(prev.filter((row) => row._isNewRow === true))
         );
         return;
       }
 
       setTableData((prev) => {
-        const unsavedNewRows = prev.filter((row) => typeof row.id !== "number");
+        const unsavedNewRows = prev.filter((row) => row._isNewRow === true);
         return hrc1TableService.sortRowsByMeThoi([...(result.tableData || []), ...unsavedNewRows]);
       });
     } catch (error) {
@@ -630,6 +635,18 @@ const TaoTieuHaoTinhLuyenLF = () => {
 
   return (
     <>
+      {idphieu && (
+        <HRC1ExportBienBanButtons
+          templateCode={config.code}
+          bieuMau={config.loaiBm}
+          idPhieu={idphieu}
+          soPhieu={soPhieu}
+          ngaySX={ngaySX}
+          ca={ca}
+          scope={scope}
+          containerStyle={{ marginBottom: 8 }}
+        />
+      )}
       <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
           <div style={{ flex: 1, textAlign: "center" }}>

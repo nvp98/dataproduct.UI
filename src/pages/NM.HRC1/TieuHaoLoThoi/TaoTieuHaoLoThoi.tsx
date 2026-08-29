@@ -22,6 +22,7 @@ import { Hrc1PhuLieuNmServiceApi, type Hrc1PhuLieuNm } from "../../../services/H
 import { hrc1MeThoiMacThepServiceApi } from "../../../services/Hrc1MeThoiMacThepServiceApi";
 import { phieuActionService, type PheDuyetItem } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
+import HRC1ExportBienBanButtons from "../../../components/HRC1ExportBienBanButtons";
 
 const TaoTieuHaoLoThoi = () => {
   const { idphieu, navigateToDetail, safeGetDetail, redirectToList } = usePhieuNavigation(
@@ -275,23 +276,6 @@ const TaoTieuHaoLoThoi = () => {
         return { ...col, align: alignType(col.align) };
       });
 
-      const editableFieldSet = new Set<string>();
-      baseColumns.forEach((col: any) => {
-        if (col.dataIndex && !col.children && col.isLabel !== true) {
-          const editable = col.editable !== false;
-          if (editable) editableFieldSet.add(col.dataIndex);
-        }
-        if (Array.isArray(col.children)) {
-          col.children.forEach((child: any) => {
-            if (!child.dataIndex) return;
-            const editableParent = col.editable !== false;
-            const editableChild = child.editable !== false;
-            if (editableParent && editableChild) editableFieldSet.add(child.dataIndex);
-          });
-        }
-      });
-      const editableFields = Array.from(editableFieldSet);
-
       const result = await hrc1PhuLieuService.fetchAndProcessPhuLieus(
         { NgaySX: paramsIn.NgaySX, Ca: paramsIn.Ca, Scope: paramsIn.Scope },
         { baseColumns }
@@ -305,7 +289,14 @@ const TaoTieuHaoLoThoi = () => {
         message.info("Không có dữ liệu phù hợp với điều kiện lọc.");
         setPhuGiaColumns([]);
         setAdjustColumnMetas([]);
-        setTableData([]);
+        // Chỉ giữ lại đúng những dòng user vừa "+ Thêm dòng" nhưng CHƯA lưu (_isNewRow, xem
+        // CustomTableHRC.handleAddRow) — giống TaoTieuHaoTinhLuyenLF.tsx, không xoá trắng để tránh mất
+        // draft đang gõ dở khi Làm mới. KHÔNG dùng "chưa có id" để nhận diện: DataJson.table1 lưu
+        // verbatim payload FE gửi lên (PhieuService), còn id thật của dòng thêm tay mới chỉ được gán
+        // SAU ĐÓ khi RunJsonInitializersAsync ghi vào bảng Hrc1TieuHao — id này không bao giờ được ghi
+        // ngược lại vào DataJson, nên dòng thêm tay đã lưu vẫn mãi "không có id" trong JSON, khiến check
+        // theo id coi nó là draft vĩnh viễn → trùng dòng với chính nó đọc từ filter (có id thật).
+        setTableData((prev) => prev.filter((row) => row._isNewRow === true));
         return;
       }
 
@@ -349,18 +340,18 @@ const TaoTieuHaoLoThoi = () => {
         setAdjustColumnMetas((prev) => (prev ?? []).filter(keepManual));
       }
 
+      // Bảng CHỈ render từ live api/DLNMHRC1/filter — không dùng hrc1TableService.mergeServerRows/
+      // applyManualOverrides để merge với dữ liệu JSON đã lưu trên phiếu (giống
+      // TaoTieuHaoTinhLuyenLF.tsx). Filter API đã là nguồn sự thật đầy đủ (BE lưu thẳng macThep/
+      // klThepPhe/phụ liệu đã sửa tay + IsManual/*Orig vào chính dòng Hrc1TieuHao, filter đọc lại đúng
+      // giá trị đó — không cần FE tự merge lại từ JSON). Merge theo JSON cũ trước đây khiến mẻ đã bị
+      // xóa/đổi ở nơi khác (JSON không tự cập nhật khi có thay đổi ngoài luồng Lưu) vẫn hiện lại.
+      // Chỉ giữ lại đúng những dòng user vừa "+ Thêm dòng" nhưng CHƯA lưu (_isNewRow) — KHÔNG dùng
+      // "chưa có id" để nhận diện, xem giải thích ở nhánh isEmpty phía trên (dòng thêm tay đã lưu vẫn
+      // mãi "không có id" trong DataJson → nếu check theo id sẽ bị trùng dòng với chính nó từ filter).
       setTableData((prev) => {
-        const baseMerged = hrc1TableService.mergeServerRows(
-          result.tableData || [],
-          prev,
-          "meThoi",
-          editableFields
-        );
-        const overridden = hrc1TableService.applyManualOverrides(baseMerged, prev, {
-          rowIdField: "id",
-          fallbackKeyField: "meThoi",
-        });
-        return hrc1TableService.sortRowsByMeThoi(overridden);
+        const unsavedNewRows = prev.filter((row) => row._isNewRow === true);
+        return hrc1TableService.sortRowsByMeThoi([...(result.tableData || []), ...unsavedNewRows]);
       });
     } catch (error) {
       console.error("Failed to fetch phu lieus:", error);
@@ -683,6 +674,18 @@ const TaoTieuHaoLoThoi = () => {
 
   return (
     <>
+      {idphieu && (
+        <HRC1ExportBienBanButtons
+          templateCode={config.code}
+          bieuMau={config.loaiBm}
+          idPhieu={idphieu}
+          soPhieu={soPhieu}
+          ngaySX={ngaySX}
+          ca={ca}
+          scope={scope}
+          containerStyle={{ marginBottom: 8 }}
+        />
+      )}
       <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
           <div style={{ flex: 1, textAlign: "center" }}>

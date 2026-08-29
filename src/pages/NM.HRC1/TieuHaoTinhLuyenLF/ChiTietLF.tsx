@@ -16,8 +16,9 @@ import { PhieuApi } from "../../../services/PhieuApi";
 import HRC1_BB_TieuHao_LF from "../../../utils/BM_config/HRC1_BB_TieuHao_LF.json";
 import { getBmQuyenUiFlags } from "../../../utils/helpers/checkAdminRole";
 import { phieuActionService } from "../../../services/PhieuActionService";
-import { DETAIL_HIDDEN_BUTTON_KEYS, PhieuActionButtonKeys } from "../../../utils/constants/PhieuActionButtonKeys";
+import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
 import logoHP from "../../../assets/images/LogoPDF.png";
+import HRC1ExportBienBanButtons from "../../../components/HRC1ExportBienBanButtons";
 
 const { Title, Text } = Typography;
 
@@ -336,18 +337,28 @@ const ChiTietTieuHaoTinhLuyenLF = () => {
         message.error((error as any)?.message ?? "Không thể thực hiện thao tác");
       },
     });
-    // ExportExcel nằm trong DETAIL_HIDDEN_BUTTON_KEYS (dùng chung cho mọi trang Chi tiết), nhưng
-    // HRC1_BB_TieuHao_BOF/LF đã có exporter riêng (HRC1TieuHaoExcelExporter/HRC1TieuHaoPdfExporter)
-    // nên không cần ẩn ở đây — mirror ChiTietBOF.tsx.
-    const filteredButtons = buttons.filter(
-      (btn) => btn.key === PhieuActionButtonKeys.ExportExcel || !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key)
-    );
+    // ExportExcel nằm trong DETAIL_HIDDEN_BUTTON_KEYS (dùng chung cho mọi trang Chi tiết) — HRC1_BB_
+    // TieuHao_BOF/LF giờ đã có HRC1ExportBienBanButtons riêng (xem return bên dưới) nên không cần giữ
+    // ngoại lệ hiện ExportExcel ở đây nữa, mirror HRC2 ChiTietBOF.tsx / HRC1 ChiTietBOF.tsx.
+    const filteredButtons = buttons.filter((btn) => !DETAIL_HIDDEN_BUTTON_KEYS.has(btn.key));
     if (filteredButtons.length === 0) return null;
     return phieuActionService.renderActionButtons(filteredButtons, idphieu || "");
   }, [data, idphieu, config.code, getUserInfo, handleActionSuccess, redirectToList]);
 
   return (
     <Card bordered style={{ padding: 24, background: "#fff" }} loading={loading}>
+      {idphieu && (
+        <HRC1ExportBienBanButtons
+          templateCode={config.code}
+          bieuMau={config.loaiBm}
+          idPhieu={idphieu}
+          soPhieu={data?.soPhieu}
+          ngaySX={formData?.NgaySX}
+          ca={formData?.ca ?? null}
+          scope={formData?.scope ?? null}
+          containerStyle={{ marginBottom: 8 }}
+        />
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <img src={logoHP} alt="logo" style={{ height: "auto", width: 220 }} />

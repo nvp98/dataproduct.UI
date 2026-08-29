@@ -312,15 +312,26 @@ export const hrc1TableService = {
     serverRows: HRCTableRow[] = [],
     previousRows: HRCTableRow[] = [],
     keyField = "meThoi",
-    preserveFields?: string[]
+    preserveFields?: string[],
+    idField = "id"
   ): HRCTableRow[] {
     if (!previousRows.length) {
       return serverRows;
     }
 
+    // Ưu tiên khoá theo id (duy nhất per-dòng) — meThoi chỉ dùng fallback cho dòng chưa có id (mới
+    // thêm tay, chưa lưu). Nếu khoá thẳng theo meThoi, 2 dòng khác nhau CÙNG meThoi (vd 1 dòng NM +
+    // 1 dòng thêm tay trùng Mẻ thổi) sẽ đụng độ trong Map — dòng sau ghi đè dòng trước, khiến field
+    // editable (macThep, klThepPhe...) của dòng NM bị "ăn theo" giá trị của dòng thêm tay khi merge.
+    const rowKey = (row: HRCTableRow): string | number | undefined => {
+      const idVal = row[idField] as string | number | undefined;
+      if (idVal !== undefined && idVal !== null && idVal !== "") return idVal;
+      return row[keyField] as string | number | undefined;
+    };
+
     const prevMap = new Map<string | number, HRCTableRow>();
     previousRows.forEach((row) => {
-      const keyValue = row[keyField] as string | number | undefined;
+      const keyValue = rowKey(row);
       if (keyValue !== undefined && keyValue !== null) {
         prevMap.set(keyValue, row);
       }
@@ -332,7 +343,7 @@ export const hrc1TableService = {
 
     const serverKeySet = new Set<string | number>();
     const merged = serverRows.map((serverRow) => {
-      const keyValue = serverRow[keyField] as string | number | undefined;
+      const keyValue = rowKey(serverRow);
       if (keyValue !== undefined && keyValue !== null) {
         serverKeySet.add(keyValue);
       }

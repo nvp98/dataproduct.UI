@@ -52,14 +52,38 @@ const Hrc1PhuLieuNmAutocomplete = ({
   const [selectedValue, setSelectedValue] = useState<SelectProps["value"]>(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialOptionsRef = useRef<Hrc1PhuLieuNmSelectOption[]>([]);
+  // Tên hiện tại của đúng `value` (id) này, tải qua getById — KHÔNG phụ thuộc việc dropdown đã mở hay
+  // chưa (options chỉ fetch khi mở dropdown). Nếu thiếu bước này, ô sẽ hiển thị mãi `defaultLabel`
+  // (snapshot tên đã lưu trên dòng từ lúc chọn) dù tên phụ liệu đã bị đổi ở danh mục HRC1_PhuLieuNM,
+  // vì defaultLabel không tự cập nhật và options rỗng cho tới khi user bấm mở dropdown.
+  const [resolvedLabel, setResolvedLabel] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (value === null || value === undefined) {
+      setResolvedLabel(undefined);
+      return;
+    }
+    let cancelled = false;
+    Hrc1PhuLieuNmServiceApi.getById(value)
+      .then((item) => {
+        if (!cancelled) setResolvedLabel(item ? buildOptionLabel(item) : undefined);
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedLabel(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [value]);
 
   const mappedValue = useMemo(() => {
     if (value === null || value === undefined) return undefined;
     const matched = options.find((opt) => opt.value === value);
     if (matched) return { value: matched.value, label: matched.label };
+    if (resolvedLabel) return { value, label: resolvedLabel };
     if (defaultLabel) return { value, label: defaultLabel };
     return { value, label: `Phụ liệu #${value}` };
-  }, [value, options, defaultLabel]);
+  }, [value, options, resolvedLabel, defaultLabel]);
 
   useEffect(() => {
     setSelectedValue(mappedValue);
