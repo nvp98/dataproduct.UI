@@ -1254,6 +1254,18 @@ export const TinhLuyenPanel = ({
       },
     },
     {
+      title: "Ca-Ngày Đúc", key: "caNgayDuc", width: 110,
+      render: (_, me) => {
+        if (!me.ngayDuc || !me.caDuc) return "";
+        const label = `Ca ${me.caDuc} - ${dayjs(me.ngayDuc).format("DD/MM/YYYY")}`;
+        return me.isChuyenCaDuc ? (
+          <Tooltip title="Đã chuyển ca — khác với ca tinh luyện">
+            <Tag color="orange">{label}</Tag>
+          </Tooltip>
+        ) : label;
+      },
+    },
+    {
       title: "", key: "xoaTay", width: 36, fixed: "right",
       render: (_, me) => {
         if (readOnly || !me.isManualTL) return null;
@@ -1316,7 +1328,7 @@ export const TinhLuyenPanel = ({
           columns={mainCols}
           dataSource={tlDisplayData}
           rowKey={(r) => `${r.id}-${r.mePhanCongId}`}
-          scrollX={showChuyenMeCols ? 2110 : 1850}
+          scrollX={showChuyenMeCols ? 2220 : 1960}
           scrollY="calc(100vh - 258px)"
           onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
         />

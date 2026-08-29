@@ -59,6 +59,9 @@ export interface HRC1_MeThepVm {
   tenMayDucChuyen?: string | null;
   // Chuyển ca Đúc (routing sang phiếu Đúc ca sau) — không đổi Ca của chính công đoạn TL
   isChuyenCaDuc?: boolean | null;
+  // Ca/Ngày của phiếu Đúc mà mẻ này đang thuộc về (đã áp dụng Chuyển ca nếu có)
+  ngayDuc?: string | null;
+  caDuc?: number | null;
 }
 
 export interface HRC1_ChoNhanMeVm {
