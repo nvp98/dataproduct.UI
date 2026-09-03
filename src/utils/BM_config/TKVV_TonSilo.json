@@ -85,8 +85,7 @@
           "dataIndex": "xuat",
           "width": 100,
           "type": "float",
-          "align": "right",
-          "readonly": true
+          "align": "right"
         },
         {
           "title": "Tồn cuối (Tấn)",

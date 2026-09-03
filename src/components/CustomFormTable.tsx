@@ -69,6 +69,8 @@ interface CustomFormTableProps {
     dataIndex: string,
     record: any,
   ) => { style?: React.CSSProperties; tooltip?: string | null } | null | undefined;
+  /** Render nút hành động tùy chỉnh per-row, hiển thị ở cột "Thao tác" cuối bảng. */
+  rowActions?: (record: any, rowIndex: number) => React.ReactNode;
 }
 
 export default function CustomFormTable({
@@ -101,6 +103,7 @@ export default function CustomFormTable({
   cloneRowButtonText = "+ Nhân dòng trên",
   showRowCloneButton = false,
   cellDecorator,
+  rowActions,
 }: CustomFormTableProps) {
   // Validate và filter input theo type
   const validateAndFormatInput = (
@@ -517,6 +520,17 @@ export default function CustomFormTable({
                 </Popconfirm>
               </Space>
             ),
+          },
+        ]
+      : []),
+    ...(rowActions
+      ? [
+          {
+            title: "Thao tác",
+            key: "rowActions",
+            width: 80,
+            render: (_: any, record: any, rowIndex: number) =>
+              rowActions(record, rowIndex),
           },
         ]
       : []),

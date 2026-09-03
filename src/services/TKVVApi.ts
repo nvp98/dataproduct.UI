@@ -421,6 +421,7 @@ export interface TKVVTonSiloRowDto {
   tonCuoiAuto: number | null;
   ghiChu: string | null;
   isAdjusted: boolean;
+  isTachLieu: boolean;
   adjustedBy: number | null;
   adjustedDate: string | null;
 }
@@ -443,6 +444,8 @@ export interface SaveTonSiloRowDto {
   xuatAuto?: number | null;
   tonCuoi?: number | null;
   tonCuoiAuto?: number | null;
+  isAdjusted?: boolean;
+  isTachLieu?: boolean;
   ghiChu?: string | null;
 }
 
