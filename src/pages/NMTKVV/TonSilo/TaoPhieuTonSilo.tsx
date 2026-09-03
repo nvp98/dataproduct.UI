@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import TKVV_TonSilo from "../../../utils/BM_config/TKVV_TonSilo.json";
-import { Button, Card, Form, Input, Space, Table, Typography, message } from "antd";
-import { CloudDownloadOutlined, UndoOutlined } from "@ant-design/icons";
+import { Button, Card, Form, Input, Modal, Select, Space, Table, Typography, message } from "antd";
+import { CloudDownloadOutlined, DeploymentUnitOutlined, PlusOutlined, UndoOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,9 +15,15 @@ import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuCons
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 import {
   tkvvTonSiloApi,
+  tkvvNvlApi,
+  tkvvNvlSiloMappingApi,
+  tkvvSiloApi,
   type TKVVTonSiloRowDto,
+  type TKVVNguyenVatLieuDto,
+  type TKVVNvlSiloMappingDto,
+  type TKVVSiloDto,
 } from "../../../services/TKVVApi";
-import { TKVV_SCOPE_OPTIONS } from "../../../utils/constants/TKVV_constant";
+import { TKVV_SCOPE_OPTIONS, getTKVVScopeByNumber } from "../../../utils/constants/TKVV_constant";
 
 interface TableRow {
   key: string | number;
@@ -38,6 +44,15 @@ interface TableRow {
   isAdjusted?: boolean;
   ghiChu?: string;
   [key: string]: any;
+}
+
+interface SiloMappingModalRow {
+  id?: number;
+  key: string | number;
+  ca: number;
+  nguyenVatLieuID: number | null;
+  siloID: number | null;
+  thuTu: number;
 }
 
 const MA_BM = "TKVV_TONSILO";
@@ -91,6 +106,14 @@ const TaoPhieuTonSilo = () => {
   const [loading, setLoading] = useState(false);
   const [loadingInit, setLoadingInit] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
+
+  const [showSiloModal, setShowSiloModal] = useState(false);
+  const [modalRows, setModalRows] = useState<SiloMappingModalRow[]>([]);
+  const [modalNgaySXGan, setModalNgaySXGan] = useState("");
+  const [nvlList, setNvlList] = useState<TKVVNguyenVatLieuDto[]>([]);
+  const [siloList, setSiloList] = useState<TKVVSiloDto[]>([]);
+  const [loadingBatch, setLoadingBatch] = useState(false);
+  const [loadingSilo, setLoadingSilo] = useState(false);
 
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -266,6 +289,105 @@ const TaoPhieuTonSilo = () => {
       setLoadingInit(false);
     }
   }, [form, currentUserInfo, idphieu]);
+
+  const handleCheckSilo = useCallback(async () => {
+    const ngaySXValue: dayjs.Dayjs | null = form.getFieldValue("ngaySX");
+    if (!ngaySXValue) { message.warning("Chọn ngày sản xuất"); return; }
+    const scopeValue: number | undefined = form.getFieldValue("scope");
+    if (!scopeValue) { message.warning("Chọn xưởng (scope)"); return; }
+
+    setLoadingSilo(true);
+    try {
+      const ngayStr = ngaySXValue.format("YYYY-MM-DD");
+      const scopeNum = String(scopeValue);
+      const [[today, nvls, silos]] = await Promise.all([
+        Promise.all([
+          tkvvNvlSiloMappingApi.getList({ scope: scopeNum, ngaySX: ngayStr }),
+          tkvvNvlApi.getListnvlbyBM({ scope: scopeNum }),
+          tkvvSiloApi.getList({ scope: scopeNum }),
+        ]),
+      ]);
+      setNvlList(nvls ?? []);
+      setSiloList(silos ?? []);
+
+      let source: TKVVNvlSiloMappingDto[] = today ?? [];
+      let fromDate = ngayStr;
+      let isToday = true;
+
+      if (source.length === 0) {
+        source = await tkvvNvlSiloMappingApi.getNearest({ scope: scopeNum, beforeDate: ngayStr });
+        fromDate = source[0]?.ngaySX ? String(source[0].ngaySX).slice(0, 10) : "";
+        isToday = false;
+      }
+
+      const rows: SiloMappingModalRow[] = source.map((m, i) => ({
+        id: m.id ?? 0,
+        key: i,
+        ca: m.ca,
+        nguyenVatLieuID: m.nguyenVatLieuID,
+        siloID: m.siloID ?? null,
+        thuTu: m.thuTu ?? i + 1,
+      }));
+      setModalRows(rows);
+      setModalNgaySXGan(isToday ? "" : fromDate);
+      setShowSiloModal(true);
+    } catch {
+      message.error("Lỗi khi tải mapping silo");
+    } finally {
+      setLoadingSilo(false);
+    }
+  }, [form]);
+
+  const updateModalRow = useCallback(
+    (idx: number, field: keyof SiloMappingModalRow, value: any) => {
+      setModalRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+    },
+    [],
+  );
+
+  const addModalRow = useCallback(() => {
+    setModalRows((prev) => [
+      ...prev,
+      { key: Date.now(), ca: 1, nguyenVatLieuID: null, siloID: null, thuTu: prev.length + 1 },
+    ]);
+  }, []);
+
+  const deleteModalRow = useCallback((idx: number) => {
+    setModalRows((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handleSaveMapping = useCallback(async () => {
+    const ngaySXValue: dayjs.Dayjs | null = form.getFieldValue("ngaySX");
+    const scopeValue: number | undefined = form.getFieldValue("scope");
+    if (!ngaySXValue || !scopeValue) return;
+    if (modalRows.some((r) => !r.nguyenVatLieuID)) {
+      message.warning("Vui lòng chọn Nguyên vật liệu cho tất cả dòng");
+      return;
+    }
+    setLoadingBatch(true);
+    try {
+      const ngayStr = ngaySXValue.format("YYYY-MM-DD");
+      await tkvvNvlSiloMappingApi.batchCreate({
+        maBM: "ALL",
+        scope: String(scopeValue),
+        ngaySX: ngayStr,
+        rows: modalRows.map((r, i) => ({
+          id: r.id ?? 0,
+          nguyenVatLieuID: r.nguyenVatLieuID!,
+          siloID: r.siloID,
+          ca: r.ca,
+          thuTu: r.thuTu ?? i + 1,
+        })),
+      });
+      setShowSiloModal(false);
+      message.success("Đã lưu mapping — đang tải dữ liệu Silo...");
+      await handleLoadRows();
+    } catch {
+      message.error("Lỗi khi lưu mapping");
+    } finally {
+      setLoadingBatch(false);
+    }
+  }, [form, modalRows, handleLoadRows]);
 
   const getFormData = useCallback(async () => {
     const userInfo = getUserInfo();
@@ -571,14 +693,24 @@ const TaoPhieuTonSilo = () => {
           <Space wrap>
             {actionButtons}
             {!isFormLocked && (
-              <Button
-                icon={<CloudDownloadOutlined />}
-                loading={loadingInit}
-                onClick={handleLoadRows}
-                disabled={!ngaySXWatch || !scopeWatch}
-              >
-                Tải dữ liệu
-              </Button>
+              <>
+                <Button
+                  icon={<CloudDownloadOutlined />}
+                  loading={loadingInit}
+                  onClick={handleLoadRows}
+                  disabled={!ngaySXWatch || !scopeWatch}
+                >
+                  Tải dữ liệu
+                </Button>
+                <Button
+                  icon={<DeploymentUnitOutlined />}
+                  loading={loadingSilo}
+                  onClick={handleCheckSilo}
+                  disabled={!ngaySXWatch || !scopeWatch}
+                >
+                  Kiểm tra Silo
+                </Button>
+              </>
             )}
             <Button
               icon={<UndoOutlined />}
@@ -667,6 +799,117 @@ const TaoPhieuTonSilo = () => {
           })}
         </div>
       </Form>
+
+      {/* ─── Modal Kiểm tra / Thiết lập Silo Mapping ──────────────────────── */}
+      <Modal
+        title={
+          <span>
+            Thiết lập Silo Mapping
+            {ngaySXWatch && (
+              <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8 }}>
+                — {(ngaySXWatch as dayjs.Dayjs).format("DD/MM/YYYY")} ·{" "}
+                {getTKVVScopeByNumber(scopeWatch ?? 0)?.label ?? ""}
+              </span>
+            )}
+            {modalNgaySXGan && (
+              <span style={{ fontWeight: 400, fontSize: 12, marginLeft: 8, color: "#888" }}>
+                (từ ngày {modalNgaySXGan})
+              </span>
+            )}
+          </span>
+        }
+        open={showSiloModal}
+        onCancel={() => setShowSiloModal(false)}
+        width={760}
+        footer={[
+          <Button key="cancel" onClick={() => setShowSiloModal(false)}>Hủy</Button>,
+          <Button key="add" onClick={addModalRow} icon={<PlusOutlined />}>Thêm dòng</Button>,
+          <Button key="save" type="primary" loading={loadingBatch} onClick={handleSaveMapping}>
+            Lưu &amp; Tải dữ liệu
+          </Button>,
+        ]}
+        destroyOnHidden
+      >
+        <Table<SiloMappingModalRow>
+          dataSource={modalRows}
+          rowKey="key"
+          pagination={false}
+          size="small"
+          columns={[
+            {
+              title: "Ca",
+              dataIndex: "ca",
+              width: 110,
+              render: (val, _, idx) => (
+                <Select
+                  value={val}
+                  onChange={(v) => updateModalRow(idx, "ca", v)}
+                  style={{ width: "100%" }}
+                  options={[
+                    { label: "Ca ngày", value: 1 },
+                    { label: "Ca đêm", value: 2 },
+                  ]}
+                />
+              ),
+            },
+            {
+              title: "Tên nguyên vật liệu",
+              dataIndex: "nguyenVatLieuID",
+              render: (val, _, idx) => (
+                <Select
+                  value={val}
+                  onChange={(v) => updateModalRow(idx, "nguyenVatLieuID", v)}
+                  style={{ width: "100%" }}
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="Chọn NVL"
+                  options={nvlList.map((n) => ({ label: n.tenNVL, value: n.id }))}
+                />
+              ),
+            },
+            {
+              title: "Mã Silo",
+              dataIndex: "siloID",
+              width: 200,
+              render: (val, _, idx) => (
+                <Select
+                  value={val}
+                  onChange={(v) => updateModalRow(idx, "siloID", v)}
+                  style={{ width: "100%" }}
+                  showSearch
+                  allowClear
+                  optionFilterProp="label"
+                  placeholder="Chọn Silo"
+                  options={siloList.map((s) => ({
+                    label: s.maSilo ? `${s.maSilo} - ${s.tenSilo}` : s.tenSilo,
+                    value: s.id,
+                  }))}
+                />
+              ),
+            },
+            {
+              title: "Thứ tự",
+              dataIndex: "thuTu",
+              width: 80,
+              render: (val, _, idx) => (
+                <input
+                  type="number"
+                  value={val ?? ""}
+                  onChange={(e) => updateModalRow(idx, "thuTu", Number(e.target.value))}
+                  style={{ width: "100%", border: "1px solid #d9d9d9", borderRadius: 4, padding: "4px 8px" }}
+                />
+              ),
+            },
+            {
+              title: "",
+              width: 50,
+              render: (_, __, idx) => (
+                <Button danger size="small" type="text" onClick={() => deleteModalRow(idx)}>Xóa</Button>
+              ),
+            },
+          ]}
+        />
+      </Modal>
     </Card>
   );
 };
