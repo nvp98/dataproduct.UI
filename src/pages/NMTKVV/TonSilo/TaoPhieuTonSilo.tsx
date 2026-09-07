@@ -1,7 +1,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import TKVV_TonSilo from "../../../utils/BM_config/TKVV_TonSilo.json";
-import { Button, Card, Form, Input, Space, Typography, message } from "antd";
-import { CloudDownloadOutlined, UndoOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Typography,
+  message,
+} from "antd";
+import {
+  CloudDownloadOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  PlusOutlined,
+  ScissorOutlined,
+  UndoOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,9 +33,18 @@ import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuCons
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
 import {
   tkvvTonSiloApi,
+  tkvvNvlApi,
+  tkvvNvlSiloMappingApi,
+  tkvvSiloApi,
   type TKVVTonSiloRowDto,
+  type TKVVNguyenVatLieuDto,
+  type TKVVNvlSiloMappingDto,
+  type TKVVSiloDto,
 } from "../../../services/TKVVApi";
-import { TKVV_SCOPE_OPTIONS } from "../../../utils/constants/TKVV_constant";
+import {
+  TKVV_SCOPE_OPTIONS,
+  getTKVVScopeByNumber,
+} from "../../../utils/constants/TKVV_constant";
 
 interface TableRow {
   key: string | number;
@@ -36,9 +63,53 @@ interface TableRow {
   tonCuoi?: number | string;
   tonCuoiAuto?: number | string;
   isAdjusted?: boolean;
+  isTachLieu?: boolean;
   ghiChu?: string;
   [key: string]: any;
 }
+
+interface SiloMappingModalRow {
+  id?: number;
+  key: string | number;
+  ca: number;
+  nguyenVatLieuID: number | null;
+  siloID: number | null;
+  thuTu: number;
+}
+
+interface TachLieuRow {
+  key: string | number;
+  nguyenVatLieuID: number | null;
+  doAm: number | string;
+  tonDau: number | string;
+  nhap: number | string;
+  xuat: number | string;
+  tonCuoi: number | string;
+  ghiChu: string;
+}
+
+const TACH_SUM_FIELDS: Array<keyof TachLieuRow> = [
+  "tonDau",
+  "nhap",
+  "xuat",
+  "tonCuoi",
+];
+
+const recalcTachRow0 = (rows: TachLieuRow[], src: TableRow): TachLieuRow[] => {
+  if (rows.length < 2) return rows;
+  const result = [...rows];
+  const row0 = { ...result[0] };
+  TACH_SUM_FIELDS.forEach((f) => {
+    const srcVal = parseFloat(String(src[f] ?? 0)) || 0;
+    const sumOthers = result.slice(1).reduce((acc, r) => {
+      const v = parseFloat(String(r[f] ?? 0));
+      return acc + (isNaN(v) ? 0 : v);
+    }, 0);
+    row0[f] = parseFloat((srcVal - sumOthers).toFixed(3)) || 0;
+  });
+  result[0] = row0;
+  return result;
+};
 
 const MA_BM = "TKVV_TONSILO";
 
@@ -56,9 +127,15 @@ const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => ({
   nhapAuto: item.nhapAuto ?? "",
   xuat: item.xuat ?? item.xuatAuto ?? "",
   xuatAuto: item.xuatAuto ?? "",
-  tonCuoi: item.tonCuoi ?? item.tonCuoiAuto ?? "",
+  tonCuoi:
+    item.isAdjusted || item.isTachLieu
+      ? item.tonCuoi != null
+        ? item.tonCuoi
+        : (item.tonCuoiAuto ?? "")
+      : (item.tonCuoiAuto ?? ""),
   tonCuoiAuto: item.tonCuoiAuto ?? "",
   isAdjusted: item.isAdjusted ?? false,
+  isTachLieu: item.isTachLieu ?? false,
   ghiChu: item.ghiChu ?? "",
 });
 
@@ -78,7 +155,6 @@ const sortSiloRows = (rows: TableRow[]): TableRow[] => {
   return [...withNvl, ...withoutNvl];
 };
 
-
 const TaoPhieuTonSilo = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -91,6 +167,20 @@ const TaoPhieuTonSilo = () => {
   const [loading, setLoading] = useState(false);
   const [loadingInit, setLoadingInit] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
+
+  const [showSiloModal, setShowSiloModal] = useState(false);
+  const [modalRows, setModalRows] = useState<SiloMappingModalRow[]>([]);
+  const [modalNgaySXGan, setModalNgaySXGan] = useState("");
+  const [nvlList, setNvlList] = useState<TKVVNguyenVatLieuDto[]>([]);
+  const [siloList, setSiloList] = useState<TKVVSiloDto[]>([]);
+  const [loadingBatch, setLoadingBatch] = useState(false);
+  const [loadingSilo, setLoadingSilo] = useState(false);
+
+  const [showTachModal, setShowTachModal] = useState(false);
+  const [tachSourceIdx, setTachSourceIdx] = useState<number | null>(null);
+  const [tachSourceRow, setTachSourceRow] = useState<TableRow | null>(null);
+  const [tachRows, setTachRows] = useState<TachLieuRow[]>([]);
+  const [loadingTachNvl, setLoadingTachNvl] = useState(false);
 
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -110,6 +200,30 @@ const TaoPhieuTonSilo = () => {
   useEffect(() => {
     tableDataRef.current = tableData;
   }, [tableData]);
+
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const signaturesRef = useRef<HTMLDivElement>(null);
+  const [tableScrollY, setTableScrollY] = useState(400);
+
+  const recalcTableHeight = useCallback(() => {
+    if (!tableWrapperRef.current) return;
+    const rect = tableWrapperRef.current.getBoundingClientRect();
+    const sigH = signaturesRef.current?.offsetHeight ?? 160;
+    const y = Math.max(
+      200,
+      Math.floor(window.innerHeight - rect.top - sigH - 100),
+    );
+    setTableScrollY(y);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(recalcTableHeight, 50);
+    window.addEventListener("resize", recalcTableHeight);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", recalcTableHeight);
+    };
+  }, [loading, recalcTableHeight]);
 
   // Form.useWatch để reactive disable nút "Tải dữ liệu"
   const ngaySXWatch = Form.useWatch("ngaySX", form);
@@ -246,6 +360,249 @@ const TaoPhieuTonSilo = () => {
     }
   }, [form, currentUserInfo, idphieu]);
 
+  const handleCheckSilo = useCallback(async () => {
+    const ngaySXValue: dayjs.Dayjs | null = form.getFieldValue("ngaySX");
+    if (!ngaySXValue) {
+      message.warning("Chọn ngày sản xuất");
+      return;
+    }
+    const scopeValue: number | undefined = form.getFieldValue("scope");
+    if (!scopeValue) {
+      message.warning("Chọn xưởng (scope)");
+      return;
+    }
+
+    setLoadingSilo(true);
+    try {
+      const ngayStr = ngaySXValue.format("YYYY-MM-DD");
+      const scopeNum = String(scopeValue);
+      const [[today, nvls, silos]] = await Promise.all([
+        Promise.all([
+          tkvvNvlSiloMappingApi.getList({ scope: scopeNum, ngaySX: ngayStr }),
+          tkvvNvlApi.getListnvlbyBM({ scope: scopeNum }),
+          tkvvSiloApi.getList({ scope: scopeNum }),
+        ]),
+      ]);
+      setNvlList(nvls ?? []);
+      setSiloList(silos ?? []);
+
+      let source: TKVVNvlSiloMappingDto[] = today ?? [];
+      let fromDate = ngayStr;
+      let isToday = true;
+
+      if (source.length === 0) {
+        source = await tkvvNvlSiloMappingApi.getNearest({
+          scope: scopeNum,
+          beforeDate: ngayStr,
+        });
+        fromDate = source[0]?.ngaySX
+          ? String(source[0].ngaySX).slice(0, 10)
+          : "";
+        isToday = false;
+      }
+
+      const rows: SiloMappingModalRow[] = source.map((m, i) => ({
+        id: m.id ?? 0,
+        key: i,
+        ca: m.ca,
+        nguyenVatLieuID: m.nguyenVatLieuID,
+        siloID: m.siloID ?? null,
+        thuTu: m.thuTu ?? i + 1,
+      }));
+      setModalRows(rows);
+      setModalNgaySXGan(isToday ? "" : fromDate);
+      setShowSiloModal(true);
+    } catch {
+      message.error("Lỗi khi tải mapping silo");
+    } finally {
+      setLoadingSilo(false);
+    }
+  }, [form]);
+
+  const updateModalRow = useCallback(
+    (idx: number, field: keyof SiloMappingModalRow, value: any) => {
+      setModalRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
+      );
+    },
+    [],
+  );
+
+  const addModalRow = useCallback(() => {
+    setModalRows((prev) => [
+      ...prev,
+      {
+        key: Date.now(),
+        ca: 1,
+        nguyenVatLieuID: null,
+        siloID: null,
+        thuTu: prev.length + 1,
+      },
+    ]);
+  }, []);
+
+  const deleteModalRow = useCallback((idx: number) => {
+    setModalRows((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handleSaveMapping = useCallback(async () => {
+    const ngaySXValue: dayjs.Dayjs | null = form.getFieldValue("ngaySX");
+    const scopeValue: number | undefined = form.getFieldValue("scope");
+    if (!ngaySXValue || !scopeValue) return;
+    if (modalRows.some((r) => !r.nguyenVatLieuID)) {
+      message.warning("Vui lòng chọn Nguyên vật liệu cho tất cả dòng");
+      return;
+    }
+    setLoadingBatch(true);
+    try {
+      const ngayStr = ngaySXValue.format("YYYY-MM-DD");
+      await tkvvNvlSiloMappingApi.batchCreate({
+        maBM: "ALL",
+        scope: String(scopeValue),
+        ngaySX: ngayStr,
+        rows: modalRows.map((r, i) => ({
+          id: r.id ?? 0,
+          nguyenVatLieuID: r.nguyenVatLieuID!,
+          siloID: r.siloID,
+          ca: r.ca,
+          thuTu: r.thuTu ?? i + 1,
+        })),
+      });
+      setShowSiloModal(false);
+      message.success("Đã lưu mapping — đang tải dữ liệu Silo...");
+      await handleLoadRows();
+    } catch {
+      message.error("Lỗi khi lưu mapping");
+    } finally {
+      setLoadingBatch(false);
+    }
+  }, [form, modalRows, handleLoadRows]);
+
+  const handleOpenTach = useCallback(
+    async (rowIdx: number) => {
+      const row = tableData[rowIdx];
+      if (!row) return;
+
+      if (nvlList.length === 0) {
+        const scopeValue: number | undefined = form.getFieldValue("scope");
+        if (scopeValue) {
+          setLoadingTachNvl(true);
+          try {
+            const nvls = await tkvvNvlApi.getListnvlbyBM({
+              scope: String(scopeValue),
+            });
+            setNvlList(nvls ?? []);
+          } catch {
+            /* ignore */
+          } finally {
+            setLoadingTachNvl(false);
+          }
+        }
+      }
+
+      setTachSourceIdx(rowIdx);
+      setTachSourceRow(row);
+      setTachRows([
+        {
+          key: Date.now(),
+          nguyenVatLieuID: row.nguyenVatLieuID ?? null,
+          doAm: row.doAm ?? "",
+          tonDau: row.tonDau ?? "",
+          nhap: row.nhap ?? "",
+          xuat: row.xuat ?? "",
+          tonCuoi: row.tonCuoi ?? "",
+          ghiChu: row.ghiChu ?? "",
+        },
+      ]);
+      setShowTachModal(true);
+    },
+    [tableData, nvlList, form],
+  );
+
+  const updateTachRow = useCallback(
+    (idx: number, field: keyof TachLieuRow, value: any) => {
+      setTachRows((prev) => {
+        const updated = prev.map((r, i) =>
+          i === idx ? { ...r, [field]: value } : r,
+        );
+        if (idx === 0 || !tachSourceRow) return updated;
+        return recalcTachRow0(updated, tachSourceRow);
+      });
+    },
+    [tachSourceRow],
+  );
+
+  const addTachRow = useCallback(() => {
+    setTachRows((prev) => [
+      ...prev,
+      {
+        key: Date.now(),
+        nguyenVatLieuID: null,
+        doAm: "",
+        tonDau: "",
+        nhap: "",
+        xuat: "",
+        tonCuoi: "",
+        ghiChu: "",
+      },
+    ]);
+  }, []);
+
+  const deleteTachRow = useCallback(
+    (idx: number) => {
+      setTachRows((prev) => {
+        const filtered = prev.filter((_, i) => i !== idx);
+        if (!tachSourceRow) return filtered;
+        return recalcTachRow0(filtered, tachSourceRow);
+      });
+    },
+    [tachSourceRow],
+  );
+
+  const handleSaveTach = useCallback(() => {
+    if (tachSourceIdx === null || !tachSourceRow) return;
+    if (tachRows.some((r) => !r.nguyenVatLieuID)) {
+      message.warning("Vui lòng chọn Nguyên vật liệu cho tất cả dòng");
+      return;
+    }
+
+    const newRows: TableRow[] = tachRows.map((r, i) => ({
+      key: `tach-${tachSourceRow.siloID}-${Date.now()}-${i}`,
+      dbId: i === 0 ? (tachSourceRow.dbId ?? null) : null,
+      siloID: tachSourceRow.siloID,
+      nguyenVatLieuID: r.nguyenVatLieuID ?? undefined,
+      maSilo: tachSourceRow.maSilo,
+      nguyenLieu: nvlList.find((n) => n.id === r.nguyenVatLieuID)?.tenNVL ?? "",
+      doAm: r.doAm,
+      doAmText: tachSourceRow.doAmText,
+      tonDau: r.tonDau,
+      nhap: r.nhap,
+      nhapAuto: i === 0 ? tachSourceRow.nhapAuto : "",
+      xuat: r.xuat,
+      xuatAuto: i === 0 ? tachSourceRow.xuatAuto : "",
+      tonCuoi: r.tonCuoi,
+      tonCuoiAuto: i === 0 ? tachSourceRow.tonCuoiAuto : "",
+      isAdjusted: true,
+      isTachLieu: i > 0 || (tachSourceRow.isTachLieu ?? false),
+      ghiChu: r.ghiChu,
+    }));
+
+    setTableData((prev) => {
+      const updated = [...prev];
+      updated.splice(tachSourceIdx, 1, ...newRows);
+      return updated;
+    });
+
+    setShowTachModal(false);
+    setTachSourceIdx(null);
+    setTachSourceRow(null);
+    message.success(`Đã tách thành ${newRows.length} dòng`);
+  }, [tachSourceIdx, tachSourceRow, tachRows, nvlList]);
+
+  const handleDeleteTachRow = useCallback((rowIdx: number) => {
+    setTableData((prev) => prev.filter((_, i) => i !== rowIdx));
+  }, []);
+
   const getFormData = useCallback(async () => {
     const userInfo = getUserInfo();
     const formData = await form.validateFields();
@@ -306,6 +663,7 @@ const TaoPhieuTonSilo = () => {
         kip: kipValue ?? null,
         thuTu: idx + 1,
         doAm: toNum(row.doAm),
+        doAmText: row.doAmText ?? null,
         tonDau: toNum(row.tonDau),
         nhap: toNum(row.nhap),
         nhapAuto: toNum(row.nhapAuto),
@@ -313,6 +671,8 @@ const TaoPhieuTonSilo = () => {
         xuatAuto: toNum(row.xuatAuto),
         tonCuoi: toNum(row.tonCuoi),
         tonCuoiAuto: toNum(row.tonCuoiAuto),
+        isAdjusted: row.isAdjusted ?? false,
+        isTachLieu: row.isTachLieu ?? false,
         ghiChu: row.ghiChu ?? null,
       });
 
@@ -411,15 +771,17 @@ const TaoPhieuTonSilo = () => {
   const cellDecorator = useCallback((dataIndex: string, record: any) => {
     if (
       dataIndex === "tonCuoi" &&
-      record.isAdjusted &&
       record.tonCuoiAuto != null &&
       record.tonCuoiAuto !== ""
     ) {
+      const cuoiNum = parseFloat(String(record.tonCuoi));
       const autoNum = parseFloat(String(record.tonCuoiAuto));
-      return {
-        style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
-        tooltip: `Tồn cuối Auto: ${isNaN(autoNum) ? record.tonCuoiAuto : autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
-      };
+      if (!isNaN(cuoiNum) && !isNaN(autoNum) && cuoiNum !== autoNum) {
+        return {
+          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          tooltip: `Tồn cuối Auto: ${autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
+        };
+      }
     }
     if (
       dataIndex === "nhap" &&
@@ -468,24 +830,28 @@ const TaoPhieuTonSilo = () => {
     const fmt = (n: number) =>
       n ? n.toLocaleString("en-US", { maximumFractionDigits: 3 }) : "";
     return (
-      <tr>
-        <td style={{ fontWeight: 600, textAlign: "center" }}>TỔNG</td>
-        <td />
-        <td />
-        <td style={{ fontWeight: 600, textAlign: "right" }}>
-          {fmt(totals.tonDau)}
-        </td>
-        <td style={{ fontWeight: 600, textAlign: "right" }}>
-          {fmt(totals.nhap)}
-        </td>
-        <td style={{ fontWeight: 600, textAlign: "right" }}>
-          {fmt(totals.xuat)}
-        </td>
-        <td style={{ fontWeight: 600, textAlign: "right" }}>
-          {fmt(totals.tonCuoi)}
-        </td>
-        <td />
-      </tr>
+      <Table.Summary fixed="bottom">
+        <Table.Summary.Row>
+          <Table.Summary.Cell index={0} align="center">
+            <b>TỔNG</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={1} />
+          <Table.Summary.Cell index={2} />
+          <Table.Summary.Cell index={3} align="right">
+            <b>{fmt(totals.tonDau)}</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={4} align="right">
+            <b>{fmt(totals.nhap)}</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={5} align="right">
+            <b>{fmt(totals.xuat)}</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={6} align="right">
+            <b>{fmt(totals.tonCuoi)}</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={7} />
+        </Table.Summary.Row>
+      </Table.Summary>
     );
   }, []);
 
@@ -544,14 +910,24 @@ const TaoPhieuTonSilo = () => {
           <Space wrap>
             {actionButtons}
             {!isFormLocked && (
-              <Button
-                icon={<CloudDownloadOutlined />}
-                loading={loadingInit}
-                onClick={handleLoadRows}
-                disabled={!ngaySXWatch || !scopeWatch}
-              >
-                Tải dữ liệu
-              </Button>
+              <>
+                <Button
+                  icon={<CloudDownloadOutlined />}
+                  loading={loadingInit}
+                  onClick={handleLoadRows}
+                  disabled={!ngaySXWatch || !scopeWatch}
+                >
+                  Tải dữ liệu
+                </Button>
+                <Button
+                  icon={<DeploymentUnitOutlined />}
+                  loading={loadingSilo}
+                  onClick={handleCheckSilo}
+                  disabled={!ngaySXWatch || !scopeWatch}
+                >
+                  Kiểm tra Silo
+                </Button>
+              </>
             )}
             <Button
               icon={<UndoOutlined />}
@@ -574,7 +950,7 @@ const TaoPhieuTonSilo = () => {
             {tableData.length} Silo
           </Typography.Text>
         </div>
-        <div style={{ width: "100%", marginBottom: 4 }}>
+        <div ref={tableWrapperRef} style={{ width: "100%", marginBottom: 4 }}>
           <CustomFormTable
             columns={tableColumns}
             initialData={tableData}
@@ -587,7 +963,35 @@ const TaoPhieuTonSilo = () => {
             showDeleteButton={false}
             summary={buildSummary}
             cellDecorator={cellDecorator}
-            stickyHeader
+            scrollY={tableScrollY}
+            onRow={(record) =>
+              record.isTachLieu
+                ? { style: { backgroundColor: "#fff7e6", outline: "1px solid #fa8c16" } }
+                : {}
+            }
+            rowActions={
+              !isFormLocked
+                ? (record, rowIdx) => (
+                    <Space size={4}>
+                      <Button
+                        size="small"
+                        icon={<ScissorOutlined />}
+                        onClick={() => handleOpenTach(rowIdx)}
+                        title="Chia tách liệu"
+                      />
+                      {record.isTachLieu && (
+                        <Button
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteTachRow(rowIdx)}
+                          title="Xóa dòng tách"
+                        />
+                      )}
+                    </Space>
+                  )
+                : undefined
+            }
           />
         </div>
 
@@ -600,6 +1004,7 @@ const TaoPhieuTonSilo = () => {
         )}
 
         <div
+          ref={signaturesRef}
           style={{
             marginTop: 20,
             display: "flex",
@@ -639,6 +1044,290 @@ const TaoPhieuTonSilo = () => {
           })}
         </div>
       </Form>
+
+      {/* ─── Modal Tách liệu ──────────────────────────────────────────────── */}
+      <Modal
+        title={
+          tachSourceRow
+            ? `Tách liệu — Silo ${tachSourceRow.maSilo ?? ""}`
+            : "Tách liệu"
+        }
+        open={showTachModal}
+        onCancel={() => setShowTachModal(false)}
+        width={820}
+        footer={[
+          <Button key="cancel" onClick={() => setShowTachModal(false)}>
+            Hủy
+          </Button>,
+          <Button key="add" onClick={addTachRow} icon={<PlusOutlined />}>
+            Thêm dòng
+          </Button>,
+          <Button key="save" type="primary" onClick={handleSaveTach}>
+            Lưu tách liệu
+          </Button>,
+        ]}
+        destroyOnHidden
+      >
+        {tachSourceRow && (
+          <div style={{ marginBottom: 12, fontSize: 12, color: "#888" }}>
+            Gốc: <b>{tachSourceRow.nguyenLieu || "—"}</b> · Tồn đầu:{" "}
+            <b>{tachSourceRow.tonDau || "—"}</b> · Nhập:{" "}
+            <b>{tachSourceRow.nhap || "—"}</b> · Xuất:{" "}
+            <b>{tachSourceRow.xuat || "—"}</b> · Tồn cuối:{" "}
+            <b>{tachSourceRow.tonCuoi || "—"}</b>
+          </div>
+        )}
+        <Table<TachLieuRow>
+          dataSource={tachRows}
+          rowKey="key"
+          pagination={false}
+          size="small"
+          loading={loadingTachNvl}
+          columns={[
+            {
+              title: "Dòng",
+              width: 60,
+              render: (_, __, idx) =>
+                idx === 0 ? (
+                  <span style={{ fontSize: 11, color: "#888" }}>
+                    Gốc (tự tính)
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 11, color: "#1677ff" }}>
+                    Tách {idx}
+                  </span>
+                ),
+            },
+            {
+              title: "Nguyên vật liệu",
+              dataIndex: "nguyenVatLieuID",
+              render: (val, _, idx) => (
+                <Select
+                  value={val}
+                  onChange={(v) => updateTachRow(idx, "nguyenVatLieuID", v)}
+                  style={{ width: "100%" }}
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="Chọn NVL"
+                  options={nvlList.map((n) => ({
+                    label: n.tenNVL,
+                    value: n.id,
+                  }))}
+                />
+              ),
+            },
+            ...(["tonDau", "nhap", "xuat", "tonCuoi"] as const).map((f) => ({
+              title:
+                f === "tonDau"
+                  ? "Tồn đầu"
+                  : f === "nhap"
+                    ? "Nhập"
+                    : f === "xuat"
+                      ? "Xuất"
+                      : "Tồn cuối",
+              dataIndex: f,
+              width: 100,
+              render: (val: any, _: any, idx: number) => {
+                const isAutoCalc = idx === 0 && tachRows.length > 1;
+                return (
+                  <input
+                    type="number"
+                    value={val ?? ""}
+                    onChange={(e) => updateTachRow(idx, f, e.target.value)}
+                    style={{
+                      width: "100%",
+                      border: "1px solid #d9d9d9",
+                      borderRadius: 4,
+                      padding: "4px 8px",
+                      backgroundColor: isAutoCalc ? "#fffbe6" : undefined,
+                    }}
+                    title={
+                      isAutoCalc
+                        ? `Tự tính: Gốc − tổng dòng tách (có thể sửa thủ công)`
+                        : undefined
+                    }
+                  />
+                );
+              },
+            })),
+            {
+              title: "Ghi chú",
+              dataIndex: "ghiChu",
+              render: (val, _, idx) => (
+                <input
+                  value={val ?? ""}
+                  onChange={(e) => updateTachRow(idx, "ghiChu", e.target.value)}
+                  style={{
+                    width: "100%",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 4,
+                    padding: "4px 8px",
+                  }}
+                />
+              ),
+            },
+            {
+              title: "",
+              width: 50,
+              render: (_, __, idx) =>
+                tachRows.length > 1 ? (
+                  <Button
+                    danger
+                    size="small"
+                    type="text"
+                    onClick={() => deleteTachRow(idx)}
+                  >
+                    Xóa
+                  </Button>
+                ) : null,
+            },
+          ]}
+        />
+      </Modal>
+
+      {/* ─── Modal Kiểm tra / Thiết lập Silo Mapping ──────────────────────── */}
+      <Modal
+        title={
+          <span>
+            Thiết lập Silo Mapping
+            {ngaySXWatch && (
+              <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8 }}>
+                — {(ngaySXWatch as dayjs.Dayjs).format("DD/MM/YYYY")} ·{" "}
+                {getTKVVScopeByNumber(scopeWatch ?? 0)?.label ?? ""}
+              </span>
+            )}
+            {modalNgaySXGan && (
+              <span
+                style={{
+                  fontWeight: 400,
+                  fontSize: 12,
+                  marginLeft: 8,
+                  color: "#888",
+                }}
+              >
+                (từ ngày {modalNgaySXGan})
+              </span>
+            )}
+          </span>
+        }
+        open={showSiloModal}
+        onCancel={() => setShowSiloModal(false)}
+        width={760}
+        footer={[
+          <Button key="cancel" onClick={() => setShowSiloModal(false)}>
+            Hủy
+          </Button>,
+          <Button key="add" onClick={addModalRow} icon={<PlusOutlined />}>
+            Thêm dòng
+          </Button>,
+          <Button
+            key="save"
+            type="primary"
+            loading={loadingBatch}
+            onClick={handleSaveMapping}
+          >
+            Lưu &amp; Tải dữ liệu
+          </Button>,
+        ]}
+        destroyOnHidden
+      >
+        <Table<SiloMappingModalRow>
+          dataSource={modalRows}
+          rowKey="key"
+          pagination={false}
+          size="small"
+          columns={[
+            {
+              title: "Ca",
+              dataIndex: "ca",
+              width: 110,
+              render: (val, _, idx) => (
+                <Select
+                  value={val}
+                  onChange={(v) => updateModalRow(idx, "ca", v)}
+                  style={{ width: "100%" }}
+                  options={[
+                    { label: "Ca ngày", value: 1 },
+                    { label: "Ca đêm", value: 2 },
+                  ]}
+                />
+              ),
+            },
+            {
+              title: "Tên nguyên vật liệu",
+              dataIndex: "nguyenVatLieuID",
+              render: (val, _, idx) => (
+                <Select
+                  value={val}
+                  onChange={(v) => updateModalRow(idx, "nguyenVatLieuID", v)}
+                  style={{ width: "100%" }}
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="Chọn NVL"
+                  options={nvlList.map((n) => ({
+                    label: n.tenNVL,
+                    value: n.id,
+                  }))}
+                />
+              ),
+            },
+            {
+              title: "Mã Silo",
+              dataIndex: "siloID",
+              width: 200,
+              render: (val, _, idx) => (
+                <Select
+                  value={val}
+                  onChange={(v) => updateModalRow(idx, "siloID", v)}
+                  style={{ width: "100%" }}
+                  showSearch
+                  allowClear
+                  optionFilterProp="label"
+                  placeholder="Chọn Silo"
+                  options={siloList.map((s) => ({
+                    label: s.maSilo ? `${s.maSilo} - ${s.tenSilo}` : s.tenSilo,
+                    value: s.id,
+                  }))}
+                />
+              ),
+            },
+            {
+              title: "Thứ tự",
+              dataIndex: "thuTu",
+              width: 80,
+              render: (val, _, idx) => (
+                <input
+                  type="number"
+                  value={val ?? ""}
+                  onChange={(e) =>
+                    updateModalRow(idx, "thuTu", Number(e.target.value))
+                  }
+                  style={{
+                    width: "100%",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 4,
+                    padding: "4px 8px",
+                  }}
+                />
+              ),
+            },
+            {
+              title: "",
+              width: 50,
+              render: (_, __, idx) => (
+                <Button
+                  danger
+                  size="small"
+                  type="text"
+                  onClick={() => deleteModalRow(idx)}
+                >
+                  Xóa
+                </Button>
+              ),
+            },
+          ]}
+        />
+      </Modal>
     </Card>
   );
 };

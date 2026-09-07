@@ -227,7 +227,7 @@ export const tkvvNvlSiloMappingApi = {
 
   batchCreate: (dto: {
     maBM: string; scope: string; ngaySX: string;
-    rows: {id: number, nguyenVatLieuID: number; siloID: number | null; ca: number; thuTu: number | null }[];
+    rows: { id?: number | null; maBM?: string | null; nguyenVatLieuID: number; siloID: number | null; ca: number; thuTu: number | null }[];
   }): Promise<{ count: number }> =>
     apiService.post("/api/TKVV_Silo/nvl-silo-mapping/batch", dto),
   getById: (id: number): Promise<TKVVNvlSiloMappingDto> =>
@@ -311,11 +311,25 @@ export interface TKVVBaoCaoSanLuongChiPhiDto {
   isAdjusted: boolean;
   adjustedBy: number | null;
   adjustedDate: string | null;
+  iD_CT_BBGN: number | null;
+}
+
+// TKVV_SanLuongDuLieu — dữ liệu PLC thô (GiaTriTuDong, từ SP_TKVV_GetTongSanLuong) + điều chỉnh tay
+export interface TKVVSanLuongDuLieuDto {
+  id: number;
+  tagID: string | null;
+  giaTriTuDong: number | null;
+  giaTriDieuChinh: number | null;
+  ngay: string;
+  ca: number;
+  scope: string | null;
+  thoiGian: string | null;
+  ngayTao: string;
 }
 
 export interface LoadDuLieuCanResultDto {
-  table1: TKVVBaoCaoSanLuongChiPhiDto[]; // Ca ngày
-  table2: TKVVBaoCaoSanLuongChiPhiDto[]; // Ca đêm
+  table: TKVVBaoCaoSanLuongChiPhiDto[]; // Chỉ dữ liệu của ca đang chọn
+  tongSanLuong: TKVVSanLuongDuLieuDto | null; // Tổng sản lượng tự động theo Ngay+Ca+Scope
 }
 
 export interface SaveBcSlRowDto {
@@ -341,6 +355,7 @@ export const tkvvBcSlChiPhiApi = {
     maBM: string;
     loaiDuLieu?: string;
     scope: number;
+    caSX?: number | null;
     createdBy?: number | null;
   }): Promise<LoadDuLieuCanResultDto> =>
     apiService.post("/api/TKVV_BCSL_ChiPhi/load-dulieu", {
@@ -421,6 +436,7 @@ export interface TKVVTonSiloRowDto {
   tonCuoiAuto: number | null;
   ghiChu: string | null;
   isAdjusted: boolean;
+  isTachLieu: boolean;
   adjustedBy: number | null;
   adjustedDate: string | null;
 }
@@ -443,6 +459,8 @@ export interface SaveTonSiloRowDto {
   xuatAuto?: number | null;
   tonCuoi?: number | null;
   tonCuoiAuto?: number | null;
+  isAdjusted?: boolean;
+  isTachLieu?: boolean;
   ghiChu?: string | null;
 }
 
@@ -535,4 +553,46 @@ export const tkvvNvlBbgnMappingApi = {
     apiService.put(`/api/TKVV_Silo/nvl-vattu-mapping/${id}`, dto),
 
   delete: (id: number) => apiService.delete(`/api/TKVV_Silo/nvl-vattu-mapping/${id}`),
+};
+
+// ─── BM_11 — Biên bản giao nhận ────────────────────────────────────────────────
+
+export interface TaoBBGNChiTietDto {
+  ID_VatTu: number;
+  MaLo: string;
+  DoAm_W: number | null;
+  KhoiLuong_BG: number;
+  GhiChu: string;
+}
+
+export interface TaoBBGNRequestDto {
+  IDTaiKhoanBG: number;
+  IDTaiKhoan: number;
+  XacNhan: string;
+  ID_Day: string;
+  IDCa: string;
+  NoiDungTrichYeu: string;
+  ChiTiet: TaoBBGNChiTietDto[];
+}
+
+export const bm11Api = {
+  taoPhieu: (request: TaoBBGNRequestDto): Promise<any> =>
+    apiService.post("http://10.192.39.98:88/api/BM_11/TaoPhieu", request),
+};
+
+// ─── TKVV_Scope_Xuong_Mapping — ánh xạ scope nội bộ → xưởng BBGN + NVL thành phẩm ──
+
+export interface TKVVScopeXuongMappingDto {
+  id: number;
+  scope: number;
+  maXuong: string | null;
+  tenXuong: string | null;
+  idXuongBBGN: number | null;
+  idNvlBbgnThanhPham: number | null;
+  tenVatTu: string | null;
+}
+
+export const tkvvScopeXuongMappingApi = {
+  getByScope: (scope: number): Promise<TKVVScopeXuongMappingDto> =>
+    apiService.get("/api/TKVV_BCSL_ChiPhi/scope-xuong-mapping", { params: { scope } }),
 };
