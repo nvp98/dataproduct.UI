@@ -20,6 +20,7 @@ import {
 import {
   CloudDownloadOutlined,
   DeploymentUnitOutlined,
+  FileAddOutlined,
   PartitionOutlined,
   PlusOutlined,
   UndoOutlined,
@@ -100,6 +101,13 @@ interface TaoBBGNChiTietRow {
 
 const MA_BM = "TKVV_BC_SanLuongChiPhi";
 const LOAI_DU_LIEU = "SANLUONG";
+
+const BBGN_LOCKED_FIELDS = new Set([
+  "thanhPhamL1",
+  "thanhPhamL2",
+  "thanhPhamL3",
+  "thanhPham_Note",
+]);
 
 const SCOPE_OPTIONS = TKVV_SCOPES.map((s) => ({
   label: s.label,
@@ -357,8 +365,11 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
               }
               if (freshData?.tongSanLuong) {
                 setTongSanLuong((prev) => ({
-                  giaTriTuDong: freshData.tongSanLuong!.giaTriTuDong ?? prev.giaTriTuDong,
-                  giaTriDieuChinh: freshData.tongSanLuong!.giaTriDieuChinh ?? prev.giaTriDieuChinh,
+                  giaTriTuDong:
+                    freshData.tongSanLuong!.giaTriTuDong ?? prev.giaTriTuDong,
+                  giaTriDieuChinh:
+                    freshData.tongSanLuong!.giaTriDieuChinh ??
+                    prev.giaTriDieuChinh,
                 }));
               }
             } catch {
@@ -781,6 +792,12 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     });
   }, [config, nvlList]);
 
+  const bbgnCellReadonly = useCallback(
+    (dataIndex: string, record: any) =>
+      record.id_CT_BBGN != null && BBGN_LOCKED_FIELDS.has(dataIndex),
+    [],
+  );
+
   const bcSlCellDecorator = useCallback((dataIndex: string, record: any) => {
     if (
       dataIndex === "klAm" &&
@@ -896,67 +913,88 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     setShowBBGNModal(false);
   }, [bbgnEditRows]);
 
-  const handleOpenTaoBBGN = useCallback(async () => {
-    setLoadingTaoBBGN(true);
-    try {
-      const fetchBGUsers = selectedScope
-        ? TaiKhoanApi.getNguoiKyByScope(selectedScope)
-        : TaiKhoanApi.getData();
-      const fetchScopeMapping = selectedScope
-        ? tkvvScopeXuongMappingApi.getByScope(selectedScope).catch(() => null)
-        : Promise.resolve(null);
+  const handleOpenTaoBBGN = useCallback(
+    async (sourceRows?: TableRow[]) => {
+      setLoadingTaoBBGN(true);
+      try {
+        const fetchBGUsers = selectedScope
+          ? TaiKhoanApi.getNguoiKyByScope(selectedScope)
+          : TaiKhoanApi.getData();
+        const fetchScopeMapping = selectedScope
+          ? tkvvScopeXuongMappingApi.getByScope(selectedScope).catch(() => null)
+          : Promise.resolve(null);
 
-      const [users, bgUsers, scopeMapping] = await Promise.all([
-        TaiKhoanApi.getData(),
-        fetchBGUsers,
-        fetchScopeMapping,
-      ]);
-      const idVatTuThanhPham = scopeMapping?.idNvlBbgnThanhPham ?? null;
-      const tenNvlThanhPham = scopeMapping?.tenVatTu ?? null;
-      setBbgnIdVatTu(idVatTuThanhPham);
-      setBbgnTenVatTu(tenNvlThanhPham);
-      setUserOptions(
-        ((users as any[]) || []).map((u: any) => ({
-          label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
-          value: u.iD_TaiKhoan,
-        })),
-      );
-      const bgList = (bgUsers as any[]) || [];
-      setNguoiBGOptions(
-        bgList.length > 0
-          ? bgList.map((u: any) => ({
-              label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
-              value: u.iD_TaiKhoan,
-            }))
-          : ((users as any[]) || []).map((u: any) => ({
-              label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
-              value: u.iD_TaiKhoan,
-            })),
-      );
-      const rows: TaoBBGNChiTietRow[] = bbgnEditRows.map((r, i) => ({
-        key: i,
-        tenNVL: tenNvlThanhPham ?? r.nguyenLieu ?? "",
-        nguyenVatLieuID: r.nguyenVatLieuID,
-        id_VatTu: idVatTuThanhPham,
-        idTaiKhoan: null,
-        noiDungTrichYeu: "",
-        maLo: "",
-        doAm_W: null,
-        khoiLuong_BG:
-          r.thanhPhamL1 !== "" && r.thanhPhamL1 != null
-            ? Number(r.thanhPhamL1)
-            : null,
-        ghiChu: "",
-      }));
-      setTaoBBGNRows(rows);
-      setIdTaiKhoanBG(currentUserInfo?.iD_TaiKhoan ?? null);
-      setShowTaoBBGNModal(true);
-    } catch {
-      message.error("Lỗi khi tải dữ liệu");
-    } finally {
-      setLoadingTaoBBGN(false);
-    }
-  }, [bbgnEditRows, currentUserInfo, selectedScope]);
+        const [users, bgUsers, scopeMapping] = await Promise.all([
+          TaiKhoanApi.getData(),
+          fetchBGUsers,
+          fetchScopeMapping,
+        ]);
+        const idVatTuThanhPham = scopeMapping?.idNvlBbgnThanhPham ?? null;
+        const tenNvlThanhPham = scopeMapping?.tenVatTu ?? null;
+        setBbgnIdVatTu(idVatTuThanhPham);
+        setBbgnTenVatTu(tenNvlThanhPham);
+        setUserOptions(
+          ((users as any[]) || []).map((u: any) => ({
+            label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
+            value: u.iD_TaiKhoan,
+          })),
+        );
+        const bgList = (bgUsers as any[]) || [];
+        setNguoiBGOptions(
+          bgList.length > 0
+            ? bgList.map((u: any) => ({
+                label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
+                value: u.iD_TaiKhoan,
+              }))
+            : ((users as any[]) || []).map((u: any) => ({
+                label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
+                value: u.iD_TaiKhoan,
+              })),
+        );
+
+        const initRows: TaoBBGNChiTietRow[] =
+          sourceRows && sourceRows.length > 0
+            ? sourceRows.map((r, i) => ({
+                key: i,
+                tenNVL: tenNvlThanhPham ?? r.nguyenLieu ?? "",
+                nguyenVatLieuID: r.nguyenVatLieuID,
+                id_VatTu: idVatTuThanhPham,
+                idTaiKhoan: null,
+                noiDungTrichYeu: "",
+                maLo: "",
+                doAm_W: 0,
+                khoiLuong_BG:
+                  r.thanhPhamL1 !== "" && r.thanhPhamL1 != null
+                    ? Number(r.thanhPhamL1)
+                    : null,
+                ghiChu: "",
+              }))
+            : [
+                {
+                  key: Date.now(),
+                  tenNVL: tenNvlThanhPham ?? "",
+                  nguyenVatLieuID: undefined,
+                  id_VatTu: idVatTuThanhPham,
+                  idTaiKhoan: null,
+                  noiDungTrichYeu: "",
+                  maLo: "",
+                  doAm_W: 0,
+                  khoiLuong_BG: null,
+                  ghiChu: "",
+                },
+              ];
+
+        setTaoBBGNRows(initRows);
+        setIdTaiKhoanBG(null);
+        setShowTaoBBGNModal(true);
+      } catch {
+        message.error("Lỗi khi tải dữ liệu");
+      } finally {
+        setLoadingTaoBBGN(false);
+      }
+    },
+    [currentUserInfo, selectedScope],
+  );
 
   const updateTaoBBGNRow = useCallback(
     (idx: number, field: keyof TaoBBGNChiTietRow, value: any) => {
@@ -978,7 +1016,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         idTaiKhoan: null,
         noiDungTrichYeu: "",
         maLo: "",
-        doAm_W: null,
+        doAm_W: 0,
         khoiLuong_BG: null,
         ghiChu: "",
       },
@@ -1030,13 +1068,13 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       message.success(`Đã tạo ${successCount} BBGN thành công`);
       setShowTaoBBGNModal(false);
       setShowBBGNModal(false);
-      await initData();
+      await handleLoadEMS();
     } catch {
       message.error("Lỗi khi tạo BBGN");
     } finally {
       setLoadingTaoBBGN(false);
     }
-  }, [idTaiKhoanBG, taoBBGNRows, ngaySXFilter, caSX, initData]);
+  }, [idTaiKhoanBG, taoBBGNRows, ngaySXFilter, caSX, handleLoadEMS]);
 
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
@@ -1123,13 +1161,21 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
                 >
                   Tải dữ liệu
                 </Button>
-                <Button
+                {/* <Button
                   icon={<DeploymentUnitOutlined />}
                   loading={loadingSilo}
                   onClick={handleCheckSilo}
                   disabled={!ngaySXFilter || !selectedScope}
                 >
                   Kiểm tra Silo
+                </Button> */}
+                <Button
+                  icon={<FileAddOutlined />}
+                  loading={loadingTaoBBGN}
+                  onClick={() => handleOpenTaoBBGN()}
+                  disabled={!ngaySXFilter || !selectedScope}
+                >
+                  Tạo BBGN
                 </Button>
               </>
             )}
@@ -1174,6 +1220,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
             showDeleteButton={!isFormLocked && tableData.length > 0}
             summary={buildSummary}
             cellDecorator={bcSlCellDecorator}
+            readonlyCellGetter={bbgnCellReadonly}
           />
         </div>
         {/* ─── Dòng TỔNG THÀNH PHẨM riêng ── */}
@@ -1237,7 +1284,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
           );
         })()}
 
-        {!isFormLocked && (
+        {/* {!isFormLocked && (
           <Button
             icon={<PlusOutlined />}
             onClick={() =>
@@ -1249,7 +1296,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
           >
             Thêm dòng
           </Button>
-        )}
+        )} */}
 
         {config.footerNotes?.length > 0 && (
           <div style={{ marginBottom: 12, fontSize: 12, color: "#888" }}>
@@ -1474,15 +1521,15 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
           <Button key="cancel" onClick={() => setShowBBGNModal(false)}>
             Đóng
           </Button>,
-          <Button
-            key="taoBBGN"
-            icon={<PartitionOutlined />}
-            loading={loadingTaoBBGN}
-            onClick={handleOpenTaoBBGN}
-            disabled={false}
-          >
-            Tạo BBGN
-          </Button>,
+          // <Button
+          //   key="taoBBGN"
+          //   icon={<PartitionOutlined />}
+          //   loading={loadingTaoBBGN}
+          //   onClick={() => handleOpenTaoBBGN(bbgnEditRows)}
+          //   disabled={false}
+          // >
+          //   Tạo BBGN
+          // </Button>,
           <Button
             key="apply"
             type="primary"
@@ -1634,7 +1681,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       >
         {/* Header nhỏ — Người bàn giao chung */}
         <Row gutter={16} style={{ marginBottom: 12 }}>
-          <Col span={10}>
+          <Col span={9}>
             <div style={{ marginBottom: 4, fontWeight: 500 }}>
               Người bàn giao <span style={{ color: "red" }}>*</span>
             </div>
@@ -1649,7 +1696,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
               status={!idTaiKhoanBG ? "error" : undefined}
             />
           </Col>
-          <Col span={7}>
+          <Col span={6}>
             <div style={{ marginBottom: 4, fontWeight: 500 }}>
               Ngày sản xuất
             </div>
@@ -1657,10 +1704,20 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
               {(ngaySXFilter ?? dayjs()).format("DD/MM/YYYY")}
             </div>
           </Col>
-          <Col span={7}>
+          <Col span={4}>
             <div style={{ marginBottom: 4, fontWeight: 500 }}>Ca</div>
             <div style={{ padding: "4px 0" }}>
               {caSX === 1 ? "Ca ngày (N)" : "Ca đêm (D)"}
+            </div>
+          </Col>
+          <Col span={5}>
+            <div style={{ marginBottom: 4, fontWeight: 500 }}>Tổng PLC</div>
+            <div
+              style={{ padding: "4px 0", fontWeight: 600, color: "#1677ff" }}
+            >
+              {tongSanLuong.giaTriDieuChinh != null
+                ? `${tongSanLuong.giaTriDieuChinh.toLocaleString("en-US", { maximumFractionDigits: 3 })} Tấn`
+                : "—"}
             </div>
           </Col>
         </Row>

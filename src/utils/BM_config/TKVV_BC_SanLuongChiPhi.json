@@ -21,14 +21,16 @@
         {
           "title": "Nguyên nhiên vật liệu đầu vào",
           "dataIndex": "nguyenLieu",
-          "width": 200
+          "width": 200,
+          "readonly": true
         },
         {
           "title": "KL ẩm (Tấn)",
           "dataIndex": "klAm",
           "width": 100,
           "type": "float",
-          "align": "right"
+          "align": "right",
+          "readonly": true
         },
         {
           "title": "Độ ẩm (%)",
@@ -42,7 +44,8 @@
           "dataIndex": "quyKho",
           "width": 110,
           "type": "float",
-          "align": "right"
+          "align": "right",
+          "readonly": true
         },
         {
           "title": "Vận chuyển",

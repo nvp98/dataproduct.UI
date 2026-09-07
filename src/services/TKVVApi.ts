@@ -577,7 +577,7 @@ export interface TaoBBGNRequestDto {
 
 export const bm11Api = {
   taoPhieu: (request: TaoBBGNRequestDto): Promise<any> =>
-    apiService.post("https://localhost:7029/api/BM_11/TaoPhieu", request),
+    apiService.post("http://10.192.39.98:88/api/BM_11/TaoPhieu", request),
 };
 
 // ─── TKVV_Scope_Xuong_Mapping — ánh xạ scope nội bộ → xưởng BBGN + NVL thành phẩm ──

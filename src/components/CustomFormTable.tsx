@@ -71,6 +71,8 @@ interface CustomFormTableProps {
   ) => { style?: React.CSSProperties; tooltip?: string | null } | null | undefined;
   /** Render nút hành động tùy chỉnh per-row, hiển thị ở cột "Thao tác" cuối bảng. */
   rowActions?: (record: any, rowIndex: number) => React.ReactNode;
+  /** Trả về true nếu ô (dataIndex, record) là readonly — ưu tiên cao hơn col.readonly. */
+  readonlyCellGetter?: (dataIndex: string, record: any) => boolean;
 }
 
 export default function CustomFormTable({
@@ -104,6 +106,7 @@ export default function CustomFormTable({
   showRowCloneButton = false,
   cellDecorator,
   rowActions,
+  readonlyCellGetter,
 }: CustomFormTableProps) {
   // Validate và filter input theo type
   const validateAndFormatInput = (
@@ -434,8 +437,9 @@ export default function CustomFormTable({
         width: col.width,
         fixed: col.fixed,
         render: (_: any, record: any, idx: number) => {
-              const baseStyleRo = getCellStyle(dataIndex, record[dataIndex], record, true);
-          if (isReadonly) {
+          const isCellReadonly = isReadonly || readonlyCellGetter?.(dataIndex, record) === true;
+          const baseStyleRo = getCellStyle(dataIndex, record[dataIndex], record, true);
+          if (isCellReadonly) {
             return wrapCell(
               <Input
                 placeholder={col.title}
