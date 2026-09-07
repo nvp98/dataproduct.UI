@@ -54,7 +54,7 @@ export interface TKVVDuLieuRawDto {
   id: number;
   tagID: string;
   giaTriTuDong: number | null; // giá trị PLC gốc
-  giaTriDieuChinh: number | null; // KTV/KCS chỉnh tay khi nghi ngờ PLC báo sai; null nếu chưa chỉnh
+  giaTriDieuChinh: number | null; // chỉ để đọc/hiển thị, không có API cập nhật
   ngay: string;
   ca: number;
   scope: string;
@@ -68,14 +68,11 @@ export const tkvvDuLieuApi = {
     ngayKetThuc?: string;
   }): Promise<TKVVDuLieuRawDto[]> =>
     apiService.get("/api/TKVV_BBSL/get-datasanluong-filter", { params }),
-
-  updateGiaTriDieuChinh: (id: number, giaTriDieuChinh: number | null): Promise<{ message: string }> =>
-    apiService.put(`/api/TKVV_BBSL/dulieu-tho/${id}/dieu-chinh`, { giaTriDieuChinh }),
 };
 
-// ─── Tổng tự động (PLC) theo Ngay/Ca/Scope — chỉ 1 số tổng/ca (ưu tiên GiaTriDieuChinh,
-// fallback GiaTriTuDong per-tag), hiển thị ở dòng "TỔNG CỘNG" của bảng phiếu để xem/đối
-// chiếu với số người dùng tự nhập, KHÔNG tự điền vào Loại 1/2/3/Phế phẩm.
+// ─── Tổng tự động (PLC) theo Ngay/Ca/Scope — chỉ 1 số tổng/ca (GiaTriTuDong per-tag),
+// hiển thị ở dòng "TỔNG CỘNG" của bảng phiếu để xem/đối chiếu với số người dùng tự
+// nhập, KHÔNG tự điền vào Loại 1/2/3/Phế phẩm.
 
 export interface TKVVTongTuDongDto {
   hasData: any;
