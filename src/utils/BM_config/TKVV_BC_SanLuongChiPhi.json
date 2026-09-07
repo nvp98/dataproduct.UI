@@ -21,18 +21,7 @@
         {
           "title": "Nguyên nhiên vật liệu đầu vào",
           "dataIndex": "nguyenLieu",
-          "width": 200,
-          "options": [
-            { "label": "Quặng Trung Hòa", "value": "Quặng Trung Hòa" },
-            { "label": "Hơi Lò Cao", "value": "Hơi Lò Cao" },
-            { "label": "Đá Vôi", "value": "Đá Vôi" },
-            { "label": "Đá Đôlômit", "value": "Đá Đôlômit" },
-            { "label": "Đôlômit Nung", "value": "Đôlômit Nung" },
-            { "label": "Vôi Nung", "value": "Vôi Nung" },
-            { "label": "Than UHG", "value": "Than UHG" },
-            { "label": "Than Coke", "value": "Than Coke" },
-            { "label": "Bụi Coke", "value": "Bụi Coke" }
-          ]
+          "width": 200
         },
         {
           "title": "KL ẩm (Tấn)",

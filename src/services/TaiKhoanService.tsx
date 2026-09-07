@@ -14,4 +14,7 @@ export const TaiKhoanApi = {
     apiService.get(`/api/TaiKhoan/info/${tenTaiKhoan}`),
   getQuyen: (tenTaiKhoan: string) =>
     apiService.get(`/api/TaiKhoan/quyen/${tenTaiKhoan}`),
+
+  getNguoiKyByScope: (scope: number) =>
+    apiService.get("/api/TaiKhoan/nguoiky-by-scope", { params: { scope } }),
 };
