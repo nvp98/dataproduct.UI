@@ -105,7 +105,7 @@ const recalcTachRow0 = (rows: TachLieuRow[], src: TableRow): TachLieuRow[] => {
       const v = parseFloat(String(r[f] ?? 0));
       return acc + (isNaN(v) ? 0 : v);
     }, 0);
-    row0[f] = parseFloat((srcVal - sumOthers).toFixed(3)) || 0;
+    (row0 as any)[f] = parseFloat((srcVal - sumOthers).toFixed(3)) || 0;
   });
   result[0] = row0;
   return result;

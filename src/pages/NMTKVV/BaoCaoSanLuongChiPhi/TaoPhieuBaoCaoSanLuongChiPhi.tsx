@@ -465,7 +465,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         const mapping = await tkvvNvlSiloMappingApi.getList({
           scope: String(selectedScope),
           ngaySX: ngayStr,
-          caSX,
+          ca: caSX,
         });
         setTableData(mapping.map(fromNearestMapping));
         message.info(
@@ -933,24 +933,14 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         const tenNvlThanhPham = scopeMapping?.tenVatTu ?? null;
         setBbgnIdVatTu(idVatTuThanhPham);
         setBbgnTenVatTu(tenNvlThanhPham);
-        setUserOptions(
-          ((users as any[]) || []).map((u: any) => ({
-            label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
-            value: u.iD_TaiKhoan,
-          })),
-        );
-        const bgList = (bgUsers as any[]) || [];
-        setNguoiBGOptions(
-          bgList.length > 0
-            ? bgList.map((u: any) => ({
-                label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
-                value: u.iD_TaiKhoan,
-              }))
-            : ((users as any[]) || []).map((u: any) => ({
-                label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
-                value: u.iD_TaiKhoan,
-              })),
-        );
+        const userList: any[] = Array.isArray(users) ? users : [];
+        const bgList: any[] = Array.isArray(bgUsers) ? bgUsers : [];
+        const toOption = (u: any) => ({
+          label: `${u.tenTaiKhoan} - ${u.hoVaTen}`,
+          value: u.iD_TaiKhoan,
+        });
+        setUserOptions(userList.map(toOption));
+        setNguoiBGOptions(bgList.length > 0 ? bgList.map(toOption) : userList.map(toOption));
 
         const initRows: TaoBBGNChiTietRow[] =
           sourceRows && sourceRows.length > 0
