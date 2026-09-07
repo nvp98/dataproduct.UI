@@ -6,6 +6,7 @@ import {
   Form,
   Input,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Table,
@@ -13,6 +14,7 @@ import {
   message,
 } from "antd";
 import {
+  ClearOutlined,
   CloudDownloadOutlined,
   DeleteOutlined,
   DeploymentUnitOutlined,
@@ -105,7 +107,7 @@ const recalcTachRow0 = (rows: TachLieuRow[], src: TableRow): TachLieuRow[] => {
       const v = parseFloat(String(r[f] ?? 0));
       return acc + (isNaN(v) ? 0 : v);
     }, 0);
-    row0[f] = parseFloat((srcVal - sumOthers).toFixed(3)) || 0;
+    (row0 as any)[f] = parseFloat((srcVal - sumOthers).toFixed(3)) || 0;
   });
   result[0] = row0;
   return result;
@@ -175,6 +177,7 @@ const TaoPhieuTonSilo = () => {
   const [siloList, setSiloList] = useState<TKVVSiloDto[]>([]);
   const [loadingBatch, setLoadingBatch] = useState(false);
   const [loadingSilo, setLoadingSilo] = useState(false);
+  const [loadingReset, setLoadingReset] = useState(false);
 
   const [showTachModal, setShowTachModal] = useState(false);
   const [tachSourceIdx, setTachSourceIdx] = useState<number | null>(null);
@@ -477,6 +480,31 @@ const TaoPhieuTonSilo = () => {
       setLoadingBatch(false);
     }
   }, [form, modalRows, handleLoadRows]);
+
+  const handleReset = useCallback(async () => {
+    const ngaySXValue: dayjs.Dayjs | null = form.getFieldValue("ngaySX");
+    const scopeValue: number | undefined = form.getFieldValue("scope");
+    const caValue: number | undefined = form.getFieldValue("ca");
+    if (!ngaySXValue || !scopeValue || !caValue) {
+      message.warning("Chọn đủ Ngày SX, Ca, Xưởng");
+      return;
+    }
+    setLoadingReset(true);
+    try {
+      await tkvvTonSiloApi.resetPhieu({
+        ngaySX: ngaySXValue.format("YYYY-MM-DD"),
+        ca: caValue,
+        scope: scopeValue,
+      });
+      setTableData([]);
+      message.success("Đã xóa dữ liệu — đang tải lại...");
+      await handleLoadRows();
+    } catch {
+      message.error("Lỗi khi reset phiếu");
+    } finally {
+      setLoadingReset(false);
+    }
+  }, [form, handleLoadRows]);
 
   const handleOpenTach = useCallback(
     async (rowIdx: number) => {
@@ -927,6 +955,23 @@ const TaoPhieuTonSilo = () => {
                 >
                   Kiểm tra Silo
                 </Button>
+                <Popconfirm
+                  title="Reset phiếu Tồn Silo"
+                  description="Xóa toàn bộ dữ liệu đã lưu cho ngày/ca/xưởng này và tải lại từ đầu?"
+                  okText="Xóa & Tải lại"
+                  cancelText="Hủy"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={handleReset}
+                >
+                  <Button
+                    icon={<ClearOutlined />}
+                    loading={loadingReset}
+                    danger
+                    disabled={!ngaySXWatch || !scopeWatch}
+                  >
+                    Reset phiếu
+                  </Button>
+                </Popconfirm>
               </>
             )}
             <Button

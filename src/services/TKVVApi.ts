@@ -481,6 +481,13 @@ export const tkvvTonSiloApi = {
     rows: SaveTonSiloRowDto[];
   }): Promise<void> =>
     apiService.post("/api/TKVV_TonSilo/save-phieu-rows", request),
+
+  resetPhieu: (params: {
+    ngaySX: string;
+    ca: number;
+    scope: number;
+  }): Promise<void> =>
+    apiService.delete("/api/TKVV_TonSilo/reset", { params }),
 };
 
 // ─── Tra cứu Vật tư SAP (PRODUCTDATA.Tbl_VatTu) ──────────────────────────────
