@@ -458,20 +458,12 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
 
       const activeRows = Array.isArray(result.table) ? result.table : [];
 
+      setTableData(activeRows.map(fromDbRecord));
       if (activeRows.length > 0) {
-        setTableData(activeRows.map(fromDbRecord));
         message.info(`${activeRows.length} dòng`);
       } else {
-        const mapping = await tkvvNvlSiloMappingApi.getList({
-          scope: String(selectedScope),
-          ngaySX: ngayStr,
-          ca: caSX,
-        });
-        setTableData(mapping.map(fromNearestMapping));
-        message.info(
-          mapping.length > 0
-            ? `${mapping.length} dòng từ mapping (chưa có dữ liệu EMS)`
-            : "Chưa có dữ liệu EMS và mapping",
+        message.warning(
+          `Chưa có phiếu Tồn silo được khởi tạo cho ngày ${ngaySXFilter.format("DD/MM/YYYY")} ca ${caSX === 1 ? "ngày" : "đêm"}`,
         );
       }
 
