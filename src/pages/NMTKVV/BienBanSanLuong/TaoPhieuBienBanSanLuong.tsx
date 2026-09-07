@@ -227,7 +227,8 @@ const TaoPhieuBienBanSanLuong = () => {
 
           tenSanPham: c.nguyenVatLieuID,
 
-          donViTinh: nvlById.get(c.nguyenVatLieuID)?.donViTinh ?? "",
+          // donViTinh được đồng bộ riêng khi nvlOptions tải xong (xem effect bên dưới)
+          donViTinh: "",
 
           ghiChu: c.ghiChu ?? "",
 
@@ -240,8 +241,30 @@ const TaoPhieuBienBanSanLuong = () => {
           "4": c.phePham ?? "",
         }));
     },
-    [nvlById],
+    [],
   );
+
+  // Đồng bộ ĐVT khi danh mục NVL tải/thay đổi, không re-init toàn bộ form/table
+  useEffect(() => {
+    if (nvlOptions.length === 0) {
+      return;
+    }
+
+    setTableData((prev) =>
+      prev.map((row) => {
+        const nvlId = Number(row.tenSanPham) || null;
+
+        const dvt = nvlId ? (nvlById.get(nvlId)?.donViTinh ?? "") : "";
+
+        return dvt !== row.donViTinh
+          ? {
+              ...row,
+              donViTinh: dvt,
+            }
+          : row;
+      }),
+    );
+  }, [nvlById, nvlOptions.length]);
 
   // ─────────────────────────────────────────────────────────────
   // INIT DATA
@@ -392,49 +415,8 @@ const TaoPhieuBienBanSanLuong = () => {
   // Chưa tự động tính dòng cuối.
   // ─────────────────────────────────────────────────────────────
 
-  const fetchTongTuDong = useCallback(async () => {
-    const formData = form.getFieldsValue();
-
-    const ngay = formData.NgaySX
-      ? dayjs(formData.NgaySX).format("YYYY-MM-DD")
-      : null;
-
-    const ca = formData.ca ?? null;
-
-    const scope = formData.scope ?? null;
-
-    if (!ngay || ca === null || scope === null) {
-      setTongTuDongPLC(null);
-
-      return;
-    }
-
-    try {
-      const res = await tkvvTongTuDongApi.get({
-        ngay,
-        ca,
-        scope,
-      });
-
-      const tong = res.tongTuDong ?? 0;
-
-      setTongTuDongPLC(tong);
-    } catch {
-      setTongTuDongPLC(null);
-    }
-  }, [form]);
-
-  const NgaySXValue = Form.useWatch(
-    (values) =>
-      values.NgaySX ? dayjs(values.NgaySX).format("YYYY-MM-DD") : null,
-    form,
-  );
-
-  const caValue = Form.useWatch("ca", form);
-
-  useEffect(() => {
-    fetchTongTuDong();
-  }, [NgaySXValue, caValue, scopeValue, fetchTongTuDong]);
+  // Không tự động gọi API khi Ngày/Ca/Xưởng thay đổi.
+  // Chỉ gọi khi người dùng bấm nút "Tải dữ liệu" (xem handleTaiDuLieu).
 
   // ─────────────────────────────────────────────────────────────
   // TẢI LẠI TỔNG PLC
