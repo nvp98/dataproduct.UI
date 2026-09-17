@@ -184,6 +184,7 @@ export default function PhanBoThanCocTab({ ngay, ca, idLoCao }: PhanBoThanCocTab
         idNvl: row.idNvl,
         ngay: ngay.format("YYYY-MM-DD"),
         ca,
+        idLoCao,
         tyLe: percent / 100,
         idNguoiNhap,
       });
