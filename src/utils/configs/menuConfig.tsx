@@ -511,8 +511,7 @@ export const menuConfig = [
       {
         key: "sub2-8",
         label: "NM.LG",
-        children: [
-          {
+        children: [          {
             key: "sub2-8-1",
             maBM: BM_CONFIG.NMLG.NMLG_BM_NapLieuLoCao,
             label: (
@@ -542,6 +541,15 @@ export const menuConfig = [
                 <NavLink to="/nkvhthanphunlocao">
                   BM.10/QT.05.09 (Nhật ký vận hành phun than lò cao)
                 </NavLink>
+              </Tooltip>
+            ),
+          }, 
+          {
+            key: "sub2-8-4",
+            maBM: BM_CONFIG.NMLG.NMLG_BM_PhieuDieuChinh,
+            label: (
+              <Tooltip title="Phiếu điều chỉnh dữ liệu NM.LG">
+                <NavLink to="/phieudieuchinh">Phiếu điều chỉnh</NavLink>
               </Tooltip>
             ),
           },

@@ -196,6 +196,11 @@ export const bmQuyenConfig = {
       nhom: "NM.NL",
     },
     {
+      maBm: BM_CONFIG.NMLG.NMLG_BM_PhieuDieuChinh,
+      tenBm: "Phiếu điều chỉnh số liệu NM.LG",
+      nhom: "NM.NMLG",
+    },
+    {
       maBm: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
       tenBm: "Biên bản tồn silo lò cao",
       nhom: "NM.NMLG",

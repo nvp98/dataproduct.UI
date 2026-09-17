@@ -1,0 +1,115 @@
+{
+  "code": "NMLG_BM_PhieuDieuChinh",
+  "title": "PHIẾU ĐIỀU CHỈNH SỐ LIỆU NM.LG",
+  "prefix": "NMLG_PDC",
+  "headerInfo": {
+    "company": "HÒA PHÁT DUNG QUẤT",
+    "subCompany": "CÔNG TY CỔ PHẦN THÉP"
+  },
+
+  "isoInfo": {
+    "code": "",
+    "effectiveDate": "",
+    "revision": ""
+  },
+
+  "headerFields": [
+    {
+      "label": "Ngày",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    },
+    {
+      "label": "Ca",
+      "type": "select",
+      "key": "ca",
+      "required": true,
+      "options": [
+        { "label": "Ca 1", "value": 1 },
+        { "label": "Ca 2", "value": 2 }
+      ]
+    },
+    {
+      "label": "Kíp",
+      "type": "select",
+      "key": "kip",
+      "required": true,
+      "options": [
+        { "label": "Kíp A", "value": "A" },
+        { "label": "Kíp B", "value": "B" },
+        { "label": "Kíp C", "value": "C" }
+      ]
+    }
+  ],
+
+  "layout": [
+    {
+      "sectionType": "table",
+      "title": "Chi tiết điều chỉnh",
+      "key": "table1",
+      "dataSource": {
+        "type": "manual",
+        "url": ""
+      },
+      "columns": [
+        { "title": "Thứ tự", "dataIndex": "thuTu", "width": 60, "readonly": true, "type": "number" },
+        { "title": "Loại điều chỉnh", "dataIndex": "loaiDieuChinh", "width": 130 , "type": "select"
+        , "options": [
+          { "label": "Nhập - Xuất", "value": 1 },
+          { "label": "Nội bộ - Xuất SX", "value": 2 }
+        ]},
+         { "title": "Loại số điều chỉnh", "dataIndex": "loaiSoDieuChinh", "width": 110 , "type": "select"
+        , "options": [
+          { "label": "Trước ẩm", "value": 1 },
+          { "label": "Sau ẩm", "value": 2 }
+        ]},
+        { "title": "Tên NVL", "dataIndex": "tenNVL", "width": 200, "isLabel": true },
+        { "title": "Tên NVL chi tiết", "dataIndex": "idNVLChiTiet", "width": 200, "type": "select" },
+        { "title": "ID Nhóm NVL", "dataIndex": "idNhomNVL", "width": 130, "type": "number" },
+        { "title": "ĐVT", "dataIndex": "dvt", "width": 80 },
+        { "title": "Mã lô", "dataIndex": "maLo", "width": 120, "isLabel": true },
+
+        {
+          "title": "Bên xuất",
+          "children": [
+            { "title": "Phòng ban", "dataIndex": "phongBanXuat", "width": 160, "isLabel": true },
+            { "title": "Xưởng", "dataIndex": "xuongXuat", "width": 160, "isLabel": true },
+            { "title": "Khối lượng", "dataIndex": "khoiLuongXuat", "width": 130, "type": "float", "isLabel": true },
+            { "title": "KL quy khô", "dataIndex": "khoiLuongQuyKhoXuat", "width": 130, "type": "float", "isLabel": true }
+          ]
+        },
+        {
+          "title": "Bên nhập",
+          "children": [
+            { "title": "Phòng ban", "dataIndex": "phongBanNhap", "width": 160, "isLabel": true },
+            { "title": "Xưởng", "dataIndex": "xuongNhap", "width": 160, "isLabel": true },
+            { "title": "Khối lượng", "dataIndex": "khoiLuongNhap", "width": 130, "type": "float" },
+            { "title": "KL quy khô", "dataIndex": "khoiLuongQuyKhoNhap", "width": 130, "type": "float", "isLabel": true }
+          ]
+        },
+        { "title": "Độ ẩm (%)", "dataIndex": "doAm", "width": 100, "type": "float" },
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 220 },
+        { "title": "Vị trí", "dataIndex": "viTri", "width": 150 },
+        { "title": "Phân loại", "dataIndex": "phanLoai", "width": 150 }
+      ]
+    }
+  ],
+
+  "footerNotes": [
+    "Phiếu dùng để điều chỉnh lại số liệu Nguyên/Nhiên liệu vật tư giữa các bên xuất - nhập của NM.LG. Nguồn tham chiếu: LG_PhieuDieuChinh_ChiTiet."
+  ],
+
+  "signatures": [
+    {
+      "label": "Người lập phiếu",
+      "type": "selectNguoiKy",
+      "key": "nguoiLapPhieu_NM.LG",
+      "maphongBan": "NM.LG",
+      "capDuyet": 0,
+      "isChon": true,
+      "required": true
+    }
+   
+  ]
+}

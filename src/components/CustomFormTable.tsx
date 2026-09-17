@@ -63,6 +63,7 @@ interface CustomFormTableProps {
   showCloneButton?: boolean;
   cloneRowButtonText?: string;
   showRowCloneButton?: boolean;
+  showPlaceholder?: boolean; // Nếu false, ô nhập không hiển thị placeholder (tên cột)
 }
 
 export default function CustomFormTable({
@@ -94,6 +95,7 @@ export default function CustomFormTable({
   showCloneButton = false,
   cloneRowButtonText = "+ Nhân dòng trên",
   showRowCloneButton = false,
+  showPlaceholder = true,
 }: CustomFormTableProps) {
   // Validate và filter input theo type
   const validateAndFormatInput = (
@@ -309,9 +311,13 @@ export default function CustomFormTable({
                 dataIndex: key,
                 width: child.width,
                 render: (_: any, record: any, idx: number) =>
-                  readonlyFields.includes(key) ? (
+                  (child as any).isLabel ? (
+                    <div style={{ paddingLeft: 8 }}>
+                      {formatIfNeeded((child as any)?.format, record[key])}
+                    </div>
+                  ) : readonlyFields.includes(key) ? (
                     <Input
-                      placeholder={child.title}
+                      placeholder={showPlaceholder ? child.title : undefined}
                       value={formatIfNeeded(
                         (child as any)?.format,
                         record[key],
@@ -326,7 +332,7 @@ export default function CustomFormTable({
                     />
                   ) : (child as any).options ? (
                     <Select
-                      placeholder={child.title}
+                      placeholder={showPlaceholder ? child.title : undefined}
                       value={record[key] ?? undefined}
                       onChange={(value) => {
                         handleCellChange(value, idx, key);
@@ -337,7 +343,7 @@ export default function CustomFormTable({
                     />
                   ) : (
                     <Input
-                      placeholder={child.title}
+                      placeholder={showPlaceholder ? child.title : undefined}
                       value={record[key] ?? ""}
                       onChange={(e) => {
                         const validated = validateAndFormatInput(
@@ -405,7 +411,7 @@ export default function CustomFormTable({
           if (isReadonly) {
             return (
               <Input
-                placeholder={col.title}
+                placeholder={showPlaceholder ? col.title : undefined}
                 value={formatIfNeeded(col.format, record[dataIndex])}
                 readOnly
                 style={getCellStyle(dataIndex, record[dataIndex], record, true)}
@@ -415,7 +421,7 @@ export default function CustomFormTable({
           if (col.options) {
             return (
               <Select
-                placeholder={col.title}
+                placeholder={showPlaceholder ? col.title : undefined}
                 value={record[dataIndex] ?? undefined}
                 onChange={(value) => handleCellChange(value, idx, dataIndex)}
                 options={col.options}
@@ -426,7 +432,7 @@ export default function CustomFormTable({
           }
           return (
             <Input
-              placeholder={col.title}
+              placeholder={showPlaceholder ? col.title : undefined}
               value={record[dataIndex] ?? ""}
               onChange={(e) => {
                 const validated = validateAndFormatInput(e.target.value, col.type as "number" | "text" | "float" | undefined);

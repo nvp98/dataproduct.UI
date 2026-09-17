@@ -106,6 +106,8 @@ import QuanLyTaiKhoan from "../pages/Settings/QuanLyTaiKhoan";
 import ThongKePhieuCTD from "../pages/NMCTD/ThongKe/ThongKePhieuCTD";
 import ThongKePhieuLG from "../pages/NMLG/ThongKe/ThongKePhieuLG";
 import PhanBoDuLieuPage from "../pages/NMLG/PhanBoDuLieu/PhanBoDuLieuPage";
+import PhieuDieuChinhList from "../pages/NMLG/PhieuDieuChinh/PhieuDieuChinhList";
+import TaoPhieuDieuChinh from "../pages/NMLG/PhieuDieuChinh/TaoPhieuDieuChinh";
 import PhuLieuHRC1 from "../pages/KhoDuLieu/NM.HRC1/PhuLieuHRC1";
 
 export const routes = [
@@ -1480,6 +1482,66 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <PhanBoDuLieuPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "phieudieuchinh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <PhieuDieuChinhList />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/phieudieuchinh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <PhieuDieuChinhList type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/phieudieuchinh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <PhieuDieuChinhList type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieudieuchinh",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuDieuChinh />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieudieuchinh/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuDieuChinh />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitietphieudieuchinh/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuDieuChinh />
             </RequireRole>
           </RequireAuth>
         ),
