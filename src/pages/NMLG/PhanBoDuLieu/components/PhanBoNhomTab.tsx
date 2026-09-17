@@ -178,6 +178,7 @@ export default function PhanBoNhomTab({ loaiPhanBo, ngay, ca, idLoCao }: PhanBoN
         idNvl: row.idNvl,
         ngay: ngay.format("YYYY-MM-DD"),
         ca,
+        idLoCao,
         tyLe: percent / 100,
         idNguoiNhap,
       });
