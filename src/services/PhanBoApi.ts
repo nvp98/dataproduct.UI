@@ -118,6 +118,7 @@ export interface CreateTyLePhanBoDto {
   idNvl: number;
   ngay: string;
   ca?: number | null;
+  idLoCao: number;
   tyLe: number;
   ghiChu?: string | null;
   idNguoiNhap: number;
@@ -130,9 +131,9 @@ export const tyLePhanBoApi = {
   create: (dto: CreateTyLePhanBoDto): Promise<TyLePhanBoDto> =>
     apiService.post("/api/LG_PhanBo/ty-le/create", dto),
 
-  // true nếu BẤT KỲ lò cao nào của (Ngày, Ca) đã chốt — tỷ lệ dùng chung cho mọi lò cao nên phạm vi
-  // chặn sửa % rộng hơn phạm vi chốt/hủy chốt (vốn theo từng lò cao riêng)
-  isCaDaChot: (params: { ngay: string; ca: number }): Promise<boolean> =>
+  // true nếu ĐÚNG lò cao đang thao tác đã chốt (Ngày, Ca, Lò cao) — Chốt là snapshot nên lò cao KHÁC
+  // đã chốt không ảnh hưởng, chỉ cần chặn đúng phạm vi lò cao đang sửa
+  isCaDaChot: (params: { ngay: string; ca: number; idLoCao: number }): Promise<boolean> =>
     apiService.get("/api/LG_PhanBo/ty-le/is-ca-da-chot", { params }),
 };
 
