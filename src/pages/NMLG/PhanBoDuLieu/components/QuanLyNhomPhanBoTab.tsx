@@ -334,16 +334,16 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: Nvl
   const [savingTyLeNvlId, setSavingTyLeNvlId] = useState<number | null>(null);
   const [daChot, setDaChot] = useState(false);
 
-  // % dùng chung cho NVL ở MỌI lò cao của (Ngày, Ca) — nên phải hỏi đã chốt ở BẤT KỲ lò cao nào của
-  // (Ngày, Ca), không phải riêng idLoCao đang chọn, để khớp đúng phạm vi backend thực sự chặn khi sửa %.
+  // Chốt là snapshot (không tính lại/ghi đè) nên sửa % sau khi lò cao KHÁC đã chốt không ảnh hưởng —
+  // chỉ cần hỏi đã chốt đúng idLoCao đang chọn, khớp đúng phạm vi backend thực sự chặn khi sửa %.
   const fetchDaChot = useCallback(async () => {
     try {
-      const res = await tyLePhanBoApi.isCaDaChot({ ngay: ngayStr, ca });
+      const res = await tyLePhanBoApi.isCaDaChot({ ngay: ngayStr, ca, idLoCao });
       setDaChot(res);
     } catch {
       setDaChot(false);
     }
-  }, [ngayStr, ca]);
+  }, [ngayStr, ca, idLoCao]);
 
   const fetchNvl = useCallback(async () => {
     setLoading(true);
@@ -418,6 +418,7 @@ function NvlNhomPanel({ nhom, nvlOptions, ngay, ca, idLoCao, refreshToken }: Nvl
         idNvl: row.idNvl,
         ngay: ngayStr,
         ca,
+        idLoCao,
         tyLe: percent / 100,
         idNguoiNhap,
       });
