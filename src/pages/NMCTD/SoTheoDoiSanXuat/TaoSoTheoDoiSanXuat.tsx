@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import CTD_STD_Sanxuat from "../../../utils/BM_config/CTD_STD_Sanxuat.json";
-import { Button, Card, Form, Input, Typography, message, Upload } from "antd";
+import { Button, Card, Form, Input, Select, Typography, message, Upload } from "antd";
 import {
-  FilePdfOutlined,
   FileExcelOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
+import { DonTrongPhoiServiceApi } from "../../../services/DonTrongPhoiServiceApi";
+import type { DonTrongPhoi } from "../../../services/DonTrongPhoiServiceApi";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -38,6 +39,7 @@ const TaoSoTheoDoiSanXuat = () => {
   const [table1Data, setTable1Data] = useState<TableRow[]>([]);
   const [table2Data, setTable2Data] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [donTrongPhoiData, setDonTrongPhoiData] = useState<DonTrongPhoi[]>([]);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -188,6 +190,12 @@ const TaoSoTheoDoiSanXuat = () => {
   useEffect(() => {
     initData();
   }, [initData]);
+
+  useEffect(() => {
+    DonTrongPhoiServiceApi.getAll()
+      .then(setDonTrongPhoiData)
+      .catch(() => {});
+  }, []);
 
   const normalizeMacPhoiLoai = (value: any): 1 | 2 | 3 | null => {
     if (value == null || value === "") return null;
@@ -531,6 +539,29 @@ const TaoSoTheoDoiSanXuat = () => {
 
           return row;
         });
+        // Validate macPhoi + kichThuoc với danh sách DonTrongPhoi
+        if (donTrongPhoiData.length > 0) {
+          const warnings: string[] = [];
+          imported.forEach((row, i) => {
+            const mp = row.macPhoi as string | undefined;
+            const kt = row.kichThuoc as string | undefined;
+            if (mp) {
+              const macExists = donTrongPhoiData.some((d) => d.mac === mp);
+              if (!macExists) {
+                warnings.push(`Dòng ${i + 1}: mác "${mp}" không có trong danh sách`);
+              } else if (kt) {
+                const ktExists = donTrongPhoiData.some((d) => d.mac === mp && d.kichThuoc === kt);
+                if (!ktExists) {
+                  warnings.push(`Dòng ${i + 1}: kích thước "${kt}" không hợp lệ cho mác phôi "${mp}"`);
+                }
+              }
+            }
+          });
+          if (warnings.length > 0) {
+            message.warning(`Dữ liệu import có ${warnings.length} dòng không khớp danh mục:\n${warnings.join("\n")}`);
+          }
+        }
+
         setTable1Data(imported);
         message.success(`Import thành công ${imported.length} dòng dữ liệu!`);
       } catch (error) {
@@ -577,6 +608,70 @@ const TaoSoTheoDoiSanXuat = () => {
     (section: any) =>
       section.sectionType === "table" && section.key === "table2",
   );
+
+  // Khi macPhoi thay đổi → xóa kichThuoc nếu không còn hợp lệ
+  const handleTable1CellChange = useCallback((rowIndex: number, dataIndex: string, _value: any, row: any) => {
+    if (dataIndex === "macPhoi") {
+      const validKichThuocs = donTrongPhoiData
+        .filter((d) => d.mac === _value)
+        .map((d) => d.kichThuoc)
+        .filter(Boolean);
+      if (row.kichThuoc && !validKichThuocs.includes(row.kichThuoc)) {
+        setTable1Data((prev) =>
+          prev.map((r, i) => (i === rowIndex ? { ...r, kichThuoc: null } : r)),
+        );
+      }
+    }
+  }, [donTrongPhoiData]);
+
+  // Columns với Select động cho macPhoi và kichThuoc
+  const table1ColumnsWithDynamic = useMemo(() => {
+    if (!table1Section) return [];
+    const uniqueMacs = [...new Set(donTrongPhoiData.map((d) => d.mac).filter(Boolean) as string[])].sort();
+    return (table1Section.columns || []).map((col: any) => {
+      if (col.dataIndex === "macPhoi") {
+        return {
+          ...col,
+          renderCell: (record: any, _idx: number, onChange: (v: any) => void, disabled: boolean) => (
+            <Select
+              value={record.macPhoi || undefined}
+              onChange={onChange}
+              disabled={disabled}
+              style={{ width: "100%" }}
+              allowClear
+              showSearch
+              placeholder="Chọn mác"
+              options={uniqueMacs.map((m) => ({ label: m, value: m }))}
+            />
+          ),
+        };
+      }
+      if (col.dataIndex === "kichThuoc") {
+        return {
+          ...col,
+          renderCell: (record: any, _idx: number, onChange: (v: any) => void, disabled: boolean) => {
+            const kichThuocOptions = donTrongPhoiData
+              .filter((d) => d.mac === record.macPhoi && d.kichThuoc)
+              .map((d) => d.kichThuoc as string);
+            const uniqueOptions = [...new Set(kichThuocOptions)].sort();
+            return (
+              <Select
+                value={record.kichThuoc || undefined}
+                onChange={onChange}
+                disabled={disabled || !record.macPhoi}
+                style={{ width: "100%" }}
+                allowClear
+                showSearch
+                placeholder={record.macPhoi ? "Chọn kích thước" : "Chọn mác trước"}
+                options={uniqueOptions.map((k) => ({ label: k, value: k }))}
+              />
+            );
+          },
+        };
+      }
+      return col;
+    });
+  }, [table1Section, donTrongPhoiData]);
 
   const handleAddTable1Triplet = useCallback(() => {
     const ts = Date.now();
@@ -709,9 +804,10 @@ const TaoSoTheoDoiSanXuat = () => {
               </Button>
             )}
             <CustomFormTable
-              columns={table1Section.columns || []}
+              columns={table1ColumnsWithDynamic}
               initialData={table1Data}
               onDataChange={(rows) => setTable1Data(rows as TableRow[])}
+              onCellChange={handleTable1CellChange}
               loading={loading}
               editable={!isFormLocked}
               showAddButton={false}

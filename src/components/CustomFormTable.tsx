@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
   Table,
   Button,
@@ -26,6 +26,8 @@ export interface FormColumnDef {
   options?: Array<{ label: string; value: string | number }>;
   /** Nested header groups — hỗ trợ đệ quy nhiều cấp */
   children?: FormColumnDef[];
+  /** Override toàn bộ cell render cho cột này */
+  renderCell?: (record: any, idx: number, onChange: (val: any) => void, disabled: boolean) => ReactNode;
 }
 
 interface CustomFormTableProps {
@@ -411,6 +413,9 @@ export default function CustomFormTable({
                 style={getCellStyle(dataIndex, record[dataIndex], record, true)}
               />
             );
+          }
+          if (col.renderCell) {
+            return col.renderCell(record, idx, (val) => handleCellChange(val, idx, dataIndex), !editable);
           }
           if (col.options) {
             return (

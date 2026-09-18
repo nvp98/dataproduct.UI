@@ -1391,6 +1391,15 @@ export const menuConfig = [
           </Tooltip>
         ),
       },
+      {
+        key: "admin-5",
+        icon: <SettingOutlined />,
+        label: (
+          <Tooltip title="Quản lý đơn trọng phôi">
+            <NavLink to="/don-trong-phoi">Đơn trọng phôi</NavLink>
+          </Tooltip>
+        ),
+      },
       // {
       //   key: "admin-5",
       //   icon: <UserOutlined />,
