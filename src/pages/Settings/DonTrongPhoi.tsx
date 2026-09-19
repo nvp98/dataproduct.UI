@@ -10,20 +10,24 @@ import {
   Row,
   Space,
   Table,
+  Upload,
   message,
 } from "antd";
+import type { UploadProps } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
   EditOutlined,
   DeleteOutlined,
+  DownloadOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import {
   DonTrongPhoiServiceApi,
 } from "../../services/DonTrongPhoiServiceApi";
-import type { DonTrongPhoi, DonTrongPhoiPayload } from "../../services/DonTrongPhoiServiceApi";
+import type { DonTrongPhoi, DonTrongPhoiPayload, ImportDonTrongPhoiResult } from "../../services/DonTrongPhoiServiceApi";
 import type { ColumnType } from "antd/es/table";
 
 type FilterState = {
@@ -42,6 +46,10 @@ const QuanLyDonTrongPhoi = () => {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
   const [filters, setFilters] = useState<FilterState>({});
   const [editingRecord, setEditingRecord] = useState<DonTrongPhoi | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResultVisible, setImportResultVisible] = useState(false);
+  const [importResult, setImportResult] = useState<ImportDonTrongPhoiResult | null>(null);
 
   const fetchData = async (
     page = pagination.current,
@@ -142,6 +150,43 @@ const QuanLyDonTrongPhoi = () => {
     }
   };
 
+  const handleExport = async () => {
+    setExportLoading(true);
+    try {
+      await DonTrongPhoiServiceApi.exportExcel();
+      message.success("Đã tải file Excel thành công");
+    } catch {
+      message.error("Không thể tải file Excel");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const uploadProps: UploadProps = {
+    accept: ".xlsx,.xls",
+    showUploadList: false,
+    beforeUpload: async (file) => {
+      setImportLoading(true);
+      try {
+        const result = await DonTrongPhoiServiceApi.importExcel(file);
+        setImportResult(result);
+        setImportResultVisible(true);
+        if (result.created > 0 || result.updated > 0) {
+          fetchData(1, pagination.pageSize);
+        }
+      } catch (err: unknown) {
+        const errMsg =
+          typeof err === "object" && err !== null && "message" in err
+            ? String((err as { message: string }).message)
+            : "Không thể import file Excel";
+        message.error(errMsg);
+      } finally {
+        setImportLoading(false);
+      }
+      return false;
+    },
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -203,9 +248,23 @@ const QuanLyDonTrongPhoi = () => {
       <Card
         title="Quản lý Đơn trọng phôi"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-            Thêm mới
-          </Button>
+          <Space>
+            <Button
+              icon={<DownloadOutlined />}
+              loading={exportLoading}
+              onClick={handleExport}
+            >
+              Tải về
+            </Button>
+            <Upload {...uploadProps}>
+              <Button icon={<UploadOutlined />} loading={importLoading}>
+                Import Excel
+              </Button>
+            </Upload>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+              Thêm mới
+            </Button>
+          </Space>
         }
         style={{ marginBottom: 16 }}
       >
@@ -258,6 +317,7 @@ const QuanLyDonTrongPhoi = () => {
         />
       </Card>
 
+      {/* Modal thêm/sửa */}
       <Modal
         title={editingRecord ? "Cập nhật Đơn trọng phôi" : "Thêm Đơn trọng phôi"}
         open={modalVisible}
@@ -308,6 +368,39 @@ const QuanLyDonTrongPhoi = () => {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal kết quả import */}
+      <Modal
+        title="Kết quả Import"
+        open={importResultVisible}
+        onOk={() => setImportResultVisible(false)}
+        onCancel={() => setImportResultVisible(false)}
+        cancelButtonProps={{ style: { display: "none" } }}
+        okText="Đóng"
+      >
+        {importResult && (
+          <div>
+            <p>
+              <strong style={{ color: "#52c41a" }}>Tạo mới:</strong> {importResult.created} bản ghi
+            </p>
+            <p>
+              <strong style={{ color: "#1677ff" }}>Cập nhật:</strong> {importResult.updated} bản ghi
+            </p>
+            {importResult.errors.length > 0 && (
+              <div>
+                <p>
+                  <strong style={{ color: "#ff4d4f" }}>Lỗi ({importResult.errors.length} dòng):</strong>
+                </p>
+                <ul style={{ maxHeight: 200, overflowY: "auto", paddingLeft: 20 }}>
+                  {importResult.errors.map((err, i) => (
+                    <li key={i} style={{ color: "#ff4d4f", fontSize: 13 }}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

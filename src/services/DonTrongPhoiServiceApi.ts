@@ -22,6 +22,12 @@ export interface DonTrongPhoiSearchResponse {
   pageSize: number;
 }
 
+export interface ImportDonTrongPhoiResult {
+  created: number;
+  updated: number;
+  errors: string[];
+}
+
 export const DonTrongPhoiServiceApi = {
   search: async (params: {
     searchKey?: string;
@@ -59,5 +65,28 @@ export const DonTrongPhoiServiceApi = {
 
   delete: async (id: number): Promise<void> => {
     await apiService.delete(`/api/DonTrongPhoi/${id}`);
+  },
+
+  exportExcel: async (): Promise<void> => {
+    const blob = (await apiService.get("/api/DonTrongPhoi/export-excel", {
+      responseType: "blob",
+    })) as unknown as Blob;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const now = new Date();
+    const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+    a.href = url;
+    a.download = `DonTrongPhoi_${ts}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  importExcel: async (file: File): Promise<ImportDonTrongPhoiResult> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = (await apiService.post("/api/DonTrongPhoi/import-excel", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })) as ImportDonTrongPhoiResult;
+    return res;
   },
 };
