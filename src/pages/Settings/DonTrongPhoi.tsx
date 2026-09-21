@@ -8,8 +8,11 @@ import {
   Modal,
   Popconfirm,
   Row,
+  Select,
   Space,
+  Switch,
   Table,
+  Tag,
   Upload,
   message,
 } from "antd";
@@ -34,6 +37,7 @@ type FilterState = {
   searchKey?: string;
   mac?: string;
   kichThuoc?: string;
+  isXacNhan?: number | null;
 };
 
 const QuanLyDonTrongPhoi = () => {
@@ -80,6 +84,7 @@ const QuanLyDonTrongPhoi = () => {
       searchKey: values.searchKey?.trim() || undefined,
       mac: values.mac?.trim() || undefined,
       kichThuoc: values.kichThuoc?.trim() || undefined,
+      isXacNhan: values.isXacNhan ?? undefined,
     });
   };
 
@@ -101,6 +106,7 @@ const QuanLyDonTrongPhoi = () => {
       donTrong: record.donTrong,
       mac: record.mac ?? undefined,
       kichThuoc: record.kichThuoc ?? undefined,
+      isXacNhan: record.isXacNhan === 1,
     });
     setModalVisible(true);
   };
@@ -119,6 +125,7 @@ const QuanLyDonTrongPhoi = () => {
         donTrong: values.donTrong as number,
         mac: values.mac?.trim() || null,
         kichThuoc: values.kichThuoc?.trim() || null,
+        isXacNhan: values.isXacNhan ? 1 : 0,
       };
       setModalLoading(true);
       if (editingRecord) {
@@ -217,6 +224,16 @@ const QuanLyDonTrongPhoi = () => {
         render: (v: number) => v.toLocaleString("vi-VN", { minimumFractionDigits: 3 }),
       },
       {
+        title: "Xác nhận",
+        dataIndex: "isXacNhan",
+        key: "isXacNhan",
+        width: 130,
+        render: (v: number | null) =>
+          v === 1
+            ? <Tag color="success">Đã xác nhận</Tag>
+            : <Tag color="default">Chưa xác nhận</Tag>,
+      },
+      {
         title: "Thao tác",
         key: "actions",
         width: 140,
@@ -275,17 +292,25 @@ const QuanLyDonTrongPhoi = () => {
                 <Input placeholder="Tìm theo mác phôi..." allowClear />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
+            <Col xs={24} md={5}>
               <Form.Item label="Mác" name="mac">
                 <Input placeholder="Tìm theo mác thép..." allowClear />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
+            <Col xs={24} md={5}>
               <Form.Item label="Kích thước" name="kichThuoc">
                 <Input placeholder="Tìm theo kích thước..." allowClear />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
+            <Col xs={24} md={4}>
+              <Form.Item label="Xác nhận" name="isXacNhan">
+                <Select allowClear placeholder="Tất cả">
+                  <Select.Option value={1}>Đã xác nhận</Select.Option>
+                  <Select.Option value={0}>Chưa xác nhận</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={4} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                   Lọc
@@ -366,6 +391,9 @@ const QuanLyDonTrongPhoi = () => {
               min={0}
               precision={3}
             />
+          </Form.Item>
+          <Form.Item name="isXacNhan" label="Xác nhận" valuePropName="checked">
+            <Switch checkedChildren="Đã xác nhận" unCheckedChildren="Chưa xác nhận" />
           </Form.Item>
         </Form>
       </Modal>

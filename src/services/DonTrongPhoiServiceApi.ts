@@ -6,6 +6,7 @@ export interface DonTrongPhoi {
   donTrong: number;
   mac?: string | null;
   kichThuoc?: string | null;
+  isXacNhan?: number | null;
 }
 
 export interface DonTrongPhoiPayload {
@@ -13,6 +14,7 @@ export interface DonTrongPhoiPayload {
   donTrong: number;
   mac?: string | null;
   kichThuoc?: string | null;
+  isXacNhan?: number | null;
 }
 
 export interface DonTrongPhoiSearchResponse {
@@ -33,6 +35,7 @@ export const DonTrongPhoiServiceApi = {
     searchKey?: string;
     mac?: string;
     kichThuoc?: string;
+    isXacNhan?: number | null;
     page?: number;
     pageSize?: number;
   }): Promise<DonTrongPhoiSearchResponse> => {
@@ -40,6 +43,7 @@ export const DonTrongPhoiServiceApi = {
     if (params.searchKey) q.searchKey = params.searchKey;
     if (params.mac) q.mac = params.mac;
     if (params.kichThuoc) q.kichThuoc = params.kichThuoc;
+    if (params.isXacNhan != null) q.isXacNhan = params.isXacNhan;
     if (params.page) q.page = params.page;
     if (params.pageSize) q.pageSize = params.pageSize;
     const res = (await apiService.get("/api/DonTrongPhoi/search", { params: q })) as DonTrongPhoiSearchResponse;
