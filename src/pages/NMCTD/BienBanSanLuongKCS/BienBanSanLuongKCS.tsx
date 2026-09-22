@@ -50,8 +50,13 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
     isViecdentoi: type === "viecdentoi",
   });
 
-  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } = useRowSelection(data as any[]);
-  const { checkLoading, handleCheckPhieu } = useCheckPhieu(selectedRowKeys, () => setSelectedRowKeys([]), refetch);
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } =
+    useRowSelection(data as any[]);
+  const { checkLoading, handleCheckPhieu } = useCheckPhieu(
+    selectedRowKeys,
+    () => setSelectedRowKeys([]),
+    refetch,
+  );
 
   const statusConfig: Record<number, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -226,6 +231,7 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
         { label: "Xưởng cán 1", value: 1 },
         { label: "Xưởng cán 2", value: 2 },
         { label: "Xưởng cán 3", value: 3 },
+        { label: "Xưởng cán 4", value: 4 },
       ],
     },
   ];
@@ -324,7 +330,9 @@ const BienBanSanLuongKCS = ({ type }: { type?: string }) => {
           rowKey="idphieu"
           size="small"
           scroll={{ x: 1200 }}
-          rowClassName={(record: any) => record.isCheck === 1 ? "row-checked" : ""}
+          rowClassName={(record: any) =>
+            record.isCheck === 1 ? "row-checked" : ""
+          }
         />
       </Card>
     </div>

@@ -210,11 +210,7 @@ const ChiTietPhieuPhoiNong = () => {
             ? dayjs(fData.NgaySX).format("YYYY-MM-DD")
             : null,
         Ca: data?.ca ? Number(data.ca) : fData?.ca ? Number(fData.ca) : null,
-        Xuong:
-          data?.mayDuc ??
-          fData?.mayDuc ??
-          fData?.mayduc ??
-          null,
+        Xuong: data?.mayDuc ?? fData?.mayDuc ?? fData?.mayduc ?? null,
         id: idphieu,
       });
       const blob = new Blob([response as any], { type: "application/pdf" });
@@ -573,6 +569,7 @@ const ChiTietPhieuPhoiNong = () => {
                 { label: "Xưởng cán 1", value: "1" },
                 { label: "Xưởng cán 2", value: "2" },
                 { label: "Xưởng cán 3", value: "3" },
+                { label: "Xưởng cán 4", value: "4" },
               ]}
             />
           </div>

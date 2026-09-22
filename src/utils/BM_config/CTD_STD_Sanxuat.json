@@ -18,15 +18,21 @@
       "key": "ca",
       "required": true,
       "options": [
-        { "label": "Ca Ngày", "value":1 },
+        { "label": "Ca Ngày", "value": 1 },
         { "label": "Ca Đêm", "value": 2 }
       ]
     },
-    { "label": "Ngày", "type": "date", "key": "NgaySX","required": true },
-    { "label": "Xưởng cán", "type": "select","required": true, "key": "xuong","options": [
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true },
+    {
+      "label": "Xưởng cán",
+      "type": "select",
+      "required": true,
+      "key": "xuong",
+      "options": [
         { "label": "Xưởng cán 1", "value": 1 },
         { "label": "Xưởng cán 2", "value": 2 },
-        { "label": "Xưởng cán 3", "value": 3 }
+        { "label": "Xưởng cán 3", "value": 3 },
+        { "label": "Xưởng cán 4", "value": 4 }
       ]
     }
   ],
@@ -36,13 +42,30 @@
       "title": "1. Nguyên liệu và sản phẩm",
       "key": "table1",
       "columns": [
-        { "title": "Loại mác phôi", "dataIndex": "MacPhoiLoai", "isLabel": true, "width": 120 },
+        {
+          "title": "Loại mác phôi",
+          "dataIndex": "MacPhoiLoai",
+          "isLabel": true,
+          "width": 120
+        },
         { "title": "Mác phôi", "dataIndex": "macPhoi", "width": 130 },
         { "title": "Kích thước", "dataIndex": "kichThuoc", "width": 150 },
-        { "title": "Số phôi ra khỏi lò", "dataIndex": "soPhoiRaKhoiLo", "width": 130 },
+        {
+          "title": "Số phôi ra khỏi lò",
+          "dataIndex": "soPhoiRaKhoiLo",
+          "width": 130
+        },
         { "title": "Số phôi hồi lò", "dataIndex": "soPhoiHoiLo", "width": 120 },
-        { "title": "Số phôi cán ra SP(T/P)", "dataIndex": "soPhoiCanRaSanPham", "width": 160 },
-        { "title": "Số phôi phế Công nghệ", "dataIndex": "soPhoiPheCongNghe", "width": 130 },
+        {
+          "title": "Số phôi cán ra SP(T/P)",
+          "dataIndex": "soPhoiCanRaSanPham",
+          "width": 160
+        },
+        {
+          "title": "Số phôi phế Công nghệ",
+          "dataIndex": "soPhoiPheCongNghe",
+          "width": 130
+        },
         { "title": "Loại sản phẩm", "dataIndex": "loaiSanPham", "width": 140 },
         { "title": "Mác thép", "dataIndex": "macThep", "width": 140 },
         { "title": "Lệnh sản xuất", "dataIndex": "lenhSanXuat", "width": 140 },
@@ -70,7 +93,11 @@
         { "title": "Từ giờ", "dataIndex": "tuGio", "width": 110 },
         { "title": "Đến giờ", "dataIndex": "denGio", "width": 110 },
         { "title": "Thiết bị", "dataIndex": "thietBi", "width": 140 },
-        { "title": "Mô tả sự cố / dừng sản xuất", "dataIndex": "moTaSuCo", "width": 260 },
+        {
+          "title": "Mô tả sự cố / dừng sản xuất",
+          "dataIndex": "moTaSuCo",
+          "width": 260
+        },
         { "title": "Loại sự cố", "dataIndex": "loaiSuCo", "width": 140 },
         { "title": "Phế công nghệ", "dataIndex": "pheCongNghe", "width": 140 }
       ]

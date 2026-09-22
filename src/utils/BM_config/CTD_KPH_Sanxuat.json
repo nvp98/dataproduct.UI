@@ -12,7 +12,7 @@
     "revision": "01"
   },
   "headerFields": [
-     { "label": "Ngày XL", "type": "date", "key": "NgaySX", "required": true },
+    { "label": "Ngày XL", "type": "date", "key": "NgaySX", "required": true },
     {
       "label": "Ca XL",
       "type": "select",
@@ -23,9 +23,9 @@
         { "label": "Ca Đêm", "value": 2 }
       ]
     },
-   
+
     { "label": "Ngày SX", "type": "date", "key": "NgayXL", "required": true },
-        {
+    {
       "label": "Ca SX",
       "type": "select",
       "key": "caXL",
@@ -43,7 +43,8 @@
       "options": [
         { "label": "Xưởng cán 1", "value": 1 },
         { "label": "Xưởng cán 2", "value": 2 },
-        { "label": "Xưởng cán 3", "value": 3 }
+        { "label": "Xưởng cán 3", "value": 3 },
+        { "label": "Xưởng cán 4", "value": 4 }
       ]
     }
   ],
@@ -61,9 +62,23 @@
             { "title": "Mác thép", "dataIndex": "inMacThep", "width": 100 },
             { "title": "Chiều dài", "dataIndex": "inChieuDai", "width": 70 },
             { "title": "Bó số/ Mẻ số", "dataIndex": "inSoMe", "width": 140 },
-            { "title": "Số thanh", "dataIndex": "inSoThanh", "width": 80, "type": "number" },
-            { "title": "Khối lượng (kg)", "dataIndex": "inKhoiLuong", "width": 100, "type": "number" },
-             { "title": "Ca/ Ngày sản xuất", "dataIndex": "inCaNgaySX", "width": 120 },
+            {
+              "title": "Số thanh",
+              "dataIndex": "inSoThanh",
+              "width": 80,
+              "type": "number"
+            },
+            {
+              "title": "Khối lượng (kg)",
+              "dataIndex": "inKhoiLuong",
+              "width": 100,
+              "type": "number"
+            },
+            {
+              "title": "Ca/ Ngày sản xuất",
+              "dataIndex": "inCaNgaySX",
+              "width": 120
+            },
             { "title": "Phân loại", "dataIndex": "inLoai", "width": 80 }
           ]
         },
@@ -76,8 +91,18 @@
             { "title": "Mác thép", "dataIndex": "newMacThep", "width": 100 },
             { "title": "Chiều dài", "dataIndex": "newChieuDai", "width": 100 },
             { "title": "Bó số/ Mẻ số", "dataIndex": "newSoMe", "width": 140 },
-            { "title": "Số thanh", "dataIndex": "newSoThanh", "width": 80, "type": "number" },
-            { "title": "Khối lượng (kg)", "dataIndex": "newKhoiLuong", "width": 100, "type": "number" },
+            {
+              "title": "Số thanh",
+              "dataIndex": "newSoThanh",
+              "width": 80,
+              "type": "number"
+            },
+            {
+              "title": "Khối lượng (kg)",
+              "dataIndex": "newKhoiLuong",
+              "width": 100,
+              "type": "number"
+            },
             { "title": "Phân loại", "dataIndex": "newLoai", "width": 80 }
           ]
         }

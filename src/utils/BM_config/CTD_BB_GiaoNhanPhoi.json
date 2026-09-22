@@ -2,7 +2,7 @@
   "code": "CTD_BB_GNP",
   "prefix": "BBGNP",
   "title": "BIÊN BẢN GIAO NHẬN PHÔI",
-   "headerInfo": {
+  "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
     "subCompany": "HÒA PHÁT GANG THÉP"
   },
@@ -31,7 +31,8 @@
       "options": [
         { "label": "Xưởng cán 1", "value": 1 },
         { "label": "Xưởng cán 2", "value": 2 },
-        { "label": "Xưởng cán 3", "value": 3 }
+        { "label": "Xưởng cán 3", "value": 3 },
+        { "label": "Xưởng cán 4", "value": 4 }
       ]
     }
   ],
@@ -45,39 +46,183 @@
         "url": ""
       },
       "initData": [
-        { "key": "fixed-1-1","mavitri": "dong1", "vitri": "Đống 1", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-1-2", "mavitri": "dong1", "vitri": "Đống 1", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-2-1", "mavitri": "dong2", "vitri": "Đống 2", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-2-2", "mavitri": "dong2", "vitri": "Đống 2", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-3-1", "mavitri": "dong3", "vitri": "Đống 3", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-3-2", "mavitri": "dong3", "vitri": "Đống 3", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-4-1", "mavitri": "dong4","vitri": "Đống 4", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-4-2", "mavitri": "dong4","vitri": "Đống 4", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-5-1", "mavitri": "sannguoi","vitri": "Sàn nguội chứa phôi", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-5-2", "mavitri": "sannguoi","vitri": "Sàn nguội chứa phôi", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-6-1", "mavitri": "tronglo","vitri": "Trong lò", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-6-2", "mavitri": "tronglo","vitri": "Trong lò", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-7-1", "mavitri": "banthuphoisauLo","vitri": "Bàn thu phôi sau lò", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-7-2", "mavitri": "banthuphoisauLo","vitri": "Bàn thu phôi sau lò", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-8-1", "mavitri": "banthuphoidtl","vitri": "Bàn thu phôi từ ĐLT sang", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-8-2", "mavitri": "banthuphoidtl","vitri": "Bàn thu phôi từ ĐLT sang", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-9-1", "mavitri": "xegoong","vitri": "Trên xe goong/ ô tô", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" },
-        { "key": "fixed-9-2", "mavitri": "xegoong","vitri": "Trên xe goong/ ô tô", "macThep": "", "kichThuoc": "", "soCay": "", "ghiChu": "" }
+        {
+          "key": "fixed-1-1",
+          "mavitri": "dong1",
+          "vitri": "Đống 1",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-1-2",
+          "mavitri": "dong1",
+          "vitri": "Đống 1",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-2-1",
+          "mavitri": "dong2",
+          "vitri": "Đống 2",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-2-2",
+          "mavitri": "dong2",
+          "vitri": "Đống 2",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-3-1",
+          "mavitri": "dong3",
+          "vitri": "Đống 3",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-3-2",
+          "mavitri": "dong3",
+          "vitri": "Đống 3",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-4-1",
+          "mavitri": "dong4",
+          "vitri": "Đống 4",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-4-2",
+          "mavitri": "dong4",
+          "vitri": "Đống 4",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-5-1",
+          "mavitri": "sannguoi",
+          "vitri": "Sàn nguội chứa phôi",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-5-2",
+          "mavitri": "sannguoi",
+          "vitri": "Sàn nguội chứa phôi",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-6-1",
+          "mavitri": "tronglo",
+          "vitri": "Trong lò",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-6-2",
+          "mavitri": "tronglo",
+          "vitri": "Trong lò",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-7-1",
+          "mavitri": "banthuphoisauLo",
+          "vitri": "Bàn thu phôi sau lò",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-7-2",
+          "mavitri": "banthuphoisauLo",
+          "vitri": "Bàn thu phôi sau lò",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-8-1",
+          "mavitri": "banthuphoidtl",
+          "vitri": "Bàn thu phôi từ ĐLT sang",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-8-2",
+          "mavitri": "banthuphoidtl",
+          "vitri": "Bàn thu phôi từ ĐLT sang",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-9-1",
+          "mavitri": "xegoong",
+          "vitri": "Trên xe goong/ ô tô",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        },
+        {
+          "key": "fixed-9-2",
+          "mavitri": "xegoong",
+          "vitri": "Trên xe goong/ ô tô",
+          "macThep": "",
+          "kichThuoc": "",
+          "soCay": "",
+          "ghiChu": ""
+        }
       ],
       "columns": [
         { "title": "Vị trí", "dataIndex": "vitri" },
         {
-                    "title": "Loại phôi",
-                    "children": [
-                        {
-                            "title": "Mác thép",
-                            "dataIndex": "macThep"
-                        },
-                        {
-                            "title": "Kích thước",
-                            "dataIndex": "kichThuoc"
-                        }
-                    ]
+          "title": "Loại phôi",
+          "children": [
+            {
+              "title": "Mác thép",
+              "dataIndex": "macThep"
+            },
+            {
+              "title": "Kích thước",
+              "dataIndex": "kichThuoc"
+            }
+          ]
         },
         { "title": "Số cây", "dataIndex": "soCay" },
         { "title": "Ghi chú", "dataIndex": "ghiChu" }
@@ -95,7 +240,7 @@
       "maphongBan": "NM.CTD",
       "capDuyet": 1,
       "isChon": true,
-       "required": true
+      "required": true
     },
     {
       "label": "Người giao kíp",

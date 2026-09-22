@@ -48,8 +48,13 @@ const SoTheoDoiSanXuat = ({ type }: { type?: string }) => {
     isViecdentoi: type === "viecdentoi",
   });
 
-  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } = useRowSelection(data as any[]);
-  const { checkLoading, handleCheckPhieu } = useCheckPhieu(selectedRowKeys, () => setSelectedRowKeys([]), refetch);
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } =
+    useRowSelection(data as any[]);
+  const { checkLoading, handleCheckPhieu } = useCheckPhieu(
+    selectedRowKeys,
+    () => setSelectedRowKeys([]),
+    refetch,
+  );
 
   const statusConfig: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -65,6 +70,7 @@ const SoTheoDoiSanXuat = ({ type }: { type?: string }) => {
     if (scope === 1) return "Xưởng cán 1";
     if (scope === 2) return "Xưởng cán 2";
     if (scope === 3) return "Xưởng cán 3";
+    if (scope === 4) return "Xưởng cán 4";
     return scope ?? "-";
   };
 
@@ -202,6 +208,7 @@ const SoTheoDoiSanXuat = ({ type }: { type?: string }) => {
         { label: "Xưởng cán 1", value: 1 },
         { label: "Xưởng cán 2", value: 2 },
         { label: "Xưởng cán 3", value: 3 },
+        { label: "Xưởng cán 4", value: 4 },
       ],
     },
   ];
@@ -272,7 +279,9 @@ const SoTheoDoiSanXuat = ({ type }: { type?: string }) => {
           columns={columns}
           dataSource={data as TableRecord[]}
           loading={loading}
-          rowClassName={(record: any) => record.isCheck === 1 ? "row-checked" : ""}
+          rowClassName={(record: any) =>
+            record.isCheck === 1 ? "row-checked" : ""
+          }
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

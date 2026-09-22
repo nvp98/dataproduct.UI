@@ -52,6 +52,7 @@ export const bmQuyenConfig = {
         { maKhuVuc: "1", tenKhuVuc: "Xưởng cán 1" },
         { maKhuVuc: "2", tenKhuVuc: "Xưởng cán 2" },
         { maKhuVuc: "3", tenKhuVuc: "Xưởng cán 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Xưởng cán 4" },
       ]
     },
     {

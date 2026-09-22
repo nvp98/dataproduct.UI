@@ -1747,6 +1747,7 @@ const TaoPhieuPhoiNong = () => {
                     { label: "Xưởng cán 1", value: "1" },
                     { label: "Xưởng cán 2", value: "2" },
                     { label: "Xưởng cán 3", value: "3" },
+                    { label: "Xưởng cán 4", value: "4" },
                   ]}
                 />
               </Col>
