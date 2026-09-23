@@ -59,7 +59,15 @@ const PHAN_LOAI_KEYS = ["1", "2", "3", "4"] as const;
 // Số dòng mặc định khi tạo phiếu mới
 const SO_DONG_MAC_DINH = 4;
 
-// Không gán sẵn NVL mặc định
+// Khung giờ cố định theo Ca, gán theo vị trí dòng (dòng 1 → mốc giờ 1, ...)
+const CA_TIME_SLOTS: Record<number, string[]> = {
+  1: ["08:30", "11:30", "14:30", "17:30"],
+  2: ["20:30", "23:30", "02:30", "05:30"],
+};
+
+// Chưa gán NVL ở đây vì danh mục (nvlOptions) chưa tải xong lúc khởi tạo dòng;
+// sản phẩm đầu tiên sẽ được tự động gán bởi effect "hasAutoFilledSanPhamRef"
+// ngay khi danh mục sẵn sàng.
 const buildBlankRow = (idx: number): TableRow => ({
   key: `blank-${idx}-${Date.now()}`,
 
@@ -169,6 +177,33 @@ const TaoPhieuBienBanSanLuong = () => {
   const scopeValue = Form.useWatch("scope", form);
 
   // ─────────────────────────────────────────────────────────────
+  // KHUNG GIỜ THEO CA
+  // Ca ngày (1): 8h30, 11h30, 14h30, 17h30
+  // Ca đêm (2): 20h30, 23h30, 02h30, 05h30
+  // ─────────────────────────────────────────────────────────────
+
+  const caValue = Form.useWatch("ca", form);
+
+  useEffect(() => {
+    // Chỉ tự động điền khi tạo phiếu mới, không đụng vào dữ liệu đã lưu
+    if (idphieu) {
+      return;
+    }
+
+    const slots = CA_TIME_SLOTS[Number(caValue)];
+
+    if (!slots) {
+      return;
+    }
+
+    setTableData((prev) =>
+      prev.map((row, idx) =>
+        slots[idx] !== undefined ? { ...row, thoiGian: slots[idx] } : row,
+      ),
+    );
+  }, [caValue, idphieu]);
+
+  // ─────────────────────────────────────────────────────────────
   // LOAD NVL THEO BM + SCOPE
   // ─────────────────────────────────────────────────────────────
 
@@ -254,7 +289,7 @@ const TaoPhieuBienBanSanLuong = () => {
       prev.map((row) => {
         const nvlId = Number(row.tenSanPham) || null;
 
-        const dvt = nvlId ? (nvlById.get(nvlId)?.donViTinh ?? "") : "";
+        const dvt = nvlId ? (nvlById.get(nvlId)?.donViTinh ?? "") : "Tấn";
 
         return dvt !== row.donViTinh
           ? {
@@ -265,6 +300,31 @@ const TaoPhieuBienBanSanLuong = () => {
       }),
     );
   }, [nvlById, nvlOptions.length]);
+
+  // Tự động gắn sản phẩm đầu tiên trong danh mục vào cột "Sản lượng" cho các
+  // dòng chưa chọn, ngay khi danh mục NVL vừa tải xong lúc mở phiếu.
+  // Chỉ chạy 1 lần/phiếu nên nếu người dùng chọn lại sản phẩm khác sau đó
+  // sẽ không bị ghi đè.
+  const hasAutoFilledSanPhamRef = useRef(false);
+
+  useEffect(() => {
+    if (hasAutoFilledSanPhamRef.current || nvlOptions.length === 0) {
+      return;
+    }
+
+    hasAutoFilledSanPhamRef.current = true;
+
+    setTableData((prev) =>
+      prev.map((row) =>
+        row.tenSanPham
+          ? row
+          : {
+              ...row,
+              tenSanPham: nvlOptions[0].id,
+            },
+      ),
+    );
+  }, [nvlOptions]);
 
   // ─────────────────────────────────────────────────────────────
   // INIT DATA
@@ -772,6 +832,34 @@ const TaoPhieuBienBanSanLuong = () => {
       throw new Error("Có dòng chưa chọn Sản lượng");
     }
 
+    // Tổng các dòng đã nhập phải khớp với TỔNG CỘNG (PLC/EMS) mới cho lưu.
+    // Chỉ áp dụng khi phiếu còn chỉnh sửa được — phiếu đã khóa thì số liệu
+    // không còn sửa được và Tổng cộng cũng không được tải lại ở đây.
+    if (!isFormLocked) {
+      if (tongTuDongPLC === null) {
+        message.error(
+          "Vui lòng bấm \"Tải dữ liệu\" để lấy Tổng cộng (PLC/EMS) trước khi lưu!",
+        );
+
+        throw new Error("Chưa tải dữ liệu Tổng cộng");
+      }
+
+      const tongCacDong = tableData.reduce(
+        (sum, row) => sum + getRowTotal(row),
+        0,
+      );
+
+      const lechTong = Math.round((tongCacDong - tongTuDongPLC) * 1000) / 1000;
+
+      if (Math.abs(lechTong) > 0.001) {
+        message.error(
+          `Tổng các dòng đã nhập (${tongCacDong.toLocaleString("en-US", { maximumFractionDigits: 3 })}) chưa khớp với Tổng cộng (${tongTuDongPLC.toLocaleString("en-US", { maximumFractionDigits: 3 })}). Vui lòng kiểm tra lại số liệu!`,
+        );
+
+        throw new Error("Tổng các dòng chưa khớp Tổng cộng");
+      }
+    }
+
     const processedTable1 = tableData.map((row, idx) => {
       const r: Record<string, any> = {
         thuTu: idx + 1,
@@ -831,7 +919,16 @@ const TaoPhieuBienBanSanLuong = () => {
 
       prefix: config.prefix,
     };
-  }, [getUserInfo, form, config, tableData, nvlOptions]);
+  }, [
+    getUserInfo,
+    form,
+    config,
+    tableData,
+    nvlOptions,
+    isFormLocked,
+    tongTuDongPLC,
+    getRowTotal,
+  ]);
 
   // ─────────────────────────────────────────────────────────────
   // ACTION

@@ -118,17 +118,13 @@ export default function TKVVBBSLTable({
     if (!type || type === "text") return value;
 
     if (type === "number") {
-      // Chỉ cho phép số nguyên dương, dấu âm ở đầu, không cho dấu thập phân
-      return value
-        .replace(/[^0-9-]/g, "")
-        .replace(/^-+/, (m) => (m.length === 1 ? "-" : "-"));
+      // Chỉ cho phép số nguyên không âm, không cho dấu trừ, không cho dấu thập phân
+      return value.replace(/[^0-9]/g, "");
     }
 
     if (type === "float") {
-      // Cho phép số với dấu thập phân, dấu âm, và dấu cách (sẽ xóa sau)
-      const normalized = value.replace(/\s+/g, ""); // Xóa dấu cách
-      const match = normalized.match(/^-?[\d.]*$/);
-      if (!match) return normalized.replace(/[^0-9.-]/g, "");
+      // Cho phép số không âm với dấu thập phân, xóa mọi ký tự khác (kể cả dấu trừ)
+      const normalized = value.replace(/\s+/g, "").replace(/[^0-9.]/g, "");
 
       // Chỉ cho phép một dấu chấm
       const parts = normalized.split(".");
