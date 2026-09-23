@@ -53,23 +53,23 @@
         "url": ""
       },
       "columns": [
-        { "title": "Thứ tự", "dataIndex": "thuTu", "width": 60, "readonly": true, "type": "number" },
-        { "title": "Loại điều chỉnh", "dataIndex": "loaiDieuChinh", "width": 130 , "type": "select"
+        { "title": "Thứ tự", "dataIndex": "thuTu", "width": 60, "readonly": true, "type": "number", "fixed": "left" },
+        { "title": "Loại điều chỉnh", "dataIndex": "loaiDieuChinh", "width": 130 , "type": "select", "fixed": "left"
         , "options": [
           { "label": "Nhập - Xuất", "value": 1 },
           { "label": "Nội bộ - Xuất SX", "value": 2 }
         ]},
-         { "title": "Loại số điều chỉnh", "dataIndex": "loaiSoDieuChinh", "width": 110 , "type": "select"
+         { "title": "Loại số điều chỉnh", "dataIndex": "loaiSoDieuChinh", "width": 110 , "type": "select", "fixed": "left"
         , "options": [
           { "label": "Trước ẩm", "value": 1 },
           { "label": "Sau ẩm", "value": 2 }
         ]},
-        { "title": "Tên NVL", "dataIndex": "tenNVL", "width": 200, "isLabel": true },
+        { "title": "Tên NVL", "dataIndex": "tenNVL", "width": 200, "isLabel": true, "fixed": "left" },
         { "title": "Tên NVL chi tiết", "dataIndex": "idNVLChiTiet", "width": 200, "type": "select" },
         { "title": "ID Nhóm NVL", "dataIndex": "idNhomNVL", "width": 130, "type": "number" },
         { "title": "ĐVT", "dataIndex": "dvt", "width": 80 },
         { "title": "Mã lô", "dataIndex": "maLo", "width": 120, "isLabel": true },
-
+        { "title": "Độ ẩm (%)", "dataIndex": "doAm", "width": 100, "type": "float" },
         {
           "title": "Bên xuất",
           "children": [
@@ -88,10 +88,11 @@
             { "title": "KL quy khô", "dataIndex": "khoiLuongQuyKhoNhap", "width": 130, "type": "float", "isLabel": true }
           ]
         },
-        { "title": "Độ ẩm (%)", "dataIndex": "doAm", "width": 100, "type": "float" },
-        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 220 },
-        { "title": "Vị trí", "dataIndex": "viTri", "width": 150 },
-        { "title": "Phân loại", "dataIndex": "phanLoai", "width": 150 }
+        { "title": "Người điều chỉnh giao", "dataIndex": "nguoiDieuChinhGiao", "width": 170 },
+        { "title": "Người điều chỉnh nhận", "dataIndex": "nguoiDieuChinhNhan", "width": 170 },   
+        { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 150 },
+        { "title": "Vị trí", "dataIndex": "viTri", "width": 100 },
+        { "title": "Phân loại", "dataIndex": "phanLoai", "width": 100 }
       ]
     }
   ],

@@ -376,6 +376,7 @@ export default function CustomFormTable({
           title: col.title,
           dataIndex: col.dataIndex,
           width: col.width,
+          fixed: col.fixed,
           render: (_: any, record: any) => (
             <div
               style={{

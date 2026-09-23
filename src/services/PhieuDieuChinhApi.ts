@@ -59,6 +59,10 @@ export interface PhieuDieuChinhChiTietDto {
   viTri: string | null;
   phanLoai: string | null;
   ghiChu: string | null;
+  nguoiDieuChinhGiao: number | null;
+  thoiGianDieuChinhGiao: string | null;
+  nguoiDieuChinhNhan: number | null;
+  thoiGianDieuChinhNhan: string | null;
   nguoiTao: string | null;
   thoiGianTao: string;
   nguoiSua: string | null;
@@ -87,6 +91,10 @@ export interface SavePhieuDieuChinhChiTietDto {
   viTri?: string | null;
   phanLoai?: string | null;
   ghiChu?: string | null;
+  nguoiDieuChinhGiao?: number | null;
+  thoiGianDieuChinhGiao?: string | null;
+  nguoiDieuChinhNhan?: number | null;
+  thoiGianDieuChinhNhan?: string | null;
 }
 
 // Danh mục NVL cho Phiếu điều chỉnh — ánh xạ bảng LG_PhieuDieuChinh_NVL (PRODUCTDATA)

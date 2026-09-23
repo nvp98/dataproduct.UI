@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_PhieuDieuChinh from "../../../utils/BM_config/LG_PhieuDieuChinh.json";
-import { Button, Card, Form, Input, Modal, Popconfirm, Space, Table, Typography, message } from "antd";
+import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, message } from "antd";
 import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SettingOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomFormItem from "../../../components/CustomFormItem";
+import CustomChonNguoiKy from "../../../components/CustomChonNguoiKy";
 import CustomFormTable from "../../../components/CustomFormTable";
 import type { FormColumnDef } from "../../../components/CustomFormTable";
 import { PhieuApi } from "../../../services/PhieuApi";
@@ -132,6 +133,21 @@ const TaoPhieuDieuChinh = () => {
     );
   }, []);
 
+  // Chọn Người điều chỉnh giao/nhận cho từng dòng — ghi kèm thời gian chọn.
+  const handleNguoiDieuChinhChange = useCallback(
+    (rowKey: string | undefined, field: "nguoiDieuChinhGiao" | "nguoiDieuChinhNhan", value: any) => {
+      const thoiGianField = field === "nguoiDieuChinhGiao" ? "thoiGianDieuChinhGiao" : "thoiGianDieuChinhNhan";
+      setTableData((prev) =>
+        prev.map((r) =>
+          r.key === rowKey
+            ? { ...r, [field]: value ?? null, [thoiGianField]: value ? new Date().toISOString() : null }
+            : r
+        )
+      );
+    },
+    []
+  );
+
   const tableColumns = useMemo(() => {
     // Select lưu thẳng ID (value = id, label = tên) — không lưu tên NVL chi tiết riêng.
     const nvlSelectOptions = nvlOptions.map((n) => ({ label: n.tenNVL, value: n.id }));
@@ -167,9 +183,26 @@ const TaoPhieuDieuChinh = () => {
         };
       }
 
+      // Người điều chỉnh giao/nhận — chọn từ danh sách tài khoản (không giới hạn theo BM/phòng ban).
+      if (col.dataIndex === "nguoiDieuChinhGiao" || col.dataIndex === "nguoiDieuChinhNhan") {
+        const field = col.dataIndex as "nguoiDieuChinhGiao" | "nguoiDieuChinhNhan";
+        return {
+          ...col,
+          type: "index",
+          render: (value: any, record: TableRow) => (
+            <CustomChonNguoiKy
+              maphongBan="All"
+              value={value ?? undefined}
+              disabled={isFormLocked}
+              onChange={(v) => handleNguoiDieuChinhChange(record.key, field, v)}
+            />
+          ),
+        };
+      }
+
       return col;
     }) as FormColumnDef[];
-  }, [table1Section, nvlOptions, handleDoAmChange, isFormLocked]);
+  }, [table1Section, nvlOptions, handleDoAmChange, handleNguoiDieuChinhChange, isFormLocked]);
 
   // ─── Quản lý NVL: thêm/sửa/xóa ─────────────────────────────────────────────
   const handleOpenNvlManager = useCallback(() => {
@@ -267,7 +300,12 @@ const TaoPhieuDieuChinh = () => {
         doAm: null,
         viTri: "",
         phanLoai: "",
-        ghiChu: r.ghiChu ?? "",
+        // Ghi chú không lấy từ BBGN — là trường để người dùng tự nhập tại Phiếu điều chỉnh.
+        ghiChu: "",
+        nguoiDieuChinhGiao: null,
+        thoiGianDieuChinhGiao: null,
+        nguoiDieuChinhNhan: null,
+        thoiGianDieuChinhNhan: null,
       }));
       setTableData(rows);
       if (rows.length > 0) {
@@ -358,6 +396,10 @@ const TaoPhieuDieuChinh = () => {
                   viTri: c.viTri,
                   phanLoai: c.phanLoai,
                   ghiChu: c.ghiChu,
+                  nguoiDieuChinhGiao: c.nguoiDieuChinhGiao,
+                  thoiGianDieuChinhGiao: c.thoiGianDieuChinhGiao,
+                  nguoiDieuChinhNhan: c.nguoiDieuChinhNhan,
+                  thoiGianDieuChinhNhan: c.thoiGianDieuChinhNhan,
                 }))
               );
             } else {
@@ -465,6 +507,12 @@ const TaoPhieuDieuChinh = () => {
       viTri: row.viTri ?? null,
       phanLoai: row.phanLoai ?? null,
       ghiChu: row.ghiChu ?? null,
+      nguoiDieuChinhGiao:
+        row.nguoiDieuChinhGiao != null && row.nguoiDieuChinhGiao !== "" ? Number(row.nguoiDieuChinhGiao) : null,
+      thoiGianDieuChinhGiao: row.thoiGianDieuChinhGiao ?? null,
+      nguoiDieuChinhNhan:
+        row.nguoiDieuChinhNhan != null && row.nguoiDieuChinhNhan !== "" ? Number(row.nguoiDieuChinhNhan) : null,
+      thoiGianDieuChinhNhan: row.thoiGianDieuChinhNhan ?? null,
     }));
 
     await phieuDieuChinhApi.saveChiTiet(phieuId, items, userInfo?.hoVaTen ?? userInfo?.tenDangNhap ?? null);
@@ -514,6 +562,80 @@ const TaoPhieuDieuChinh = () => {
   const handleTableDataChange = useCallback((rows: TableRow[]) => {
     setTableData(recomputeRows(rows));
   }, []);
+
+  // ─── Bộ lọc bảng "Chi tiết điều chỉnh" ─────────────────────────────────────
+  // Lọc theo Loại điều chỉnh / Loại số điều chỉnh / Tên NVL / Phòng ban bên giao / Phòng ban bên nhận.
+  // Bộ lọc chỉ ảnh hưởng hiển thị — tableData (nguồn sự thật) vẫn giữ đủ dòng bị ẩn.
+  const [filters, setFilters] = useState<{
+    loaiDieuChinh?: string | number;
+    loaiSoDieuChinh?: string | number;
+    tenNVL?: string;
+    phongBanXuat?: string;
+    phongBanNhap?: string;
+  }>({});
+
+  const loaiDieuChinhOptions = useMemo(
+    () => (table1Section?.columns ?? []).find((c: any) => c.dataIndex === "loaiDieuChinh")?.options ?? [],
+    [table1Section]
+  );
+  const loaiSoDieuChinhOptions = useMemo(
+    () => (table1Section?.columns ?? []).find((c: any) => c.dataIndex === "loaiSoDieuChinh")?.options ?? [],
+    [table1Section]
+  );
+
+  const makeUniqueOptions = useCallback((field: string) => {
+    const values = Array.from(
+      new Set(tableData.map((r) => r[field]).filter((v) => v !== null && v !== undefined && v !== ""))
+    );
+    return values.map((v) => ({ label: String(v), value: v as string }));
+  }, [tableData]);
+
+  const tenNVLOptions = useMemo(() => makeUniqueOptions("tenNVL"), [makeUniqueOptions]);
+  const phongBanXuatOptions = useMemo(() => makeUniqueOptions("phongBanXuat"), [makeUniqueOptions]);
+  const phongBanNhapOptions = useMemo(() => makeUniqueOptions("phongBanNhap"), [makeUniqueOptions]);
+
+  const hasActiveFilters = Object.values(filters).some((v) => v !== undefined && v !== null && v !== "");
+
+  const filteredTableData = useMemo(() => {
+    if (!hasActiveFilters) return tableData;
+    return tableData.filter((row) => {
+      if (filters.loaiDieuChinh != null && filters.loaiDieuChinh !== "" && String(row.loaiDieuChinh) !== String(filters.loaiDieuChinh)) return false;
+      if (filters.loaiSoDieuChinh != null && filters.loaiSoDieuChinh !== "" && String(row.loaiSoDieuChinh) !== String(filters.loaiSoDieuChinh)) return false;
+      if (filters.tenNVL && row.tenNVL !== filters.tenNVL) return false;
+      if (filters.phongBanXuat && row.phongBanXuat !== filters.phongBanXuat) return false;
+      if (filters.phongBanNhap && row.phongBanNhap !== filters.phongBanNhap) return false;
+      return true;
+    });
+  }, [tableData, filters, hasActiveFilters]);
+
+  // Khi bảng đang lọc, CustomFormTable chỉ thao tác trên tập con hiển thị — cần ghép lại
+  // với các dòng bị ẩn trong tableData gốc để không mất dữ liệu khi thêm/sửa/xóa.
+  const handleFilteredTableDataChange = useCallback(
+    (newRows: TableRow[]) => {
+      setTableData((prev) => {
+        const newRowsByKey = new Map(newRows.map((r) => [r.key, r]));
+        const filteredKeys = new Set(filteredTableData.map((r) => r.key));
+        const merged: TableRow[] = [];
+        prev.forEach((row) => {
+          if (filteredKeys.has(row.key)) {
+            const updated = newRowsByKey.get(row.key);
+            if (updated) {
+              merged.push(updated);
+              newRowsByKey.delete(row.key);
+            }
+          } else {
+            merged.push(row);
+          }
+        });
+        merged.push(...Array.from(newRowsByKey.values()));
+        return recomputeRows(merged);
+      });
+    },
+    [filteredTableData]
+  );
+
+  const handleResetFilters = useCallback(() => setFilters({}), []);
+
   return (
     <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -611,14 +733,68 @@ const TaoPhieuDieuChinh = () => {
                 {table1Section.title}
               </Typography.Title>
             )}
+
+            <Space wrap style={{ marginBottom: 12 }}>
+              <Select
+                allowClear
+                showSearch
+                placeholder="Loại điều chỉnh"
+                style={{ width: 180 }}
+                options={loaiDieuChinhOptions}
+                value={filters.loaiDieuChinh ?? undefined}
+                onChange={(value) => setFilters((f) => ({ ...f, loaiDieuChinh: value }))}
+                optionFilterProp="label"
+              />
+              <Select
+                allowClear
+                showSearch
+                placeholder="Loại số điều chỉnh"
+                style={{ width: 180 }}
+                options={loaiSoDieuChinhOptions}
+                value={filters.loaiSoDieuChinh ?? undefined}
+                onChange={(value) => setFilters((f) => ({ ...f, loaiSoDieuChinh: value }))}
+                optionFilterProp="label"
+              />
+              <Select
+                allowClear
+                showSearch
+                placeholder="Tên NVL"
+                style={{ width: 200 }}
+                options={tenNVLOptions}
+                value={filters.tenNVL ?? undefined}
+                onChange={(value) => setFilters((f) => ({ ...f, tenNVL: value }))}
+                optionFilterProp="label"
+              />
+              <Select
+                allowClear
+                showSearch
+                placeholder="Phòng ban bên giao"
+                style={{ width: 200 }}
+                options={phongBanXuatOptions}
+                value={filters.phongBanXuat ?? undefined}
+                onChange={(value) => setFilters((f) => ({ ...f, phongBanXuat: value }))}
+                optionFilterProp="label"
+              />
+              <Select
+                allowClear
+                showSearch
+                placeholder="Phòng ban bên nhận"
+                style={{ width: 200 }}
+                options={phongBanNhapOptions}
+                value={filters.phongBanNhap ?? undefined}
+                onChange={(value) => setFilters((f) => ({ ...f, phongBanNhap: value }))}
+                optionFilterProp="label"
+              />
+              {hasActiveFilters && <Button onClick={handleResetFilters}>Xóa lọc</Button>}
+            </Space>
+
             {/* Giới hạn bảng trong khung riêng — cuộn ngang/dọc chỉ diễn ra bên trong bảng,
                 không kéo giãn/cuộn theo cả trang. */}
             <div style={{ maxWidth: "100%", overflow: "auto" }}>
               <CustomFormTable
                 columns={tableColumns}
-                initialData={tableData}
-                //onDataChange={(rows) => setTableData(rows as TableRow[])}
-                onDataChange={handleTableDataChange}
+                initialData={filteredTableData}
+                onDataChange={hasActiveFilters ? handleFilteredTableDataChange : handleTableDataChange}
                 loading={loading}
                 editable={!isFormLocked}
                 showAddButton={!isFormLocked}
