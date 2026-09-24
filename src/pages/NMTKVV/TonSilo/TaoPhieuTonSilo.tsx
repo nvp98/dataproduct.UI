@@ -204,6 +204,56 @@ const TaoPhieuTonSilo = () => {
     tableDataRef.current = tableData;
   }, [tableData]);
 
+  // Tính Tồn cuối tính toán = Σ(tồn đầu) + Σ(nhập) - Σ(xuất) nhóm theo NVL, chỉ gán cho dòng đầu tiên của mỗi nhóm
+  const tonCuoiTinhToanByKey = useMemo(() => {
+    const groups = new Map<
+      number,
+      {
+        sumTonDau: number;
+        sumNhap: number;
+        sumXuat: number;
+        firstKey: string | number;
+      }
+    >();
+    tableData.forEach((row) => {
+      if (row.nguyenVatLieuID == null) return;
+      const id = row.nguyenVatLieuID as number;
+      const tonDau = parseFloat(String(row.tonDau ?? 0)) || 0;
+      const nhap = parseFloat(String(row.nhap ?? 0)) || 0;
+      const xuat = parseFloat(String(row.xuat ?? 0)) || 0;
+      if (!groups.has(id)) {
+        groups.set(id, {
+          sumTonDau: tonDau,
+          sumNhap: nhap,
+          sumXuat: xuat,
+          firstKey: row.key,
+        });
+      } else {
+        const g = groups.get(id)!;
+        g.sumTonDau += tonDau;
+        g.sumNhap += nhap;
+        g.sumXuat += xuat;
+      }
+    });
+    const result = new Map<string | number, number>();
+    groups.forEach((g) => {
+      result.set(
+        g.firstKey,
+        parseFloat((g.sumTonDau + g.sumNhap - g.sumXuat).toFixed(3)),
+      );
+    });
+    return result;
+  }, [tableData]);
+
+  const tableDataDisplay = useMemo(
+    () =>
+      tableData.map((row) => ({
+        ...row,
+        tonCuoiTinhToan: tonCuoiTinhToanByKey.get(row.key) ?? null,
+      })),
+    [tableData, tonCuoiTinhToanByKey],
+  );
+
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const signaturesRef = useRef<HTMLDivElement>(null);
   const [tableScrollY, setTableScrollY] = useState(400);
@@ -782,7 +832,22 @@ const TaoPhieuTonSilo = () => {
     const section = config.layout.find(
       (s: any) => s.sectionType === "table" && s.key === "table1",
     );
-    return (section?.columns || []) as FormColumnDef[];
+    const baseCols = (section?.columns || []) as FormColumnDef[];
+    const calcCol: FormColumnDef = {
+      title: "Tồn cuối T.T",
+      dataIndex: "tonCuoiTinhToan",
+      width: 110,
+      type: "float",
+      align: "right",
+      readonly: true,
+    };
+    const tonCuoiIdx = baseCols.findIndex((c) => c.dataIndex === "tonCuoi");
+    if (tonCuoiIdx >= 0) {
+      const cols = [...baseCols];
+      cols.splice(tonCuoiIdx + 1, 0, calcCol);
+      return cols;
+    }
+    return [...baseCols, calcCol];
   }, [config]);
 
   const handleCellChange = useCallback(
@@ -795,6 +860,12 @@ const TaoPhieuTonSilo = () => {
     },
     [],
   );
+
+  const handleDataChange = useCallback((rows: any[]) => {
+    setTableData(
+      rows.map(({ tonCuoiTinhToan: _c, ...rest }: any) => rest as TableRow),
+    );
+  }, []);
 
   const cellDecorator = useCallback((dataIndex: string, record: any) => {
     if (
@@ -878,6 +949,7 @@ const TaoPhieuTonSilo = () => {
             <b>{fmt(totals.tonCuoi)}</b>
           </Table.Summary.Cell>
           <Table.Summary.Cell index={7} />
+          <Table.Summary.Cell index={8} />
         </Table.Summary.Row>
       </Table.Summary>
     );
@@ -998,8 +1070,8 @@ const TaoPhieuTonSilo = () => {
         <div ref={tableWrapperRef} style={{ width: "100%", marginBottom: 4 }}>
           <CustomFormTable
             columns={tableColumns}
-            initialData={tableData}
-            onDataChange={setTableData}
+            initialData={tableDataDisplay}
+            onDataChange={handleDataChange}
             onCellChange={handleCellChange}
             editable={!isFormLocked}
             loading={loading || loadingInit}
@@ -1011,7 +1083,12 @@ const TaoPhieuTonSilo = () => {
             scrollY={tableScrollY}
             onRow={(record) =>
               record.isTachLieu
-                ? { style: { backgroundColor: "#fff7e6", outline: "1px solid #fa8c16" } }
+                ? {
+                    style: {
+                      backgroundColor: "#fff7e6",
+                      outline: "1px solid #fa8c16",
+                    },
+                  }
                 : {}
             }
             rowActions={
