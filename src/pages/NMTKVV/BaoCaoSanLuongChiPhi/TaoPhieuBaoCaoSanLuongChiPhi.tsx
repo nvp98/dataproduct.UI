@@ -91,6 +91,7 @@ interface TaoBBGNChiTietRow {
   tenNVL: string;
   nguyenVatLieuID: number | undefined;
   id_VatTu: number | null;
+  idTaiKhoanBG: number | null;
   idTaiKhoan: number | null;
   noiDungTrichYeu: string;
   maLo: string;
@@ -204,7 +205,12 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
   const [tongSanLuong, setTongSanLuong] = useState<{
     giaTriTuDong: number | null;
     giaTriDieuChinh: number | null;
-  }>({ giaTriTuDong: null, giaTriDieuChinh: null });
+    lyDoDieuChinh: string | null;
+  }>({ giaTriTuDong: null, giaTriDieuChinh: null, lyDoDieuChinh: null });
+  const tongSanLuongRef = useRef(tongSanLuong);
+  useEffect(() => {
+    tongSanLuongRef.current = tongSanLuong;
+  }, [tongSanLuong]);
   const [showBBGNModal, setShowBBGNModal] = useState(false);
   const [bbgnEditRows, setBbgnEditRows] = useState<TableRow[]>([]);
   const [showTaoBBGNModal, setShowTaoBBGNModal] = useState(false);
@@ -219,6 +225,9 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
   const [nguoiBGOptions, setNguoiBGOptions] = useState<
     { label: string; value: number }[]
   >([]);
+  const [userInfoMap, setUserInfoMap] = useState<
+    Record<number, { tenPhongBan: string | null; xuong_API: string | null }>
+  >({});
 
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -299,11 +308,23 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
             }
           });
 
-          const caValue = Number(data.ca ?? data.caSX ?? 1);
+          // Ưu tiên jsonData; fallback top-level PhieuDto fields (cho phiếu auto-created)
+          const caValue = Number(data.ca ?? data.caSX ?? res.ca ?? 1);
+          const scopeResolved: number | undefined =
+            data.scope != null
+              ? Number(data.scope)
+              : res.scope != null
+                ? Number(res.scope)
+                : undefined;
+          const ngaySXValue =
+            data.ngaySX || data.NgaySX || res.ngaySX || res.NgaySX;
+
           form.setFieldsValue({
             ...data,
             ca: caValue,
             caSX: caValue,
+            ...(scopeResolved != null ? { scope: scopeResolved } : {}),
+            ...(ngaySXValue ? { ngaySX: dayjs(ngaySXValue) } : {}),
             ...signatureFields,
             ...parsedDates,
           });
@@ -335,21 +356,22 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
           );
           setTableData(mappedRows);
 
-          if (data.scope) setSelectedScope(Number(data.scope));
-          const ngaySXValue = data.ngaySX || data.NgaySX;
+          if (scopeResolved != null) setSelectedScope(scopeResolved);
           if (ngaySXValue) setNgaySXFilter(dayjs(ngaySXValue));
           setTongSanLuong({
             giaTriTuDong: data.tongSanLuongTuDong ?? null,
             giaTriDieuChinh: data.tongSanLuong ?? null,
+            lyDoDieuChinh: null,
           });
 
           // Patch id_CT_BBGN + giaTriTuDong từ DB
-          if (ngaySXValue && data.scope) {
+          if (ngaySXValue && scopeResolved != null) {
             try {
               const freshData = await tkvvBcSlChiPhiApi.getBaoCaoData({
                 ngaySX: ngaySXValue.slice(0, 10),
                 maBM: MA_BM,
-                scope: Number(data.scope),
+                scope: scopeResolved,
+                caSX: caValue,
               });
               if (freshData?.table?.length) {
                 const bbgnMap = new Map(
@@ -370,6 +392,8 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
                   giaTriDieuChinh:
                     freshData.tongSanLuong!.giaTriDieuChinh ??
                     prev.giaTriDieuChinh,
+                  lyDoDieuChinh:
+                    freshData.tongSanLuong!.lyDoDieuChinh ?? prev.lyDoDieuChinh,
                 }));
               }
             } catch {
@@ -470,6 +494,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       setTongSanLuong({
         giaTriTuDong: result.tongSanLuong?.giaTriTuDong ?? null,
         giaTriDieuChinh: result.tongSanLuong?.giaTriDieuChinh ?? null,
+        lyDoDieuChinh: result.tongSanLuong?.lyDoDieuChinh ?? null,
       });
     } catch {
       message.error("Lỗi khi tải dữ liệu từ EMS");
@@ -705,6 +730,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
           phieuID: phieuId ?? idphieu ?? null,
           currentUserId: userId,
           rows,
+          lyDoDieuChinh: tongSanLuongRef.current.lyDoDieuChinh ?? null,
         });
       } catch {
         // không block phiếu nếu lưu BCSL lỗi
@@ -932,7 +958,21 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
           value: u.iD_TaiKhoan,
         });
         setUserOptions(userList.map(toOption));
-        setNguoiBGOptions(bgList.length > 0 ? bgList.map(toOption) : userList.map(toOption));
+        setNguoiBGOptions(
+          bgList.length > 0 ? bgList.map(toOption) : userList.map(toOption),
+        );
+        const infoMap: Record<
+          number,
+          { tenPhongBan: string | null; xuong_API: string | null }
+        > = {};
+        userList.forEach((u: any) => {
+          if (u.iD_TaiKhoan != null)
+            infoMap[u.iD_TaiKhoan] = {
+              tenPhongBan: u.tenPhongBan ?? null,
+              xuong_API: u.xuong_API ?? null,
+            };
+        });
+        setUserInfoMap(infoMap);
 
         const initRows: TaoBBGNChiTietRow[] =
           sourceRows && sourceRows.length > 0
@@ -941,6 +981,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
                 tenNVL: tenNvlThanhPham ?? r.nguyenLieu ?? "",
                 nguyenVatLieuID: r.nguyenVatLieuID,
                 id_VatTu: idVatTuThanhPham,
+                idTaiKhoanBG: null,
                 idTaiKhoan: null,
                 noiDungTrichYeu: "",
                 maLo: "",
@@ -957,6 +998,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
                   tenNVL: tenNvlThanhPham ?? "",
                   nguyenVatLieuID: undefined,
                   id_VatTu: idVatTuThanhPham,
+                  idTaiKhoanBG: null,
                   idTaiKhoan: null,
                   noiDungTrichYeu: "",
                   maLo: "",
@@ -967,7 +1009,6 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
               ];
 
         setTaoBBGNRows(initRows);
-        setIdTaiKhoanBG(null);
         setShowTaoBBGNModal(true);
       } catch {
         message.error("Lỗi khi tải dữ liệu");
@@ -995,6 +1036,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         tenNVL: bbgnTenVatTu ?? "",
         nguyenVatLieuID: undefined,
         id_VatTu: bbgnIdVatTu,
+        idTaiKhoanBG: null,
         idTaiKhoan: null,
         noiDungTrichYeu: "",
         maLo: "",
@@ -1006,8 +1048,9 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
   }, [bbgnIdVatTu, bbgnTenVatTu]);
 
   const handleSubmitTaoBBGN = useCallback(async () => {
-    if (!idTaiKhoanBG) {
-      message.warning("Vui lòng chọn người bàn giao");
+    const missingNguoiGiao = taoBBGNRows.filter((r) => !r.idTaiKhoanBG);
+    if (missingNguoiGiao.length > 0) {
+      message.warning(`${missingNguoiGiao.length} dòng chưa chọn người giao`);
       return;
     }
     const missingNguoiNhan = taoBBGNRows.filter((r) => !r.idTaiKhoan);
@@ -1028,7 +1071,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       let successCount = 0;
       for (const r of taoBBGNRows) {
         const request: TaoBBGNRequestDto = {
-          IDTaiKhoanBG: idTaiKhoanBG,
+          IDTaiKhoanBG: r.idTaiKhoanBG!,
           IDTaiKhoan: r.idTaiKhoan!,
           XacNhan: "1",
           ID_Day: ngay,
@@ -1220,9 +1263,8 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
             <div
               style={{
                 display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 12,
+                flexDirection: "column",
+                gap: 6,
                 padding: "8px 14px",
                 marginBottom: 4,
                 background: hasWarning ? "#fffbe6" : "#f6ffed",
@@ -1230,38 +1272,79 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
                 borderRadius: 4,
               }}
             >
-              <Typography.Text strong style={{ minWidth: 160 }}>
-                TỔNG THÀNH PHẨM:
-              </Typography.Text>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Tự động:
-                </Typography.Text>
-                <Typography.Text strong style={{ fontSize: 14, minWidth: 90 }}>
-                  {auto != null ? `${fmt(auto)} Tấn` : "—"}
-                </Typography.Text>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Điều chỉnh:
-                </Typography.Text>
-                <Typography.Text strong style={{ fontSize: 14, minWidth: 90 }}>
-                  {dc != null ? `${fmt(dc)} Tấn` : "—"}
-                </Typography.Text>
-              </div>
-              {hasWarning && (
-                <Tag color="warning">
-                  Chênh lệch: {chenhlech! >= 0 ? "+" : ""}
-                  {fmt(chenhlech!)} Tấn
-                </Tag>
-              )}
-              <Button
-                icon={<PartitionOutlined />}
-                onClick={handleOpenBBGN}
-                size="small"
+              {/* Hàng 1: TỔNG + giá trị + chênh lệch + nút */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                }}
               >
-                Phân bổ BBGN
-              </Button>
+                <Typography.Text strong style={{ minWidth: 160 }}>
+                  TỔNG THÀNH PHẨM:
+                </Typography.Text>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Tự động:
+                  </Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ fontSize: 14, minWidth: 90 }}
+                  >
+                    {auto != null ? `${fmt(auto)} Tấn` : "—"}
+                  </Typography.Text>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Điều chỉnh:
+                  </Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ fontSize: 14, minWidth: 90 }}
+                  >
+                    {dc != null ? `${fmt(dc)} Tấn` : "—"}
+                  </Typography.Text>
+                </div>
+                {hasWarning && (
+                  <Tag color="warning">
+                    Chênh lệch: {chenhlech! >= 0 ? "+" : ""}
+                    {fmt(chenhlech!)} Tấn
+                  </Tag>
+                )}
+                <Button
+                  icon={<PartitionOutlined />}
+                  onClick={handleOpenBBGN}
+                  size="small"
+                >
+                  Phân bổ BBGN
+                </Button>
+              </div>
+              {/* Hàng 2: Lý do điều chỉnh (chỉ khi có chênh lệch) */}
+              {hasWarning && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Typography.Text
+                    type="secondary"
+                    style={{ fontSize: 12, whiteSpace: "nowrap" }}
+                  >
+                    Lý do điều chỉnh:
+                  </Typography.Text>
+                  <Input
+                    size="small"
+                    placeholder="Nhập lý do điều chỉnh..."
+                    value={tongSanLuong.lyDoDieuChinh ?? ""}
+                    onChange={(e) =>
+                      setTongSanLuong((prev) => ({
+                        ...prev,
+                        lyDoDieuChinh: e.target.value || null,
+                      }))
+                    }
+                    disabled={isFormLocked}
+                    style={{ flex: 1, maxWidth: 500 }}
+                    maxLength={500}
+                  />
+                </div>
+              )}
             </div>
           );
         })()}
@@ -1645,7 +1728,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         }
         open={showTaoBBGNModal}
         onCancel={() => setShowTaoBBGNModal(false)}
-        width={1100}
+        width={1300}
         footer={[
           <Button key="cancel" onClick={() => setShowTaoBBGNModal(false)}>
             Hủy
@@ -1661,48 +1744,30 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         ]}
         destroyOnHidden
       >
-        {/* Header nhỏ — Người bàn giao chung */}
-        <Row gutter={16} style={{ marginBottom: 12 }}>
-          <Col span={9}>
-            <div style={{ marginBottom: 4, fontWeight: 500 }}>
-              Người bàn giao <span style={{ color: "red" }}>*</span>
-            </div>
-            <Select
-              style={{ width: "100%" }}
-              showSearch
-              optionFilterProp="label"
-              options={nguoiBGOptions}
-              value={idTaiKhoanBG}
-              onChange={(v) => setIdTaiKhoanBG(v)}
-              placeholder="Chọn người bàn giao"
-              status={!idTaiKhoanBG ? "error" : undefined}
-            />
-          </Col>
-          <Col span={6}>
-            <div style={{ marginBottom: 4, fontWeight: 500 }}>
-              Ngày sản xuất
-            </div>
-            <div style={{ padding: "4px 0" }}>
-              {(ngaySXFilter ?? dayjs()).format("DD/MM/YYYY")}
-            </div>
-          </Col>
-          <Col span={4}>
-            <div style={{ marginBottom: 4, fontWeight: 500 }}>Ca</div>
-            <div style={{ padding: "4px 0" }}>
-              {caSX === 1 ? "Ca ngày (N)" : "Ca đêm (D)"}
-            </div>
-          </Col>
-          <Col span={5}>
-            <div style={{ marginBottom: 4, fontWeight: 500 }}>Tổng PLC</div>
-            <div
-              style={{ padding: "4px 0", fontWeight: 600, color: "#1677ff" }}
-            >
-              {tongSanLuong.giaTriDieuChinh != null
-                ? `${tongSanLuong.giaTriDieuChinh.toLocaleString("en-US", { maximumFractionDigits: 3 })} Tấn`
-                : "—"}
-            </div>
-          </Col>
-        </Row>
+        {/* Header nhỏ — thông tin chung */}
+        <div
+          style={{ display: "flex", gap: 24, marginBottom: 12, fontSize: 13 }}
+        >
+          <span>
+            <Typography.Text type="secondary">Ngày SX: </Typography.Text>
+            <b>{(ngaySXFilter ?? dayjs()).format("DD/MM/YYYY")}</b>
+          </span>
+          <span>
+            <Typography.Text type="secondary">Ca: </Typography.Text>
+            <b>{caSX === 1 ? "Ca ngày" : "Ca đêm"}</b>
+          </span>
+          {tongSanLuong.giaTriDieuChinh != null && (
+            <span>
+              <Typography.Text type="secondary">Tổng PLC: </Typography.Text>
+              <b style={{ color: "#1677ff" }}>
+                {tongSanLuong.giaTriDieuChinh.toLocaleString("en-US", {
+                  maximumFractionDigits: 3,
+                })}{" "}
+                Tấn
+              </b>
+            </span>
+          )}
+        </div>
 
         <Table<TaoBBGNChiTietRow>
           dataSource={taoBBGNRows}
@@ -1719,12 +1784,39 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
             {
               title: "Vật tư giao nhận",
               dataIndex: "tenNVL",
-              width: 160,
+              width: 150,
               render: (val) =>
                 val || <Typography.Text type="secondary">—</Typography.Text>,
             },
             {
-              title: "Người nhận",
+              title: (
+                <span>
+                  Người giao <span style={{ color: "red" }}>*</span>
+                </span>
+              ),
+              dataIndex: "idTaiKhoanBG",
+              width: 200,
+              render: (val, _, idx) => (
+                <Select
+                  style={{ width: "100%" }}
+                  showSearch
+                  optionFilterProp="label"
+                  options={nguoiBGOptions}
+                  value={val}
+                  onChange={(v) =>
+                    updateTaoBBGNRow(idx, "idTaiKhoanBG", v ?? null)
+                  }
+                  placeholder="Chọn người giao"
+                  status={!val ? "error" : undefined}
+                />
+              ),
+            },
+            {
+              title: (
+                <span>
+                  Người nhận <span style={{ color: "red" }}>*</span>
+                </span>
+              ),
               dataIndex: "idTaiKhoan",
               width: 200,
               render: (val, _, idx) => (
@@ -1743,8 +1835,32 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
               ),
             },
             {
+              title: "Thông tin người nhận",
+              dataIndex: "idTaiKhoan",
+              width: 180,
+              render: (val) => {
+                if (!val)
+                  return (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      —
+                    </Typography.Text>
+                  );
+                const info = userInfoMap[val];
+                if (!info) return null;
+                const parts = [info.tenPhongBan, info.xuong_API].filter(
+                  Boolean,
+                );
+                return (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {parts.join(" · ") || "—"}
+                  </Typography.Text>
+                );
+              },
+            },
+            {
               title: "Nội dung trích yếu",
               dataIndex: "noiDungTrichYeu",
+              width: 180,
               render: (val, _, idx) => (
                 <Input
                   value={val}

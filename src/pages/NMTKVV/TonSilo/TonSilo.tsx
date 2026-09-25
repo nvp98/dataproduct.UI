@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import TKVV_TonSilo from "../../../utils/BM_config/TKVV_TonSilo.json";
-import { Button, Card, Space, Table, Tag, Tooltip } from "antd";
-import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { Button, Card, Space, Table, Tag, Tooltip, message } from "antd";
+import { EyeOutlined, PlusOutlined, SyncOutlined } from "@ant-design/icons";
+import { tkvvTonSiloApi } from "../../../services/TKVVApi";
 import PhieuFilterCard, {
   type FilterFieldConfig,
 } from "../../../components/PhieuFilterCard";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
@@ -55,6 +56,29 @@ const TonSilo = ({ type }: { type?: string }) => {
     () => setSelectedRowKeys([]),
     refetch,
   );
+
+  const [refreshLoading, setRefreshLoading] = useState(false);
+
+  const handleRefreshBbgn = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning("Vui lòng chọn ít nhất 1 phiếu.");
+      return;
+    }
+    setRefreshLoading(true);
+    try {
+      const res = await tkvvTonSiloApi.refreshBbgnBatch({
+        phieuIds: selectedRowKeys as string[],
+        currentUserId,
+      });
+      message.success(res.message || "Đã cập nhật dữ liệu BBGN.");
+      setSelectedRowKeys([]);
+      refetch();
+    } catch {
+      message.error("Cập nhật dữ liệu BBGN thất bại.");
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
 
   const statusConfig: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -234,6 +258,14 @@ const TonSilo = ({ type }: { type?: string }) => {
       <Card
         extra={
           <Space>
+            <Button
+              icon={<SyncOutlined />}
+              loading={refreshLoading}
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleRefreshBbgn}
+            >
+              Cập nhật BBGN
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}

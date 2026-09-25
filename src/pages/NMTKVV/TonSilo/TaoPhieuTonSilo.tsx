@@ -319,12 +319,20 @@ const TaoPhieuTonSilo = () => {
           });
 
           const tinhTrang = res.tinhTrang ?? 0;
-          const ngaySXValue = data.ngaySX || data.NgaySX;
+          // Ưu tiên jsonData; fallback top-level PhieuDto fields (cho phiếu auto-created)
+          const ngaySXValue = data.ngaySX || data.NgaySX || res.ngaySX || res.NgaySX;
+          const caVal = data.ca ?? res.ca ?? null;
+          const scopeVal =
+            data.scope != null
+              ? Number(data.scope)
+              : res.scope != null
+                ? Number(res.scope)
+                : undefined;
 
           form.setFieldsValue({
             ngaySX: ngaySXValue ? dayjs(ngaySXValue) : null,
-            ca: data.ca,
-            scope: data.scope ? Number(data.scope) : undefined,
+            ca: caVal,
+            scope: scopeVal,
             kip: data.kip,
             ...signatureFields,
           });
@@ -424,44 +432,62 @@ const TaoPhieuTonSilo = () => {
       message.warning("Chọn xưởng (scope)");
       return;
     }
+    const caValue: number | undefined = form.getFieldValue("ca");
+    if (!caValue) {
+      message.warning("Chọn Ca");
+      return;
+    }
 
     setLoadingSilo(true);
     try {
       const ngayStr = ngaySXValue.format("YYYY-MM-DD");
       const scopeNum = String(scopeValue);
-      const [[today, nvls, silos]] = await Promise.all([
-        Promise.all([
-          tkvvNvlSiloMappingApi.getList({ scope: scopeNum, ngaySX: ngayStr }),
-          tkvvNvlApi.getListnvlbyBM({ scope: scopeNum }),
-          tkvvSiloApi.getList({ scope: scopeNum }),
-        ]),
+      const [mappingAll, nvls, silos, nvlOverrides] = await Promise.all([
+        tkvvNvlSiloMappingApi.getList({ scope: scopeNum, ngaySX: ngayStr }),
+        tkvvNvlApi.getListnvlbyBM({ scope: scopeNum }),
+        tkvvSiloApi.getList({ scope: scopeNum }),
+        tkvvTonSiloApi.getNvlOverride({ ngaySX: ngayStr, ca: caValue, scope: scopeValue }),
       ]);
       setNvlList(nvls ?? []);
       setSiloList(silos ?? []);
 
-      let source: TKVVNvlSiloMappingDto[] = today ?? [];
+      // Chỉ lấy row mapping đúng ca đang chọn
+      let source: TKVVNvlSiloMappingDto[] = (mappingAll ?? []).filter(
+        (m) => m.ca === caValue,
+      );
       let fromDate = ngayStr;
       let isToday = true;
 
       if (source.length === 0) {
-        source = await tkvvNvlSiloMappingApi.getNearest({
+        const nearest = await tkvvNvlSiloMappingApi.getNearest({
           scope: scopeNum,
           beforeDate: ngayStr,
         });
+        source = (nearest ?? []).filter((m) => m.ca === caValue);
         fromDate = source[0]?.ngaySX
           ? String(source[0].ngaySX).slice(0, 10)
           : "";
         isToday = false;
       }
 
-      const rows: SiloMappingModalRow[] = source.map((m, i) => ({
-        id: m.id ?? 0,
-        key: i,
-        ca: m.ca,
-        nguyenVatLieuID: m.nguyenVatLieuID,
-        siloID: m.siloID ?? null,
-        thuTu: m.thuTu ?? i + 1,
-      }));
+      // Xây map override: siloID → nvlId (từ tách liệu ca trước)
+      const overrideMap = new Map<number, number>(
+        (nvlOverrides ?? []).map((o) => [o.siloId, o.nvlId]),
+      );
+
+      const rows: SiloMappingModalRow[] = source.map((m, i) => {
+        const siloId = m.siloID ?? null;
+        const overrideNvl =
+          siloId != null ? (overrideMap.get(siloId) ?? null) : null;
+        return {
+          id: m.id ?? 0,
+          key: i,
+          ca: m.ca,
+          nguyenVatLieuID: overrideNvl ?? m.nguyenVatLieuID,
+          siloID: siloId,
+          thuTu: m.thuTu ?? i + 1,
+        };
+      });
       setModalRows(rows);
       setModalNgaySXGan(isToday ? "" : fromDate);
       setShowSiloModal(true);
@@ -611,20 +637,22 @@ const TaoPhieuTonSilo = () => {
   );
 
   const addTachRow = useCallback(() => {
-    setTachRows((prev) => [
-      ...prev,
-      {
+    setTachRows((prev) => {
+      const newRow: TachLieuRow = {
         key: Date.now(),
         nguyenVatLieuID: null,
         doAm: "",
-        tonDau: "",
+        tonDau: 0,
         nhap: "",
         xuat: "",
-        tonCuoi: "",
+        tonCuoi: tachSourceRow?.tonCuoi ?? "",
         ghiChu: "",
-      },
-    ]);
-  }, []);
+      };
+      const updated = [...prev, newRow];
+      if (!tachSourceRow) return updated;
+      return recalcTachRow0(updated, tachSourceRow);
+    });
+  }, [tachSourceRow]);
 
   const deleteTachRow = useCallback(
     (idx: number) => {
