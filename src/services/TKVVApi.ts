@@ -322,6 +322,7 @@ export interface TKVVSanLuongDuLieuDto {
   scope: string | null;
   thoiGian: string | null;
   ngayTao: string;
+  lyDoDieuChinh: string | null;
 }
 
 export interface LoadDuLieuCanResultDto {
@@ -364,6 +365,7 @@ export const tkvvBcSlChiPhiApi = {
     ngaySX: string;
     maBM: string;
     scope: number;
+    caSX?: number | null;
   }): Promise<LoadDuLieuCanResultDto> =>
     apiService.get("/api/TKVV_BCSL_ChiPhi/get-baocao-data", { params }),
 
@@ -372,6 +374,7 @@ export const tkvvBcSlChiPhiApi = {
     phieuID?: string | null;
     currentUserId: number;
     rows: SaveBcSlRowDto[];
+    lyDoDieuChinh?: string | null;
   }): Promise<void> =>
     apiService.post("/api/TKVV_BCSL_ChiPhi/save-phieu-rows", request),
 };
@@ -488,6 +491,19 @@ export const tkvvTonSiloApi = {
     scope: number;
   }): Promise<void> =>
     apiService.delete("/api/TKVV_TonSilo/reset", { params }),
+
+  refreshBbgnBatch: (request: {
+    phieuIds: string[];
+    currentUserId?: number | null;
+  }): Promise<{ message: string }> =>
+    apiService.post("/api/TKVV_TonSilo/refresh-bbgn-batch", request),
+
+  getNvlOverride: (params: {
+    ngaySX: string;
+    ca: number;
+    scope: number;
+  }): Promise<{ siloId: number; nvlId: number; tenNVL: string | null }[]> =>
+    apiService.get("/api/TKVV_TonSilo/nvl-override", { params }),
 };
 
 // ─── Tra cứu Vật tư SAP (PRODUCTDATA.Tbl_VatTu) ──────────────────────────────

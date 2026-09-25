@@ -204,6 +204,56 @@ const TaoPhieuTonSilo = () => {
     tableDataRef.current = tableData;
   }, [tableData]);
 
+  // Tính Tồn cuối tính toán = Σ(tồn đầu) + Σ(nhập) - Σ(xuất) nhóm theo NVL, chỉ gán cho dòng đầu tiên của mỗi nhóm
+  const tonCuoiTinhToanByKey = useMemo(() => {
+    const groups = new Map<
+      number,
+      {
+        sumTonDau: number;
+        sumNhap: number;
+        sumXuat: number;
+        firstKey: string | number;
+      }
+    >();
+    tableData.forEach((row) => {
+      if (row.nguyenVatLieuID == null) return;
+      const id = row.nguyenVatLieuID as number;
+      const tonDau = parseFloat(String(row.tonDau ?? 0)) || 0;
+      const nhap = parseFloat(String(row.nhap ?? 0)) || 0;
+      const xuat = parseFloat(String(row.xuat ?? 0)) || 0;
+      if (!groups.has(id)) {
+        groups.set(id, {
+          sumTonDau: tonDau,
+          sumNhap: nhap,
+          sumXuat: xuat,
+          firstKey: row.key,
+        });
+      } else {
+        const g = groups.get(id)!;
+        g.sumTonDau += tonDau;
+        g.sumNhap += nhap;
+        g.sumXuat += xuat;
+      }
+    });
+    const result = new Map<string | number, number>();
+    groups.forEach((g) => {
+      result.set(
+        g.firstKey,
+        parseFloat((g.sumTonDau + g.sumNhap - g.sumXuat).toFixed(3)),
+      );
+    });
+    return result;
+  }, [tableData]);
+
+  const tableDataDisplay = useMemo(
+    () =>
+      tableData.map((row) => ({
+        ...row,
+        tonCuoiTinhToan: tonCuoiTinhToanByKey.get(row.key) ?? null,
+      })),
+    [tableData, tonCuoiTinhToanByKey],
+  );
+
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const signaturesRef = useRef<HTMLDivElement>(null);
   const [tableScrollY, setTableScrollY] = useState(400);
@@ -269,12 +319,20 @@ const TaoPhieuTonSilo = () => {
           });
 
           const tinhTrang = res.tinhTrang ?? 0;
-          const ngaySXValue = data.ngaySX || data.NgaySX;
+          // Ưu tiên jsonData; fallback top-level PhieuDto fields (cho phiếu auto-created)
+          const ngaySXValue = data.ngaySX || data.NgaySX || res.ngaySX || res.NgaySX;
+          const caVal = data.ca ?? res.ca ?? null;
+          const scopeVal =
+            data.scope != null
+              ? Number(data.scope)
+              : res.scope != null
+                ? Number(res.scope)
+                : undefined;
 
           form.setFieldsValue({
             ngaySX: ngaySXValue ? dayjs(ngaySXValue) : null,
-            ca: data.ca,
-            scope: data.scope ? Number(data.scope) : undefined,
+            ca: caVal,
+            scope: scopeVal,
             kip: data.kip,
             ...signatureFields,
           });
@@ -374,44 +432,62 @@ const TaoPhieuTonSilo = () => {
       message.warning("Chọn xưởng (scope)");
       return;
     }
+    const caValue: number | undefined = form.getFieldValue("ca");
+    if (!caValue) {
+      message.warning("Chọn Ca");
+      return;
+    }
 
     setLoadingSilo(true);
     try {
       const ngayStr = ngaySXValue.format("YYYY-MM-DD");
       const scopeNum = String(scopeValue);
-      const [[today, nvls, silos]] = await Promise.all([
-        Promise.all([
-          tkvvNvlSiloMappingApi.getList({ scope: scopeNum, ngaySX: ngayStr }),
-          tkvvNvlApi.getListnvlbyBM({ scope: scopeNum }),
-          tkvvSiloApi.getList({ scope: scopeNum }),
-        ]),
+      const [mappingAll, nvls, silos, nvlOverrides] = await Promise.all([
+        tkvvNvlSiloMappingApi.getList({ scope: scopeNum, ngaySX: ngayStr }),
+        tkvvNvlApi.getListnvlbyBM({ scope: scopeNum }),
+        tkvvSiloApi.getList({ scope: scopeNum }),
+        tkvvTonSiloApi.getNvlOverride({ ngaySX: ngayStr, ca: caValue, scope: scopeValue }),
       ]);
       setNvlList(nvls ?? []);
       setSiloList(silos ?? []);
 
-      let source: TKVVNvlSiloMappingDto[] = today ?? [];
+      // Chỉ lấy row mapping đúng ca đang chọn
+      let source: TKVVNvlSiloMappingDto[] = (mappingAll ?? []).filter(
+        (m) => m.ca === caValue,
+      );
       let fromDate = ngayStr;
       let isToday = true;
 
       if (source.length === 0) {
-        source = await tkvvNvlSiloMappingApi.getNearest({
+        const nearest = await tkvvNvlSiloMappingApi.getNearest({
           scope: scopeNum,
           beforeDate: ngayStr,
         });
+        source = (nearest ?? []).filter((m) => m.ca === caValue);
         fromDate = source[0]?.ngaySX
           ? String(source[0].ngaySX).slice(0, 10)
           : "";
         isToday = false;
       }
 
-      const rows: SiloMappingModalRow[] = source.map((m, i) => ({
-        id: m.id ?? 0,
-        key: i,
-        ca: m.ca,
-        nguyenVatLieuID: m.nguyenVatLieuID,
-        siloID: m.siloID ?? null,
-        thuTu: m.thuTu ?? i + 1,
-      }));
+      // Xây map override: siloID → nvlId (từ tách liệu ca trước)
+      const overrideMap = new Map<number, number>(
+        (nvlOverrides ?? []).map((o) => [o.siloId, o.nvlId]),
+      );
+
+      const rows: SiloMappingModalRow[] = source.map((m, i) => {
+        const siloId = m.siloID ?? null;
+        const overrideNvl =
+          siloId != null ? (overrideMap.get(siloId) ?? null) : null;
+        return {
+          id: m.id ?? 0,
+          key: i,
+          ca: m.ca,
+          nguyenVatLieuID: overrideNvl ?? m.nguyenVatLieuID,
+          siloID: siloId,
+          thuTu: m.thuTu ?? i + 1,
+        };
+      });
       setModalRows(rows);
       setModalNgaySXGan(isToday ? "" : fromDate);
       setShowSiloModal(true);
@@ -561,20 +637,22 @@ const TaoPhieuTonSilo = () => {
   );
 
   const addTachRow = useCallback(() => {
-    setTachRows((prev) => [
-      ...prev,
-      {
+    setTachRows((prev) => {
+      const newRow: TachLieuRow = {
         key: Date.now(),
         nguyenVatLieuID: null,
         doAm: "",
-        tonDau: "",
+        tonDau: 0,
         nhap: "",
         xuat: "",
-        tonCuoi: "",
+        tonCuoi: tachSourceRow?.tonCuoi ?? "",
         ghiChu: "",
-      },
-    ]);
-  }, []);
+      };
+      const updated = [...prev, newRow];
+      if (!tachSourceRow) return updated;
+      return recalcTachRow0(updated, tachSourceRow);
+    });
+  }, [tachSourceRow]);
 
   const deleteTachRow = useCallback(
     (idx: number) => {
@@ -782,7 +860,22 @@ const TaoPhieuTonSilo = () => {
     const section = config.layout.find(
       (s: any) => s.sectionType === "table" && s.key === "table1",
     );
-    return (section?.columns || []) as FormColumnDef[];
+    const baseCols = (section?.columns || []) as FormColumnDef[];
+    const calcCol: FormColumnDef = {
+      title: "Tồn cuối T.T",
+      dataIndex: "tonCuoiTinhToan",
+      width: 110,
+      type: "float",
+      align: "right",
+      readonly: true,
+    };
+    const tonCuoiIdx = baseCols.findIndex((c) => c.dataIndex === "tonCuoi");
+    if (tonCuoiIdx >= 0) {
+      const cols = [...baseCols];
+      cols.splice(tonCuoiIdx + 1, 0, calcCol);
+      return cols;
+    }
+    return [...baseCols, calcCol];
   }, [config]);
 
   const handleCellChange = useCallback(
@@ -795,6 +888,12 @@ const TaoPhieuTonSilo = () => {
     },
     [],
   );
+
+  const handleDataChange = useCallback((rows: any[]) => {
+    setTableData(
+      rows.map(({ tonCuoiTinhToan: _c, ...rest }: any) => rest as TableRow),
+    );
+  }, []);
 
   const cellDecorator = useCallback((dataIndex: string, record: any) => {
     if (
@@ -878,6 +977,7 @@ const TaoPhieuTonSilo = () => {
             <b>{fmt(totals.tonCuoi)}</b>
           </Table.Summary.Cell>
           <Table.Summary.Cell index={7} />
+          <Table.Summary.Cell index={8} />
         </Table.Summary.Row>
       </Table.Summary>
     );
@@ -998,8 +1098,8 @@ const TaoPhieuTonSilo = () => {
         <div ref={tableWrapperRef} style={{ width: "100%", marginBottom: 4 }}>
           <CustomFormTable
             columns={tableColumns}
-            initialData={tableData}
-            onDataChange={setTableData}
+            initialData={tableDataDisplay}
+            onDataChange={handleDataChange}
             onCellChange={handleCellChange}
             editable={!isFormLocked}
             loading={loading || loadingInit}
@@ -1011,7 +1111,12 @@ const TaoPhieuTonSilo = () => {
             scrollY={tableScrollY}
             onRow={(record) =>
               record.isTachLieu
-                ? { style: { backgroundColor: "#fff7e6", outline: "1px solid #fa8c16" } }
+                ? {
+                    style: {
+                      backgroundColor: "#fff7e6",
+                      outline: "1px solid #fa8c16",
+                    },
+                  }
                 : {}
             }
             rowActions={

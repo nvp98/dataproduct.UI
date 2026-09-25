@@ -422,7 +422,7 @@ const NvlTab = ({
               if (items.length === 0)
                 return (
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    Chưa ánh xạ
+                    Chưa móc nối NVL
                   </Typography.Text>
                 );
               return (
@@ -486,7 +486,7 @@ const NvlTab = ({
               showSearch
               optionFilterProp="label"
               placeholder="Chọn Mã BM"
-              options={MA_BM_OPTIONS.filter((opt) => opt.value !== "ALL")}
+              options={MA_BM_OPTIONS}
               disabled={selectedMaBM !== "ALL"}
             />
           </Form.Item>
