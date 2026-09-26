@@ -553,26 +553,38 @@ const TaoSoTheoDoiSanXuat = () => {
 
           return row;
         });
-        // Validate macPhoi + kichThuoc với danh sách DonTrongPhoi
+        // Validate macPhoi + kichThuoc với danh sách DonTrongPhoi — block nếu không hợp lệ
         if (donTrongPhoiData.length > 0) {
-          const warnings: string[] = [];
+          const errors: string[] = [];
           imported.forEach((row, i) => {
             const mp = row.macPhoi as string | undefined;
             const kt = row.kichThuoc as string | undefined;
-            if (mp) {
-              const macExists = donTrongPhoiData.some((d) => d.mac === mp);
-              if (!macExists) {
-                warnings.push(`Dòng ${i + 1}: mác "${mp}" không có trong danh sách`);
-              } else if (kt) {
-                const ktExists = donTrongPhoiData.some((d) => d.mac === mp && d.kichThuoc === kt);
-                if (!ktExists) {
-                  warnings.push(`Dòng ${i + 1}: kích thước "${kt}" không hợp lệ cho mác phôi "${mp}"`);
-                }
+            if (!mp) return;
+            const macExists = donTrongPhoiData.some((d) => d.mac === mp);
+            if (!macExists) {
+              errors.push(`Dòng ${i + 1}: mác "${mp}" không có trong danh sách`);
+            } else if (kt) {
+              const ktExists = donTrongPhoiData.some(
+                (d) => d.mac === mp && d.kichThuoc === kt,
+              );
+              if (!ktExists) {
+                errors.push(
+                  `Dòng ${i + 1}: kích thước "${kt}" không hợp lệ cho mác "${mp}"`,
+                );
               }
             }
           });
-          if (warnings.length > 0) {
-            message.warning(`Dữ liệu import có ${warnings.length} dòng không khớp danh mục:\n${warnings.join("\n")}`);
+          if (errors.length > 0) {
+            Modal.error({
+              title: `Import thất bại — ${errors.length} dòng không khớp danh mục`,
+              content: (
+                <ul style={{ maxHeight: 300, overflowY: "auto", paddingLeft: 16 }}>
+                  {errors.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              ),
+              width: 520,
+            });
+            return;
           }
         }
 
