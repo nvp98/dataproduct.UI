@@ -262,7 +262,8 @@ export const bmQuyenConfig = {
       khuVucPhus: [
         { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
         { khuVucPhu: "Can", tenKhuVuc: "Bộ phận Cán Tấm" },
-        { khuVucPhu: "C4", tenKhuVuc: "GĐ/PGĐ NM" },
+        // "C4" (GĐ/PGĐ NM) đã bỏ khỏi luồng — không cấp mới; user đã được cấp C4 trước đó vẫn giữ
+        // quyền (BM_QuyenXL không xóa) để xử lý tiếp các phiếu cũ còn dính luồng C4.
       ]
     },
     {
