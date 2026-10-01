@@ -16,10 +16,12 @@ import {
   type HRC1_LoThoiUpdateRequest,
   type HRC1_TinhLuyenUpdateRequest,
   type HRC1_TrungMeInfo,
+  type HRC1_MayDucOptionVm,
 } from "../../../services/HRC1_BBGNApi";
 import MeThepTable from "./components/MeThepTable";
 import ChoNhanMePanel from "./components/ChoNhanMePanel";
 import { bmQuyenConfig } from "../../../utils/configs/bmQuyenConfig";
+import { buildMayDucOptions } from "../../../hooks/useMayDucOptions";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
@@ -40,10 +42,13 @@ const buildMeSortKey = (
   return `${date} ${thoiGian}`;
 };
 
-const _mayDucScopes = bmQuyenConfig.danhSachBieuMau
-  .find((b) => b.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)?.scope ?? [];
-
-export const getScopeName = (maBm: string, scope: number | null | undefined, tenScope?: string | null): string => {
+// Phiếu Đúc: scope = MayDuc.Id. Ưu tiên tenScope chốt lúc tạo phiếu, sau đó tra danhSachMayDuc (BE trả về).
+export const getScopeName = (
+  maBm: string,
+  scope: number | null | undefined,
+  tenScope?: string | null,
+  danhSachMayDuc?: HRC1_MayDucOptionVm[],
+): string => {
   if (tenScope) return tenScope;
   if (!scope) {
     if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi)    return "Lò thổi";
@@ -53,7 +58,7 @@ export const getScopeName = (maBm: string, scope: number | null | undefined, ten
   if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi)    return `Lò thổi ${scope}`;
   if (maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen) return `Tinh luyện ${scope}`;
   if (maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)
-    return _mayDucScopes.find((s) => s.maKhuVuc === String(scope))?.tenKhuVuc ?? `TSC/Đúc ${scope}`;
+    return danhSachMayDuc?.find((m) => m.id === scope)?.tenMayDuc ?? `Máy đúc ${scope}`;
   const bmDef = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
   return bmDef?.scope?.find((s) => s.maKhuVuc === String(scope))?.tenKhuVuc ?? `${maBm}-${scope}`;
 };
@@ -225,17 +230,19 @@ export const LoThoiPanel = ({
   const ghostCount = phieuData.danhSachMe.filter((m) => m.isGhost).length;
   const dirtyCount = Object.keys(edits).length;
 
-  // "Tinh luyện/Lên thẳng" combined Select options
-  const dichChuyenOpts = useMemo(() => [
+  // "Tinh luyện/Lên thẳng" combined Select options — máy đúc đã khóa không hiển thị, trừ khi đang là
+  // máy đích đã lưu của chính mẻ đó (giữ lại, disabled) để hiện tên thay vì Id
+  const getDichChuyenOpts = (me: HRC1_MeThepVm) => [
     {
       label: "Tinh luyện",
       options: [1, 2, 3, 4, 5].map((n) => ({ label: `TL ${n}`, value: `TL:${n}` })),
     },
     {
       label: "Lên thẳng",
-      options: phieuData.danhSachMayDuc.map((m) => ({ label: m.tenMayDuc, value: `LS:${m.id}` })),
+      options: buildMayDucOptions(phieuData.danhSachMayDuc, [me.idMayDucDich])
+        .map((o) => ({ ...o, value: `LS:${o.value}` })),
     },
-  ], [phieuData.danhSachMayDuc]);
+  ];
 
   const getDichEncoded = (me: HRC1_MeThepVm): string | undefined => {
     const e = edits[me.id];
@@ -566,13 +573,13 @@ export const LoThoiPanel = ({
           return (
             <Select size="small" style={{ width: 125 }}
               value={getDichEncoded(me) ?? undefined}
-              options={dichChuyenOpts}
+              options={getDichChuyenOpts(me)}
               disabled />
           );
         }
         const optsForMe = (me.trangThaiTL ?? 0) >= 1
-          ? dichChuyenOpts.slice(0, 1)
-          : dichChuyenOpts;
+          ? getDichChuyenOpts(me).slice(0, 1)
+          : getDichChuyenOpts(me);
         return (
           <Select size="small" style={{ width: 125 }} showSearch optionFilterProp="label"
             status={!getDichEncoded(me) ? "error" : undefined}
@@ -756,7 +763,11 @@ export const TinhLuyenPanel = ({
   const [xoaMeTayBusy, setXoaMeTayBusy] = useState<Set<number>>(new Set());
 
   const dirtyCount = Object.keys(edits).length;
-  const mayDucOpts = phieuData.danhSachMayDuc.map((m) => ({ label: m.tenMayDuc, value: m.id }));
+  // Máy đúc đã khóa không hiển thị, trừ khi đang là máy đích đã lưu của chính mẻ đó (giữ lại,
+  // disabled) để hiện tên thay vì Id
+  const getMayDucOpts = (me: HRC1_MeThepVm) => buildMayDucOptions(phieuData.danhSachMayDuc, [me.idMayDucDich]);
+  const getTenMayDuc = (id: number | null | undefined) =>
+    id != null ? phieuData.danhSachMayDuc.find((m) => m.id === id)?.tenMayDuc : undefined;
 
   const get = (me: HRC1_MeThepVm, f: keyof HRC1_TinhLuyenUpdateRequest) => {
     const e = edits[me.id];
@@ -1191,7 +1202,7 @@ export const TinhLuyenPanel = ({
           <Select size="small" style={{ width: 120 }} showSearch optionFilterProp="label"
             status={!disabled && val == null ? "error" : undefined}
             value={val}
-            options={mayDucOpts}
+            options={getMayDucOpts(me)}
             allowClear={!disabled}
             disabled={disabled}
             onChange={disabled ? undefined : (v) => set(me.id, "idMayDucDich", v ?? null)} />
@@ -1228,7 +1239,7 @@ export const TinhLuyenPanel = ({
           const isSelf = effectiveChuyenId == null || effectiveChuyenId === me.id;
           if (isSelf) {
             const mayId = get(me, "idMayDucDich") as number | null | undefined;
-            return mayDucOpts.find((o) => o.value === mayId)?.label ?? "—";
+            return getTenMayDuc(mayId) ?? "—";
           }
           return me.tenMayDucChuyen ?? "—";
         },
@@ -1914,7 +1925,7 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
 
   const buildExportFilename = (ext: "xlsx" | "pdf") => {
     if (!phieuData) return `HRC1_export.${ext}`;
-    const label = getScopeName(phieuData.maBm ?? "", phieuData.scope).replace(/[\s/]/g, "_");
+    const label = getScopeName(phieuData.maBm ?? "", phieuData.scope, phieuData.tenScope, phieuData.danhSachMayDuc).replace(/[\s/]/g, "_");
     const ngay = phieuData.ngaySX ? phieuData.ngaySX.toString().replace(/-/g, "") : "";
     const ca = phieuData.ca === 1 ? "CaNgay" : phieuData.ca === 2 ? "CaDem" : "";
     return `HRC1_${label}_${ngay}_${ca}.${ext}`;
@@ -1970,7 +1981,7 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
     if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi || maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen) {
       return groupLabel;
     }
-    const scopeName = getScopeName(maBm, phieuData.scope);
+    const scopeName = getScopeName(maBm, phieuData.scope, phieuData.tenScope, phieuData.danhSachMayDuc);
     return `${groupLabel} — ${scopeName}`;
   }, [phieuData]);
 

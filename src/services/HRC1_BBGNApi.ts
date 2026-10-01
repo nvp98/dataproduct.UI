@@ -95,6 +95,7 @@ export interface HRC1_MeChoNhanQuery {
 export interface HRC1_MayDucOptionVm {
   id: number;
   tenMayDuc: string;
+  isLock: boolean;
 }
 
 export interface HRC1_PhieuDataVm {
@@ -103,6 +104,7 @@ export interface HRC1_PhieuDataVm {
   maBm?: string | null;
   congDoan?: string | null;
   scope?: number | null;
+  tenScope?: string | null;
   ngaySX?: string | null;
   ca?: number | null;
   kip?: string | null;
