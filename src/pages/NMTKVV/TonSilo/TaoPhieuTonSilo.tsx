@@ -115,6 +115,12 @@ const recalcTachRow0 = (rows: TachLieuRow[], src: TableRow): TachLieuRow[] => {
 
 const MA_BM = "TKVV_TONSILO";
 
+const fmt3 = (v: unknown): string => {
+  if (v == null || v === "") return "";
+  const n = Number(v);
+  return Number.isFinite(n) ? (Math.round(n * 1000) / 1000).toFixed(3) : String(v);
+};
+
 const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => ({
   key: `silo-${item.siloID}-${idx}`,
   dbId: item.id > 0 ? item.id : null,
@@ -123,19 +129,18 @@ const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => ({
   maSilo: item.maSilo ?? "",
   nguyenLieu: item.tenNVL ?? "",
   doAm: item.doAm ?? "",
-  doAmText: item.doAmText ?? "",
-  tonDau: item.tonDau ?? "",
-  nhap: item.nhap ?? item.nhapAuto ?? "",
-  nhapAuto: item.nhapAuto ?? "",
-  xuat: item.xuat ?? item.xuatAuto ?? "",
-  xuatAuto: item.xuatAuto ?? "",
-  tonCuoi:
+  doAmText: fmt3(item.doAmText),
+  tonDau: fmt3(item.tonDau),
+  nhap: fmt3(item.nhap ?? item.nhapAuto),
+  nhapAuto: fmt3(item.nhapAuto),
+  xuat: fmt3(item.xuat ?? item.xuatAuto),
+  xuatAuto: fmt3(item.xuatAuto),
+  tonCuoi: fmt3(
     item.isAdjusted || item.isTachLieu
-      ? item.tonCuoi != null
-        ? item.tonCuoi
-        : (item.tonCuoiAuto ?? "")
-      : (item.tonCuoiAuto ?? ""),
-  tonCuoiAuto: item.tonCuoiAuto ?? "",
+      ? item.tonCuoi ?? item.tonCuoiAuto
+      : item.tonCuoiAuto
+  ),
+  tonCuoiAuto: fmt3(item.tonCuoiAuto),
   isAdjusted: item.isAdjusted ?? false,
   isTachLieu: item.isTachLieu ?? false,
   ghiChu: item.ghiChu ?? "",
@@ -1326,6 +1331,11 @@ const TaoPhieuTonSilo = () => {
                         if (dec && dec.length > 3) v = int + "." + dec.slice(0, 3);
                       }
                       updateTachRow(idx, f, v);
+                    }}
+                    onBlur={(e) => {
+                      const v = e.target.value;
+                      if (v !== "" && Number.isFinite(Number(v)))
+                        updateTachRow(idx, f, (Math.round(Number(v) * 1000) / 1000).toFixed(3));
                     }}
                     style={{
                       width: "100%",

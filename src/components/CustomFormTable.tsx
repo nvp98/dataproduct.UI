@@ -160,9 +160,22 @@ export default function CustomFormTable({
     const rounded = Math.round(n * 1000) / 1000;
     const sign = rounded < 0 ? "-" : "";
     const abs = Math.abs(rounded);
-    const [intPartRaw, fracRaw] = String(abs).split(".");
+    const [intPartRaw, fracRaw] = abs.toFixed(3).split(".");
     const intPart = intPartRaw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    return fracRaw ? `${sign}${intPart}.${fracRaw}` : `${sign}${intPart}`;
+    return `${sign}${intPart}.${fracRaw}`;
+  };
+
+  const formatFloat3dp = (value: unknown): string => {
+    if (value === null || value === undefined || value === "") return "";
+    const raw = String(value).trim();
+    if (!raw) return "";
+    const n = Number(raw.replace(",", "."));
+    if (!Number.isFinite(n)) return raw;
+    const rounded = Math.round(n * 1000) / 1000;
+    const sign = rounded < 0 ? "-" : "";
+    const abs = Math.abs(rounded);
+    const [intPart, fracPart] = abs.toFixed(3).split(".");
+    return `${sign}${intPart}.${fracPart}`;
   };
 
   const formatIfNeeded = (format: unknown, value: unknown): string => {
@@ -358,17 +371,11 @@ export default function CustomFormTable({
                   readonlyFields.includes(key) ? (
                     <Input
                       placeholder={child.title}
-                      value={formatIfNeeded(
-                        (child as any)?.format,
-                        record[key],
-                      )}
+                      value={(child as any)?.type === "float"
+                        ? formatFloat3dp(record[key])
+                        : formatIfNeeded((child as any)?.format, record[key])}
                       readOnly
-                      style={getCellStyle(
-                        key,
-                        record[key],
-                        record,
-                        true,
-                      )}
+                      style={getCellStyle(key, record[key], record, true)}
                     />
                   ) : (child as any).options ? (
                     <Select
@@ -391,19 +398,19 @@ export default function CustomFormTable({
                           (child as any)?.type,
                           (child as any)?.min,
                         );
-                        handleCellChange(
-                          validated,
-                          idx,
-                          key,
-                        );
+                        handleCellChange(validated, idx, key);
+                      }}
+                      onBlur={() => {
+                        if ((child as any)?.type === "float") {
+                          const v = record[key];
+                          if (v !== "" && v != null) {
+                            const n = Number(String(v).replace(",", "."));
+                            if (Number.isFinite(n)) handleCellChange((Math.round(n * 1000) / 1000).toFixed(3), idx, key);
+                          }
+                        }
                       }}
                       disabled={!editable}
-                      style={getCellStyle(
-                        key,
-                        record[key],
-                        record,
-                        false,
-                      )}
+                      style={getCellStyle(key, record[key], record, false)}
                     />
                   ),
               };
@@ -452,10 +459,13 @@ export default function CustomFormTable({
           const isCellReadonly = isReadonly || readonlyCellGetter?.(dataIndex, record) === true;
           const baseStyleRo = getCellStyle(dataIndex, record[dataIndex], record, true);
           if (isCellReadonly) {
+            const displayVal = col.type === "float"
+              ? formatFloat3dp(record[dataIndex])
+              : formatIfNeeded(col.format, record[dataIndex]);
             return wrapCell(
               <Input
                 placeholder={col.title}
-                value={formatIfNeeded(col.format, record[dataIndex])}
+                value={displayVal}
                 readOnly
                 style={baseStyleRo}
               />,
@@ -482,6 +492,15 @@ export default function CustomFormTable({
               onChange={(e) => {
                 const validated = validateAndFormatInput(e.target.value, col.type as "number" | "text" | "float" | undefined, col.min);
                 handleCellChange(validated, idx, dataIndex);
+              }}
+              onBlur={() => {
+                if (col.type === "float") {
+                  const v = record[dataIndex];
+                  if (v !== "" && v != null) {
+                    const n = Number(String(v).replace(",", "."));
+                    if (Number.isFinite(n)) handleCellChange((Math.round(n * 1000) / 1000).toFixed(3), idx, dataIndex);
+                  }
+                }
               }}
               disabled={!editable}
               style={baseStyle}

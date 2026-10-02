@@ -115,12 +115,18 @@ const SCOPE_OPTIONS = TKVV_SCOPES.map((s) => ({
   value: s.scope,
 }));
 
-const calcQuyKho = (klAmRaw: any, doAmRaw: any): number | string => {
+const fmt3 = (v: unknown): string => {
+  if (v == null || v === "") return "";
+  const n = Number(v);
+  return Number.isFinite(n) ? (Math.round(n * 1000) / 1000).toFixed(3) : String(v);
+};
+
+const calcQuyKho = (klAmRaw: any, doAmRaw: any): string => {
   const klAm = parseFloat(String(klAmRaw));
   if (isNaN(klAm)) return "";
   const doAm = parseFloat(String(doAmRaw));
-  if (isNaN(doAm)) return parseFloat(klAm.toFixed(3));
-  return parseFloat((klAm * (1 - doAm / 100)).toFixed(3));
+  const result = isNaN(doAm) ? klAm : klAm * (1 - doAm / 100);
+  return (Math.round(result * 1000) / 1000).toFixed(3);
 };
 
 const withQuyKho = (rows: TableRow[]): TableRow[] =>
@@ -148,13 +154,13 @@ const fromDbRecord = (
   kip: item.kip ?? "",
   nguyenLieu: item.tenNVL ?? "",
   donViTinh: null,
-  klAm: item.klAm ?? "",
-  klAmAuto: item.klAmAuto ?? "",
+  klAm: fmt3(item.klAm),
+  klAmAuto: fmt3(item.klAmAuto),
   isAdjusted: item.isAdjusted,
-  doAm: item.doAm ?? "",
-  quyKho: item.quyKho ?? calcQuyKho(item.klAm, item.doAm),
-  thanhPhamL1: item.thanhPhamL1 ?? "",
-  thanhPhamL2: item.thanhPhamL2 ?? "",
+  doAm: fmt3(item.doAm),
+  quyKho: item.quyKho != null ? fmt3(item.quyKho) : calcQuyKho(item.klAm, item.doAm),
+  thanhPhamL1: fmt3(item.thanhPhamL1),
+  thanhPhamL2: fmt3(item.thanhPhamL2),
   thanhPham_Note: item.thanhPham_Note ?? "",
   ghiChu: item.ghiChu ?? "",
   id_CT_BBGN: item.iD_CT_BBGN ?? null,
@@ -827,7 +833,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       if (!isNaN(klAmNum) && !isNaN(klAmAutoNum) && klAmNum !== klAmAutoNum) {
         return {
           style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
-          tooltip: `KL ẩm Auto: ${klAmAutoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
+          tooltip: `KL ẩm Auto: ${klAmAutoNum.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`,
         };
       }
     }
@@ -888,7 +894,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
       });
     });
     const fmt = (n: number) =>
-      n ? n.toLocaleString("en-US", { maximumFractionDigits: 3 }) : "";
+      n ? n.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : "";
     return (
       <tr>
         <td style={{ fontWeight: 600, textAlign: "center" }}>TỔNG</td>
@@ -1259,7 +1265,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
           const auto = tongSanLuong.giaTriTuDong;
           const dc = tongThanhPhamDieuChinh;
           const fmt = (n: number) =>
-            n.toLocaleString("en-US", { maximumFractionDigits: 3 });
+            n.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
           const chenhlech =
             auto != null && dc != null
               ? parseFloat((dc - auto).toFixed(3))
@@ -1578,6 +1584,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
               >
                 — Tổng PLC:{" "}
                 {tongSanLuong.giaTriDieuChinh.toLocaleString("en-US", {
+                  minimumFractionDigits: 3,
                   maximumFractionDigits: 3,
                 })}{" "}
                 Tấn
@@ -1633,6 +1640,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
                 <Table.Summary.Cell index={3}>
                   <b>
                     {total.toLocaleString("en-US", {
+                      minimumFractionDigits: 3,
                       maximumFractionDigits: 3,
                     })}
                   </b>
@@ -1645,6 +1653,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
                     >
                       {diff >= 0 ? "+" : ""}
                       {diff.toLocaleString("en-US", {
+                        minimumFractionDigits: 3,
                         maximumFractionDigits: 3,
                       })}{" "}
                       so PLC
@@ -1769,6 +1778,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
               <Typography.Text type="secondary">Tổng PLC: </Typography.Text>
               <b style={{ color: "#1677ff" }}>
                 {tongSanLuong.giaTriDieuChinh.toLocaleString("en-US", {
+                  minimumFractionDigits: 3,
                   maximumFractionDigits: 3,
                 })}{" "}
                 Tấn
@@ -1970,6 +1980,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
                 <Table.Summary.Cell index={6}>
                   <b>
                     {total.toLocaleString("en-US", {
+                      minimumFractionDigits: 3,
                       maximumFractionDigits: 3,
                     })}{" "}
                     Tấn
