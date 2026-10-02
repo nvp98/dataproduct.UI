@@ -1,18 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import TKVV_BC_SanLuongChiPhi from "../../../utils/BM_config/TKVV_BC_SanLuongChiPhi.json";
-import { Button, Card, Space, Table, Tag, Tooltip } from "antd";
-import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { tkvvBcSlChiPhiApi } from "../../../services/TKVVApi";
+import { Button, Card, Space, Table, Tag, Tooltip, message } from "antd";
+import { EyeOutlined, PlusOutlined, SyncOutlined } from "@ant-design/icons";
 import PhieuFilterCard, {
   type FilterFieldConfig,
 } from "../../../components/PhieuFilterCard";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import useRowSelection from "../../../hooks/useRowSelection";
 import useCheckPhieu from "../../../hooks/useCheckPhieu";
-import { tkvvScopeToLabel } from "../../../utils/constants/TKVV_constant";
+import { tkvvScopeToLabel, TKVV_SCOPE_OPTIONS } from "../../../utils/constants/TKVV_constant";
 
 const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
   const config = TKVV_BC_SanLuongChiPhi as any;
@@ -42,6 +43,7 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
     handleClearFilter,
     onPageChange,
     refetch,
+    getAllowedScopeOptions,
   } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
@@ -55,6 +57,29 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
     () => setSelectedRowKeys([]),
     refetch,
   );
+
+  const [refreshLoading, setRefreshLoading] = useState(false);
+
+  const handleRefreshBbgn = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning("Vui lòng chọn ít nhất 1 phiếu.");
+      return;
+    }
+    setRefreshLoading(true);
+    try {
+      const res = await tkvvBcSlChiPhiApi.refreshBbgnBatch({
+        phieuIds: selectedRowKeys as string[],
+        currentUserId,
+      });
+      message.success(res.message || "Đã làm mới dữ liệu BBGN.");
+      setSelectedRowKeys([]);
+      refetch();
+    } catch {
+      message.error("Làm mới dữ liệu BBGN thất bại.");
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
 
   const statusConfig: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -122,6 +147,14 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
       width: 130,
       render: (value: string) =>
         value ? dayjs(value).format("DD/MM/YYYY") : "-",
+    },
+    {
+      title: "Ca",
+      dataIndex: "ca",
+      key: "ca",
+      width: 100,
+      render: (value: number) =>
+        value === 1 ? "Ca ngày" : value === 2 ? "Ca đêm" : "-",
     },
     {
       title: "Xưởng",
@@ -195,7 +228,7 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
     },
   ];
 
-  const filterFieldsConfig: FilterFieldConfig[] = [
+  const filterFieldsConfig: FilterFieldConfig[] = useMemo(() => [
     {
       key: "soPhieu",
       label: "Số phiếu",
@@ -208,7 +241,14 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
       type: "dateRange",
       placeholder: "Khoảng ngày",
     },
-  ];
+    {
+      key: "scope",
+      label: "Xưởng",
+      type: "select",
+      placeholder: "Chọn xưởng",
+      options: getAllowedScopeOptions(config.code as string, TKVV_SCOPE_OPTIONS),
+    },
+  ], [getAllowedScopeOptions, config.code]);
 
   return (
     <div>
@@ -226,6 +266,14 @@ const BaoCaoSanLuongChiPhi = ({ type }: { type?: string }) => {
       <Card
         extra={
           <Space>
+            <Button
+              icon={<SyncOutlined />}
+              loading={refreshLoading}
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleRefreshBbgn}
+            >
+              Làm mới dữ liệu BBGN
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}

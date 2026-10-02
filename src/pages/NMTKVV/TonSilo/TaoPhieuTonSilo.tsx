@@ -141,18 +141,18 @@ const fromInitRecord = (item: TKVVTonSiloRowDto, idx: number): TableRow => ({
   ghiChu: item.ghiChu ?? "",
 });
 
-// Có NVL lên trước, nhóm cùng NVL ở gần nhau; chưa gán NVL xuống dưới giữ thứ tự gốc
+// Nhóm cùng silo ở gần nhau; trong cùng silo sort theo NVL; chưa gán NVL xuống dưới
 const sortSiloRows = (rows: TableRow[]): TableRow[] => {
   const withNvl = rows.filter((r) => r.nguyenVatLieuID != null);
   const withoutNvl = rows.filter((r) => r.nguyenVatLieuID == null);
   withNvl.sort((a, b) => {
-    if (a.nguyenVatLieuID !== b.nguyenVatLieuID)
-      return (a.nguyenVatLieuID as number) - (b.nguyenVatLieuID as number);
-    return String(a.maSilo ?? "").localeCompare(
+    const siloCompare = String(a.maSilo ?? "").localeCompare(
       String(b.maSilo ?? ""),
       undefined,
       { numeric: true },
     );
+    if (siloCompare !== 0) return siloCompare;
+    return (a.nguyenVatLieuID as number) - (b.nguyenVatLieuID as number);
   });
   return [...withNvl, ...withoutNvl];
 };
@@ -253,6 +253,20 @@ const TaoPhieuTonSilo = () => {
       })),
     [tableData, tonCuoiTinhToanByKey],
   );
+
+  // Key của dòng đầu tiên trong mỗi nhóm NVL (theo thứ tự hiển thị sau sort)
+  const firstNvlRowKeySet = useMemo(() => {
+    const seen = new Set<number>();
+    const result = new Set<string | number>();
+    tableDataDisplay.forEach((row) => {
+      const nvlId = row.nguyenVatLieuID as number;
+      if (nvlId != null && !seen.has(nvlId)) {
+        seen.add(nvlId);
+        result.add(row.key);
+      }
+    });
+    return result;
+  }, [tableDataDisplay]);
 
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const signaturesRef = useRef<HTMLDivElement>(null);
@@ -642,10 +656,10 @@ const TaoPhieuTonSilo = () => {
         key: Date.now(),
         nguyenVatLieuID: null,
         doAm: "",
-        tonDau: 0,
+        tonDau: "",
         nhap: "",
         xuat: "",
-        tonCuoi: tachSourceRow?.tonCuoi ?? "",
+        tonCuoi: prev.length > 0 ? (prev[0].tonCuoi ?? "") : "",
         ghiChu: "",
       };
       const updated = [...prev, newRow];
@@ -696,7 +710,7 @@ const TaoPhieuTonSilo = () => {
     setTableData((prev) => {
       const updated = [...prev];
       updated.splice(tachSourceIdx, 1, ...newRows);
-      return updated;
+      return sortSiloRows(updated);
     });
 
     setShowTachModal(false);
@@ -882,7 +896,12 @@ const TaoPhieuTonSilo = () => {
     (rowIndex: number, dataIndex: string, value: any) => {
       setTableData((prev) => {
         const updated = [...prev];
-        updated[rowIndex] = { ...updated[rowIndex], [dataIndex]: value };
+        const patch: Partial<TableRow> = { [dataIndex]: value };
+        if (dataIndex === "doAmText") {
+          const parsed = parseFloat(String(value));
+          patch.doAm = isNaN(parsed) ? "" : parsed;
+        }
+        updated[rowIndex] = { ...updated[rowIndex], ...patch };
         return updated;
       });
     },
@@ -895,6 +914,19 @@ const TaoPhieuTonSilo = () => {
     );
   }, []);
 
+  // doAmText chỉ cho sửa khi: cột Xuất có giá trị VÀ là dòng đầu tiên của NVL
+  const readonlyCellGetter = useCallback(
+    (dataIndex: string, record: any): boolean => {
+      if (dataIndex !== "doAmText") return false;
+      const xuat = record.xuat;
+      const xuatHasValue =
+        xuat !== "" && xuat != null && !isNaN(parseFloat(String(xuat))) && parseFloat(String(xuat)) !== 0;
+      if (!xuatHasValue) return true;
+      return !firstNvlRowKeySet.has(record.key);
+    },
+    [firstNvlRowKeySet],
+  );
+
   const cellDecorator = useCallback((dataIndex: string, record: any) => {
     if (
       dataIndex === "tonCuoi" &&
@@ -905,7 +937,7 @@ const TaoPhieuTonSilo = () => {
       const autoNum = parseFloat(String(record.tonCuoiAuto));
       if (!isNaN(cuoiNum) && !isNaN(autoNum) && cuoiNum !== autoNum) {
         return {
-          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          style: { backgroundColor: "#fff1f0", borderColor: "#faad14" },
           tooltip: `Tồn cuối Auto: ${autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
         };
       }
@@ -919,7 +951,7 @@ const TaoPhieuTonSilo = () => {
       const autoNum = parseFloat(String(record.nhapAuto));
       if (!isNaN(nhapNum) && !isNaN(autoNum) && nhapNum !== autoNum) {
         return {
-          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          style: { backgroundColor: "#fff1f0", borderColor: "#faad14" },
           tooltip: `Nhập BBGN (Auto): ${autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
         };
       }
@@ -933,7 +965,7 @@ const TaoPhieuTonSilo = () => {
       const autoNum = parseFloat(String(record.xuatAuto));
       if (!isNaN(xuatNum) && !isNaN(autoNum) && xuatNum !== autoNum) {
         return {
-          style: { backgroundColor: "#fffbe6", borderColor: "#faad14" },
+          style: { backgroundColor: "#fff1f0", borderColor: "#faad14" },
           tooltip: `Xuất Auto: ${autoNum.toLocaleString("en-US", { maximumFractionDigits: 3 })}`,
         };
       }
@@ -1108,6 +1140,7 @@ const TaoPhieuTonSilo = () => {
             showDeleteButton={false}
             summary={buildSummary}
             cellDecorator={cellDecorator}
+            readonlyCellGetter={readonlyCellGetter}
             scrollY={tableScrollY}
             onRow={(record) =>
               record.isTachLieu
@@ -1282,14 +1315,24 @@ const TaoPhieuTonSilo = () => {
                 return (
                   <input
                     type="number"
+                    min={0}
+                    step="0.001"
                     value={val ?? ""}
-                    onChange={(e) => updateTachRow(idx, f, e.target.value)}
+                    onChange={(e) => {
+                      let v = e.target.value;
+                      if (v !== "" && Number(v) < 0) return;
+                      if (v.includes(".")) {
+                        const [int, dec] = v.split(".");
+                        if (dec && dec.length > 3) v = int + "." + dec.slice(0, 3);
+                      }
+                      updateTachRow(idx, f, v);
+                    }}
                     style={{
                       width: "100%",
                       border: "1px solid #d9d9d9",
                       borderRadius: 4,
                       padding: "4px 8px",
-                      backgroundColor: isAutoCalc ? "#fffbe6" : undefined,
+                      backgroundColor: isAutoCalc ? "#fff1f0" : undefined,
                     }}
                     title={
                       isAutoCalc

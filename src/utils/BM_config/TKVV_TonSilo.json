@@ -24,6 +24,7 @@
       "type": "select",
       "key": "ca",
       "required": true,
+      "lockOnEdit": true,
       "options": [
         { "label": "Ca ngày", "value": 1 },
         { "label": "Ca đêm", "value": 2 }
@@ -61,8 +62,7 @@
           "dataIndex": "doAmText",
           "width": 80,
           "type": "float",
-          "align": "right",
-          "readonly": true
+          "align": "right"
         },
         {
           "title": "Tồn đầu (Tấn)",
@@ -85,14 +85,16 @@
           "dataIndex": "xuat",
           "width": 100,
           "type": "float",
-          "align": "right"
+          "align": "right",
+          "min": 0
         },
         {
           "title": "Tồn cuối (Tấn)",
           "dataIndex": "tonCuoi",
           "width": 100,
           "type": "float",
-          "align": "right"
+          "align": "right",
+          "min": 0
         },
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 160 }
       ]

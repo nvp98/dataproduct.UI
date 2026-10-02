@@ -377,6 +377,12 @@ export const tkvvBcSlChiPhiApi = {
     lyDoDieuChinh?: string | null;
   }): Promise<void> =>
     apiService.post("/api/TKVV_BCSL_ChiPhi/save-phieu-rows", request),
+
+  refreshBbgnBatch: (request: {
+    phieuIds: string[];
+    currentUserId?: number | null;
+  }): Promise<{ message: string }> =>
+    apiService.post("/api/TKVV_BCSL_ChiPhi/refresh-bbgn-batch", request),
 };
 
 // ─── Chi tiết sản lượng theo phiếu ────────────────────────────────────────────

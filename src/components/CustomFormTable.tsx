@@ -20,6 +20,7 @@ export interface FormColumnDef {
   fixed?: "left" | "right";
   format?: string;
   type?: "text" | "number" | "float" | "index" | string;
+  min?: number;
   readonly?: boolean;
   editable?: boolean;
   sum?: boolean;
@@ -112,6 +113,7 @@ export default function CustomFormTable({
   const validateAndFormatInput = (
     value: string,
     type?: "text" | "number" | "float",
+    min?: number,
   ): string => {
     if (!type || type === "text") return value;
 
@@ -123,15 +125,23 @@ export default function CustomFormTable({
     }
 
     if (type === "float") {
-      // Cho phép số với dấu thập phân, dấu âm, và dấu cách (sẽ xóa sau)
-      const normalized = value.replace(/\s+/g, ""); // Xóa dấu cách
-      const match = normalized.match(/^-?[\d.]*$/);
-      if (!match) return normalized.replace(/[^0-9.-]/g, "");
+      const allowNegative = min === undefined || min < 0;
+      const normalized = allowNegative
+        ? value.replace(/\s+/g, "")
+        : value.replace(/\s+/g, "").replace(/-/g, "");
+      const pattern = allowNegative ? /^-?[\d.]*$/ : /^[\d.]*$/;
+      const match = normalized.match(pattern);
+      if (!match) return normalized.replace(allowNegative ? /[^0-9.-]/g : /[^0-9.]/g, "");
 
       // Chỉ cho phép một dấu chấm
       const parts = normalized.split(".");
       if (parts.length > 2) {
-        return (parts[0] || "0") + "." + parts.slice(1).join("");
+        return (parts[0] || "0") + "." + parts.slice(1).join("").slice(0, 3);
+      }
+
+      // Giới hạn tối đa 3 chữ số thập phân
+      if (parts.length === 2 && parts[1].length > 3) {
+        return parts[0] + "." + parts[1].slice(0, 3);
       }
 
       return normalized;
@@ -147,8 +157,9 @@ export default function CustomFormTable({
     const normalized = raw.replace(/\s+/g, "").replace(",", ".");
     const n = Number(normalized);
     if (!Number.isFinite(n)) return raw;
-    const sign = n < 0 ? "-" : "";
-    const abs = Math.abs(n);
+    const rounded = Math.round(n * 1000) / 1000;
+    const sign = rounded < 0 ? "-" : "";
+    const abs = Math.abs(rounded);
     const [intPartRaw, fracRaw] = String(abs).split(".");
     const intPart = intPartRaw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     return fracRaw ? `${sign}${intPart}.${fracRaw}` : `${sign}${intPart}`;
@@ -378,6 +389,7 @@ export default function CustomFormTable({
                         const validated = validateAndFormatInput(
                           e.target.value,
                           (child as any)?.type,
+                          (child as any)?.min,
                         );
                         handleCellChange(
                           validated,
@@ -468,7 +480,7 @@ export default function CustomFormTable({
               placeholder={col.title}
               value={record[dataIndex] ?? ""}
               onChange={(e) => {
-                const validated = validateAndFormatInput(e.target.value, col.type as "number" | "text" | "float" | undefined);
+                const validated = validateAndFormatInput(e.target.value, col.type as "number" | "text" | "float" | undefined, col.min);
                 handleCellChange(validated, idx, dataIndex);
               }}
               disabled={!editable}

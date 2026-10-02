@@ -851,7 +851,7 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
         }
         return;
       }
-      if (dataIndex !== "doAm" && dataIndex !== "klAm") return;
+      if (dataIndex !== "klAm") return;
       setTableData((prev) => {
         const r = { ...prev[rowIndex], [dataIndex]: value };
         r.quyKho = calcQuyKho(r.klAm, r.doAm);
@@ -914,12 +914,18 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
     );
   }, []);
 
-  const handleOpenBBGN = useCallback(() => {
+  const handleOpenBBGN = useCallback(async () => {
     const rows = tableData.filter((r) => r.id_CT_BBGN != null);
-    console.log(rows, tableData);
     setBbgnEditRows(rows.map((r) => ({ ...r })));
+    if (!bbgnTenVatTu && selectedScope) {
+      try {
+        const mapping = await tkvvScopeXuongMappingApi.getByScope(selectedScope).catch(() => null);
+        if (mapping?.tenVatTu) setBbgnTenVatTu(mapping.tenVatTu);
+        if (mapping?.idNvlBbgnThanhPham) setBbgnIdVatTu(mapping.idNvlBbgnThanhPham);
+      } catch {}
+    }
     setShowBBGNModal(true);
-  }, [tableData]);
+  }, [tableData, bbgnTenVatTu, selectedScope]);
 
   const handleApplyBBGN = useCallback(() => {
     const editMap = new Map(bbgnEditRows.map((r) => [r.key, r.thanhPhamL1]));
@@ -1657,8 +1663,10 @@ const TaoPhieuBaoCaoSanLuongChiPhi = () => {
             {
               title: "Nguyên vật liệu",
               dataIndex: "nguyenLieu",
-              render: (val) =>
-                val || <Typography.Text type="secondary">—</Typography.Text>,
+              render: (val) => {
+                const name = bbgnTenVatTu ?? val;
+                return name || <Typography.Text type="secondary">—</Typography.Text>;
+              },
             },
             {
               title: "Nguồn BBGN",

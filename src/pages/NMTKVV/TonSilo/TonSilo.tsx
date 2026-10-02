@@ -13,7 +13,7 @@ import { usePhieuSearchListHRC } from "../../../hooks/usePhieuSearchListHRC";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import useRowSelection from "../../../hooks/useRowSelection";
 import useCheckPhieu from "../../../hooks/useCheckPhieu";
-import { tkvvScopeToLabel } from "../../../utils/constants/TKVV_constant";
+import { tkvvScopeToLabel, TKVV_SCOPE_OPTIONS } from "../../../utils/constants/TKVV_constant";
 
 const TonSilo = ({ type }: { type?: string }) => {
   const config = TKVV_TonSilo as any;
@@ -43,6 +43,7 @@ const TonSilo = ({ type }: { type?: string }) => {
     handleClearFilter,
     onPageChange,
     refetch,
+    getAllowedScopeOptions,
   } = usePhieuSearchListHRC({
     maBm: config.code as string,
     fixedFilters,
@@ -227,7 +228,7 @@ const TonSilo = ({ type }: { type?: string }) => {
     },
   ];
 
-  const filterFieldsConfig: FilterFieldConfig[] = [
+  const filterFieldsConfig: FilterFieldConfig[] = useMemo(() => [
     {
       key: "soPhieu",
       label: "Số phiếu",
@@ -240,7 +241,14 @@ const TonSilo = ({ type }: { type?: string }) => {
       type: "dateRange",
       placeholder: "Khoảng ngày",
     },
-  ];
+    {
+      key: "scope",
+      label: "Xưởng",
+      type: "select",
+      placeholder: "Chọn xưởng",
+      options: getAllowedScopeOptions(config.code as string, TKVV_SCOPE_OPTIONS),
+    },
+  ], [getAllowedScopeOptions, config.code]);
 
   return (
     <div>
