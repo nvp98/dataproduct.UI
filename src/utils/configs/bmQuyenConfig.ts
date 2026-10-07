@@ -305,7 +305,8 @@ export const bmQuyenConfig = {
         { maKhuVuc: "5", tenKhuVuc: "Vê viên 1" },
         { maKhuVuc: "6", tenKhuVuc: "Vê viên 2" },
       ]
-    }
+    },
+    {
       maBm: BM_CONFIG.HRC1.HRC1_STD_NXT,
       tenBm: "STD - Nhập xuất tồn HRC1",
       nhom: "NM.HRC1",

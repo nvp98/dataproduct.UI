@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from "react";
+import React, { useState, useEffect, type ReactNode } from "react";
 import {
   Table,
   Button,
@@ -29,7 +29,12 @@ export interface FormColumnDef {
   /** Nested header groups — hỗ trợ đệ quy nhiều cấp */
   children?: FormColumnDef[];
   /** Override toàn bộ cell render cho cột này */
-  renderCell?: (record: any, idx: number, onChange: (val: any) => void, disabled: boolean) => ReactNode;
+  renderCell?: (
+    record: any,
+    idx: number,
+    onChange: (val: any) => void,
+    disabled: boolean,
+  ) => ReactNode;
 }
 
 interface CustomFormTableProps {
@@ -71,7 +76,10 @@ interface CustomFormTableProps {
   cellDecorator?: (
     dataIndex: string,
     record: any,
-  ) => { style?: React.CSSProperties; tooltip?: string | null } | null | undefined;
+  ) =>
+    | { style?: React.CSSProperties; tooltip?: string | null }
+    | null
+    | undefined;
   /** Render nút hành động tùy chỉnh per-row, hiển thị ở cột "Thao tác" cuối bảng. */
   rowActions?: (record: any, rowIndex: number) => React.ReactNode;
   /** Trả về true nếu ô (dataIndex, record) là readonly — ưu tiên cao hơn col.readonly. */
@@ -133,7 +141,8 @@ export default function CustomFormTable({
         : value.replace(/\s+/g, "").replace(/-/g, "");
       const pattern = allowNegative ? /^-?[\d.]*$/ : /^[\d.]*$/;
       const match = normalized.match(pattern);
-      if (!match) return normalized.replace(allowNegative ? /[^0-9.-]/g : /[^0-9.]/g, "");
+      if (!match)
+        return normalized.replace(allowNegative ? /[^0-9.-]/g : /[^0-9.]/g, "");
 
       // Chỉ cho phép một dấu chấm
       const parts = normalized.split(".");
@@ -231,7 +240,10 @@ export default function CustomFormTable({
     const deco = cellDecorator?.(dataIndex, record);
     if (!deco) return node;
     const decorated = deco.style
-      ? React.cloneElement(node as React.ReactElement<{ style?: React.CSSProperties }>, { style: { ...baseStyle, ...deco.style } })
+      ? React.cloneElement(
+          node as React.ReactElement<{ style?: React.CSSProperties }>,
+          { style: { ...baseStyle, ...deco.style } },
+        )
       : node;
     if (deco.tooltip) {
       return (
@@ -362,62 +374,67 @@ export default function CustomFormTable({
           title: col.title,
           width: col.width,
           fixed: col.fixed,
-          children: col.children.map(
-            (child: FormColumnDef) => {
-              const key = child.dataIndex ?? "";
-              return {
-                title: child.title,
-                dataIndex: key,
-                width: child.width,
-                render: (_: any, record: any, idx: number) =>
-                  readonlyFields.includes(key) ? (
-                    <Input
-                      placeholder={child.title}
-                      value={(child as any)?.type === "float"
+          children: col.children.map((child: FormColumnDef) => {
+            const key = child.dataIndex ?? "";
+            return {
+              title: child.title,
+              dataIndex: key,
+              width: child.width,
+              render: (_: any, record: any, idx: number) =>
+                readonlyFields.includes(key) ? (
+                  <Input
+                    placeholder={child.title}
+                    value={
+                      (child as any)?.type === "float"
                         ? formatFloat3dp(record[key])
-                        : formatIfNeeded((child as any)?.format, record[key])}
-                      readOnly
-                      style={getCellStyle(key, record[key], record, true)}
-                    />
-                  ) : (child as any).options ? (
-                    <Select
-                      placeholder={child.title}
-                      value={record[key] ?? undefined}
-                      onChange={(value) => {
-                        handleCellChange(value, idx, key);
-                      }}
-                      options={(child as any).options}
-                      disabled={!editable}
-                      style={{ width: "100%" }}
-                    />
-                  ) : (
-                    <Input
-                      placeholder={child.title}
-                      value={record[key] ?? ""}
-                      onChange={(e) => {
-                        const validated = validateAndFormatInput(
-                          e.target.value,
-                          (child as any)?.type,
-                          (child as any)?.min,
-                        );
-                        handleCellChange(validated, idx, key);
-                      }}
-                      onBlur={() => {
-                        if ((child as any)?.type === "float") {
-                          const v = record[key];
-                          if (v !== "" && v != null) {
-                            const n = Number(String(v).replace(",", "."));
-                            if (Number.isFinite(n)) handleCellChange((Math.round(n * 1000) / 1000).toFixed(3), idx, key);
-                          }
+                        : formatIfNeeded((child as any)?.format, record[key])
+                    }
+                    readOnly
+                    style={getCellStyle(key, record[key], record, true)}
+                  />
+                ) : (child as any).options ? (
+                  <Select
+                    placeholder={child.title}
+                    value={record[key] ?? undefined}
+                    onChange={(value) => {
+                      handleCellChange(value, idx, key);
+                    }}
+                    options={(child as any).options}
+                    disabled={!editable}
+                    style={{ width: "100%" }}
+                  />
+                ) : (
+                  <Input
+                    placeholder={child.title}
+                    value={record[key] ?? ""}
+                    onChange={(e) => {
+                      const validated = validateAndFormatInput(
+                        e.target.value,
+                        (child as any)?.type,
+                        (child as any)?.min,
+                      );
+                      handleCellChange(validated, idx, key);
+                    }}
+                    onBlur={() => {
+                      if ((child as any)?.type === "float") {
+                        const v = record[key];
+                        if (v !== "" && v != null) {
+                          const n = Number(String(v).replace(",", "."));
+                          if (Number.isFinite(n))
+                            handleCellChange(
+                              (Math.round(n * 1000) / 1000).toFixed(3),
+                              idx,
+                              key,
+                            );
                         }
-                      }}
-                      disabled={!editable}
-                      style={getCellStyle(key, record[key], record, false)}
-                    />
-                  ),
-              };
-            },
-          ),
+                      }
+                    }}
+                    disabled={!editable}
+                    style={getCellStyle(key, record[key], record, false)}
+                  />
+                ),
+            };
+          }),
         };
       }
 
@@ -450,7 +467,10 @@ export default function CustomFormTable({
       }
 
       const dataIndex = col.dataIndex as string;
-      const isReadonly = col.readonly === true || col.editable === false || readonlyFields.includes(String(dataIndex));
+      const isReadonly =
+        col.readonly === true ||
+        col.editable === false ||
+        readonlyFields.includes(String(dataIndex));
 
       return {
         title: col.title,
@@ -458,12 +478,19 @@ export default function CustomFormTable({
         width: col.width,
         fixed: col.fixed,
         render: (_: any, record: any, idx: number) => {
-          const isCellReadonly = isReadonly || readonlyCellGetter?.(dataIndex, record) === true;
-          const baseStyleRo = getCellStyle(dataIndex, record[dataIndex], record, true);
+          const isCellReadonly =
+            isReadonly || readonlyCellGetter?.(dataIndex, record) === true;
+          const baseStyleRo = getCellStyle(
+            dataIndex,
+            record[dataIndex],
+            record,
+            true,
+          );
           if (isCellReadonly) {
-            const displayVal = col.type === "float"
-              ? formatFloat3dp(record[dataIndex])
-              : formatIfNeeded(col.format, record[dataIndex]);
+            const displayVal =
+              col.type === "float"
+                ? formatFloat3dp(record[dataIndex])
+                : formatIfNeeded(col.format, record[dataIndex]);
             return wrapCell(
               <Input
                 placeholder={col.title}
@@ -471,11 +498,18 @@ export default function CustomFormTable({
                 readOnly
                 style={baseStyleRo}
               />,
-              dataIndex, record, baseStyleRo,
+              dataIndex,
+              record,
+              baseStyleRo,
             );
           }
           if (col.renderCell) {
-            return col.renderCell(record, idx, (val) => handleCellChange(val, idx, dataIndex), !editable);
+            return col.renderCell(
+              record,
+              idx,
+              (val) => handleCellChange(val, idx, dataIndex),
+              !editable,
+            );
           }
           if (col.options) {
             return (
@@ -489,13 +523,22 @@ export default function CustomFormTable({
               />
             );
           }
-          const baseStyle = getCellStyle(dataIndex, record[dataIndex], record, false);
+          const baseStyle = getCellStyle(
+            dataIndex,
+            record[dataIndex],
+            record,
+            false,
+          );
           return wrapCell(
             <Input
               placeholder={col.title}
               value={record[dataIndex] ?? ""}
               onChange={(e) => {
-                const validated = validateAndFormatInput(e.target.value, col.type as "number" | "text" | "float" | undefined, col.min);
+                const validated = validateAndFormatInput(
+                  e.target.value,
+                  col.type as "number" | "text" | "float" | undefined,
+                  col.min,
+                );
                 handleCellChange(validated, idx, dataIndex);
               }}
               onBlur={() => {
@@ -503,14 +546,21 @@ export default function CustomFormTable({
                   const v = record[dataIndex];
                   if (v !== "" && v != null) {
                     const n = Number(String(v).replace(",", "."));
-                    if (Number.isFinite(n)) handleCellChange((Math.round(n * 1000) / 1000).toFixed(3), idx, dataIndex);
+                    if (Number.isFinite(n))
+                      handleCellChange(
+                        (Math.round(n * 1000) / 1000).toFixed(3),
+                        idx,
+                        dataIndex,
+                      );
                   }
                 }
               }}
               disabled={!editable}
               style={baseStyle}
             />,
-            dataIndex, record, baseStyle,
+            dataIndex,
+            record,
+            baseStyle,
           );
         },
       };
