@@ -357,6 +357,14 @@ const TaoPhieuBienBanSanLuong = () => {
 
           const tinhTrang = res.tinhTrang ?? 0;
 
+          // Phiếu tạo tự động từ BM có thể không có Ngày/Ca/Kíp/Xưởng trong
+          // jsonData → lấy từ các cột của chính phiếu.
+          const headerFromPhieu: Record<string, any> = {
+            NgaySX: data.NgaySX ?? res.ngaySX,
+            ca: data.ca ?? res.ca,
+            scope: data.scope ?? res.scope,
+          };
+
           const dateFields = config.headerFields
 
             .filter((f: any) => f.type === "date")
@@ -366,8 +374,10 @@ const TaoPhieuBienBanSanLuong = () => {
           const parsedDates: Record<string, any> = {};
 
           dateFields.forEach((k: string) => {
-            if (data[k]) {
-              const parsed = dayjs(data[k]);
+            const raw = headerFromPhieu[k] ?? data[k];
+
+            if (raw) {
+              const parsed = dayjs(raw);
 
               parsedDates[k] = parsed.isValid() ? parsed : null;
             }
@@ -375,6 +385,7 @@ const TaoPhieuBienBanSanLuong = () => {
 
           form.setFieldsValue({
             ...data,
+            ...headerFromPhieu,
             ...signatureFields,
             ...parsedDates,
           });
@@ -1267,7 +1278,7 @@ const TaoPhieuBienBanSanLuong = () => {
               key={f.key || idx}
               field={f}
               idx={idx}
-              disabled={isFormLocked}
+              disabled={isFormLocked || !!idphieu }
             />
           ))}
         </div>
