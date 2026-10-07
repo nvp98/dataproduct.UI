@@ -1,19 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_PhieuDieuChinh from "../../../utils/BM_config/LG_PhieuDieuChinh.json";
-import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, message } from "antd";
-import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SettingOutlined } from "@ant-design/icons";
+import { Badge, Button, Card, Checkbox, Collapse, Form, Input, Modal, Popconfirm, Popover, Select, Space, Table, Tabs, Typography, message } from "antd";
+import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SettingOutlined, TableOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomFormItem from "../../../components/CustomFormItem";
-import CustomChonNguoiKy from "../../../components/CustomChonNguoiKy";
-import CustomFormTable from "../../../components/CustomFormTable";
-import type { FormColumnDef } from "../../../components/CustomFormTable";
+import CustomFormTableV2 from "../../../components/FormPhieuDieuChinh";
+import type { FormColumnDef } from "../../../components/FormPhieuDieuChinh";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { PheDuyetItem } from "../../../services/PhieuActionService";
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
-import { phieuDieuChinhApi, type LGPhieuDieuChinhNvlDto } from "../../../services/PhieuDieuChinhApi";
+import {
+  phieuDieuChinhApi,
+  type LGPhieuDieuChinhNvlDto,
+  type PhieuDieuChinhChiTietDto,
+} from "../../../services/PhieuDieuChinhApi";
+import { TaiKhoanApi } from "../../../services/TaiKhoanService";
+import "../../../styles/phieuDieuChinhCompact.css";
 
 interface TableRow {
   key?: string;
@@ -35,8 +40,19 @@ const toNum = (v: any): number | null =>
 // "Trước ẩm": không cần Độ ẩm, KL quy khô Nhập = Khối lượng Nhập.
 // "Sau ẩm": KL quy khô Nhập tự tính từ Khối lượng nhập + Độ ẩm.
 // Sau khi tính xong, Bên nhập mới gán qua Bên xuất.
-const recomputeRows = (rows: TableRow[]): TableRow[] =>
-  rows.map((row) => {
+//
+// "Người điều chỉnh nhận" không còn chọn tay — tự động gán người đang đăng nhập ngay khi
+// họ (bên nhận) sửa Khối lượng Nhập hoặc Độ ẩm của dòng (so với prevRows để biết có thật sự
+// vừa sửa). "Người điều chỉnh giao" tách riêng: người dùng (bên giao) tự tích xác nhận (xem
+// cột "Người điều chỉnh giao" trong tableColumns), không tự động theo thao tác sửa số liệu.
+const recomputeRows = (
+  rows: TableRow[],
+  prevRows: TableRow[] = [],
+  currentUserId?: number | null,
+): TableRow[] => {
+  const prevByKey = new Map(prevRows.map((r) => [r.key, r]));
+
+  return rows.map((row) => {
     const loaiSo = row.loaiSoDieuChinh != null ? String(row.loaiSoDieuChinh) : null;
     const khoiLuongNhap = toNum(row.khoiLuongNhap);
 
@@ -49,10 +65,22 @@ const recomputeRows = (rows: TableRow[]): TableRow[] =>
       const doAmNum = toNum(row.doAm);
       khoiLuongQuyKhoNhap =
         khoiLuongNhap != null && doAmNum != null
-          ? Number((khoiLuongNhap * (doAmNum / 100)).toFixed(3))
+          ? Number((khoiLuongNhap * (1 - doAmNum / 100)).toFixed(3))
           : null;
     } else {
       khoiLuongQuyKhoNhap = toNum(row.khoiLuongQuyKhoNhap);
+    }
+
+    let nguoiDieuChinhNhan = row.nguoiDieuChinhNhan;
+    let thoiGianDieuChinhNhan = row.thoiGianDieuChinhNhan;
+    const prev = prevByKey.get(row.key);
+    if (currentUserId != null && prev) {
+      const khoiLuongDaDoi = String(prev.khoiLuongNhap ?? "") !== String(row.khoiLuongNhap ?? "");
+      const doAmDaDoi = String(prev.doAm ?? "") !== String(row.doAm ?? "");
+      if (khoiLuongDaDoi || doAmDaDoi) {
+        nguoiDieuChinhNhan = currentUserId;
+        thoiGianDieuChinhNhan = new Date().toISOString();
+      }
     }
 
     return {
@@ -61,8 +89,50 @@ const recomputeRows = (rows: TableRow[]): TableRow[] =>
       khoiLuongQuyKhoNhap,
       khoiLuongXuat: khoiLuongNhap,
       khoiLuongQuyKhoXuat: khoiLuongQuyKhoNhap,
+      nguoiDieuChinhNhan,
+      thoiGianDieuChinhNhan,
     };
   });
+};
+
+// LG_PhieuDieuChinh_ChiTiet (DB) → TableRow hiển thị trên UI — dùng chung cho initData
+// (mở lại phiếu đã lưu) và handleLoadFromSource (sau khi sync-tu-bbgn/sync-tu-naplieulocao insert xong).
+const chiTietDtoToRows = (chiTiet: PhieuDieuChinhChiTietDto[]): TableRow[] =>
+  chiTiet.map((c, idx) => ({
+    key: `ct-${c.id ?? idx}`,
+    // Id thật trong LG_PhieuDieuChinh_ChiTiet — dùng để gọi API xác nhận riêng cho từng dòng
+    // (xem handleXacNhanGiao). Dòng ở phiếu mới chưa Lưu thì không có id này.
+    id: c.id,
+    idNVL: c.idNVL,
+    tenNVL: c.tenNVL,
+    idNVLChiTiet: c.idNVLChiTiet,
+    idNhomNVL: c.idNhomNVL,
+    dvt: c.dvt,
+    maLo: c.maLo,
+    thuTu: c.thuTu ?? idx + 1,
+    loaiDieuChinh: c.loaiDieuChinh,
+    loaiSoDieuChinh: c.loaiSoDieuChinh,
+    phongBanXuat: c.phongBanXuat,
+    xuongXuat: c.xuongXuat,
+    khoiLuongXuat: c.khoiLuongXuat,
+    khoiLuongQuyKhoXuat: c.khoiLuongQuyKhoXuat,
+    phongBanNhap: c.phongBanNhap,
+    xuongNhap: c.xuongNhap,
+    khoiLuongNhap: c.khoiLuongNhap,
+    khoiLuongQuyKhoNhap: c.khoiLuongQuyKhoNhap,
+    doAm: c.doAm,
+    viTri: c.viTri,
+    phanLoai: c.phanLoai,
+    ghiChu: c.ghiChu,
+    nguoiDieuChinhGiao: c.nguoiDieuChinhGiao,
+    thoiGianDieuChinhGiao: c.thoiGianDieuChinhGiao,
+    nguoiDieuChinhNhan: c.nguoiDieuChinhNhan,
+    thoiGianDieuChinhNhan: c.thoiGianDieuChinhNhan,
+    trangThai: c.trangThai ?? 0,
+    // Khóa liên kết ngược tới dòng BBGN nguồn — giữ lại để khi Lưu không bị mất, và để lần
+    // "Tải dữ liệu" sau khớp lại đúng dòng cũ thay vì tạo trùng.
+    idCtBBGN: c.idCtBBGN ?? null,
+  }));
 
 const TaoPhieuDieuChinh = () => {
   const { id } = useParams<{ id: string }>();
@@ -105,6 +175,46 @@ const TaoPhieuDieuChinh = () => {
     [config.layout]
   );
 
+  // ─── Cột hiển thị ───────────────────────────────────────────────────────────
+  // Bảng chi tiết có ~21 cột, quá rộng để xem hết cùng lúc — cho phép người dùng
+  // ẩn bớt cột ít dùng, nhớ lựa chọn qua các lần mở trang (localStorage, chỉ là
+  // tiện ích hiển thị riêng cho máy này, không phải dữ liệu nghiệp vụ).
+  const HIDDEN_COLUMNS_STORAGE_KEY = "taoPhieuDieuChinh_hiddenColumns";
+  const DEFAULT_HIDDEN_COLUMNS = useMemo(() => ["idNhomNVL", "viTri", "phanLoai"], []);
+
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(HIDDEN_COLUMNS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : DEFAULT_HIDDEN_COLUMNS;
+    } catch {
+      return DEFAULT_HIDDEN_COLUMNS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(HIDDEN_COLUMNS_STORAGE_KEY, JSON.stringify(hiddenColumns));
+    } catch {
+      /* localStorage có thể bị chặn (private mode...) — bỏ qua, không ảnh hưởng chức năng chính */
+    }
+  }, [hiddenColumns]);
+
+  // Danh sách cột có thể ẩn/hiện — làm phẳng nhóm "Bên xuất"/"Bên nhập". "Thứ tự" luôn hiển thị.
+  const toggleableColumns = useMemo(() => {
+    const result: { dataIndex: string; label: string }[] = [];
+    (table1Section?.columns ?? []).forEach((col: any) => {
+      if (col.dataIndex === "thuTu") return;
+      if (col.children) {
+        col.children.forEach((child: any) => {
+          if (child.dataIndex) result.push({ dataIndex: child.dataIndex, label: `${col.title} - ${child.title}` });
+        });
+      } else if (col.dataIndex) {
+        result.push({ dataIndex: col.dataIndex, label: col.title });
+      }
+    });
+    return result;
+  }, [table1Section]);
+
   // ─── Danh mục NVL (LG_PhieuDieuChinh_NVL) ──────────────────────────────────
   const [nvlOptions, setNvlOptions] = useState<LGPhieuDieuChinhNvlDto[]>([]);
   const [nvlModalOpen, setNvlModalOpen] = useState(false);
@@ -125,27 +235,92 @@ const TaoPhieuDieuChinh = () => {
     loadNvlOptions();
   }, [loadNvlOptions]);
 
-  // Độ ẩm chỉ nhập được khi "Loại số điều chỉnh" = Sau ẩm — khóa ô lại khi Trước ẩm,
-  // xử lý ngay trong trang này qua custom render (không sửa CustomFormTable dùng chung).
-  const handleDoAmChange = useCallback((rowKey: string | undefined, value: string) => {
-    setTableData((prev) =>
-      recomputeRows(prev.map((r) => (r.key === rowKey ? { ...r, doAm: value } : r)))
-    );
+  // ─── Danh sách tài khoản (để hiển thị tên Người điều chỉnh giao/nhận) ──────
+  // Tải 1 lần cho cả trang thay vì để từng dòng tự gọi API riêng (trước đây mỗi dòng dùng
+  // CustomChonNguoiKy, 35 dòng x 2 cột = 70 lần gọi /api/TaiKhoan/nguoiky cùng lúc).
+  const [nguoiKyMap, setNguoiKyMap] = useState<Map<number, string>>(new Map());
+
+  useEffect(() => {
+    TaiKhoanApi.getData({})
+      .then((res: any) => {
+        const map = new Map<number, string>();
+        (Array.isArray(res) ? res : []).forEach((x: any) => {
+          map.set(x.iD_TaiKhoan, `${x.tenTaiKhoan} - ${x.hoVaTen}`);
+        });
+        setNguoiKyMap(map);
+      })
+      .catch(() => setNguoiKyMap(new Map()));
   }, []);
 
-  // Chọn Người điều chỉnh giao/nhận cho từng dòng — ghi kèm thời gian chọn.
-  const handleNguoiDieuChinhChange = useCallback(
-    (rowKey: string | undefined, field: "nguoiDieuChinhGiao" | "nguoiDieuChinhNhan", value: any) => {
-      const thoiGianField = field === "nguoiDieuChinhGiao" ? "thoiGianDieuChinhGiao" : "thoiGianDieuChinhNhan";
+  // Độ ẩm chỉ nhập được khi "Loại số điều chỉnh" = Sau ẩm — khóa ô lại khi Trước ẩm,
+  // xử lý ngay trong trang này qua custom render (không sửa CustomFormTable dùng chung).
+  // Sửa Độ ẩm cũng tính là sửa số liệu — tự gán "Người điều chỉnh giao" (xem recomputeRows).
+  const handleDoAmChange = useCallback((rowKey: string | undefined, value: string) => {
+    setTableData((prev) =>
+      recomputeRows(
+        prev.map((r) => (r.key === rowKey ? { ...r, doAm: value } : r)),
+        prev,
+        currentUserInfo?.iD_TaiKhoan
+      )
+    );
+  }, [currentUserInfo]);
+
+  // "Người điều chỉnh giao" không còn chọn tay — người dùng (bên giao) tự tích xác nhận, hệ
+  // thống ghi tên người đang đăng nhập vào dòng đó, đồng thời khóa dòng (trangThai = 1) để
+  // không sửa KL/Độ ẩm... được nữa. Bấm "Hủy xác nhận" (checked=false) mở khóa lại dòng.
+  //
+  // Dòng đã có id thật (đã Lưu hoặc đã Tải dữ liệu nguồn từ BBGN) → gọi API riêng lưu ngay
+  // xuống DB, không cần chờ Lưu cả phiếu; lỗi thì báo và hoàn tác lại trên UI. Dòng ở phiếu
+  // mới chưa Lưu (chưa có id) thì chỉ cập nhật tạm trong bộ nhớ như trước, lưu cùng lúc Lưu phiếu.
+  const handleXacNhanGiao = useCallback(
+    (rowKey: string | undefined, checked: boolean) => {
+      // rowKey undefined không được khớp bất kỳ dòng nào — tránh trường hợp nhiều dòng cùng
+      // thiếu "key" (vd rơi vào bảng jsonData.table1 cũ) khiến 1 lần bấm xác nhận tất cả dòng.
+      if (rowKey === undefined) return;
+
+      const idNguoiThucHien = currentUserInfo?.iD_TaiKhoan ?? null;
+      const nowIso = new Date().toISOString();
+      let targetId: number | null = null;
+
       setTableData((prev) =>
-        prev.map((r) =>
-          r.key === rowKey
-            ? { ...r, [field]: value ?? null, [thoiGianField]: value ? new Date().toISOString() : null }
-            : r
-        )
+        prev.map((r) => {
+          if (r.key === undefined || r.key !== rowKey) return r;
+          targetId = r.id ?? null;
+          return {
+            ...r,
+            nguoiDieuChinhGiao: checked ? idNguoiThucHien : null,
+            thoiGianDieuChinhGiao: checked ? nowIso : null,
+            trangThai: checked ? 1 : 0,
+          };
+        })
       );
+
+      if (targetId != null) {
+        phieuDieuChinhApi.xacNhanGiao(targetId, checked, idNguoiThucHien).catch(() => {
+          message.error("Không thể lưu xác nhận xuống hệ thống, vui lòng thử lại");
+          setTableData((prev) =>
+            prev.map((r) =>
+              r.key === rowKey
+                ? {
+                    ...r,
+                    nguoiDieuChinhGiao: checked ? null : idNguoiThucHien,
+                    thoiGianDieuChinhGiao: checked ? null : nowIso,
+                    trangThai: checked ? 0 : 1,
+                  }
+                : r
+            )
+          );
+        });
+      }
     },
-    []
+    [currentUserInfo]
+  );
+
+  // "Loại điều chỉnh" — nguồn cho các Tab (Nhập - Xuất / Nội bộ - Xuất SX) và cho hiển thị
+  // nhãn ở cột loaiDieuChinh trong bảng (xem tableColumns bên dưới).
+  const loaiDieuChinhOptions = useMemo(
+    () => (table1Section?.columns ?? []).find((c: any) => c.dataIndex === "loaiDieuChinh")?.options ?? [],
+    [table1Section]
   );
 
   const tableColumns = useMemo(() => {
@@ -163,6 +338,19 @@ const TaoPhieuDieuChinh = () => {
       if (col.dataIndex === "idNVLChiTiet") {
         return { ...col, options: nvlSelectOptions };
       }
+      // "Loại điều chỉnh" nay do Tab quyết định (xem activeTab) — chỉ hiển thị nhãn, không
+      // cho sửa tay trong bảng để tránh dòng "biến mất" khỏi tab đang xem sau khi đổi giá trị.
+      if (col.dataIndex === "loaiDieuChinh") {
+        return {
+          ...col,
+          type: "index",
+          render: (value: any) => (
+            <div style={{ paddingLeft: 8 }}>
+              {loaiDieuChinhOptions.find((o: any) => String(o.value) === String(value))?.label ?? "—"}
+            </div>
+          ),
+        };
+      }
       // Độ ẩm chỉ nhập được khi "Loại số điều chỉnh" = Sau ẩm — dùng type "index" để tự
       // render Input riêng (CustomFormTable không hỗ trợ khóa ô theo từng dòng).
       if (col.dataIndex === "doAm") {
@@ -170,7 +358,7 @@ const TaoPhieuDieuChinh = () => {
           ...col,
           type: "index",
           render: (value: any, record: TableRow) => {
-            const disabled = String(record.loaiSoDieuChinh) === "1";
+            const disabled = String(record.loaiSoDieuChinh) === "1" || record.trangThai === 1;
             return (
               <Input
                 value={value ?? ""}
@@ -183,26 +371,77 @@ const TaoPhieuDieuChinh = () => {
         };
       }
 
-      // Người điều chỉnh giao/nhận — chọn từ danh sách tài khoản (không giới hạn theo BM/phòng ban).
-      if (col.dataIndex === "nguoiDieuChinhGiao" || col.dataIndex === "nguoiDieuChinhNhan") {
-        const field = col.dataIndex as "nguoiDieuChinhGiao" | "nguoiDieuChinhNhan";
+      // Người điều chỉnh nhận — không chọn tay nữa, tự động gán người (bên nhận) vừa sửa
+      // Khối lượng/Độ ẩm của dòng (xem recomputeRows). Chỉ hiển thị tên, không cho sửa trực
+      // tiếp ở đây.
+      if (col.dataIndex === "nguoiDieuChinhNhan") {
         return {
           ...col,
           type: "index",
-          render: (value: any, record: TableRow) => (
-            <CustomChonNguoiKy
-              maphongBan="All"
-              value={value ?? undefined}
-              disabled={isFormLocked}
-              onChange={(v) => handleNguoiDieuChinhChange(record.key, field, v)}
-            />
+          render: (value: any) => (
+            <div style={{ paddingLeft: 8, color: value ? undefined : "#bbb" }}>
+              {value ? (nguoiKyMap.get(Number(value)) ?? `#${value}`) : "Chưa có"}
+            </div>
           ),
+        };
+      }
+
+      // Người điều chỉnh giao — người dùng (bên giao) tự tích xác nhận, hệ thống ghi tên
+      // người đang đăng nhập vào dòng đó (không chọn người khác được). Sau khi tích, checkbox
+      // tự khóa lại — phải bấm "Hủy xác nhận" (có hỏi lại) mới xác nhận lại được, tránh bỏ
+      // tích nhầm.
+      if (col.dataIndex === "nguoiDieuChinhGiao") {
+        return {
+          ...col,
+          type: "index",
+          render: (value: any, record: TableRow) => {
+            const confirmed = !!value;
+            return (
+              <Space size={6}>
+                <Checkbox
+                  checked={confirmed}
+                  disabled={isFormLocked || confirmed}
+                  onChange={(e) => handleXacNhanGiao(record.key, e.target.checked)}
+                />
+                <span style={{ color: confirmed ? undefined : "#bbb" }}>
+                  {confirmed ? (nguoiKyMap.get(Number(value)) ?? `#${value}`) : "Chưa xác nhận"}
+                </span>
+                {confirmed && !isFormLocked && (
+                  <Popconfirm
+                    title="Hủy xác nhận dòng này?"
+                    okText="Hủy xác nhận"
+                    cancelText="Đóng"
+                    onConfirm={() => handleXacNhanGiao(record.key, false)}
+                  >
+                    <Button type="link" danger size="small" style={{ padding: 0 }}>
+                      Hủy xác nhận
+                    </Button>
+                  </Popconfirm>
+                )}
+              </Space>
+            );
+          },
         };
       }
 
       return col;
     }) as FormColumnDef[];
-  }, [table1Section, nvlOptions, handleDoAmChange, handleNguoiDieuChinhChange, isFormLocked]);
+  }, [table1Section, nvlOptions, handleDoAmChange, handleXacNhanGiao, nguoiKyMap, isFormLocked, loaiDieuChinhOptions]);
+
+  // Áp dụng lựa chọn ẩn/hiện cột lên tableColumns — nhóm "Bên xuất"/"Bên nhập" nào
+  // bị ẩn hết cột con thì bỏ luôn cả nhóm.
+  const visibleTableColumns = useMemo(() => {
+    const filterCol = (col: FormColumnDef): FormColumnDef | null => {
+      if (col.children) {
+        const filteredChildren = col.children.filter((c) => !hiddenColumns.includes(c.dataIndex ?? ""));
+        if (filteredChildren.length === 0) return null;
+        return { ...col, children: filteredChildren };
+      }
+      if (col.dataIndex && hiddenColumns.includes(col.dataIndex)) return null;
+      return col;
+    };
+    return tableColumns.map(filterCol).filter((c): c is FormColumnDef => c !== null);
+  }, [tableColumns, hiddenColumns]);
 
   // ─── Quản lý NVL: thêm/sửa/xóa ─────────────────────────────────────────────
   const handleOpenNvlManager = useCallback(() => {
@@ -259,9 +498,20 @@ const TaoPhieuDieuChinh = () => {
     [loadNvlOptions]
   );
 
-  // Tải dữ liệu nguồn từ BBGN (Ngày/Ca/Kíp) để làm nháp ban đầu cho bảng chi tiết —
-  // người dùng có thể chỉnh sửa lại (đổi phòng ban/xưởng xuất-nhập, KL...) trước khi Lưu.
-  const handleLoadFromBBGN = useCallback(async () => {
+  // Tải dữ liệu nguồn (Ngày/Ca/Kíp) — 1 nút bấm gọi GỘP cả 2 nguồn cùng lúc:
+  // - SP_Get_BBGN → Loại điều chỉnh = 1 (Nhập - Xuất)
+  // - Sp_GetNVLNapLieuLoCao → Loại điều chỉnh = 2 (Nội bộ - Xuất SX)
+  // Mỗi dòng trả về tự mang theo loaiDieuChinh nên FE không cần biết dòng nào đến từ nguồn nào,
+  // chỉ cần lọc theo loaiDieuChinh để hiển thị vào đúng Tab (xem visibleTableData).
+  //
+  // Phiếu ĐÃ LƯU (có idphieu): backend (GetNguonAsync/SyncChiTietFromNguonAsync) tự đọc
+  // Ngày/Ca/Kíp từ BmPhieu, insert/khớp thẳng vào LG_PhieuDieuChinh_ChiTiet cho cả 2 nguồn (mỗi
+  // nguồn chỉ chạm đúng dòng của nó, xem SyncChiTietFromBBGNAsync/SyncChiTietFromNapLieuLoCaoAsync
+  // ở BE), rồi trả về TOÀN BỘ chi tiết đã lưu nên setTableData ghi đè thẳng là an toàn.
+  //
+  // Phiếu MỚI (chưa có idphieu, chưa lưu header): chưa có ID để insert vào DB — giữ tạm ở bộ nhớ
+  // trình duyệt, lưu cùng lúc với cả phiếu khi bấm Lưu/Gửi.
+  const handleLoadFromSource = useCallback(async () => {
     const ngayValue = form.getFieldValue("NgaySX");
     const ca = form.getFieldValue("ca");
     const kip = form.getFieldValue("kip");
@@ -269,26 +519,45 @@ const TaoPhieuDieuChinh = () => {
       message.warning("Vui lòng chọn Ngày trước khi tải dữ liệu nguồn");
       return;
     }
+
     try {
       setLoading(true);
+
+      if (idphieu) {
+        const userInfo = getUserInfo();
+        const nguoiThucHien = userInfo?.hoVaTen ?? userInfo?.tenDangNhap ?? null;
+        const chiTietRes = await phieuDieuChinhApi.syncTuNguon(idphieu, nguoiThucHien);
+        const rows = chiTietDtoToRows(Array.isArray(chiTietRes) ? chiTietRes : []);
+        setTableData(rows);
+        if (rows.length > 0) {
+          message.success(`Đã tải và lưu ${rows.length} dòng dữ liệu nguồn`);
+        } else {
+          message.info("Không có dữ liệu nguồn cho Ngày/Ca/Kíp đã chọn");
+        }
+        return;
+      }
+
       const ngay = ngayValue?.format ? ngayValue.format("YYYY-MM-DD") : String(ngayValue);
-      const res = await phieuDieuChinhApi.getBBGN({ ngay, ca: ca ? Number(ca) : undefined, kip: kip || undefined });
+      const res = await phieuDieuChinhApi.getNguon({ ngay, ca: ca ? Number(ca) : undefined, kip: kip || undefined });
       const rows = (Array.isArray(res) ? res : []).map((r, idx) => ({
-        key: `bbgn-${r.idCtBBGN ?? idx}`,
+        key: `${r.loaiDieuChinh === 1 ? "bbgn-" : "naplieulocao-"}${r.idCtBBGN ?? idx}`,
+        // Khóa liên kết ngược tới dòng nguồn — phiếu chưa lưu nên chưa insert được vào
+        // LG_PhieuDieuChinh_ChiTiet, nhưng vẫn giữ lại trong bộ nhớ để gửi kèm khi Lưu phiếu,
+        // nhờ đó lần "Tải dữ liệu" sau (sau khi phiếu đã có id) khớp lại đúng dòng cũ.
+        idCtBBGN: r.idCtBBGN ?? null,
         idNVL: r.idVatTu ?? null,
         tenNVL: r.tenVatTu ?? "",
-        // Dữ liệu từ BBGN mặc định là Loại điều chỉnh "Nhập - Xuất" (value 1)
-        loaiDieuChinh: 1,
+        loaiDieuChinh: r.loaiDieuChinh,
         // Tên NVL chi tiết (idNVLChiTiet) là giá trị người dùng tự chọn từ danh mục
-        // LG_PhieuDieuChinh_NVL, không có sẵn trong BBGN.
+        // LG_PhieuDieuChinh_NVL, không có sẵn trong nguồn.
         idNVLChiTiet: null,
         idNhomNVL: null,
         dvt: "",
         maLo: r.maLo ?? "",
         thuTu: idx + 1,
-        // Phòng ban/Xưởng Giao-Nhận lấy tên thật từ SP_Get_BBGN (đã join Tbl_Xuong/Tbl_PhongBan).
+        // Phòng ban/Xưởng Giao-Nhận lấy tên thật từ nguồn (đã join Tbl_Xuong/Tbl_PhongBan).
         // Khối lượng, KL quy khô (Xuất/Nhập) và Độ ẩm là giá trị điều chỉnh — không lấy từ
-        // BBGN, người dùng tự nhập tay trước khi Lưu rồi mới insert vào LG_PhieuDieuChinh_ChiTiet.
+        // nguồn, người dùng tự nhập tay trước khi Lưu rồi mới insert vào LG_PhieuDieuChinh_ChiTiet.
         phongBanXuat: r.tenPhongBanGiao ?? "",
         xuongXuat: r.tenXuongGiao ?? "",
         khoiLuongXuat: null,
@@ -300,25 +569,26 @@ const TaoPhieuDieuChinh = () => {
         doAm: null,
         viTri: "",
         phanLoai: "",
-        // Ghi chú không lấy từ BBGN — là trường để người dùng tự nhập tại Phiếu điều chỉnh.
+        // Ghi chú không lấy từ nguồn — là trường để người dùng tự nhập tại Phiếu điều chỉnh.
         ghiChu: "",
         nguoiDieuChinhGiao: null,
         thoiGianDieuChinhGiao: null,
         nguoiDieuChinhNhan: null,
         thoiGianDieuChinhNhan: null,
+        trangThai: 0,
       }));
       setTableData(rows);
       if (rows.length > 0) {
-        message.success(`Đã tải ${rows.length} dòng dữ liệu nguồn từ BBGN`);
+        message.success(`Đã tải ${rows.length} dòng dữ liệu nguồn`);
       } else {
-        message.info("Không có dữ liệu BBGN cho Ngày/Ca/Kíp đã chọn");
+        message.info("Không có dữ liệu nguồn cho Ngày/Ca/Kíp đã chọn");
       }
-    } catch {
-      message.error("Không thể tải dữ liệu nguồn BBGN");
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || err?.message || "Không thể tải dữ liệu nguồn");
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [form, idphieu]);
 
   const initData = useCallback(async () => {
     try {
@@ -368,45 +638,21 @@ const TaoPhieuDieuChinh = () => {
 
           // Nguồn sự thật của bảng chi tiết là LG_PhieuDieuChinh_ChiTiet — fallback về
           // table1 trong jsonData nếu phiếu chưa từng lưu chi tiết (mới tạo, chưa bấm Lưu).
+          // table1 trong jsonData không có "key" (bị xóa trước khi lưu ở getFormData) — phải
+          // gán lại key duy nhất ở đây, nếu không mọi dòng sẽ cùng key=undefined và bấm xác
+          // nhận 1 dòng sẽ khớp trùng tất cả các dòng (xem handleXacNhanGiao).
+          const withFallbackKeys = (table1: TableRow[]) =>
+            (table1 || []).map((r, idx) => ({ ...r, key: r.key ?? `row-${idx}` }));
           try {
             const chiTietRes = await phieuDieuChinhApi.getChiTiet(idPhieu);
             const chiTiet = Array.isArray(chiTietRes) ? chiTietRes : [];
             if (chiTiet.length > 0) {
-              setTableData(
-                chiTiet.map((c, idx) => ({
-                  key: `ct-${c.id ?? idx}`,
-                  idNVL: c.idNVL,
-                  tenNVL: c.tenNVL,
-                  idNVLChiTiet: c.idNVLChiTiet,
-                  idNhomNVL: c.idNhomNVL,
-                  dvt: c.dvt,
-                  maLo: c.maLo,
-                  thuTu: c.thuTu ?? idx + 1,
-                  loaiDieuChinh: c.loaiDieuChinh,
-                  loaiSoDieuChinh: c.loaiSoDieuChinh,
-                  phongBanXuat: c.phongBanXuat,
-                  xuongXuat: c.xuongXuat,
-                  khoiLuongXuat: c.khoiLuongXuat,
-                  khoiLuongQuyKhoXuat: c.khoiLuongQuyKhoXuat,
-                  phongBanNhap: c.phongBanNhap,
-                  xuongNhap: c.xuongNhap,
-                  khoiLuongNhap: c.khoiLuongNhap,
-                  khoiLuongQuyKhoNhap: c.khoiLuongQuyKhoNhap,
-                  doAm: c.doAm,
-                  viTri: c.viTri,
-                  phanLoai: c.phanLoai,
-                  ghiChu: c.ghiChu,
-                  nguoiDieuChinhGiao: c.nguoiDieuChinhGiao,
-                  thoiGianDieuChinhGiao: c.thoiGianDieuChinhGiao,
-                  nguoiDieuChinhNhan: c.nguoiDieuChinhNhan,
-                  thoiGianDieuChinhNhan: c.thoiGianDieuChinhNhan,
-                }))
-              );
+              setTableData(chiTietDtoToRows(chiTiet));
             } else {
-              setTableData(data.table1 || []);
+              setTableData(withFallbackKeys(data.table1));
             }
           } catch {
-            setTableData(data.table1 || []);
+            setTableData(withFallbackKeys(data.table1));
           }
 
           setPhieuInfo({
@@ -445,6 +691,17 @@ const TaoPhieuDieuChinh = () => {
     const userInfo = getUserInfo();
     const formData = await form.validateFields();
 
+    // Loại số điều chỉnh = "Sau ẩm" (value "2") bắt buộc phải nhập Độ ẩm — nếu không thì
+    // KL quy khô Nhập không tính được (xem recomputeRows). Chặn lưu và báo rõ dòng nào thiếu.
+    const invalidDoAmRows = tableData
+      .map((row, idx) => ({ row, idx }))
+      .filter(({ row }) => String(row.loaiSoDieuChinh) === "2" && toNum(row.doAm) === null);
+    if (invalidDoAmRows.length > 0) {
+      const rowsText = invalidDoAmRows.map(({ row, idx }) => row.thuTu ?? idx + 1).join(", ");
+      message.error(`Vui lòng nhập Độ ẩm cho dòng ${rowsText} (Loại số điều chỉnh = Sau ẩm)`);
+      throw new Error("Thiếu Độ ẩm ở các dòng Sau ẩm");
+    }
+
     const pheDuyetFlow = config.signatures.map((s: any) => ({
       capDuyet: getCapDuyet(s),
       maKyDuyet: s.key,
@@ -468,6 +725,7 @@ const TaoPhieuDieuChinh = () => {
     return {
       ...formData,
       ...formattedDates,
+      dvt: "Tấn",
       ca: formData.ca != null ? Number(formData.ca) : null,
       maBm: config.code,
       xuongId: userInfo.iD_PhanXuong ?? null,
@@ -488,7 +746,7 @@ const TaoPhieuDieuChinh = () => {
       tenNVL: row.tenNVL ?? "",
       idNVLChiTiet: row.idNVLChiTiet != null && row.idNVLChiTiet !== "" ? Number(row.idNVLChiTiet) : null,
       idNhomNVL: row.idNhomNVL ?? null,
-      dvt: row.dvt ?? null,
+      dvt: "Tấn",
       maLo: row.maLo ?? null,
       thuTu: row.thuTu ?? null,
       loaiDieuChinh: row.loaiDieuChinh != null && row.loaiDieuChinh !== "" ? Number(row.loaiDieuChinh) : null,
@@ -513,6 +771,8 @@ const TaoPhieuDieuChinh = () => {
       nguoiDieuChinhNhan:
         row.nguoiDieuChinhNhan != null && row.nguoiDieuChinhNhan !== "" ? Number(row.nguoiDieuChinhNhan) : null,
       thoiGianDieuChinhNhan: row.thoiGianDieuChinhNhan ?? null,
+      trangThai: row.trangThai != null && row.trangThai !== "" ? Number(row.trangThai) : 0,
+      idCtBBGN: row.idCtBBGN ?? null,
     }));
 
     await phieuDieuChinhApi.saveChiTiet(phieuId, items, userInfo?.hoVaTen ?? userInfo?.tenDangNhap ?? null);
@@ -559,65 +819,95 @@ const TaoPhieuDieuChinh = () => {
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
   }, [idphieu, phieuInfo, getFormData, saveChiTiet, handleStatusChange, handleActionSuccess, config.code]);
-  const handleTableDataChange = useCallback((rows: TableRow[]) => {
-    setTableData(recomputeRows(rows));
-  }, []);
+
+  // ─── Tab theo "Loại điều chỉnh" ─────────────────────────────────────────────
+  // 1 phiếu duy nhất (1 header, 1 lần Lưu) nhưng chia bảng chi tiết thành các Tab —
+  // mỗi Tab tương ứng 1 giá trị "Loại điều chỉnh" (Nhập - Xuất / Nội bộ - Xuất SX), lấy trực
+  // tiếp từ config để không hard-code. Bộ lọc "Loại điều chỉnh" cũ (Select) không cần nữa vì
+  // Tab đã thay thế vai trò đó.
+  const [activeTab, setActiveTab] = useState<string>("1");
+
+  useEffect(() => {
+    if (loaiDieuChinhOptions.length > 0 && !loaiDieuChinhOptions.some((o: any) => String(o.value) === activeTab)) {
+      setActiveTab(String(loaiDieuChinhOptions[0].value));
+    }
+  }, [loaiDieuChinhOptions, activeTab]);
 
   // ─── Bộ lọc bảng "Chi tiết điều chỉnh" ─────────────────────────────────────
-  // Lọc theo Loại điều chỉnh / Loại số điều chỉnh / Tên NVL / Phòng ban bên giao / Phòng ban bên nhận.
-  // Bộ lọc chỉ ảnh hưởng hiển thị — tableData (nguồn sự thật) vẫn giữ đủ dòng bị ẩn.
-  const [filters, setFilters] = useState<{
-    loaiDieuChinh?: string | number;
+  // Lọc theo Loại số điều chỉnh / Tên NVL / Phòng ban bên giao / Phòng ban bên nhận / Xưởng bên
+  // giao / Xưởng bên nhận. Mỗi Tab (Loại điều chỉnh) giữ bộ lọc RIÊNG — đổi Tab không mang theo
+  // bộ lọc của Tab kia, vì 2 Tab là 2 miền dữ liệu khác nhau (NVL, phòng ban, xưởng không liên
+  // quan nhau). Bộ lọc chỉ ảnh hưởng hiển thị — tableData (nguồn sự thật) vẫn giữ đủ dòng bị
+  // ẩn/ở Tab khác.
+  type FilterShape = {
     loaiSoDieuChinh?: string | number;
     tenNVL?: string;
     phongBanXuat?: string;
     phongBanNhap?: string;
-  }>({});
-
-  const loaiDieuChinhOptions = useMemo(
-    () => (table1Section?.columns ?? []).find((c: any) => c.dataIndex === "loaiDieuChinh")?.options ?? [],
-    [table1Section]
+    xuongXuat?: string;
+    xuongNhap?: string;
+  };
+  const [filtersByTab, setFiltersByTab] = useState<Record<string, FilterShape>>({});
+  const filters = filtersByTab[activeTab] ?? {};
+  const setFilters = useCallback(
+    (updater: (f: FilterShape) => FilterShape) => {
+      setFiltersByTab((prev) => ({ ...prev, [activeTab]: updater(prev[activeTab] ?? {}) }));
+    },
+    [activeTab]
   );
+
   const loaiSoDieuChinhOptions = useMemo(
     () => (table1Section?.columns ?? []).find((c: any) => c.dataIndex === "loaiSoDieuChinh")?.options ?? [],
     [table1Section]
   );
 
+  // Danh sách giá trị cho dropdown bộ lọc chỉ lấy trong phạm vi Tab đang xem — không lẫn
+  // NVL/phòng ban/xưởng của Tab kia vào gợi ý.
+  const tableDataActiveTab = useMemo(
+    () => tableData.filter((r) => String(r.loaiDieuChinh) === activeTab),
+    [tableData, activeTab]
+  );
+
   const makeUniqueOptions = useCallback((field: string) => {
     const values = Array.from(
-      new Set(tableData.map((r) => r[field]).filter((v) => v !== null && v !== undefined && v !== ""))
+      new Set(tableDataActiveTab.map((r) => r[field]).filter((v) => v !== null && v !== undefined && v !== ""))
     );
     return values.map((v) => ({ label: String(v), value: v as string }));
-  }, [tableData]);
+  }, [tableDataActiveTab]);
 
   const tenNVLOptions = useMemo(() => makeUniqueOptions("tenNVL"), [makeUniqueOptions]);
   const phongBanXuatOptions = useMemo(() => makeUniqueOptions("phongBanXuat"), [makeUniqueOptions]);
   const phongBanNhapOptions = useMemo(() => makeUniqueOptions("phongBanNhap"), [makeUniqueOptions]);
+  const xuongXuatOptions = useMemo(() => makeUniqueOptions("xuongXuat"), [makeUniqueOptions]);
+  const xuongNhapOptions = useMemo(() => makeUniqueOptions("xuongNhap"), [makeUniqueOptions]);
 
   const hasActiveFilters = Object.values(filters).some((v) => v !== undefined && v !== null && v !== "");
 
-  const filteredTableData = useMemo(() => {
-    if (!hasActiveFilters) return tableData;
-    return tableData.filter((row) => {
-      if (filters.loaiDieuChinh != null && filters.loaiDieuChinh !== "" && String(row.loaiDieuChinh) !== String(filters.loaiDieuChinh)) return false;
+  // Tập con đang hiển thị = đúng Tab đang chọn + bộ lọc RIÊNG của Tab đó (nếu có).
+  const visibleTableData = useMemo(() => {
+    return tableDataActiveTab.filter((row) => {
       if (filters.loaiSoDieuChinh != null && filters.loaiSoDieuChinh !== "" && String(row.loaiSoDieuChinh) !== String(filters.loaiSoDieuChinh)) return false;
       if (filters.tenNVL && row.tenNVL !== filters.tenNVL) return false;
       if (filters.phongBanXuat && row.phongBanXuat !== filters.phongBanXuat) return false;
       if (filters.phongBanNhap && row.phongBanNhap !== filters.phongBanNhap) return false;
+      if (filters.xuongXuat && row.xuongXuat !== filters.xuongXuat) return false;
+      if (filters.xuongNhap && row.xuongNhap !== filters.xuongNhap) return false;
       return true;
     });
-  }, [tableData, filters, hasActiveFilters]);
+  }, [tableDataActiveTab, filters]);
 
-  // Khi bảng đang lọc, CustomFormTable chỉ thao tác trên tập con hiển thị — cần ghép lại
-  // với các dòng bị ẩn trong tableData gốc để không mất dữ liệu khi thêm/sửa/xóa.
-  const handleFilteredTableDataChange = useCallback(
+  // Bảng chỉ thao tác trên tập con đang hiển thị (đúng Tab + bộ lọc) — cần ghép lại với các
+  // dòng ở Tab khác/bị ẩn trong tableData gốc để không mất dữ liệu khi thêm/sửa/xóa. Dòng mới
+  // thêm (chưa từng có trong tableData) không có "Loại điều chỉnh" — tự gán theo Tab đang mở để
+  // dòng vừa thêm không "biến mất" khỏi Tab ngay sau khi thêm.
+  const handleVisibleTableDataChange = useCallback(
     (newRows: TableRow[]) => {
       setTableData((prev) => {
         const newRowsByKey = new Map(newRows.map((r) => [r.key, r]));
-        const filteredKeys = new Set(filteredTableData.map((r) => r.key));
+        const visibleKeys = new Set(visibleTableData.map((r) => r.key));
         const merged: TableRow[] = [];
         prev.forEach((row) => {
-          if (filteredKeys.has(row.key)) {
+          if (visibleKeys.has(row.key)) {
             const updated = newRowsByKey.get(row.key);
             if (updated) {
               merged.push(updated);
@@ -627,47 +917,53 @@ const TaoPhieuDieuChinh = () => {
             merged.push(row);
           }
         });
-        merged.push(...Array.from(newRowsByKey.values()));
-        return recomputeRows(merged);
+        newRowsByKey.forEach((row) => {
+          const hasLoai = row.loaiDieuChinh != null && row.loaiDieuChinh !== "";
+          merged.push({ ...row, loaiDieuChinh: hasLoai ? row.loaiDieuChinh : Number(activeTab) });
+        });
+        return recomputeRows(merged, prev, currentUserInfo?.iD_TaiKhoan);
       });
     },
-    [filteredTableData]
+    [visibleTableData, activeTab, currentUserInfo]
   );
 
-  const handleResetFilters = useCallback(() => setFilters({}), []);
+  const handleResetFilters = useCallback(() => setFilters(() => ({})), [setFilters]);
 
   return (
-    <Card style={{ margin: 24, boxShadow: "0 2px 8px #f0f1f2" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <Typography.Title level={3} style={{ marginBottom: 0 }}>{config.title}</Typography.Title>
-          {idphieu && <b>Số phiếu: {soPhieu}</b>}
-        </div>
+    <Card style={{ margin: 16, boxShadow: "0 2px 8px #f0f1f2" }} styles={{ body: { padding: 12 } }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+        <Typography.Title level={4} style={{ margin: 0 }}>{config.title}</Typography.Title>
+        {idphieu && <Typography.Text strong>Số phiếu: {soPhieu}</Typography.Text>}
       </div>
 
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" className="pdc-compact">
         <Form.Item name="idphieu" hidden><Input type="hidden" /></Form.Item>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-          {config.headerFields.map((f: any, idx: number) => (
-            <CustomFormItem key={f.key || idx} field={f} idx={idx} disabled={isFormLocked} />
-          ))}
-        </div>
-
-        <div style={{ marginTop: 16, marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Button
-            type="primary"
-            icon={<FilterOutlined />}
-            onClick={handleLoadFromBBGN}
-            disabled={isFormLocked}
-            loading={loading}
-          >
-            Tải dữ liệu nguồn
-          </Button>
-          <Button icon={<SettingOutlined />} onClick={handleOpenNvlManager}>
-            Quản lý NVL
-          </Button>
-          {actionButtons}
+        {/* Ngày/Ca/Kíp + hành động gộp chung 1 khu vực gọn — nhường chiều cao còn lại cho bảng */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end", marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {config.headerFields.map((f: any, idx: number) => (
+              <div key={f.key || idx} style={{ width: 140 }}>
+                <CustomFormItem field={f} idx={idx} disabled={isFormLocked} />
+              </div>
+            ))}
+          </div>
+          <Space wrap size="small" style={{ marginLeft: "auto" }}>
+            <Button
+              size="small"
+              type="primary"
+              icon={<FilterOutlined />}
+              onClick={handleLoadFromSource}
+              disabled={isFormLocked}
+              loading={loading}
+            >
+              Tải dữ liệu nguồn
+            </Button>
+            <Button size="small" icon={<SettingOutlined />} onClick={handleOpenNvlManager}>
+              Quản lý NVL
+            </Button>
+            {actionButtons}
+          </Space>
         </div>
 
         <Modal
@@ -728,80 +1024,174 @@ const TaoPhieuDieuChinh = () => {
 
         {table1Section && (
           <div>
-            {table1Section.title && (
-              <Typography.Title level={5} style={{ marginTop: 4, marginBottom: 2 }}>
-                {table1Section.title}
-              </Typography.Title>
-            )}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 6 }}>
+              {table1Section.title && (
+                <Typography.Title level={5} style={{ margin: 0 }}>
+                  {table1Section.title}
+                </Typography.Title>
+              )}
+              <Popover
+                trigger="click"
+                placement="bottomRight"
+                title="Chọn cột hiển thị"
+                content={
+                  <div style={{ width: 280, maxHeight: 340, overflow: "auto" }}>
+                    <Checkbox.Group
+                      style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                      value={toggleableColumns.filter((o) => !hiddenColumns.includes(o.dataIndex)).map((o) => o.dataIndex)}
+                      onChange={(checked) => {
+                        const checkedSet = new Set(checked as string[]);
+                        setHiddenColumns(toggleableColumns.filter((o) => !checkedSet.has(o.dataIndex)).map((o) => o.dataIndex));
+                      }}
+                    >
+                      {toggleableColumns.map((o) => (
+                        <Checkbox key={o.dataIndex} value={o.dataIndex}>{o.label}</Checkbox>
+                      ))}
+                    </Checkbox.Group>
+                    <Button
+                      type="link"
+                      size="small"
+                      style={{ padding: 0, marginTop: 8 }}
+                      onClick={() => setHiddenColumns([])}
+                    >
+                      Hiện tất cả cột
+                    </Button>
+                  </div>
+                }
+              >
+                <Badge count={hiddenColumns.length} size="small">
+                  <Button size="small" icon={<TableOutlined />}>Cột hiển thị</Button>
+                </Badge>
+              </Popover>
+            </div>
 
-            <Space wrap style={{ marginBottom: 12 }}>
-              <Select
-                allowClear
-                showSearch
-                placeholder="Loại điều chỉnh"
-                style={{ width: 180 }}
-                options={loaiDieuChinhOptions}
-                value={filters.loaiDieuChinh ?? undefined}
-                onChange={(value) => setFilters((f) => ({ ...f, loaiDieuChinh: value }))}
-                optionFilterProp="label"
-              />
-              <Select
-                allowClear
-                showSearch
-                placeholder="Loại số điều chỉnh"
-                style={{ width: 180 }}
-                options={loaiSoDieuChinhOptions}
-                value={filters.loaiSoDieuChinh ?? undefined}
-                onChange={(value) => setFilters((f) => ({ ...f, loaiSoDieuChinh: value }))}
-                optionFilterProp="label"
-              />
-              <Select
-                allowClear
-                showSearch
-                placeholder="Tên NVL"
-                style={{ width: 200 }}
-                options={tenNVLOptions}
-                value={filters.tenNVL ?? undefined}
-                onChange={(value) => setFilters((f) => ({ ...f, tenNVL: value }))}
-                optionFilterProp="label"
-              />
-              <Select
-                allowClear
-                showSearch
-                placeholder="Phòng ban bên giao"
-                style={{ width: 200 }}
-                options={phongBanXuatOptions}
-                value={filters.phongBanXuat ?? undefined}
-                onChange={(value) => setFilters((f) => ({ ...f, phongBanXuat: value }))}
-                optionFilterProp="label"
-              />
-              <Select
-                allowClear
-                showSearch
-                placeholder="Phòng ban bên nhận"
-                style={{ width: 200 }}
-                options={phongBanNhapOptions}
-                value={filters.phongBanNhap ?? undefined}
-                onChange={(value) => setFilters((f) => ({ ...f, phongBanNhap: value }))}
-                optionFilterProp="label"
-              />
-              {hasActiveFilters && <Button onClick={handleResetFilters}>Xóa lọc</Button>}
-            </Space>
+            {/* 1 phiếu duy nhất — chia bảng chi tiết thành các Tab theo "Loại điều chỉnh" để dễ
+                theo dõi từng nhóm (Nhập - Xuất / Nội bộ - Xuất SX) thay vì 1 bảng dài lẫn lộn. */}
+            <Tabs
+              size="small"
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              style={{ marginBottom: 4 }}
+              items={loaiDieuChinhOptions.map((opt: any) => {
+                //const count = tableData.filter((r) => String(r.loaiDieuChinh) === String(opt.value)).length;
+                return {
+                  key: String(opt.value),
+                  label: (
+                    <Space size={4}>
+                      {opt.label}
+                      {/* <Badge count={count} showZero color="#999" /> */}
+                    </Space>
+                  ),
+                };
+              })}
+            />
+
+            <Collapse
+              size="small"
+              className="pdc-compact-filters"
+              style={{ marginBottom: 8 }}
+              items={[
+                {
+                  key: "filters",
+                  label: (
+                    <Space>
+                      <FilterOutlined />
+                      Bộ lọc
+                      {hasActiveFilters && <Badge count={Object.values(filters).filter((v) => v !== undefined && v !== null && v !== "").length} size="small" />}
+                    </Space>
+                  ),
+                  children: (
+                    <Space wrap size="small">
+                      <Select
+                        allowClear
+                        showSearch
+                        size="small"
+                        placeholder="Loại số điều chỉnh"
+                        style={{ width: 160 }}
+                        options={loaiSoDieuChinhOptions}
+                        value={filters.loaiSoDieuChinh ?? undefined}
+                        onChange={(value) => setFilters((f) => ({ ...f, loaiSoDieuChinh: value }))}
+                        optionFilterProp="label"
+                      />
+                      <Select
+                        allowClear
+                        showSearch
+                        size="small"
+                        placeholder="Tên NVL"
+                        style={{ width: 180 }}
+                        options={tenNVLOptions}
+                        value={filters.tenNVL ?? undefined}
+                        onChange={(value) => setFilters((f) => ({ ...f, tenNVL: value }))}
+                        optionFilterProp="label"
+                      />
+                      <Select
+                        allowClear
+                        showSearch
+                        size="small"
+                        placeholder="Phòng ban bên giao"
+                        style={{ width: 180 }}
+                        options={phongBanXuatOptions}
+                        value={filters.phongBanXuat ?? undefined}
+                        onChange={(value) => setFilters((f) => ({ ...f, phongBanXuat: value }))}
+                        optionFilterProp="label"
+                      />
+                      <Select
+                        allowClear
+                        showSearch
+                        size="small"
+                        placeholder="Phòng ban bên nhận"
+                        style={{ width: 180 }}
+                        options={phongBanNhapOptions}
+                        value={filters.phongBanNhap ?? undefined}
+                        onChange={(value) => setFilters((f) => ({ ...f, phongBanNhap: value }))}
+                        optionFilterProp="label"
+                      />
+                      <Select
+                        allowClear
+                        showSearch
+                        size="small"
+                        placeholder="Xưởng bên giao"
+                        style={{ width: 180 }}
+                        options={xuongXuatOptions}
+                        value={filters.xuongXuat ?? undefined}
+                        onChange={(value) => setFilters((f) => ({ ...f, xuongXuat: value }))}
+                        optionFilterProp="label"
+                      />
+                      <Select
+                        allowClear
+                        showSearch
+                        size="small"
+                        placeholder="Xưởng bên nhận"
+                        style={{ width: 180 }}
+                        options={xuongNhapOptions}
+                        value={filters.xuongNhap ?? undefined}
+                        onChange={(value) => setFilters((f) => ({ ...f, xuongNhap: value }))}
+                        optionFilterProp="label"
+                      />
+                      {hasActiveFilters && <Button size="small" onClick={handleResetFilters}>Xóa lọc</Button>}
+                    </Space>
+                  ),
+                },
+              ]}
+            />
 
             {/* Giới hạn bảng trong khung riêng — cuộn ngang/dọc chỉ diễn ra bên trong bảng,
-                không kéo giãn/cuộn theo cả trang. */}
+                không kéo giãn/cuộn theo cả trang. Chiều cao co giãn theo màn hình để bảng
+                chiếm phần lớn không gian thay vì bị giới hạn cứng 600px. */}
             <div style={{ maxWidth: "100%", overflow: "auto" }}>
-              <CustomFormTable
-                columns={tableColumns}
-                initialData={filteredTableData}
-                onDataChange={hasActiveFilters ? handleFilteredTableDataChange : handleTableDataChange}
+              <CustomFormTableV2
+                columns={visibleTableColumns}
+                initialData={visibleTableData}
+                onDataChange={handleVisibleTableDataChange}
                 loading={loading}
                 editable={!isFormLocked}
                 showAddButton={!isFormLocked}
                 showDeleteButton={!isFormLocked}
                 minRows={0}
-                scrollY={600}
+                scrollY="calc(100vh - 400px)"
+                pagination={{ pageSize: 50 }}
                 showPlaceholder={false}
+                isRowReadonly={(record) => record.trangThai === 1}
               />
             </div>
           </div>

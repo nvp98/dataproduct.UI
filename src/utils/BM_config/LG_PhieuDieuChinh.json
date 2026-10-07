@@ -54,7 +54,7 @@
       },
       "columns": [
         { "title": "Thứ tự", "dataIndex": "thuTu", "width": 60, "readonly": true, "type": "number", "fixed": "left" },
-        { "title": "Loại điều chỉnh", "dataIndex": "loaiDieuChinh", "width": 130 , "type": "select", "fixed": "left"
+        { "title": "Loại điều chỉnh", "dataIndex": "loaiDieuChinh", "width": 105 , "type": "select", "fixed": "left"
         , "options": [
           { "label": "Nhập - Xuất", "value": 1 },
           { "label": "Nội bộ - Xuất SX", "value": 2 }
@@ -64,19 +64,19 @@
           { "label": "Trước ẩm", "value": 1 },
           { "label": "Sau ẩm", "value": 2 }
         ]},
-        { "title": "Tên NVL", "dataIndex": "tenNVL", "width": 200, "isLabel": true, "fixed": "left" },
-        { "title": "Tên NVL chi tiết", "dataIndex": "idNVLChiTiet", "width": 200, "type": "select" },
+        { "title": "Tên NVL", "dataIndex": "tenNVL", "width": 150, "isLabel": true, "fixed": "left" },
+        { "title": "Tên NVL chi tiết", "dataIndex": "idNVLChiTiet", "width": 160, "type": "select" },
         { "title": "ID Nhóm NVL", "dataIndex": "idNhomNVL", "width": 130, "type": "number" },
-        { "title": "ĐVT", "dataIndex": "dvt", "width": 80 },
+        { "title": "ĐVT", "dataIndex": "dvt", "width": 80},
         { "title": "Mã lô", "dataIndex": "maLo", "width": 120, "isLabel": true },
-        { "title": "Độ ẩm (%)", "dataIndex": "doAm", "width": 100, "type": "float" },
+        { "title": "Độ ẩm (%)", "dataIndex": "doAm", "width": 70, "type": "float" },
         {
           "title": "Bên xuất",
           "children": [
             { "title": "Phòng ban", "dataIndex": "phongBanXuat", "width": 160, "isLabel": true },
             { "title": "Xưởng", "dataIndex": "xuongXuat", "width": 160, "isLabel": true },
-            { "title": "Khối lượng", "dataIndex": "khoiLuongXuat", "width": 130, "type": "float", "isLabel": true },
-            { "title": "KL quy khô", "dataIndex": "khoiLuongQuyKhoXuat", "width": 130, "type": "float", "isLabel": true }
+            { "title": "Khối lượng", "dataIndex": "khoiLuongXuat", "width": 100, "type": "float", "isLabel": true },
+            { "title": "KL quy khô", "dataIndex": "khoiLuongQuyKhoXuat", "width": 100, "type": "float", "isLabel": true }
           ]
         },
         {
@@ -84,8 +84,8 @@
           "children": [
             { "title": "Phòng ban", "dataIndex": "phongBanNhap", "width": 160, "isLabel": true },
             { "title": "Xưởng", "dataIndex": "xuongNhap", "width": 160, "isLabel": true },
-            { "title": "Khối lượng", "dataIndex": "khoiLuongNhap", "width": 130, "type": "float" },
-            { "title": "KL quy khô", "dataIndex": "khoiLuongQuyKhoNhap", "width": 130, "type": "float", "isLabel": true }
+            { "title": "Khối lượng", "dataIndex": "khoiLuongNhap", "width": 100, "type": "float" },
+            { "title": "KL quy khô", "dataIndex": "khoiLuongQuyKhoNhap", "width": 100, "type": "float", "isLabel": true }
           ]
         },
         { "title": "Người điều chỉnh giao", "dataIndex": "nguoiDieuChinhGiao", "width": 170 },

@@ -1,6 +1,8 @@
 import apiService from "./ApiService";
 
 export interface PhieuDieuChinhBBGNDto {
+  // 1 = từ SP_Get_BBGN (Nhập - Xuất), 2 = từ Sp_GetNVLNapLieuLoCao (Nội bộ - Xuất SX)
+  loaiDieuChinh: number;
   idCtBBGN: number;
   kip: string | null;
   ca: string | null;
@@ -63,10 +65,15 @@ export interface PhieuDieuChinhChiTietDto {
   thoiGianDieuChinhGiao: string | null;
   nguoiDieuChinhNhan: number | null;
   thoiGianDieuChinhNhan: string | null;
+  // 0 = chưa xác nhận (còn sửa được), 1 = đã xác nhận (khóa dòng)
+  trangThai: number;
   nguoiTao: string | null;
   thoiGianTao: string;
   nguoiSua: string | null;
   thoiGianSua: string | null;
+  // Khóa liên kết ngược tới dòng BBGN nguồn — dùng để khớp lại dòng cũ khi bấm "Tải dữ liệu"
+  // lần sau, tránh mất số liệu điều chỉnh tay đã nhập cho dòng này (null nếu dòng nhập tay).
+  idCtBBGN: number | null;
 }
 
 export interface SavePhieuDieuChinhChiTietDto {
@@ -95,9 +102,11 @@ export interface SavePhieuDieuChinhChiTietDto {
   thoiGianDieuChinhGiao?: string | null;
   nguoiDieuChinhNhan?: number | null;
   thoiGianDieuChinhNhan?: string | null;
+  trangThai?: number | null;
+  idCtBBGN?: number | null;
 }
 
-// Danh mục NVL cho Phiếu điều chỉnh — ánh xạ bảng LG_PhieuDieuChinh_NVL (PRODUCTDATA)
+// Danh mục NVL cho Phiếu điều chỉnh — ánh xạ bảng LG_PhieuDieuChinh_NVL (PRODUCT_FORM)
 export interface LGPhieuDieuChinhNvlDto {
   id: number;
   tenNVL: string;
@@ -108,14 +117,52 @@ export const phieuDieuChinhApi = {
   getBBGN: (params: GetBBGNParams) =>
     apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/get-bbgn", { params }),
 
+  // Nguồn "Nội bộ - Xuất SX" — dữ liệu Nạp liệu lò cao (dbo.Sp_GetNVLNapLieuLoCao), cùng hình
+  // dạng trả về với getBBGN (dùng chung PhieuDieuChinhBBGNDto).
+  getNapLieuLoCao: (params: GetBBGNParams) =>
+    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/get-naplieulocao", { params }),
+
+  // Gộp cả 2 nguồn (BBGN + Nạp liệu lò cao) trong 1 lần gọi — mỗi dòng tự mang theo
+  // loaiDieuChinh để FE phân vào đúng Tab.
+  getNguon: (params: GetBBGNParams) =>
+    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/get-nguon", { params }),
+
   getChiTiet: (idPhieu: string) =>
     apiService.get<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/chi-tiet`),
+
+  // Tải dữ liệu nguồn từ BBGN và insert thẳng vào DB cho phiếu đã lưu (giống luồng
+  // "Tải dữ liệu" của Nạp liệu lò cao) — ghi đè toàn bộ chi tiết cũ của phiếu.
+  syncTuBBGN: (idPhieu: string, nguoiThucHien?: string | null) =>
+    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/sync-tu-bbgn`, {
+      nguoiThucHien: nguoiThucHien ?? null,
+    }),
+
+  // Tải dữ liệu nguồn "Nội bộ - Xuất SX" từ Nạp liệu lò cao và insert thẳng vào DB cho phiếu
+  // đã lưu — song song với syncTuBBGN, chỉ ghi đè các dòng gắn LoaiDieuChinh = 2.
+  syncTuNapLieuLoCao: (idPhieu: string, nguoiThucHien?: string | null) =>
+    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/sync-tu-naplieulocao`, {
+      nguoiThucHien: nguoiThucHien ?? null,
+    }),
+
+  // Gộp cả 2 nguồn cho phiếu đã lưu — 1 lần gọi đồng bộ cả BBGN lẫn Nạp liệu lò cao.
+  syncTuNguon: (idPhieu: string, nguoiThucHien?: string | null) =>
+    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/sync-tu-nguon`, {
+      nguoiThucHien: nguoiThucHien ?? null,
+    }),
 
   // Ghi đè toàn bộ chi tiết của phiếu (xóa cũ, ghi lại theo danh sách mới)
   saveChiTiet: (idPhieu: string, items: SavePhieuDieuChinhChiTietDto[], nguoiSua?: string | null) =>
     apiService.put<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/chi-tiet`, {
       items,
       nguoiSua: nguoiSua ?? null,
+    }),
+
+  // Tích/hủy tích xác nhận "Người điều chỉnh giao" cho 1 dòng chi tiết — lưu ngay xuống DB,
+  // không cần chờ Lưu cả phiếu. Chỉ gọi với dòng đã có id thật (đã Lưu/đã sync BBGN).
+  xacNhanGiao: (id: number, confirmed: boolean, idNguoiThucHien?: number | null) =>
+    apiService.put<PhieuDieuChinhChiTietDto>(`/api/PhieuDieuChinh/chi-tiet/xac-nhan-giao/${id}`, {
+      confirmed,
+      idNguoiThucHien: idNguoiThucHien ?? null,
     }),
 
   // Danh mục NVL (LG_PhieuDieuChinh_NVL) — CRUD
