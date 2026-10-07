@@ -51,6 +51,14 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub1-1.2",
+            label: (
+              <Tooltip title="Quản lý danh mục phụ liệu HRC1">
+                <NavLink to="/hrc1-phulieu">Phụ liệu HRC1</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       // {
@@ -434,6 +442,7 @@ export const menuConfig = [
         key: "sub2-7",
         label: "NM.HRC1",
         children: [
+          
           {
             key: "sub2-7-1",
             maBM: BM_CONFIG.HRC1.HRC1_BB_Sanluongphoi,
@@ -474,6 +483,39 @@ export const menuConfig = [
               <Tooltip title="BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)">
                 <NavLink to="/bbgnphoitam_hrc1">
                   BM.30/QT.05.12 (BB giao nhận phôi tấm HRC1)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-7-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+            label: (
+              <Tooltip title="BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)">
+                <NavLink to="/hrc1_tieuhaolothoi">
+                  BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-7-5",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+            label: (
+              <Tooltip title="BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)">
+                <NavLink to="/hrc1_tieuhaotinhluyenlf">
+                  BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub2-7-6",
+            maBM: BM_CONFIG.HRC1.HRC1_STD_NXT,
+            label: (
+              <Tooltip title="STD Nhập xuất tồn HRC1">
+                <NavLink to="/hrc1_std_nhapxuatton">
+                  STD Nhập xuất tồn HRC1
                 </NavLink>
               </Tooltip>
             ),
@@ -830,6 +872,28 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub3-6-5",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+            label: (
+              <Tooltip title="BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)">
+                <NavLink to="/viecdentoi/hrc1_tieuhaolothoi">
+                  BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub3-6-6",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+            label: (
+              <Tooltip title="BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)">
+                <NavLink to="/viecdentoi/hrc1_tieuhaotinhluyenlf">
+                  BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -989,7 +1053,29 @@ export const menuConfig = [
             ),
           },
           {
-            key: "sub4-1-2",
+            key: "sub4-1-3",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+            label: (
+              <Tooltip title="BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)">
+                <NavLink to="/xemphieu/hrc1_tieuhaolothoi">
+                  BM.07/QT.05.10 (BB Tiêu hao lò thổi BOF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-1-4",
+            maBM: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+            label: (
+              <Tooltip title="BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)">
+                <NavLink to="/xemphieu/hrc1_tieuhaotinhluyenlf">
+                  BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-1-5",
             maBM: BM_CONFIG.HRC1.THONGKE_HRC1,
             strictMaBM: true,
             label: (
@@ -1448,6 +1534,15 @@ export const menuConfig = [
         label: (
           <Tooltip title="Quản lý mã vật tư">
             <NavLink to="/ma-vat-tu-hrc1">Mã vật tư</NavLink>
+          </Tooltip>
+        ),
+      },
+      {
+        key: "admin-5",
+        icon: <SettingOutlined />,
+        label: (
+          <Tooltip title="Quản lý đơn trọng phôi">
+            <NavLink to="/don-trong-phoi">Đơn trọng phôi</NavLink>
           </Tooltip>
         ),
       },

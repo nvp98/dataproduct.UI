@@ -1,0 +1,56 @@
+/* Tắt hiệu ứng hover đổi màu dòng của antd Table — màu hover mặc định (xám nhạt) đè lên các màu
+   highlight riêng của ô/dòng (vàng ô đã sửa, đỏ mẻ trùng, vàng dòng thêm tay), gây rối mắt.
+   Loại trừ cột fixed/sticky (.ant-table-cell-fix-left/-right, dùng cho stickyFirstColumn/stickyColumnKeys
+   của CustomTableHRC): antd tự set nền ĐỤC cho các cột này để che phần bảng đang cuộn ngang bên dưới —
+   ép background: transparent lên chúng lúc hover sẽ phá nền đục đó, lộ ra cột đang cuộn (bug đã gặp). */
+.hrc-table-no-hover .ant-table-tbody > tr:hover > td:not(.ant-table-cell-fix-left):not(.ant-table-cell-fix-right),
+.hrc-table-no-hover .ant-table-tbody > tr > td.ant-table-cell-row-hover:not(.ant-table-cell-fix-left):not(.ant-table-cell-fix-right) {
+  background: transparent !important;
+}
+
+/* Khi dùng scroll.y + sticky (header) + Table.Summary fixed (dòng Tổng), antd render header/thân
+   cuộn/dòng Tổng thành 3 <table> tách biệt xếp chồng lên nhau thay vì 1 table liền — ranh giới giữa
+   chúng không tự "collapse" border như 1 bảng duy nhất. Khi cuộn, dòng dữ liệu có màu nền riêng (vd
+   vàng nhạt của dòng thêm tay IsNM=false, vàng của ô đã sửa tay) có thể lộ ra đúng khe hở 1px ở sát
+   viền trên (giáp header) hoặc viền dưới (giáp dòng Tổng). Dùng box-shadow đè thêm 1px thay vì trông
+   chờ border 2 bảng khớp pixel — header/dòng Tổng luôn phủ kín ranh giới bất kể đang cuộn tới đâu. */
+.hrc-table .ant-table-thead {
+  position: relative;
+  z-index: 3;
+}
+.hrc-table .ant-table-thead > tr > th {
+  box-shadow: 0 1px 0 0 #f0f0f0;
+}
+.hrc-table .ant-table-summary {
+  position: relative;
+  z-index: 3;
+}
+.hrc-table .ant-table-summary > tr > td {
+  box-shadow: 0 -1px 0 0 #f0f0f0;
+}
+
+/* Highlight ô autocomplete meThoi khi mẻ bị trùng (IsTrungMeThoi) — antd Select vẽ nền trắng ở
+   .ant-select-selector (lồng bên trong), nên set backgroundColor qua prop `style` (chỉ áp lên
+   .ant-select ngoài cùng) không hiển thị ra ngoài. Phải override đúng lớp selector. */
+.hrc-select-trung-me-thoi .ant-select-selector {
+  background-color: tomato !important;
+}
+.hrc-select-trung-me-thoi .ant-select-selection-item,
+.hrc-select-trung-me-thoi .ant-select-selection-placeholder,
+.hrc-select-trung-me-thoi .ant-select-selection-search-input {
+  color: #fff !important;
+}
+
+/* Ô autocomplete meThoi/macThep (dòng thêm tay) — mặc định AntD Select chừa padding-right ~24px cho
+   icon dropdown, cột đã hẹp (115-150px) nên số bị đẩy khuất/cắt mất vài ký tự cuối. Thu hẹp padding
+   dành cho icon để phần text có tối đa không gian hiển thị đủ số. */
+.hrc-select-key-column .ant-select-selector {
+  padding-right: 18px !important;
+}
+.hrc-select-key-column .ant-select-arrow {
+  right: 4px;
+}
+.hrc-select-key-column .ant-select-selection-item,
+.hrc-select-key-column .ant-select-selection-search-input {
+  text-overflow: clip;
+}

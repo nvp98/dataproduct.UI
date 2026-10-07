@@ -32,6 +32,7 @@ export interface NvlNhomPhanBoDto {
   ngay: string; // "YYYY-MM-DD"
   ca: number;
   idLoCao: number;
+  tyLe: number | null; // % riêng của NVL này (chỉ có với nhóm PP2 — tỷ lệ nhập tay), 0..1
 }
 
 export interface AddNvlNhomPhanBoDto {
@@ -117,6 +118,7 @@ export interface CreateTyLePhanBoDto {
   idNvl: number;
   ngay: string;
   ca?: number | null;
+  idLoCao: number;
   tyLe: number;
   ghiChu?: string | null;
   idNguoiNhap: number;
@@ -128,6 +130,11 @@ export const tyLePhanBoApi = {
 
   create: (dto: CreateTyLePhanBoDto): Promise<TyLePhanBoDto> =>
     apiService.post("/api/LG_PhanBo/ty-le/create", dto),
+
+  // true nếu ĐÚNG lò cao đang thao tác đã chốt (Ngày, Ca, Lò cao) — Chốt là snapshot nên lò cao KHÁC
+  // đã chốt không ảnh hưởng, chỉ cần chặn đúng phạm vi lò cao đang sửa
+  isCaDaChot: (params: { ngay: string; ca: number; idLoCao: number }): Promise<boolean> =>
+    apiService.get("/api/LG_PhanBo/ty-le/is-ca-da-chot", { params }),
 };
 
 // ─── Tính / chốt / xem kết quả phân bổ (LG_KetQuaPhanBo) ────────────────────
@@ -205,10 +212,10 @@ export const phanBoApi = {
   getKetQuaThanCoc: (params: { ngay: string; idLoCao: number; ca?: number }): Promise<KetQuaThanCocQueryResultDto> =>
     apiService.get("/api/LG_PhanBo/get-ket-qua-than-coc", { params }),
 
-  chot: (dto: { ngay: string; idNguoiXacNhan: number }): Promise<{ message: string }> =>
+  chot: (dto: { ngay: string; ca: number; idLoCao: number; idNguoiXacNhan: number }): Promise<{ message: string }> =>
     apiService.post("/api/LG_PhanBo/chot", dto),
 
-  huyChot: (dto: { ngay: string; idNguoiXacNhan: number }): Promise<{ message: string }> =>
+  huyChot: (dto: { ngay: string; ca: number; idLoCao: number; idNguoiXacNhan: number }): Promise<{ message: string }> =>
     apiService.post("/api/LG_PhanBo/huy-chot", dto),
 
   baoCao: (params: { tuNgay: string; denNgay: string; idLoCao?: number; loaiPhanBo?: number }): Promise<KetQuaPhanBoDto[]> =>

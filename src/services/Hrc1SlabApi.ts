@@ -56,6 +56,8 @@ export interface Hrc1SlabItem {
   ghiChu?: string | null;
   maVatTu?: string | null;
   tenVatTu?: string | null;
+  // Đã qua "Sửa slab thủ công" (tồn tại record Hrc1SlabEdit) — dùng để highlight dòng ở FE.
+  isManualEdited: boolean;
   // Workflow
   isChuyenCa: boolean;
   idPhieuGoc?: string | null;
@@ -121,6 +123,37 @@ export interface WorkflowResult {
   affectedRows: number;
 }
 
+// NgaySX/CaSX/KipSX KHÔNG gửi từ client — BE tự lấy từ phiếu (idPhieu) để slab mới luôn
+// khớp đúng phiếu đang xem.
+export interface Hrc1SlabCreateRequest {
+  idPhieu: string;
+  idSlab: string;
+  idPiece?: string | null;
+  maMe?: string | null;
+  macThep?: string | null;
+  mayDuc?: string | null;
+  cutDate?: string | null;
+  chieuDay?: number | null;
+  chieuRong?: number | null;
+  chieuDai?: number | null;
+  khoiLuong?: number | null;
+}
+
+// Cùng bộ field với Hrc1SlabCreateRequest — dùng cho popup "Sửa" (PUT, full-replace), khác
+// updateSlab (PATCH, chỉ ghiChu/maVatTu, dùng cho inline-edit).
+export interface Hrc1SlabEditRequest {
+  idSlab: string;
+  idPiece?: string | null;
+  maMe?: string | null;
+  macThep?: string | null;
+  mayDuc?: string | null;
+  cutDate?: string | null;
+  chieuDay?: number | null;
+  chieuRong?: number | null;
+  chieuDai?: number | null;
+  khoiLuong?: number | null;
+}
+
 const BASE = "/api/hrc1-slab";
 
 export const Hrc1SlabApi = {
@@ -162,8 +195,9 @@ export const Hrc1SlabApi = {
     return (await apiService.post(`${BASE}/chuyen-phoi`, { idSlabs, idPhieuNguon, huong, nguoiChuyen })) as WorkflowResult;
   },
 
-  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "C4" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
-    return (await apiService.post(`${BASE}/xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien })) as WorkflowResult;
+  // idPhieu bắt buộc khi loaiXacNhan = "C4" — BE chỉ cho XN C4 trên phiếu cũ đang "dính" luồng C4
+  xacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "C4" | "PKH", nguoiThucHien: number, idPhieu?: string): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/xac-nhan`, { idSlabs, loaiXacNhan, nguoiThucHien, idPhieu })) as WorkflowResult;
   },
 
   huyXacNhan: async (idSlabs: number[], loaiXacNhan: "Duc" | "Can" | "C4" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
@@ -188,6 +222,22 @@ export const Hrc1SlabApi = {
 
   updateSlab: async (id: number, payload: { ghiChu?: string | null; maVatTu?: string | null }): Promise<WorkflowResult> => {
     return (await apiService.patch(`${BASE}/${id}`, payload)) as WorkflowResult;
+  },
+
+  createSlab: async (payload: Hrc1SlabCreateRequest): Promise<Hrc1SlabItem> => {
+    return (await apiService.post(`${BASE}/create`, payload)) as Hrc1SlabItem;
+  },
+
+  editSlab: async (id: number, payload: Hrc1SlabEditRequest): Promise<WorkflowResult> => {
+    return (await apiService.put(`${BASE}/${id}`, payload)) as WorkflowResult;
+  },
+
+  deleteSlabs: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/xoa`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  },
+
+  restoreSlabs: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/khoi-phuc`, { idSlabs, nguoiThucHien })) as WorkflowResult;
   },
 
   getTongHopGhiChu: async (idPhieu: string): Promise<Hrc1TongHopGhiChuItem[]> => {

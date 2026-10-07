@@ -8,6 +8,7 @@ import {
   DatePicker,
   Form,
   Input,
+  InputNumber,
   Modal,
   Row,
   Select,
@@ -27,6 +28,7 @@ import {
   EyeOutlined,
   EyeInvisibleOutlined,
   SnippetsOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import type { TableRowSelection } from "antd/es/table/interface";
 import type { ColumnsType } from "antd/es/table";
@@ -44,6 +46,16 @@ const { RangePicker } = DatePicker;
 // Màu sắc trạng thái
 const TT_COLOR: Record<number, string> = { 0: "default", 1: "green" };
 const TT_TEXT: Record<number, string>  = { 0: "Chưa", 1: "Đã XN" };
+
+// Nền ô KL đã được KCS sửa tay
+const KL_SUA_BG = "#ffe58f";
+
+const fmtKL = (v: number | null | undefined): string =>
+  v != null ? Number(v).toLocaleString("vi-VN", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : "-";
+
+// So sánh KL đúng 3 số lẻ (cùng scale decimal(18,3) phía DB) — tránh sai số float của JS
+const sameKL = (a: number | null | undefined, b: number | null | undefined): boolean =>
+  a != null && b != null && Math.round(Number(a) * 1000) === Math.round(Number(b) * 1000);
 
 // Tính trạng thái hiển thị của phiếu BBSL
 // "chot"      = BM_Phieu.TinhTrang === 5 (set bởi button Chốt phiếu)
@@ -67,7 +79,7 @@ const getUserId = (): number => {
   return 0;
 };
 
-const BkHrc2SlabTable = () => {
+const BkHrc2SlabTable = ({ readOnly = false }: { readOnly?: boolean }) => {
   // ── Phân quyền theo bộ phận ──────────────────────────────────────────────
   const userInfo = (() => { try { const s = localStorage.getItem("userinfo"); return s ? JSON.parse(s) : null; } catch { return null; } })();
   const isView    = getBmQuyenUiFlags(BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam, userInfo).isView;
@@ -126,20 +138,34 @@ const BkHrc2SlabTable = () => {
   const [phieuList, setPhieuList] = useState<PhieuBBSLItem[]>([]);
   const [phieuLoading, setPhieuLoading] = useState(false);
   const [selectedPhieu, setSelectedPhieu] = useState<PhieuBBSLItem | null>(null);
+  // Kíp/Ca cố định theo slab đã chọn — chỉ khoảng ngày là tiêu chí tìm kiếm người dùng điều chỉnh được
+  const [phieuKipCa, setPhieuKipCa] = useState<{ kip: string | null; ca: number | null }>({ kip: null, ca: null });
+  const [phieuSearchForm] = Form.useForm();
 
   // Sub-modal tạo phiếu BBSL mới
   const [createVisible, setCreateVisible] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createForm] = Form.useForm();
 
+  // Modal sửa tay khối lượng (KCS)
+  const [suaKLRow, setSuaKLRow] = useState<HrcSlabItem | null>(null);
+  const [suaKLLoading, setSuaKLLoading] = useState(false);
+  const [suaKLForm] = Form.useForm();
+  const suaKLValue = Form.useWatch("khoiLuong", suaKLForm) as number | null | undefined;
+  // Nhập đúng bằng KL gốc → khôi phục KL nhà máy, Lý do/Số BBSV không bắt buộc (vẫn cho nhập để truy vết)
+  const suaKLIsReset = suaKLRow != null && sameKL(suaKLValue, suaKLRow.khoiLuongGoc);
+
   const fetchData = useCallback(async (page = 1, pageSize = 50, values?: any, resetSel = true) => {
     try {
       setLoading(true);
       const filters = values ?? form.getFieldsValue();
       const dateRange = filters.dateRange;
+      const dateXLRange = filters.dateXLRange;
       const res = await Hrc2SlabApi.search({
         tuNgay:    dateRange?.[0] ? dayjs(dateRange[0]).format("YYYY-MM-DD") : null,
         denNgay:   dateRange?.[1] ? dayjs(dateRange[1]).format("YYYY-MM-DD") : null,
+        tuNgayXL:  dateXLRange?.[0] ? dayjs(dateXLRange[0]).format("YYYY-MM-DD") : null,
+        denNgayXL: dateXLRange?.[1] ? dayjs(dateXLRange[1]).format("YYYY-MM-DD") : null,
         caSanXuat: filters.caSanXuat || null,
         kip:       filters.kip || null,
         mayDuc:    filters.mayDuc ?? null,
@@ -150,6 +176,7 @@ const BkHrc2SlabTable = () => {
         isTrungIDSlab:  filters.isTrungIDSlab ? true : null,
         isDiffMacThep:  filters.isDiffMacThep ? true : null,
         isSaiLotName:   filters.isSaiLotName ? true : null,
+        isSuaKL:        filters.isSuaKL ? true : null,
         trangThaiKCS:   filters.trangThaiKCS ?? null,
         page,
         pageSize,
@@ -206,8 +233,61 @@ const BkHrc2SlabTable = () => {
     r.trangThaiPKH === 0 &&
     !r.isChot;
 
+  const hasChatLuong = (r: HrcSlabItem): boolean =>
+    !!(r.chatLuong && String(r.chatLuong).trim() !== "");
+
   const canChuyenBBSLRow = (r: HrcSlabItem): boolean =>
-    r.trangThaiKCS === 0 && r.isSaiLotName === false && r.isTrungIDSlab === false && r.isDiffMacThep === false;
+    r.trangThaiKCS === 0 && r.isSaiLotName === false && r.isTrungIDSlab === false && r.isDiffMacThep === false && hasChatLuong(r);
+
+  // Sửa KL chỉ khi slab chưa lên BBSL và mọi bên đã gỡ xác nhận (BE kiểm tra lại lúc lưu)
+  const canSuaKLRow = (r: HrcSlabItem): boolean =>
+    r.trangThaiKCS === 0 &&
+    r.trangThaiDuc === 0 &&
+    r.trangThaiKho === 0 &&
+    r.trangThaiPKH === 0 &&
+    !r.idPhieuBBSL &&
+    !r.isChot;
+
+  const handleOpenSuaKL = () => {
+    const row = selectedRows[0];
+    if (selectedRows.length !== 1 || !row) { message.warning("Vui lòng chọn đúng 1 slab để sửa khối lượng!"); return; }
+    if (!canSuaKLRow(row)) {
+      message.warning("Slab đã chuyển BBSL — cần hủy xác nhận Đúc/Kho và thu hồi trước khi sửa khối lượng!");
+      return;
+    }
+    setSuaKLRow(row);
+    suaKLForm.setFieldsValue({
+      khoiLuong: row.khoiLuong ?? null,
+      lyDoSua: row.lyDoSua ?? "",
+      soBBSV: row.soBBSV ?? "",
+    });
+  };
+
+  const handleCloseSuaKL = () => {
+    setSuaKLRow(null);
+    suaKLForm.resetFields();
+  };
+
+  const handleSaveSuaKL = async (values: { khoiLuong: number; lyDoSua?: string; soBBSV?: string }) => {
+    if (!suaKLRow) return;
+    try {
+      setSuaKLLoading(true);
+      const res = await Hrc2SlabApi.suaKhoiLuong({
+        idSlab: suaKLRow.id,
+        khoiLuong: values.khoiLuong,
+        lyDoSua: values.lyDoSua?.trim() || null,
+        soBBSV: values.soBBSV?.trim() || null,
+        nguoiThucHien: getUserId(),
+      });
+      message.success(res.message);
+      handleCloseSuaKL();
+      await fetchData(pagination.current, pagination.pageSize);
+    } catch (err: any) {
+      message.error(err?.message ?? "Lỗi khi sửa khối lượng!");
+    } finally {
+      setSuaKLLoading(false);
+    }
+  };
 
   const validateSameCaSanXuat = (): boolean => {
     const caValues = [...new Set(selectedRows.map((r) => r.caSanXuat ?? ""))];
@@ -238,7 +318,7 @@ const BkHrc2SlabTable = () => {
     if (hasChuyenRoi) { message.warning("Một số mẻ đã được chuyển BBSL, vui lòng bỏ chọn chúng!"); return; }
 
     const invalidRows = selectedRows.filter(
-      (r) => r.isSaiLotName || r.isTrungIDSlab || r.isDiffMacThep
+      (r) => r.isSaiLotName || r.isTrungIDSlab || r.isDiffMacThep || !hasChatLuong(r)
     );
     if (invalidRows.length > 0) {
       const lines = invalidRows.map((r) => {
@@ -246,6 +326,7 @@ const BkHrc2SlabTable = () => {
         if (r.isSaiLotName) reasons.push("LotName");
         if (r.isTrungIDSlab) reasons.push("ID Slab (trùng)");
         if (r.isDiffMacThep) reasons.push("Mác thép (khác)");
+        if (!hasChatLuong(r)) reasons.push("thiếu Chất lượng");
         return `Không thể chuyển BBSL ID ${r.idSlab} vì đang sai ${reasons.join(", ")}`;
       });
       message.error(
@@ -256,20 +337,43 @@ const BkHrc2SlabTable = () => {
       return;
     }
 
-    try {
-      setPhieuLoading(true);
-      setModalVisible(true);
-      setSelectedPhieu(null);
-      const firstKip = selectedRows[0]?.kipSanXuat;
-      const firstCaStr = selectedRows[0]?.caSanXuat;
-      const caNum = firstCaStr ? parseInt(String(firstCaStr), 10) : null;
-      const list = await Hrc2SlabApi.getPhieuBBSL(firstKip ?? null, caNum != null && !isNaN(caNum) ? caNum : null);
-      setPhieuList(list);
-    } catch {
-      message.error("Không thể tải danh sách phiếu!");
-    } finally {
-      setPhieuLoading(false);
-    }
+    const firstKip = selectedRows[0]?.kipSanXuat ?? null;
+    const firstCaStr = selectedRows[0]?.caSanXuat;
+    const caNum = firstCaStr ? parseInt(String(firstCaStr), 10) : null;
+    const ca = caNum != null && !isNaN(caNum) ? caNum : null;
+    setPhieuKipCa({ kip: firstKip, ca });
+
+    // Mặc định tìm phiếu trong 30 ngày gần nhất — người dùng có thể mở rộng khoảng ngày để tìm xa hơn
+    const defaultRange: [dayjs.Dayjs, dayjs.Dayjs] = [dayjs().subtract(30, "day"), dayjs()];
+    phieuSearchForm.setFieldsValue({ dateRange: defaultRange });
+
+    setModalVisible(true);
+    setSelectedPhieu(null);
+    await fetchPhieuBBSL(firstKip, defaultRange[0].format("YYYY-MM-DD"), defaultRange[1].format("YYYY-MM-DD"));
+  };
+
+  // Không lọc theo "ca" — chỉ theo kíp + khoảng ngày (xem ghi chú trong Hrc2SlabApi.getPhieuBBSL)
+  const fetchPhieuBBSL = useCallback(
+    async (kip: string | null, tuNgay: string | null, denNgay: string | null) => {
+      try {
+        setPhieuLoading(true);
+        const list = await Hrc2SlabApi.getPhieuBBSL(kip, tuNgay, denNgay);
+        setPhieuList(list);
+      } catch {
+        message.error("Không thể tải danh sách phiếu!");
+      } finally {
+        setPhieuLoading(false);
+      }
+    },
+    []
+  );
+
+  const handleSearchPhieuBBSL = async () => {
+    const values = phieuSearchForm.getFieldsValue();
+    const range = values.dateRange as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+    const tuNgay = range?.[0] ? dayjs(range[0]).format("YYYY-MM-DD") : null;
+    const denNgay = range?.[1] ? dayjs(range[1]).format("YYYY-MM-DD") : null;
+    await fetchPhieuBBSL(phieuKipCa.kip, tuNgay, denNgay);
   };
 
   const handleConfirmChuyenBBSL = async () => {
@@ -279,7 +383,10 @@ const BkHrc2SlabTable = () => {
       setActionLoading(true);
       const userId = getUserId();
       const ids = selectedRows.map((r) => r.id);
-      await Hrc2SlabApi.chuyenBBSL(ids, selectedPhieu.idPhieu, userId);
+      // Bắt thời điểm ngay lúc người dùng bấm xác nhận trong popup — không dùng giờ server nhận request
+      // (có thể lệch do độ trễ mạng) để lưu vết đúng thời điểm thao tác thực tế.
+      const thoiDiemThaoTac = dayjs().toISOString();
+      await Hrc2SlabApi.chuyenBBSL(ids, selectedPhieu.idPhieu, userId, thoiDiemThaoTac);
       message.success(`Đã chuyển ${ids.length} slab vào phiếu ${selectedPhieu.soPhieu}`);
       setModalVisible(false);
       await fetchData(pagination.current, pagination.pageSize);
@@ -310,11 +417,12 @@ const BkHrc2SlabTable = () => {
       message.success(`Tạo phiếu thành công: ${(res as any)?.soPhieu ?? ""}`);
       setCreateVisible(false);
       createForm.resetFields();
-      // Reload danh sách phiếu
-      const firstKip = selectedRows[0]?.kipSanXuat;
-      const firstCaStr = selectedRows[0]?.caSanXuat;
-      const caNum2 = firstCaStr ? parseInt(String(firstCaStr), 10) : null;
-      const list = await Hrc2SlabApi.getPhieuBBSL(firstKip ?? null, caNum2 != null && !isNaN(caNum2) ? caNum2 : null);
+      // Reload danh sách phiếu — dùng lại kíp + khoảng ngày đang tìm kiếm trong popup
+      const searchValues = phieuSearchForm.getFieldsValue();
+      const range = searchValues.dateRange as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+      const tuNgay = range?.[0] ? dayjs(range[0]).format("YYYY-MM-DD") : null;
+      const denNgay = range?.[1] ? dayjs(range[1]).format("YYYY-MM-DD") : null;
+      const list = await Hrc2SlabApi.getPhieuBBSL(phieuKipCa.kip, tuNgay, denNgay);
       setPhieuList(list);
       // Auto-select phiếu vừa tạo
       const newId = (res as any)?.idphieu;
@@ -351,6 +459,8 @@ const BkHrc2SlabTable = () => {
 
   const currentPageKeys = useMemo(() => data.map((r) => r.id as React.Key), [data]);
 
+  // Cho tick mọi dòng (kể cả thiếu Chất lượng) để KCS vẫn sửa được KL — việc chặn chuyển BBSL khi thiếu
+  // Chất lượng đã nằm ở canChuyenBBSLRow (nút bị disable) + handleOpenChuyenBBSL (báo lý do cụ thể).
   const rowSelection: TableRowSelection<HrcSlabItem> = {
     selectedRowKeys,
     onChange: (newKeys) => {
@@ -414,6 +524,13 @@ const BkHrc2SlabTable = () => {
       fixed: "left" as const,
       render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
     },
+    {
+      title: "Ngày lên BBSL",
+      dataIndex: "ngayXuLy",
+      fixed: "left" as const,
+      width: 105,
+      render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
+    },
     { title: "Ca SX", dataIndex: "shiftName", width: 150, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
     { title: "Kíp", dataIndex: "kipSanXuat", width: 40, align: "center" as const, fixed: "left" as const, render: (v: string) => v ?? "-" },
     { title: "Mẻ thép", dataIndex: "meThep", width: 100, align: "center" as const, fixed: "left" as const },
@@ -445,10 +562,47 @@ const BkHrc2SlabTable = () => {
       dataIndex: "khoiLuong",
       width: 150,
       align: "right" as const,
-      render: (v: number) =>
-        v != null ? Number(v).toLocaleString("vi-VN", { minimumFractionDigits: 3 }) : "-",
+      // KL đã được KCS sửa tay → tô vàng, tooltip so sánh với KL gốc nhà máy
+      onCell: (r: HrcSlabItem) => ({
+        style: r.khoiLuongManual != null ? { backgroundColor: KL_SUA_BG, fontWeight: 600 } : undefined,
+      }),
+      render: (v: number, r: HrcSlabItem) => {
+        if (r.khoiLuongManual == null) return fmtKL(v);
+        const chenhLech = r.khoiLuongGoc != null ? Number(r.khoiLuongManual) - Number(r.khoiLuongGoc) : null;
+        return (
+          <Tooltip
+            title={
+              <div>
+                <div>KL nhà máy: <b>{fmtKL(r.khoiLuongGoc)}</b></div>
+                <div>KL sửa tay: <b>{fmtKL(r.khoiLuongManual)}</b></div>
+                {chenhLech != null && <div>Chênh lệch: <b>{chenhLech > 0 ? "+" : ""}{fmtKL(chenhLech)}</b></div>}
+                <div>Lý do: {r.lyDoSua ?? "-"}</div>
+                <div>Số BBSV: {r.soBBSV ?? "-"}</div>
+                <div>Người sửa: {r.nguoiSuaKL ?? "-"}</div>
+                <div>Lúc: {r.thoiDiemSuaKL ? dayjs(r.thoiDiemSuaKL).format("DD/MM/YYYY HH:mm:ss") : "-"}</div>
+              </div>
+            }
+          >
+            <span>{fmtKL(v)}</span>
+          </Tooltip>
+        );
+      },
     },
-    { title: "Chất lượng", dataIndex: "chatLuong", width: 280 },
+    {
+      title: "Chất lượng",
+      dataIndex: "chatLuong",
+      width: 280,
+      render: (v: string, r: HrcSlabItem) => {
+        const missing = r.trangThaiKCS === 0 && !hasChatLuong(r);
+        return (
+          <Tooltip title={missing ? "Thiếu Chất lượng, không thể chuyển BBSL" : undefined}>
+            <span style={{ color: missing ? "#ff4d4f" : undefined, fontWeight: missing ? 600 : undefined }}>
+              {v ?? "-"}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
     { title: "OrderID", dataIndex: "orderId", width: 150 },
     {
       title: "LotName",
@@ -469,12 +623,6 @@ const BkHrc2SlabTable = () => {
     { title: "Loại phôi", dataIndex: "loaiPhoi", width: 95, render: (v: string) => v ?? "-" },
     { title: "SAP Description", dataIndex: "sapDescription", width: 300, render: (v: string) => v ?? "-" },
     {
-      title: "Ngày xử lý",
-      dataIndex: "ngayXuLy",
-      width: 105,
-      render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
-    },
-    {
       title: "Ca (phiếu)",
       dataIndex: "caBBSL",
       width: 85,
@@ -482,9 +630,25 @@ const BkHrc2SlabTable = () => {
     },
     { title: "Kíp (phiếu)", dataIndex: "kipBBSL", width: 85, render: (v: string) => v ?? "-" },
     { title: "Người Chuyển BBSL (KCS)", dataIndex: "nguoiChuyenBBSL", width: 200, render: (v: string) => v ?? "-" },
+    {
+      title: "Thời điểm thao tác",
+      dataIndex: "thoiDiemThaoTac",
+      width: 150,
+      render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY HH:mm:ss") : "-"),
+    },
     { title: "Người xác nhận Đúc", dataIndex: "nguoiXacNhanDuc", width: 200, render: (v: string) => v ?? "-" },
     { title: "Người xác nhận Kho", dataIndex: "nguoiXacNhanKho", width: 200, render: (v: string) => v ?? "-" },
     { title: "Người xác nhận PKH", dataIndex: "nguoiXacNhanPKH", width: 200, render: (v: string) => v ?? "-" },
+    { title: "KL nhà máy", dataIndex: "khoiLuongGoc", width: 110, align: "right" as const, render: (v: number) => fmtKL(v) },
+    { title: "Lý do sửa KL", dataIndex: "lyDoSua", width: 220, render: (v: string) => v ?? "-" },
+    { title: "Số BBSV", dataIndex: "soBBSV", width: 120, render: (v: string) => v ?? "-" },
+    { title: "Người sửa KL", dataIndex: "nguoiSuaKL", width: 200, render: (v: string) => v ?? "-" },
+    {
+      title: "Thời điểm sửa KL",
+      dataIndex: "thoiDiemSuaKL",
+      width: 150,
+      render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY HH:mm:ss") : "-"),
+    },
   ], []);
 
   const columns = useMemo((): ColumnsType<HrcSlabItem> => {
@@ -498,11 +662,12 @@ const BkHrc2SlabTable = () => {
   const selectedCount = selectedRowKeys.length;
   const canChuyenBBSL = selectedCount > 0 && selectedRows.every(canChuyenBBSLRow);
   const canThuHoi     = selectedCount > 0 && selectedRows.every(canThuHoiRow);
+  const canSuaKL      = selectedCount === 1 && selectedRows.length === 1 && canSuaKLRow(selectedRows[0]);
 
   // Cột phiếu BBSL trong modal
   const phieuColumns = [
     { title: "Số phiếu", dataIndex: "soPhieu", width: 170 },
-    { title: "Ngày SX", dataIndex: "ngaySX", width: 110, render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-", onCell: () => ({ style: { fontWeight: "bold" } }) },
+    { title: "Ngày lên BBSL", dataIndex: "ngaySX", width: 110, render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-", onCell: () => ({ style: { fontWeight: "bold" } }) },
     { title: "Ca", dataIndex: "ca", width: 100, render: (v: number) => v === 1 ? "Ca Ngày" : v === 2 ? "Ca Đêm" : v ?? "-", onCell: () => ({ style: { fontWeight: "bold" } }) },
     { title: "Kíp", dataIndex: "kip", width: 70, onCell: () => ({ style: { fontWeight: "bold" } }) },
     { title: "Số slab", dataIndex: "soSlabDaChot", width: 75, align: "right" as const },
@@ -532,6 +697,11 @@ const BkHrc2SlabTable = () => {
           <Row gutter={[12, 0]}>
             <Col xs={24} sm={12} md={4}>
               <Form.Item name="dateRange" label="Khoảng ngày SX">
+                <RangePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder={["Từ ngày", "Đến ngày"]} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={4}>
+              <Form.Item name="dateXLRange" label="Khoảng ngày lên BBSL">
                 <RangePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder={["Từ ngày", "Đến ngày"]} />
               </Form.Item>
             </Col>
@@ -629,6 +799,11 @@ const BkHrc2SlabTable = () => {
                 <Checkbox>Sai LotName</Checkbox>
               </Form.Item>
             </Col>
+            <Col xs={12} sm={6} md={2}>
+              <Form.Item name="isSuaKL" valuePropName="checked" label=" ">
+                <Checkbox>Đã sửa KL</Checkbox>
+              </Form.Item>
+            </Col>
           </Row>
 
           {/* Hàng nút tìm kiếm + actions */}
@@ -643,20 +818,25 @@ const BkHrc2SlabTable = () => {
                 : `Tổng: ${pagination.total} bản ghi`}
             </span>
 
-            {!isView && isKCS && (<>
+            {!readOnly && !isView && isKCS && (<>
               <Button type="primary" icon={<ArrowUpOutlined />} disabled={!canChuyenBBSL} loading={actionLoading} onClick={handleOpenChuyenBBSL}>
                 Chuyển BBSL
               </Button>
               <Popconfirm title={`Thu hồi ${selectedCount} slab đã chọn?`} onConfirm={handleThuHoi} disabled={!canThuHoi}>
                 <Button icon={<RollbackOutlined />} disabled={!canThuHoi} loading={actionLoading}>Thu hồi</Button>
               </Popconfirm>
+              <Tooltip title={selectedCount === 1 && !canSuaKL ? "Slab đã chuyển BBSL — cần hủy xác nhận và thu hồi trước khi sửa" : undefined}>
+                <Button icon={<EditOutlined />} disabled={!canSuaKL} onClick={handleOpenSuaKL}>
+                  Sửa KL
+                </Button>
+              </Tooltip>
             </>)}
 
             <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
               <Button icon={showExtraColumns ? <EyeInvisibleOutlined /> : <EyeOutlined />} onClick={() => setShowExtraColumns((v) => !v)}>
                 {showExtraColumns ? "Ẩn cột phụ" : "Hiện cột phụ"}
               </Button>
-              {isKCS && (
+              {!readOnly && isKCS && (
                 <Button icon={<SyncOutlined />} onClick={() => setSyncVisible(true)}>Sync BKMIS</Button>
               )}
             </div>
@@ -668,7 +848,7 @@ const BkHrc2SlabTable = () => {
       <Card bodyStyle={{ padding: "8px 12px" }}>
         <Table<HrcSlabItem>
           rowKey="id"
-          rowSelection={rowSelection}
+          rowSelection={readOnly ? undefined : rowSelection}
           columns={columns}
           dataSource={data}
           loading={loading}
@@ -751,11 +931,22 @@ const BkHrc2SlabTable = () => {
         ]}
       >
         <p style={{ marginBottom: 8, color: "#555" }}>
-          Sẽ chuyển <b>{selectedCount}</b> slab vào phiếu được chọn.
+          Sẽ chuyển <b>{selectedCount}</b> slab vào phiếu được chọn (Kíp <b>{phieuKipCa.kip ?? "-"}</b>, Ca{" "}
+          <b>{phieuKipCa.ca === 1 ? "Ngày" : phieuKipCa.ca === 2 ? "Đêm" : phieuKipCa.ca ?? "-"}</b>).
           {selectedPhieu && (
             <> Phiếu đã chọn: <b style={{ color: "#1976d2" }}>{selectedPhieu.soPhieu}</b></>
           )}
         </p>
+        <Form form={phieuSearchForm} layout="inline" style={{ marginBottom: 12 }} onFinish={handleSearchPhieuBBSL}>
+          <Form.Item name="dateRange" label="Khoảng ngày SX của phiếu">
+            <RangePicker format="DD/MM/YYYY" allowClear={false} />
+          </Form.Item>
+          <Form.Item>
+            <Button icon={<SearchOutlined />} htmlType="submit" loading={phieuLoading}>
+              Tìm kiếm
+            </Button>
+          </Form.Item>
+        </Form>
         <Table<PhieuBBSLItem>
           rowKey="idPhieu"
           columns={phieuColumns}
@@ -785,6 +976,53 @@ const BkHrc2SlabTable = () => {
             },
           })}
         />
+      </Modal>
+
+      {/* Modal sửa tay khối lượng (KCS) */}
+      <Modal
+        title={`Sửa khối lượng slab ${suaKLRow?.idSlab ?? ""}`}
+        open={suaKLRow != null}
+        onCancel={handleCloseSuaKL}
+        footer={null}
+        width={460}
+      >
+        <Form form={suaKLForm} layout="vertical" onFinish={handleSaveSuaKL}>
+          <Form.Item label="KL nhà máy (tấn)">
+            <Input value={fmtKL(suaKLRow?.khoiLuongGoc)} disabled />
+          </Form.Item>
+          <Form.Item
+            name="khoiLuong"
+            label="Khối lượng (tấn)"
+            rules={[{ required: true, message: "Nhập khối lượng" }]}
+            extra={
+              suaKLIsReset
+                ? <span style={{ color: "#1677ff" }}>Bằng KL nhà máy — lưu sẽ khôi phục về chưa sửa (Lý do/Số BBSV không bắt buộc).</span>
+                : undefined
+            }
+          >
+            <InputNumber style={{ width: "100%" }} min={0} precision={3} step={0.001} autoFocus />
+          </Form.Item>
+          <Form.Item
+            name="lyDoSua"
+            label="Lý do sửa"
+            rules={[{ required: !suaKLIsReset, whitespace: true, message: "Nhập lý do sửa" }]}
+          >
+            <Input.TextArea rows={3} maxLength={500} showCount />
+          </Form.Item>
+          <Form.Item
+            name="soBBSV"
+            label="Số BBSV (biên bản sự việc)"
+            rules={[{ required: !suaKLIsReset, whitespace: true, message: "Nhập số BBSV" }]}
+          >
+            <Input maxLength={50} />
+          </Form.Item>
+          <Form.Item style={{ textAlign: "right", marginBottom: 0 }}>
+            <Space>
+              <Button onClick={handleCloseSuaKL}>Hủy</Button>
+              <Button type="primary" htmlType="submit" loading={suaKLLoading}>Lưu</Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Modal>
 
       {/* Modal paste danh sách ID Slab */}

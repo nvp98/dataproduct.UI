@@ -21,6 +21,8 @@ async function downloadBlob(res: Response, fallbackName: string): Promise<void> 
 export interface HrcSlabSearchRequest {
   tuNgay?: string | null;
   denNgay?: string | null;
+  tuNgayXL?: string | null;
+  denNgayXL?: string | null;
   caSanXuat?: string | null;
   kip?: string | null;
   mayDuc?: number | null;
@@ -31,6 +33,7 @@ export interface HrcSlabSearchRequest {
   isTrungIDSlab?: boolean | null;
   isDiffMacThep?: boolean | null;
   isSaiLotName?: boolean | null;
+  isSuaKL?: boolean | null;
   trangThaiKCS?: number | null;
   trangThaiDuc?: number | null;
   trangThaiKho?: number | null;
@@ -54,7 +57,16 @@ export interface HrcSlabItem {
   chieuDay?: number | null;
   chieuRong?: number | null;
   chieuDai?: number | null;
+  // KL hiệu lực = khoiLuongManual ?? khoiLuongGoc — dùng cho mọi hiển thị/cộng tổng
   khoiLuong?: number | null;
+  // KL gốc từ nhà máy (BKMIS)
+  khoiLuongGoc?: number | null;
+  // KL KCS sửa tay (null = chưa sửa)
+  khoiLuongManual?: number | null;
+  lyDoSua?: string | null;
+  soBBSV?: string | null;
+  nguoiSuaKL?: string | null;
+  thoiDiemSuaKL?: string | null;
   khoiLuongTinhToan?: number | null;
   chatLuongTPHH?: string | null;
   thongTinPhoi?: string | null;
@@ -85,11 +97,15 @@ export interface HrcSlabItem {
   trangThaiPKH: number;
   idPhieuBBSL?: string | null;
   soPhieuBBSL?: string | null;
+  // Thời điểm FE bắt được lúc người dùng xác nhận chuyển lên BBSL (khác ngày server ghi nhận)
+  thoiDiemThaoTac?: string | null;
   // Người xử lý từng bước
   nguoiChuyenBBSL?: string | null;
   nguoiXacNhanDuc?: string | null;
   nguoiXacNhanKho?: string | null;
   nguoiXacNhanPKH?: string | null;
+  // Đánh dấu "đã check" của riêng user đang đăng nhập — độc lập với workflow xác nhận
+  daCheck: boolean;
 }
 
 export interface HrcSlabSearchResponse {
@@ -159,10 +175,17 @@ export const Hrc2SlabApi = {
     return (await apiService.get(`${BASE}/tong-hop?${qs}`)) as SlabTongHopItem[];
   },
 
-  getPhieuBBSL: async (kip?: string | null, ca?: number | null): Promise<PhieuBBSLItem[]> => {
+  // Không truyền "ca" lên: 1 ngày có 2 ca nhưng 3 kíp A/B/C, kíp A hôm nay có thể thuộc ca ngày
+  // nhưng vài ngày sau lại thuộc ca đêm — lọc cứng theo ca sẽ bỏ sót phiếu cùng kíp hợp lệ.
+  getPhieuBBSL: async (
+    kip?: string | null,
+    tuNgay?: string | null,
+    denNgay?: string | null
+  ): Promise<PhieuBBSLItem[]> => {
     const qs = new URLSearchParams();
     if (kip) qs.set("kip", kip);
-    if (ca != null) qs.set("ca", String(ca));
+    if (tuNgay) qs.set("tuNgay", tuNgay);
+    if (denNgay) qs.set("denNgay", denNgay);
     return (await apiService.get(`${BASE}/phieu-bbsl?${qs}`)) as PhieuBBSLItem[];
   },
 
@@ -170,16 +193,32 @@ export const Hrc2SlabApi = {
     return (await apiService.get(`${BASE}/ruot-phieu/${idPhieu}`)) as SlabTongHopItem[];
   },
 
-  getSlabsByPhieu: async (idPhieu: string): Promise<HrcSlabItem[]> => {
-    return (await apiService.get(`${BASE}/slabs-by-phieu/${idPhieu}`)) as HrcSlabItem[];
+  getSlabsByPhieu: async (idPhieu: string, currentUserId?: number): Promise<HrcSlabItem[]> => {
+    const qs = currentUserId != null ? `?currentUserId=${currentUserId}` : "";
+    return (await apiService.get(`${BASE}/slabs-by-phieu/${idPhieu}${qs}`)) as HrcSlabItem[];
   },
 
-  chuyenBBSL: async (idSlabs: number[], idPhieu: string, nguoiThucHien: number): Promise<WorkflowResult> => {
-    return (await apiService.post(`${BASE}/chuyen-bbsl`, { idSlabs, idPhieu, nguoiThucHien })) as WorkflowResult;
+  chuyenBBSL: async (
+    idSlabs: number[],
+    idPhieu: string,
+    nguoiThucHien: number,
+    thoiDiemThaoTac?: string
+  ): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/chuyen-bbsl`, { idSlabs, idPhieu, nguoiThucHien, thoiDiemThaoTac })) as WorkflowResult;
   },
 
   thuHoi: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
     return (await apiService.post(`${BASE}/thu-hoi`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  },
+
+  suaKhoiLuong: async (req: {
+    idSlab: number;
+    khoiLuong: number;
+    lyDoSua?: string | null;
+    soBBSV?: string | null;
+    nguoiThucHien: number;
+  }): Promise<{ isReset: boolean; message: string }> => {
+    return (await apiService.post(`${BASE}/sua-khoi-luong`, req)) as { isReset: boolean; message: string };
   },
 
   xacNhan: async (idSlabs: number[], loaiXacNhan: "KCS" | "Duc" | "Kho" | "PKH", nguoiThucHien: number): Promise<WorkflowResult> => {
@@ -198,6 +237,14 @@ export const Hrc2SlabApi = {
     return (await apiService.post(`${BASE}/huy-chot-phieu`, { idPhieu, nguoiThucHien })) as WorkflowResult;
   },
 
+  check: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/check`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  },
+
+  unCheck: async (idSlabs: number[], nguoiThucHien: number): Promise<WorkflowResult> => {
+    return (await apiService.post(`${BASE}/un-check`, { idSlabs, nguoiThucHien })) as WorkflowResult;
+  },
+
   sync: async (ngayBatDau?: string | null, ngayKetThuc?: string | null): Promise<SyncStatusItem> => {
     return (await apiService.post(`${BASE}/sync`, { ngayBatDau, ngayKetThuc })) as SyncStatusItem;
   },
@@ -210,11 +257,12 @@ export const Hrc2SlabApi = {
     }
   },
 
-  exportExcel: async (idPhieu: string, tab: "chitiet" | "tonghop"): Promise<void> => {
+  exportExcel: async (idPhieu: string, tab: "chitiet" | "tonghop", currentUserId?: number): Promise<void> => {
     const token = localStorage.getItem("token");
     const apiUrl = (import.meta.env.VITE_API_URL as string).replace(/\/$/, "");
+    const userQs = currentUserId != null ? `&currentUserId=${currentUserId}` : "";
     const res = await fetch(
-      `${apiUrl}${BASE}/export/excel?idPhieu=${encodeURIComponent(idPhieu)}&tab=${tab}`,
+      `${apiUrl}${BASE}/export/excel?idPhieu=${encodeURIComponent(idPhieu)}&tab=${tab}${userQs}`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     );
     if (!res.ok) throw new Error("Lỗi xuất Excel");

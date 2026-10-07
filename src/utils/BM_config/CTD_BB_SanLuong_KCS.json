@@ -18,15 +18,21 @@
       "key": "ca",
       "required": true,
       "options": [
-        { "label": "Ca Ngày", "value":1 },
+        { "label": "Ca Ngày", "value": 1 },
         { "label": "Ca Đêm", "value": 2 }
       ]
     },
-    { "label": "Ngày", "type": "date", "key": "NgaySX","required": true },
-    { "label": "Xưởng cán", "type": "select","required": true, "key": "xuong","options": [
+    { "label": "Ngày", "type": "date", "key": "NgaySX", "required": true },
+    {
+      "label": "Xưởng cán",
+      "type": "select",
+      "required": true,
+      "key": "xuong",
+      "options": [
         { "label": "Xưởng cán 1", "value": 1 },
         { "label": "Xưởng cán 2", "value": 2 },
-        { "label": "Xưởng cán 3", "value": 3 }
+        { "label": "Xưởng cán 3", "value": 3 },
+        { "label": "Xưởng cán 4", "value": 4 }
       ]
     }
   ],
@@ -37,7 +43,7 @@
       "key": "table1",
       "columns": [
         { "title": "STT", "dataIndex": "stt", "isLabel": true, "width": 50 },
-        { "title": "Sản phẩm", "dataIndex": "sanPham"  },
+        { "title": "Sản phẩm", "dataIndex": "sanPham" },
         { "title": "Mác thép", "dataIndex": "macThep" },
         { "title": "Chiều dài", "dataIndex": "chieuDai" },
         { "title": "Số bó", "dataIndex": "soBo" },
@@ -48,7 +54,7 @@
     }
   ],
   "signatures": [
-     {
+    {
       "label": "Trưởng kíp",
       "type": "selectNguoiKy",
       "key": "nguoiKy_TruongKip",

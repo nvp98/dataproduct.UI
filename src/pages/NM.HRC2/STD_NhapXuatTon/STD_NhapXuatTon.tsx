@@ -71,6 +71,7 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
                 state: {
                   idphieu: record.idphieu,
                   pheduyet: record?.pheDuyet?.[0] ?? null,
+                  type,
                 },
               });
             } else {
@@ -162,8 +163,12 @@ const STD_NhapXuatTon = ({ type }: { type?: string }) => {
             type="text"
             icon={<EyeOutlined twoToneColor="#1890ff" />}
             onClick={() =>
-              navigate("/chitiettieuhaonauluyen_bof", {
-                state: { idphieu: record.idphieu },
+              navigate("/chi_tiet_std", {
+                state: {
+                  idphieu: record.idphieu,
+                  pheduyet: record?.pheDuyet?.[0] ?? null,
+                  type,
+                },
               })
             }
           />

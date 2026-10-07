@@ -1,6 +1,6 @@
 import { Button, message, Modal, Tag } from "antd";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FilterFieldConfig } from "../../../components/PhieuFilterCard";
 import ThongKePhieuCommon, {
@@ -10,10 +10,10 @@ import ThongKePhieuCommon, {
 import { DEFAULT_TINH_TRANG_OPTIONS } from "../../../utils/ConfigDefault/thongKePhieuDefaults";
 import type { SearchPhieuRequest } from "../../../models/Phieu";
 import type { PhieuFilterValues } from "../../../components/PhieuFilterCard";
-import { getPhieuStatusConfig } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { getPhieuStatusConfig, PHOI_TAM_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
-import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
-import type { NhaMayEnum } from "../../../models/SiloModel";
+import { NhaMayEnum } from "../../../services/MayDucServiceApi";
+import { useMayDucOptions } from "../../../hooks/useMayDucOptions";
 import { dlnmHRC2Api } from "../../../services/DLNMHRC2Api";
 
 // Map maBm -> route chi tiết
@@ -61,30 +61,8 @@ interface ThongKePhieuHRC2Props {
 const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
   const navigate = useNavigate();
   const [selectedLoaiBM, setSelectedLoaiBM] = useState<string[]>([]);
-  const [mayDucOptions, setMayDucOptions] = useState<Array<{ label: string; value: number }>>([]);
+  const { options: mayDucOptions } = useMayDucOptions(NhaMayEnum.HRC2);
   const [gangMetricsLoading, setGangMetricsLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await MayDucServiceApi.search({
-          nhaMay: 2 as NhaMayEnum,
-          isLock: false,
-          page: 1,
-          pageSize: 200,
-        });
-        if (cancelled) return;
-        setMayDucOptions((res.data || []).map((x) => ({ label: x.tenMayDuc, value: x.id })));
-      } catch (error) {
-        console.error("Load máy đúc options failed:", error);
-        if (!cancelled) setMayDucOptions([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const transformFilters = useCallback((filters: PhieuFilterValues): Partial<SearchPhieuRequest> => {
     const loaiBMList = (filters.loaiBM as (string | number)[] | undefined) ?? [];
@@ -157,7 +135,17 @@ const ThongKePhieuHRC2 = ({ type }: ThongKePhieuHRC2Props) => {
             });
           })();
     fields.push({ key: "scope", label: "Lò thổi", type: "select", options: scopeOptions });
-    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: DEFAULT_TINH_TRANG_OPTIONS });
+    // Biên bản sản lượng phôi tấm (HRC2_BBSL_PhoiTam) dùng thang trạng thái tổng hợp riêng
+    // (11/12, xem PHOI_TAM_STATUS_CONFIG) thay vì TrangThaiPhieuConst chuẩn — gộp thêm vào đây
+    // để lọc được tình trạng cho mã BM này.
+    const tinhTrangOptions = [
+      ...DEFAULT_TINH_TRANG_OPTIONS,
+      ...Object.entries(PHOI_TAM_STATUS_CONFIG).map(([value, cfg]) => ({
+        label: `${cfg.text} (Phôi tấm)`,
+        value: Number(value),
+      })),
+    ];
+    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: tinhTrangOptions });
 
     return fields;
   }, [mayDucOptions, selectedLoaiBM]);

@@ -1,6 +1,6 @@
 import { Button, message, Tooltip } from "antd";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FilterFieldConfig } from "../../../components/PhieuFilterCard";
 import ThongKePhieuCommon, {
@@ -12,19 +12,22 @@ import { DEFAULT_TINH_TRANG_OPTIONS } from "../../../utils/ConfigDefault/thongKe
 import type { SearchPhieuRequest } from "../../../models/Phieu";
 import type { PhieuFilterValues } from "../../../components/PhieuFilterCard";
 import { PhieuApi } from "../../../services/PhieuApi";
-import { getPhieuStatusConfig } from "../../../utils/constants/TrangThaiPhieuDisplay";
+import { getPhieuStatusConfig, PHOI_TAM_STATUS_CONFIG } from "../../../utils/constants/TrangThaiPhieuDisplay";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
-import { MayDucServiceApi } from "../../../services/MayDucServiceApi";
-import type { NhaMayEnum } from "../../../models/SiloModel";
+import { NhaMayEnum } from "../../../services/MayDucServiceApi";
+import { useMayDucOptions } from "../../../hooks/useMayDucOptions";
 import { HRC1Api } from "../../../services/HRC1_BBGNApi";
-import { Tag } from "antd";
+import { Tag, Modal } from "antd";
+import { dlnmHRC1Api } from "../../../services/DLNMHRC1Api";
 
 const MABM_DETAIL_ROUTE: Record<string, string> = {
   HRC1_BB_Lothoi: "/taotieuhaolothoi",
   HRC1_TinhLuyen: "/taophieugiaonhantheplong_hrc1",
   HRC1_BBGN_ThepLong: "/chitietgiaonhantheplong_hrc1",
-  HRC1_BBSL_PhoiTam: "/chitietbbgnphoitam_hrc1"
+  HRC1_BBSL_PhoiTam: "/chitietbbgnphoitam_hrc1",
+  HRC1_BB_TieuHao_BOF: "/hrc1_chitiettieuhaolothoi_bof",
+  HRC1_BB_TieuHao_LF: "/hrc1_chitiettieuhaotinhluyenlf",
 };
 
 const MABM_LIST: string[] = [
@@ -32,6 +35,8 @@ const MABM_LIST: string[] = [
   // BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
   BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
+  BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+  BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
 ];
 
 const LOAI_BM_TO_MABM: Record<string, string> = {
@@ -39,6 +44,8 @@ const LOAI_BM_TO_MABM: Record<string, string> = {
   TinhLuyen: BM_CONFIG.HRC1.HRC1_TinhLuyen,
   BBGN_ThepLong: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
   BBGN_PhoiTam: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
+  BB_TieuHao_BOF: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+  BB_TieuHao_LF: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
 };
 
 const normalizeNum = (v: unknown): number | null => {
@@ -54,28 +61,10 @@ interface ThongKePhieuHRC1Props {
 const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
   const navigate = useNavigate();
   const [selectedLoaiBM, setSelectedLoaiBM] = useState<string[]>([]);
-  const [mayDucOptions, setMayDucOptions] = useState<Array<{ label: string; value: number }>>([]);
+  const { options: mayDucOptions } = useMayDucOptions(NhaMayEnum.HRC1);
   const [exportLoading, setExportLoading] = useState(false);
+  const [gangMetricsLoading, setGangMetricsLoading] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await MayDucServiceApi.search({
-          nhaMay: 1 as NhaMayEnum,
-          isLock: false,
-          page: 1,
-          pageSize: 200,
-        });
-        if (cancelled) return;
-        setMayDucOptions((res.data || []).map((x) => ({ label: x.tenMayDuc, value: x.id })));
-      } catch (error) {
-        console.error("Load máy đúc options failed:", error);
-        if (!cancelled) setMayDucOptions([]);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   const transformFilters = useCallback((filters: PhieuFilterValues): Partial<SearchPhieuRequest> => {
     const loaiBMList = (filters.loaiBM as (string | number)[] | undefined) ?? [];
@@ -104,6 +93,8 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
           { label: "Tinh luyện", value: "TinhLuyen" },
           { label: "Giao nhận thép lỏng", value: "BBGN_ThepLong" },
           { label: "Biên bản sản lượng phôi tấm", value: "BBGN_PhoiTam" },
+          { label: "Tiêu hao lò thổi BOF", value: "BB_TieuHao_BOF" },
+          { label: "Tiêu hao tinh luyện LF", value: "BB_TieuHao_LF" },
         ],
       },
       { key: "ngaySX", label: "Ngày sản xuất", type: "dateRange", placeholder: "Khoảng ngày" },
@@ -142,7 +133,17 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
       fields.push({ key: "scope", label: "Máy đúc", type: "select", options: scopeOptions });
     }
 
-    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: DEFAULT_TINH_TRANG_OPTIONS });
+    // Biên bản sản lượng phôi tấm (HRC1_BBSL_PhoiTam) dùng thang trạng thái tổng hợp riêng
+    // (11/12, xem PHOI_TAM_STATUS_CONFIG) thay vì TrangThaiPhieuConst chuẩn — gộp thêm vào đây
+    // để lọc được tình trạng cho mã BM này.
+    const tinhTrangOptions = [
+      ...DEFAULT_TINH_TRANG_OPTIONS,
+      ...Object.entries(PHOI_TAM_STATUS_CONFIG).map(([value, cfg]) => ({
+        label: `${cfg.text} (Phôi tấm)`,
+        value: Number(value),
+      })),
+    ];
+    fields.push({ key: "tinhTrang", label: "Tình trạng", type: "select", options: tinhTrangOptions });
 
     return fields;
   }, [mayDucOptions, selectedLoaiBM]);
@@ -272,21 +273,78 @@ const ThongKePhieuHRC1 = ({ type }: ThongKePhieuHRC1Props) => {
     }
   }, []);
 
-  const renderExtraActions = useCallback(({ selectedKeys, selectedMaBm }: ExtraActionsCtx) => (
-    <Tooltip title={selectedKeys.length > 0 && !selectedMaBm ? "Chỉ xuất được nhiều phiếu cùng loại biểu mẫu" : undefined}>
+  const handleRefreshGangMetrics = useCallback((ctx: ExtraActionsCtx) => {
+    const { selectedKeys, data } = ctx;
+    if (selectedKeys.length === 0) return;
+
+    const selectedRecords = data.filter((r) => selectedKeys.includes(r.idphieu));
+    const supportedMaBm = [BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF, BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF];
+    const unsupportedRecords = selectedRecords.filter((r) => !supportedMaBm.includes(r.maBm as string));
+
+    if (unsupportedRecords.length > 0) {
+      message.warning(`Chỉ hỗ trợ phiếu HRC1_BB_TieuHao_BOF/LF. ${unsupportedRecords.length} phiếu không hợp lệ sẽ bị bỏ qua.`);
+    }
+
+    const ids = selectedRecords
+      .filter((r) => supportedMaBm.includes(r.maBm as string))
+      .map((r) => r.idphieu);
+
+    if (ids.length === 0) {
+      message.error("Không có phiếu BOF/LF nào được chọn.");
+      return;
+    }
+
+    if (ids.length > 10) {
+      message.error("Tối đa 10 phiếu mỗi lần làm mới. Vui lòng bỏ chọn bớt.");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Làm mới dữ liệu gang",
+      content: `Cập nhật KL gang lỏng CCT/KL thép phế gang (BOF) và KL thép lỏng (LF) cho ${ids.length} phiếu đã chọn. Tiếp tục?`,
+      okText: "Làm mới",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          setGangMetricsLoading(true);
+          const res = await dlnmHRC1Api.refreshGangMetrics(ids);
+          const result = (res as { updatedRows?: number; skippedPhieu?: number; message?: string }) ?? {};
+          message.success(result.message ?? `Đã làm mới ${result.updatedRows ?? 0} mẻ.`);
+          if ((result.skippedPhieu ?? 0) > 0)
+            message.warning(`${result.skippedPhieu} phiếu không hợp lệ đã bị bỏ qua.`);
+        } catch {
+          message.error("Làm mới dữ liệu gang thất bại. Vui lòng thử lại.");
+        } finally {
+          setGangMetricsLoading(false);
+        }
+      },
+    });
+  }, []);
+
+  const renderExtraActions = useCallback((ctx: ExtraActionsCtx) => (
+    <>
+    <Tooltip title={ctx.selectedKeys.length > 0 && !ctx.selectedMaBm ? "Chỉ xuất được nhiều phiếu cùng loại biểu mẫu" : undefined}>
       <Button
-        disabled={selectedKeys.length === 0 || !selectedMaBm}
+        disabled={ctx.selectedKeys.length === 0 || !ctx.selectedMaBm}
         loading={exportLoading}
-        onClick={() => handleExportBulk(selectedKeys)}
+        onClick={() => handleExportBulk(ctx.selectedKeys)}
       >
-        Export Excel ({selectedKeys.length})
+        Export Excel ({ctx.selectedKeys.length})
       </Button>
     </Tooltip>
-  ), [exportLoading, handleExportBulk]);
+    <Button
+      disabled={ctx.selectedKeys.length === 0}
+      loading={gangMetricsLoading}
+      onClick={() => handleRefreshGangMetrics(ctx)}
+    >
+      Làm mới dữ liệu gang ({ctx.selectedKeys.length})
+    </Button>
+    </>
+  ), [exportLoading, handleExportBulk, handleRefreshGangMetrics, gangMetricsLoading]);
 
   return (
     <ThongKePhieuCommon
-      maBmList={MABM_LIST}
+      maBmList={MABM_LIST} 
       title="Tổng hợp phiếu HRC1"
       type={type}
       mabmDetailRoute={MABM_DETAIL_ROUTE}

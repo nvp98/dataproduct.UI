@@ -81,8 +81,8 @@
           "title": "Mác thép",
           "dataIndex": "macThep",
           "width": 130,
-          "editable": false,
-          "readonly": true
+          "editable": true,
+          "readonly": false
         },
         {
           "title": "Nguyên liệu đầu vào (tấn)",

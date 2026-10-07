@@ -1,11 +1,20 @@
 ﻿/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AutoComplete,
   Button,
   Card,
+  Col,
+  DatePicker,
   Descriptions,
+  Form,
   Input,
+  InputNumber,
+  Modal,
   Popconfirm,
+  Radio,
+  Row,
+  Space,
   Table,
   Tabs,
   Tag,
@@ -19,7 +28,11 @@ import {
   ArrowRightOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
   ReloadOutlined,
+  SnippetsOutlined,
   SyncOutlined,
   LockOutlined,
   UnlockOutlined,
@@ -42,11 +55,24 @@ import {
 import { phieuActionService } from "../../../services/PhieuActionService";
 import { DETAIL_HIDDEN_BUTTON_KEYS } from "../../../utils/constants/PhieuActionButtonKeys";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
+import { MaVatTuApi } from "../../../services/MaVatTuApi";
 
 const { Title } = Typography;
 
 const MA_BM = BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam as string;
+const NHA_MAY_MA_VAT_TU = "HRC1";
 const TT_COLOR: Record<number, string> = { 0: "default", 1: "green" };
+
+// Màu theo Ý NGHĨA (không theo vị trí) để nhất quán giữa các nhóm filter: xám = "Tất cả" (không
+// lọc), xanh = trạng thái "đã xong" (đã xác nhận), cam = trạng thái "cần chú ý" (chưa xác nhận).
+const FILTER_BTN_COLOR: Record<string, { background: string; borderColor: string; color: string }> = {
+  all: { background: "#f5f5f5", borderColor: "#d9d9d9", color: "rgba(0, 0, 0, 0.88)" },
+  da: { background: "#52c41a", borderColor: "#52c41a", color: "#fff" },
+  chua: { background: "#fa8c16", borderColor: "#fa8c16", color: "#fff" },
+};
+
+const filterBtnStyle = (value: string, current: string) =>
+  value === current ? FILTER_BTN_COLOR[value] : undefined;
 
 const getUserId = (): number => {
   try {
@@ -106,7 +132,79 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
   const [syncLoading, setSyncLoading] = useState(false);
 
   const [chuyenLoading, setChuyenLoading] = useState<"truoc" | "sau" | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [tongHopRefreshLoading, setTongHopRefreshLoading] = useState(false);
+
+  // Luồng C4 (GĐ/PGĐ NM) đã bỏ cho phiếu mới — chỉ phiếu cũ đang "dính" C4 (có ≥1 slab đã được C4
+  // xác nhận) mới còn hiện cột/bộ lọc/nút C4 và bắt buộc C4 khi chốt (BE: Hrc1SlabRepository.IsDinhC4).
+  const isDinhC4 = useMemo(() => slabDetails.some((r) => r.trangThaiC4), [slabDetails]);
+
+  // Search client-side (không gọi API) cho cột Số Mẻ / ID Slab trong tab chi tiết —
+  // gõ trực tiếp vào ô input, hoặc bấm nút Paste để mở popup dán danh sách
+  // (mỗi dòng/phẩy/tab 1 giá trị) từ Excel.
+  const [maMeSearch, setMaMeSearch] = useState("");
+  const [idSlabSearch, setIdSlabSearch] = useState("");
+
+  // Bộ lọc theo trạng thái 4 cấp xác nhận — dùng CHUNG cho cả 2 tab (Chi tiết + Tổng hợp).
+  const [filterDuc, setFilterDuc] = useState<"all" | "chua" | "da">("all");
+  const [filterCan, setFilterCan] = useState<"all" | "chua" | "da">("all");
+  const [filterC4, setFilterC4] = useState<"all" | "chua" | "da">("all");
+  const [filterPKH, setFilterPKH] = useState<"all" | "chua" | "da">("all");
+  const hasActiveFilter = filterDuc !== "all" || filterCan !== "all" || filterC4 !== "all" || filterPKH !== "all"; // filterC4 chỉ đổi được khi phiếu dính C4
+  const resetFilters = () => {
+    setFilterDuc("all");
+    setFilterCan("all");
+    setFilterC4("all");
+    setFilterPKH("all");
+  };
+
+  // ── Thêm mới / Sửa slab thủ công (tab "Chi tiết") ────────────────────────
+  // Dùng chung 1 Modal/Form cho cả 2 chế độ — bộ field giống hệt nhau, chỉ khác nguồn dữ liệu
+  // fill vào form lúc mở (rỗng khi Thêm mới, fill từ dòng đang chọn khi Sửa) và API gọi lúc Lưu.
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addForm] = Form.useForm();
+  const [formMode, setFormMode] = useState<"add" | "edit">("add");
+  const [editingSlabId, setEditingSlabId] = useState<number | null>(null);
+
+  // Autocomplete "Mác thép" — gợi ý từ bảng MaVatTu (NhaMay = HRC1), debounce theo từ khóa gõ.
+  const [macThepOptions, setMacThepOptions] = useState<{ value: string }[]>([]);
+  const macThepSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchMacThep = useCallback((keyword: string) => {
+    if (macThepSearchTimer.current) clearTimeout(macThepSearchTimer.current);
+    macThepSearchTimer.current = setTimeout(async () => {
+      try {
+        const res = await MaVatTuApi.search({
+          nhaMay: NHA_MAY_MA_VAT_TU,
+          macThep: keyword.trim() || undefined,
+          page: 1,
+          pageSize: 20,
+        });
+        const unique = Array.from(
+          new Set(res.data.map((x) => x.macThep).filter((v): v is string => !!v)),
+        );
+        setMacThepOptions(unique.map((v) => ({ value: v })));
+      } catch { /* không chặn nhập tay nếu lỗi gợi ý */ }
+    }, 300);
+  }, []);
+
+  const [pasteModalOpen, setPasteModalOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteTarget, setPasteTarget] = useState<((v: string) => void) | null>(null);
+
+  const openPasteModal = useCallback((setter: (v: string) => void) => {
+    setPasteTarget(() => setter);
+    setPasteText("");
+    setPasteModalOpen(true);
+  }, []);
+
+  const applyPasteModal = () => {
+    const vals = pasteText.split(/[\n\t,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (vals.length > 0 && pasteTarget) pasteTarget(vals.join(", "));
+    setPasteModalOpen(false);
+    setPasteText("");
+  };
 
   const TAB_TITLES: Record<string, string> = {
     chitiet: "BIÊN BẢN GIAO NHẬN PHÔI TẤM",
@@ -182,6 +280,58 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
     }
   }, [idphieu, data, loadSlabs]);
 
+  // ── Thêm mới / Sửa slab thủ công — NgaySX/CaSX/KipSX lấy từ thông tin phiếu (data) khi thêm
+  // mới, không cho user nhập, để slab mới luôn khớp đúng phiếu đang xem (BE cũng tự lấy lại từ
+  // phiếu). Khi Sửa, các field này giữ nguyên (không gửi lên, BE không đụng tới).
+  const closeSlabFormModal = useCallback(() => {
+    setAddModalOpen(false);
+    addForm.resetFields();
+    setFormMode("add");
+    setEditingSlabId(null);
+  }, [addForm]);
+
+  const handleSubmitSlabForm = useCallback(async () => {
+    if (!idphieu) return;
+    try {
+      const values = await addForm.validateFields();
+      setAddLoading(true);
+      const payload = {
+        idSlab: values.idSlab,
+        idPiece: values.idPiece || null,
+        maMe: values.maMe || null,
+        macThep: values.macThep || null,
+        mayDuc: values.mayDuc || null,
+        cutDate: values.cutDate ? values.cutDate.format("YYYY-MM-DDTHH:mm:ss") : null,
+        chieuDay: values.chieuDay ?? null,
+        chieuRong: values.chieuRong ?? null,
+        chieuDai: values.chieuDai ?? null,
+        khoiLuong: values.khoiLuong ?? null,
+      };
+      if (formMode === "edit" && editingSlabId != null) {
+        await Hrc1SlabApi.editSlab(editingSlabId, payload);
+        message.success("Đã cập nhật slab");
+      } else {
+        await Hrc1SlabApi.createSlab({ idPhieu: idphieu, ...payload });
+        message.success("Đã thêm slab mới");
+      }
+      closeSlabFormModal();
+      await loadSlabs();
+    } catch (err: any) {
+      if (err?.errorFields) return; // lỗi validate form, không phải lỗi API
+      message.error(err?.message ?? (formMode === "edit" ? "Lỗi cập nhật slab" : "Lỗi thêm slab mới"));
+    } finally {
+      setAddLoading(false);
+    }
+  }, [idphieu, addForm, formMode, editingSlabId, closeSlabFormModal, loadSlabs]);
+
+  const openAddModal = useCallback(() => {
+    setFormMode("add");
+    setEditingSlabId(null);
+    addForm.resetFields();
+    setAddModalOpen(true);
+    searchMacThep("");
+  }, [addForm, searchMacThep]);
+
   useEffect(() => { loadData(); }, [loadData]);
 
   // Chỉ làm mới dữ liệu slab/ghi chú cho tab tổng hợp — không gọi loadData()
@@ -230,20 +380,93 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
   );
   const selectedCount = selectedRowKeys.length;
 
-  // Đúc, Cán và C4 đồng cấp (song song, không phụ thuộc lẫn nhau)
+  // Chỉ cho phép Sửa khi tick đúng 1 dòng — fill toàn bộ field từ dòng đang chọn vào form, y hệt
+  // popup "Thêm mới" nhưng đổi tiêu đề + hành vi Lưu (gọi editSlab thay vì createSlab).
+  const openEditModal = useCallback(() => {
+    const row = selectedRows[0];
+    if (!row) return;
+    setFormMode("edit");
+    setEditingSlabId(row.id);
+    addForm.setFieldsValue({
+      idSlab: row.idSlab,
+      idPiece: row.idPiece ?? null,
+      maMe: row.maMe ?? null,
+      macThep: row.macThep ?? null,
+      mayDuc: row.mayDuc ?? null,
+      cutDate: row.cutDate ? dayjs(row.cutDate) : null,
+      chieuDay: row.chieuDay ?? null,
+      chieuRong: row.chieuRong ?? null,
+      chieuDai: row.chieuDai ?? null,
+      khoiLuong: row.khoiLuong ?? null,
+    });
+    setAddModalOpen(true);
+    searchMacThep(row.macThep ?? "");
+  }, [selectedRows, addForm, searchMacThep]);
+
+  // Xóa mềm: slab bị ẩn khỏi phiếu và không bị SyncAsync hồi sinh ở lần "Làm mới dữ liệu" kế
+  // tiếp (khác xóa cứng trước đây — TSC luôn trả đủ slab của ca nên sẽ bị insert lại ngay).
+  const handleDeleteSlabs = useCallback(async () => {
+    if (selectedRows.length === 0) return;
+    try {
+      setDeleteLoading(true);
+      const ids = selectedRows.map((r) => r.id);
+      const result = await Hrc1SlabApi.deleteSlabs(ids, getUserId());
+      message.success(result.message || `Đã xóa ${result.affectedRows} slab`);
+      await loadSlabs();
+    } catch (err: any) {
+      message.error(err?.message ?? "Lỗi xóa slab");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [selectedRows, loadSlabs]);
+
+  const parseSearchTerms = (text: string) =>
+    text.split(/[\n\t,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+  // Lọc theo trạng thái Đúc/Cán/GĐ-PGĐ NM/PKH — dùng CHUNG cho cả 2 tab (Chi tiết + Tổng hợp).
+  const sharedFilteredSlabDetails = useMemo(() => {
+    return slabDetails.filter((r) => {
+      if (filterDuc === "chua" && r.trangThaiDuc !== 0) return false;
+      if (filterDuc === "da" && r.trangThaiDuc !== 1) return false;
+      if (filterCan === "chua" && r.trangThaiCan !== 0) return false;
+      if (filterCan === "da" && r.trangThaiCan !== 1) return false;
+      if (isDinhC4 && filterC4 === "chua" && r.trangThaiC4) return false;
+      if (isDinhC4 && filterC4 === "da" && !r.trangThaiC4) return false;
+      if (filterPKH === "chua" && r.trangThaiPKH !== 0) return false;
+      if (filterPKH === "da" && r.trangThaiPKH !== 1) return false;
+      return true;
+    });
+  }, [slabDetails, filterDuc, filterCan, filterC4, filterPKH, isDinhC4]);
+
+  // Lọc riêng cho tab "Chi tiết" theo Số Mẻ / ID Slab — tách các giá trị nhập/paste theo
+  // dòng/phẩy/tab, 1 dòng khớp nếu chứa (contains, không phân biệt hoa/thường) BẤT KỲ giá trị
+  // nào đã nhập. Áp dụng thêm trên nền đã lọc chung ở trên (không ảnh hưởng tab "Tổng hợp").
+  const filteredSlabDetails = useMemo(() => {
+    const maMeTerms = parseSearchTerms(maMeSearch);
+    const idSlabTerms = parseSearchTerms(idSlabSearch);
+    return sharedFilteredSlabDetails.filter((r) => {
+      const maMe = (r.maMe ?? "").toLowerCase();
+      const idSlab = (r.idSlab ?? "").toLowerCase();
+      if (maMeTerms.length > 0 && !maMeTerms.some((t) => maMe.includes(t))) return false;
+      if (idSlabTerms.length > 0 && !idSlabTerms.some((t) => idSlab.includes(t))) return false;
+      return true;
+    });
+  }, [sharedFilteredSlabDetails, maMeSearch, idSlabSearch]);
+
+  // Đúc, Cán (và C4 với phiếu cũ dính C4) đồng cấp (song song, không phụ thuộc lẫn nhau)
   const canXacNhanDuc = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 0 && r.trangThaiPKH === 0);
   const canHuyDuc     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiDuc === 1 && r.trangThaiPKH === 0);
   const canXacNhanCan = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 0 && r.trangThaiPKH === 0);
   const canHuyCan     = selectedCount > 0 && selectedRows.every((r) => r.trangThaiCan === 1 && r.trangThaiPKH === 0);
   const canXacNhanC4  = selectedCount > 0 && selectedRows.every((r) => !r.trangThaiC4 && r.trangThaiPKH === 0);
   const canHuyC4      = selectedCount > 0 && selectedRows.every((r) => r.trangThaiC4 && r.trangThaiPKH === 0);
-  // PKH chỉ chốt được khi cả Đúc, Cán và C4 đã xác nhận
+  // PKH chỉ chốt được khi Đúc + Cán đã xác nhận (cộng thêm C4 nếu phiếu cũ dính C4)
 
   const handleXacNhan = async (loai: "Duc" | "Can" | "C4" | "PKH") => {
     try {
       setActionLoading(true);
       const ids = selectedRows.map((r) => r.id);
-      await Hrc1SlabApi.xacNhan(ids, loai, getUserId());
+      await Hrc1SlabApi.xacNhan(ids, loai, getUserId(), idphieu ?? undefined);
       message.success(`Xác nhận ${loai} thành công cho ${ids.length} slab`);
       await loadData();
     } catch (err: any) {
@@ -344,16 +567,50 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
       render: (_: unknown, r: Hrc1SlabItem) => r.tenVatTu || r.macThep || "-",
     },
     {
-      title: "Số Mẻ",
+      title: (
+        <div>
+          <div>Số Mẻ</div>
+          <div style={{ display: "flex", gap: 2, marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
+            <Input
+              size="small"
+              value={maMeSearch}
+              onChange={(e) => setMaMeSearch(e.target.value)}
+              placeholder="Tìm/paste..."
+              allowClear
+              style={{ fontWeight: "normal" }}
+            />
+            <Tooltip title="Paste từ clipboard">
+              <Button size="small" icon={<SnippetsOutlined />} onClick={() => openPasteModal(setMaMeSearch)} />
+            </Tooltip>
+          </div>
+        </div>
+      ),
       dataIndex: "maMe",
-      width: 100,
+      width: 130,
       align: "center" as const,
       render: (v: string) => v ?? "-",
     },
     {
-      title: "ID Slab",
+      title: (
+        <div>
+          <div>ID Slab</div>
+          <div style={{ display: "flex", gap: 2, marginTop: 4 }} onClick={(e) => e.stopPropagation()}>
+            <Input
+              size="small"
+              value={idSlabSearch}
+              onChange={(e) => setIdSlabSearch(e.target.value)}
+              placeholder="Tìm/paste..."
+              allowClear
+              style={{ fontWeight: "normal" }}
+            />
+            <Tooltip title="Paste từ clipboard">
+              <Button size="small" icon={<SnippetsOutlined />} onClick={() => openPasteModal(setIdSlabSearch)} />
+            </Tooltip>
+          </div>
+        </div>
+      ),
       dataIndex: "idSlab",
-      width: 130,
+      width: 150,
       align: "center" as const,
     },
     {
@@ -362,7 +619,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
       width: 100,
       align: "right" as const,
       render: (v: number) =>
-        v != null ? Number(v).toLocaleString("vi-VN", { minimumFractionDigits: 2 }) : "-",
+        v != null ? Math.round(v).toLocaleString("vi-VN") : "-",
     },
     {
       title: "Ghi chú",
@@ -393,13 +650,14 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
       align: "center" as const,
       render: (v: number) => <Tag color={TT_COLOR[v]}>{v === 1 ? "Đã XN" : "Chưa"}</Tag>,
     },
-    {
+    // Cột C4 chỉ hiện với phiếu cũ đang dính luồng C4
+    ...(isDinhC4 ? [{
       title: "TT GĐ/PGĐ NM",
       dataIndex: "trangThaiC4",
       width: 85,
       align: "center" as const,
       render: (v: boolean) => <Tag color={v ? "green" : "default"}>{v ? "Đã XN" : "Chưa"}</Tag>,
-    },
+    }] : []),
     {
       title: "TT PKH",
       dataIndex: "trangThaiPKH",
@@ -408,12 +666,14 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
       render: (v: number) => <Tag color={v === 1 ? "blue" : "default"}>{v === 1 ? "Đã chốt" : "Chưa"}</Tag>,
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [isDuc, isCan, isC4, isPKH, rowEdits, saveRowEdit, data?.tinhTrang]);
+  ], [isDuc, isCan, isC4, isPKH, isDinhC4, rowEdits, saveRowEdit, data?.tinhTrang, maMeSearch, idSlabSearch, openPasteModal]);
 
   // ── Tab tổng hợp rows ─────────────────────────────────────────────────────
+  // Pivot từ sharedFilteredSlabDetails (đã áp bộ lọc trạng thái Đúc/Cán/GĐ-PGĐ NM/PKH dùng
+  // chung cho cả 2 tab) — không áp Số Mẻ/ID Slab search vì đó là filter riêng của tab "Chi tiết".
   const tongHopRows = useMemo(() => {
     const map = new Map<string, { macThep: string | null; maVatTu: string | null; tenVatTu: string | null; soPhoi: number; tongKL: number, trangThaiDuc: number;trangThaiCan: number; }>();
-    slabDetails.forEach((r) => {
+    sharedFilteredSlabDetails.forEach((r) => {
       const key = `${r.macThep ?? ""}|${r.maVatTu ?? ""}`;
       if (!map.has(key)) {
         map.set(key, { macThep: r.macThep ?? null, maVatTu: r.maVatTu ?? null, tenVatTu: r.tenVatTu ?? null, soPhoi: 0, tongKL: 0, trangThaiDuc: 1, trangThaiCan: 1 });
@@ -438,7 +698,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
       trangThaiDuc: r.trangThaiDuc ,
       trangThaiCan: r.trangThaiCan,
     }));
-  }, [slabDetails]);
+  }, [sharedFilteredSlabDetails]);
 
   const tongHopTotals = useMemo(() => ({
     soPhoi: tongHopRows.reduce((s, r) => s + r.soPhoi, 0),
@@ -511,7 +771,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
       dataIndex: "tongKL",
       width: 200,
       align: "right" as const,
-      render: (v: number) => Number(v).toLocaleString("vi-VN", { minimumFractionDigits: 2 }),
+      render: (v: number) => Math.round(v).toLocaleString("vi-VN"),
     },
     {
       title: "Ghi chú",
@@ -632,6 +892,78 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
         {idphieu && <b>Số phiếu: {data?.soPhieu}</b>}
       </div>
 
+      {/* Bộ lọc theo trạng thái 4 cấp: dùng CHUNG cho cả 2 tab (Chi tiết + Tổng hợp) */}
+      <Card size="small" style={{ marginBottom: 12 }} bodyStyle={{ padding: "8px 12px" }}>
+        <Space wrap size={[16, 8]}>
+          <Space size={4}>
+            <span style={{ color: "#555" }}>Đúc:</span>
+            <Radio.Group
+              size="small"
+              value={filterDuc}
+              onChange={(e) => setFilterDuc(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="all" style={filterBtnStyle("all", filterDuc)}>Tất cả</Radio.Button>
+              <Radio.Button value="chua" style={filterBtnStyle("chua", filterDuc)}>Chưa XN</Radio.Button>
+              <Radio.Button value="da" style={filterBtnStyle("da", filterDuc)}>Đã XN</Radio.Button>
+            </Radio.Group>
+          </Space>
+          <Space size={4}>
+            <span style={{ color: "#555" }}>Cán:</span>
+            <Radio.Group
+              size="small"
+              value={filterCan}
+              onChange={(e) => setFilterCan(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="all" style={filterBtnStyle("all", filterCan)}>Tất cả</Radio.Button>
+              <Radio.Button value="chua" style={filterBtnStyle("chua", filterCan)}>Chưa XN</Radio.Button>
+              <Radio.Button value="da" style={filterBtnStyle("da", filterCan)}>Đã XN</Radio.Button>
+            </Radio.Group>
+          </Space>
+          {isDinhC4 && (
+            <Space size={4}>
+              <span style={{ color: "#555" }}>GĐ/PGĐ NM:</span>
+              <Radio.Group
+                size="small"
+                value={filterC4}
+                onChange={(e) => setFilterC4(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+              >
+                <Radio.Button value="all" style={filterBtnStyle("all", filterC4)}>Tất cả</Radio.Button>
+                <Radio.Button value="chua" style={filterBtnStyle("chua", filterC4)}>Chưa XN</Radio.Button>
+                <Radio.Button value="da" style={filterBtnStyle("da", filterC4)}>Đã XN</Radio.Button>
+              </Radio.Group>
+            </Space>
+          )}
+          <Space size={4}>
+            <span style={{ color: "#555" }}>PKH:</span>
+            <Radio.Group
+              size="small"
+              value={filterPKH}
+              onChange={(e) => setFilterPKH(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="all" style={filterBtnStyle("all", filterPKH)}>Tất cả</Radio.Button>
+              <Radio.Button value="chua" style={filterBtnStyle("chua", filterPKH)}>Chưa chốt</Radio.Button>
+              <Radio.Button value="da" style={filterBtnStyle("da", filterPKH)}>Đã chốt</Radio.Button>
+            </Radio.Group>
+          </Space>
+          {hasActiveFilter && (
+            <Button size="small" onClick={resetFilters}>
+              Xóa lọc
+            </Button>
+          )}
+          <span style={{ color: "#888" }}>
+            Đang hiển thị {sharedFilteredSlabDetails.length}/{slabDetails.length} slab
+          </span>
+        </Space>
+      </Card>
+
       <Tabs
         defaultActiveKey="chitiet"
         onChange={setActiveTabKey}
@@ -646,7 +978,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                 {phieuInfo}
                 <Card
                   size="small"
-                  title={`Danh sách slab (${slabDetails.length})${selectedCount > 0 ? ` — Đã chọn ${selectedCount}` : ""}`}
+                  title={`Danh sách slab (${filteredSlabDetails.length}${filteredSlabDetails.length !== slabDetails.length ? ` / ${slabDetails.length}` : ""})${selectedCount > 0 ? ` — Đã chọn ${selectedCount}` : ""}`}
                   styles={{ body: { padding: "8px 12px" } }}
                   extra={
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -662,6 +994,45 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                         >
                           Làm mới dữ liệu
                         </Button>
+                      )}
+                      {!readOnly && (
+                        <Button
+                          size="small"
+                          icon={<PlusOutlined />}
+                          onClick={openAddModal}
+                          disabled={data?.tinhTrang === 5}
+                        >
+                          Thêm mới
+                        </Button>
+                      )}
+                      {!readOnly && (
+                        <Tooltip title={selectedCount === 1 ? undefined : "Chọn đúng 1 dòng để sửa"}>
+                          <Button
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={openEditModal}
+                            disabled={data?.tinhTrang === 5 || selectedCount !== 1}
+                          >
+                            Sửa
+                          </Button>
+                        </Tooltip>
+                      )}
+                      {!readOnly && (
+                        <Popconfirm
+                          title={`Xóa ${selectedCount} slab đã chọn? Slab sẽ bị ẩn khỏi phiếu và không hiện lại khi Làm mới dữ liệu.`}
+                          onConfirm={() => void handleDeleteSlabs()}
+                          disabled={selectedCount === 0}
+                        >
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            loading={deleteLoading}
+                            disabled={data?.tinhTrang === 5 || selectedCount === 0}
+                          >
+                            Xóa
+                          </Button>
+                        </Popconfirm>
                       )}
 
                       {/* Đúc: chuyển ca + xác nhận Đúc */}
@@ -730,8 +1101,8 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                         </>
                       )}
 
-                      {/* C4 (GĐ/PGĐ NM): xác nhận C4, song song với Đúc/Cán */}
-                      {isC4 && (
+                      {/* C4 (GĐ/PGĐ NM): chỉ còn với phiếu cũ đang dính luồng C4, song song với Đúc/Cán */}
+                      {isC4 && isDinhC4 && (
                         <>
                           <Popconfirm
                             title={`Xác nhận C4 ${selectedCount} slab?`}
@@ -799,14 +1170,17 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                     bordered
                     virtual
                     columns={detailColumns}
-                    dataSource={slabDetails}
+                    dataSource={filteredSlabDetails}
                     pagination={false}
                     scroll={{ x: "max-content", y: 520 }}
                     sticky={{ offsetHeader: 0 }}
-                    rowClassName={(r) => r.isChuyenCa ? "row-chuyen-ca" : ""}
+                    rowClassName={(r) => [
+                      r.isChuyenCa ? "row-chuyen-ca" : "",
+                      r.isManualEdited ? "row-manual-edited" : "",
+                    ].filter(Boolean).join(" ")}
                     summary={() => {
-                      const totalKL = slabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
-                      const optColCount = ((isDuc || isCan || isPKH) ? 1 : 0) + ((isCan || isPKH) ? 1 : 0) + ((isC4 || isPKH) ? 1 : 0) + (isPKH ? 1 : 0);
+                      const totalKL = filteredSlabDetails.reduce((s, r) => s + (r.khoiLuong ?? 0), 0);
+                      const optColCount = ((isDuc || isCan || isPKH) ? 1 : 0) + ((isCan || isPKH) ? 1 : 0) + (isDinhC4 && (isC4 || isPKH) ? 1 : 0) + (isPKH ? 1 : 0);
                       return (
                         <Table.Summary fixed>
                           <Table.Summary.Row>
@@ -814,7 +1188,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                               <strong>Tổng</strong>
                             </Table.Summary.Cell>
                             <Table.Summary.Cell index={6} align="right">
-                              <strong>{Number(totalKL).toLocaleString("vi-VN", { minimumFractionDigits: 2 })}</strong>
+                              <strong>{Math.round(totalKL).toLocaleString("vi-VN")}</strong>
                             </Table.Summary.Cell>
                             <Table.Summary.Cell index={7} colSpan={1 + optColCount} />
                           </Table.Summary.Row>
@@ -873,7 +1247,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                   summary={() => (
                     <Table.Summary fixed>
                       <Table.Summary.Row>
-                        <Table.Summary.Cell index={0} colSpan={2} align="center">
+                        <Table.Summary.Cell index={0} colSpan={4} align="center">
                           <strong>Tổng</strong>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={2} align="right">
@@ -881,7 +1255,7 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={3} align="right">
                           <strong>
-                            {Number(tongHopTotals.tongKL).toLocaleString("vi-VN", { minimumFractionDigits: 2 })}
+                            {Math.round(tongHopTotals.tongKL).toLocaleString("vi-VN")}
                           </strong>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={4} />
@@ -910,13 +1284,140 @@ const ChiTietBienBanGiaoNhanPhoiTam_HRC1 = ({ readOnly = false }: { readOnly?: b
         </div>
       )} */}
 
-      {/* CSS cho row được chuyển ca */}
+      {/* Popup thêm mới / sửa slab thủ công (tab "Chi tiết") — dùng chung 1 Form cho cả 2 chế độ */}
+      <Modal
+        title={formMode === "edit" ? "Sửa slab" : "Thêm mới slab"}
+        open={addModalOpen}
+        onOk={() => void handleSubmitSlabForm()}
+        onCancel={closeSlabFormModal}
+        okText="Lưu"
+        cancelText="Hủy"
+        confirmLoading={addLoading}
+        width={480}
+        destroyOnClose
+      >
+        <Form form={addForm} layout="vertical" style={{ marginTop: 12 }}>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item
+                name="idSlab"
+                label="ID Slab"
+                rules={[{ required: true, message: "Nhập ID Slab" }]}
+              >
+                <Input maxLength={50} placeholder="ID Slab" style={{ height: 36 }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="idPiece" label="ID Piece">
+                <Input maxLength={50} placeholder="ID Piece" style={{ height: 36 }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="maMe"
+                label="Mã mẻ"
+                rules={[{ required: true, message: "Nhập Mã mẻ" }]}
+              >
+                <Input maxLength={50} placeholder="Mã mẻ" style={{ height: 36 }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="macThep"
+                label="Mác thép"
+                rules={[{ required: true, message: "Nhập Mác thép" }]}
+              >
+                <AutoComplete
+                  options={macThepOptions}
+                  onSearch={searchMacThep}
+                  onFocus={() => searchMacThep(addForm.getFieldValue("macThep") ?? "")}
+                  filterOption={false}
+                  placeholder="Mác thép"
+                  style={{ width: "100%" }}
+                >
+                  <Input maxLength={50} style={{ height: 36 }} />
+                </AutoComplete>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="khoiLuong"
+                label="Khối lượng (kg)"
+                rules={[{ required: true, message: "Nhập Khối lượng" }]}
+              >
+                <InputNumber min={0} precision={2} style={{ width: "100%", height: 36 }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="mayDuc" label="Máy đúc">
+                <Input maxLength={10} placeholder="Máy đúc" style={{ height: 36 }} />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item
+                name="cutDate"
+                label="Cut Date"
+                rules={[{ required: true, message: "Chọn Cut Date" }]}
+              >
+                <DatePicker showTime format="DD/MM/YYYY HH:mm" style={{ width: "100%", height: 36 }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="chieuDay" label="Chiều dày">
+                <InputNumber min={0} precision={2} style={{ width: "100%", height: 36 }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="chieuRong" label="Chiều rộng">
+                <InputNumber min={0} precision={2} style={{ width: "100%", height: 36 }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="chieuDai" label="Chiều dài">
+                <InputNumber min={0} precision={2} style={{ width: "100%", height: 36 }} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Popup paste danh sách Số Mẻ / ID Slab (dùng chung) */}
+      <Modal
+        title="Paste danh sách"
+        open={pasteModalOpen}
+        onOk={applyPasteModal}
+        onCancel={() => { setPasteModalOpen(false); setPasteText(""); }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <p style={{ marginBottom: 8, color: "#666", fontSize: 12 }}>
+          Paste danh sách từ Excel (mỗi dòng 1 giá trị, hoặc phân cách bằng dấu phẩy/tab).
+        </p>
+        <Input.TextArea
+          autoFocus
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder="Paste dữ liệu từ Excel vào đây..."
+          rows={8}
+        />
+      </Modal>
+
+      {/* CSS cho row được chuyển ca / đã sửa thủ công — bảng tab "Chi tiết" dùng virtual (Table
+          virtual), rc-table render cell bằng <div className="ant-table-cell"> thay vì <td>, nên
+          phải match cả 2 kiểu selector để hoạt động ở cả bảng thường và bảng virtual. */}
       <style>{`
-        .row-chuyen-ca td {
+        .row-chuyen-ca td, .row-chuyen-ca.ant-table-row > .ant-table-cell {
           background-color: #fff7e6 !important;
         }
-        .row-chuyen-ca:hover td {
+        .row-chuyen-ca:hover td, .row-chuyen-ca.ant-table-row:hover > .ant-table-cell {
           background-color: #ffe7ba !important;
+        }
+        .row-manual-edited td, .row-manual-edited.ant-table-row > .ant-table-cell {
+          background-color: #fffbe6 !important;
+        }
+        .row-manual-edited:hover td, .row-manual-edited.ant-table-row:hover > .ant-table-cell {
+          background-color: #fff1b8 !important;
         }
       `}</style>
     </Card>

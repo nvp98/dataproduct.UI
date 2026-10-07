@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import CTD_STD_Sanxuat from "../../../utils/BM_config/CTD_STD_Sanxuat.json";
-import { Button, Card, Form, Input, Typography, message, Upload } from "antd";
+import { Button, Card, Form, Input, InputNumber, Modal, Select, Typography, message, Upload } from "antd";
 import {
-  FilePdfOutlined,
   FileExcelOutlined,
   DownloadOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
+import { DonTrongPhoiServiceApi } from "../../../services/DonTrongPhoiServiceApi";
+import type { DonTrongPhoi } from "../../../services/DonTrongPhoiServiceApi";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -38,6 +40,7 @@ const TaoSoTheoDoiSanXuat = () => {
   const [table1Data, setTable1Data] = useState<TableRow[]>([]);
   const [table2Data, setTable2Data] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [donTrongPhoiData, setDonTrongPhoiData] = useState<DonTrongPhoi[]>([]);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
     tinhTrang?: number;
@@ -46,6 +49,9 @@ const TaoSoTheoDoiSanXuat = () => {
     pheDuyet?: PheDuyetItem[];
     isClone?: boolean;
   }>({});
+  const [themMacPhoiVisible, setThemMacPhoiVisible] = useState(false);
+  const [themMacPhoiLoading, setThemMacPhoiLoading] = useState(false);
+  const [themMacPhoiForm] = Form.useForm();
 
   const currentUserInfo = useMemo(() => {
     const stored = localStorage.getItem("userinfo");
@@ -189,6 +195,12 @@ const TaoSoTheoDoiSanXuat = () => {
     initData();
   }, [initData]);
 
+  useEffect(() => {
+    DonTrongPhoiServiceApi.getAll()
+      .then(setDonTrongPhoiData)
+      .catch(() => {});
+  }, []);
+
   const normalizeMacPhoiLoai = (value: any): 1 | 2 | 3 | null => {
     if (value == null || value === "") return null;
     if (typeof value === "number") {
@@ -243,6 +255,16 @@ const TaoSoTheoDoiSanXuat = () => {
         return clone;
       });
 
+    const injectDonTrongId = (rows: TableRow[]) =>
+      rows.map((row) => {
+        const mac = row.macPhoi as string | undefined;
+        const kt = row.kichThuoc as string | undefined;
+        const match = donTrongPhoiData.find(
+          (d) => d.mac === mac && d.kichThuoc === (kt || null)
+        );
+        return match ? { ...row, idDonTrongPhoi: match.id } : row;
+      });
+
     const table1Section = config.layout.find(
       (section: any) =>
         section.sectionType === "table" && section.key === "table1",
@@ -251,7 +273,7 @@ const TaoSoTheoDoiSanXuat = () => {
       (table1Section as any)?.columns?.find((col: any) => col.isLabel)
         ?.dataIndex || "MacPhoiLoai";
 
-    const normalizedTable1 = normalizeRows(table1Data).map((row, idx) => {
+    const normalizedTable1 = normalizeRows(injectDonTrongId(table1Data)).map((row, idx) => {
       const code = normalizeMacPhoiLoai((row as any)[table1LabelKey]);
       if (code === null) {
         message.warning(
@@ -531,6 +553,41 @@ const TaoSoTheoDoiSanXuat = () => {
 
           return row;
         });
+        // Validate macPhoi + kichThuoc với danh sách DonTrongPhoi — block nếu không hợp lệ
+        if (donTrongPhoiData.length > 0) {
+          const errors: string[] = [];
+          imported.forEach((row, i) => {
+            const mp = row.macPhoi as string | undefined;
+            const kt = row.kichThuoc as string | undefined;
+            if (!mp) return;
+            const macExists = donTrongPhoiData.some((d) => d.mac === mp);
+            if (!macExists) {
+              errors.push(`Dòng ${i + 1}: mác "${mp}" không có trong danh sách`);
+            } else if (kt) {
+              const ktExists = donTrongPhoiData.some(
+                (d) => d.mac === mp && d.kichThuoc === kt,
+              );
+              if (!ktExists) {
+                errors.push(
+                  `Dòng ${i + 1}: kích thước "${kt}" không hợp lệ cho mác "${mp}"`,
+                );
+              }
+            }
+          });
+          if (errors.length > 0) {
+            Modal.error({
+              title: `Import thất bại — ${errors.length} dòng không khớp danh mục`,
+              content: (
+                <ul style={{ maxHeight: 300, overflowY: "auto", paddingLeft: 16 }}>
+                  {errors.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              ),
+              width: 520,
+            });
+            return;
+          }
+        }
+
         setTable1Data(imported);
         message.success(`Import thành công ${imported.length} dòng dữ liệu!`);
       } catch (error) {
@@ -577,6 +634,106 @@ const TaoSoTheoDoiSanXuat = () => {
     (section: any) =>
       section.sectionType === "table" && section.key === "table2",
   );
+
+  // Khi macPhoi thay đổi → xóa kichThuoc nếu không còn hợp lệ
+  const handleTable1CellChange = useCallback((rowIndex: number, dataIndex: string, _value: any, row: any) => {
+    if (dataIndex === "macPhoi") {
+      const validKichThuocs = donTrongPhoiData
+        .filter((d) => d.mac === _value)
+        .map((d) => d.kichThuoc)
+        .filter(Boolean);
+      if (row.kichThuoc && !validKichThuocs.includes(row.kichThuoc)) {
+        setTable1Data((prev) =>
+          prev.map((r, i) => (i === rowIndex ? { ...r, kichThuoc: null } : r)),
+        );
+      }
+    }
+  }, [donTrongPhoiData]);
+
+  // Columns với Select động cho macPhoi và kichThuoc
+  const table1ColumnsWithDynamic = useMemo(() => {
+    if (!table1Section) return [];
+    const uniqueMacs = [...new Set(donTrongPhoiData.map((d) => d.mac).filter(Boolean) as string[])].sort();
+    return (table1Section.columns || []).map((col: any) => {
+      if (col.dataIndex === "macPhoi") {
+        return {
+          ...col,
+          renderCell: (record: any, _idx: number, onChange: (v: any) => void, disabled: boolean) => (
+            <Select
+              value={record.macPhoi || undefined}
+              onChange={onChange}
+              disabled={disabled}
+              style={{ width: "100%" }}
+              allowClear
+              showSearch
+              placeholder="Chọn mác"
+              options={uniqueMacs.map((m) => ({ label: m, value: m }))}
+            />
+          ),
+        };
+      }
+      if (col.dataIndex === "kichThuoc") {
+        return {
+          ...col,
+          renderCell: (record: any, _idx: number, onChange: (v: any) => void, disabled: boolean) => {
+            const kichThuocOptions = donTrongPhoiData
+              .filter((d) => d.mac === record.macPhoi && d.kichThuoc)
+              .map((d) => d.kichThuoc as string);
+            const uniqueOptions = [...new Set(kichThuocOptions)].sort();
+            return (
+              <Select
+                value={record.kichThuoc || undefined}
+                onChange={onChange}
+                disabled={disabled || !record.macPhoi}
+                style={{ width: "100%" }}
+                allowClear
+                showSearch
+                placeholder={record.macPhoi ? "Chọn kích thước" : "Chọn mác trước"}
+                options={uniqueOptions.map((k) => ({ label: k, value: k }))}
+              />
+            );
+          },
+        };
+      }
+      return col;
+    });
+  }, [table1Section, donTrongPhoiData]);
+
+  const handleThemMacPhoi = async () => {
+    try {
+      const values = await themMacPhoiForm.validateFields();
+      const mac = values.mac?.trim() || null;
+      const kichThuoc = values.kichThuoc?.trim() || null;
+      const donTrong: number = values.donTrong ?? 0;
+
+      const isDuplicate = donTrongPhoiData.some(
+        (d) => d.mac === mac && d.kichThuoc === kichThuoc
+      );
+      if (isDuplicate) {
+        message.warning(
+          `Mác "${mac ?? ""}"${kichThuoc ? ` - Kích thước "${kichThuoc}"` : ""} đã tồn tại trong danh sách!`
+        );
+        return;
+      }
+
+      setThemMacPhoiLoading(true);
+      const macPhoi = [mac, kichThuoc].filter(Boolean).join("_") || `MPC_${Date.now()}`;
+      const newRecord = await DonTrongPhoiServiceApi.create({ macPhoi, mac, kichThuoc, donTrong });
+      setDonTrongPhoiData((prev) => [...prev, newRecord]);
+      message.success("Thêm mác phôi thành công!");
+      setThemMacPhoiVisible(false);
+      themMacPhoiForm.resetFields();
+    } catch (err: unknown) {
+      if (typeof err === "object" && err !== null && "errorFields" in err) return;
+      const errMsg =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message: string }).message)
+          : "Không thể thêm mác phôi";
+      message.error(errMsg);
+    } finally {
+      setThemMacPhoiLoading(false);
+    }
+  };
 
   const handleAddTable1Triplet = useCallback(() => {
     const ts = Date.now();
@@ -661,6 +818,12 @@ const TaoSoTheoDoiSanXuat = () => {
                   Import Excel
                 </Button>
               </Upload>
+              <Button
+                icon={<PlusOutlined />}
+                onClick={() => setThemMacPhoiVisible(true)}
+              >
+                Thêm mác phôi
+              </Button>
             </>
           )}
           {/* Save button for users with chốt permission when form is in HoanThanh state */}
@@ -709,9 +872,10 @@ const TaoSoTheoDoiSanXuat = () => {
               </Button>
             )}
             <CustomFormTable
-              columns={table1Section.columns || []}
+              columns={table1ColumnsWithDynamic}
               initialData={table1Data}
               onDataChange={(rows) => setTable1Data(rows as TableRow[])}
+              onCellChange={handleTable1CellChange}
               loading={loading}
               editable={!isFormLocked}
               showAddButton={false}
@@ -783,6 +947,49 @@ const TaoSoTheoDoiSanXuat = () => {
           })}
         </div>
       </Form>
+
+      <Modal
+        title="Thêm mác phôi"
+        open={themMacPhoiVisible}
+        onCancel={() => {
+          setThemMacPhoiVisible(false);
+          themMacPhoiForm.resetFields();
+        }}
+        onOk={handleThemMacPhoi}
+        confirmLoading={themMacPhoiLoading}
+        okText="Lưu"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <Form form={themMacPhoiForm} layout="vertical">
+          <Form.Item
+            name="mac"
+            label="Mác"
+            rules={[
+              { required: true, message: "Vui lòng nhập mác" },
+              { whitespace: true, message: "Không được chỉ có khoảng trắng" },
+              { max: 100, message: "Tối đa 100 ký tự" },
+            ]}
+          >
+            <Input placeholder="Nhập mác thép (VD: CT3, SS400...)" />
+          </Form.Item>
+          <Form.Item
+            name="kichThuoc"
+            label="Kích thước"
+            rules={[{ max: 100, message: "Tối đa 100 ký tự" }]}
+          >
+            <Input placeholder="VD: 150x150, 160x160..." />
+          </Form.Item>
+          <Form.Item name="donTrong" label="Đơn trọng (kg)">
+            <InputNumber
+              style={{ width: "100%" }}
+              placeholder="Nhập đơn trọng (nếu có)"
+              min={0}
+              precision={3}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </Card>
   );
 };

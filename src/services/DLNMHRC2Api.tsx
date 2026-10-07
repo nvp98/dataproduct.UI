@@ -20,6 +20,9 @@ export const dlnmHRC2Api = {
   deleteRowByKey: (rowKey: number) => apiService.delete(`/api/DLNMHRC2/${rowKey}`),
   filterSTD_NXT: (payload: FilterSTD_NXTRequest) =>
     apiService.post("/api/DLNMHRC2/filterSTD_NXT", payload),
+  /** Ép đồng bộ NM ngay lập tức cho STD_NXT (bỏ qua cooldown) — dùng cho nút "Đồng bộ lại từ NM". */
+  forceSyncStdNxt: (payload: { NgaySX: string; Ca: number }) =>
+    apiService.post("/api/DLNMHRC2/force-sync-std-nxt", payload),
   exportBienBan: (params?: Record<string, unknown>) =>
     apiService.get("/api/DLNMHRC2/export-excel-detail", {
       params,

@@ -28,6 +28,9 @@ export const BM_CONFIG = {
         HRC1_BB_Sanluongphoi: 'HRC1_BB_Sanluongphoi',
         HRC1_BBSL_PhoiTam: 'HRC1_BBSL_PhoiTam',     // BB giao nhận phôi tấm HRC1
         THONGKE_HRC1: 'THONGKE_HRC1',
+        HRC1_BB_TieuHao_BOF: 'HRC1_BB_TieuHao_BOF',
+        HRC1_BB_TieuHao_LF: 'HRC1_BB_TieuHao_LF',
+        HRC1_STD_NXT: 'HRC1_STD_NXT'
     },
     NMLG: {
         NMLG_BM_NapLieuLoCao: 'NMLG_BM_NapLieuLoCao',

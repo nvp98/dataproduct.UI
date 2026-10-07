@@ -57,9 +57,21 @@ export interface SearchPhieuResponseModel {
   scope: number;
   mayDuc: number;
   tinhTrang: number;
+  /** Số lượng ID Slab của phiếu đã được từng bộ phận xác nhận (so với tổng soLuongSlab) —
+   *  do BE (IPhieuSearchEnricher tương ứng, vd Hrc2BbgnPhoiTamEnricher, Hrc1BbgnPhoiTamEnricher)
+   *  tính, null nếu biểu mẫu không có enricher hỗ trợ hoặc không có bộ phận đó (vd HRC2 không có
+   *  Cán/C4, HRC1 không có Kho). */
+  soLuongXNDuc?: number | null;
+  soLuongXNKho?: number | null;
+  soLuongXNCan?: number | null;
+  soLuongXNC4?: number | null;
+  soLuongXNPKH?: number | null;
   nguoiTao: number;
   tenNguoiTao?: string | null;
   tenScope?: string | null;
   isCheck?: number | null;
   soLuongMe?: number | null;
+  /** Số lượng ID Slab thuộc phiếu — do BE tính (vd Hrc2BbgnPhoiTamEnricher), null nếu biểu mẫu
+   *  không có enricher hỗ trợ. */
+  soLuongSlab?: number | null;
 }

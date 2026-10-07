@@ -4,7 +4,7 @@ import {
   AutoComplete, Button, Card, Checkbox, Col, Divider, InputNumber, Modal,
   Popconfirm, Row, Select, Space, Spin, Table, Tag, Tooltip, Typography, Input, message, Empty,
 } from "antd";
-import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined, FilePdfOutlined, SyncOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ArrowRightOutlined, DeleteOutlined, EyeInvisibleOutlined, EyeOutlined, FileExcelOutlined, FilePdfOutlined, SyncOutlined, UndoOutlined } from "@ant-design/icons";
 import { PhieuApi } from "../../../services/PhieuApi";
 import type { TableColumnsType } from "antd";
 import dayjs from "dayjs";
@@ -16,10 +16,12 @@ import {
   type HRC1_LoThoiUpdateRequest,
   type HRC1_TinhLuyenUpdateRequest,
   type HRC1_TrungMeInfo,
+  type HRC1_MayDucOptionVm,
 } from "../../../services/HRC1_BBGNApi";
 import MeThepTable from "./components/MeThepTable";
 import ChoNhanMePanel from "./components/ChoNhanMePanel";
 import { bmQuyenConfig } from "../../../utils/configs/bmQuyenConfig";
+import { buildMayDucOptions } from "../../../hooks/useMayDucOptions";
 import { BM_CONFIG } from "../../../utils/configs/BieuMauConst";
 import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
 import { getThongTinUser } from "../../../utils/constants/GetThongTinLocalStore";
@@ -40,10 +42,13 @@ const buildMeSortKey = (
   return `${date} ${thoiGian}`;
 };
 
-const _mayDucScopes = bmQuyenConfig.danhSachBieuMau
-  .find((b) => b.maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)?.scope ?? [];
-
-export const getScopeName = (maBm: string, scope: number | null | undefined, tenScope?: string | null): string => {
+// Phiếu Đúc: scope = MayDuc.Id. Ưu tiên tenScope chốt lúc tạo phiếu, sau đó tra danhSachMayDuc (BE trả về).
+export const getScopeName = (
+  maBm: string,
+  scope: number | null | undefined,
+  tenScope?: string | null,
+  danhSachMayDuc?: HRC1_MayDucOptionVm[],
+): string => {
   if (tenScope) return tenScope;
   if (!scope) {
     if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi)    return "Lò thổi";
@@ -53,7 +58,7 @@ export const getScopeName = (maBm: string, scope: number | null | undefined, ten
   if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi)    return `Lò thổi ${scope}`;
   if (maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen) return `Tinh luyện ${scope}`;
   if (maBm === BM_CONFIG.HRC1.HRC1_BBGN_ThepLong)
-    return _mayDucScopes.find((s) => s.maKhuVuc === String(scope))?.tenKhuVuc ?? `TSC/Đúc ${scope}`;
+    return danhSachMayDuc?.find((m) => m.id === scope)?.tenMayDuc ?? `Máy đúc ${scope}`;
   const bmDef = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
   return bmDef?.scope?.find((s) => s.maKhuVuc === String(scope))?.tenKhuVuc ?? `${maBm}-${scope}`;
 };
@@ -84,6 +89,12 @@ const calcKlThepLong = (dichChuyen: string | null | undefined, kllf: number | nu
   if (dichChuyen === "len_thang" && kllf)  return Math.round((kllf - klLan2) * 100) / 100;
   if (dichChuyen === "tinh_luyen" && klLan1) return Math.round((klLan1 - klLan2) * 100) / 100;
   return null;
+};
+
+// Tính KL đổ xỉ tự động = KL bì - Lần 2 (klLan2) - Khối lượng thùng LF trước khi ra thép (klLan3)
+const calcKlDoXi = (klLan2: number | null | undefined, klLan3: number | null | undefined): number | null => {
+  if (klLan2 == null || klLan3 == null) return null;
+  return Math.round((klLan2 - klLan3) * 100) / 100;
 };
 
 // Ghi chú dùng chung cả 3 công đoạn — auto-save khi blur
@@ -219,17 +230,19 @@ export const LoThoiPanel = ({
   const ghostCount = phieuData.danhSachMe.filter((m) => m.isGhost).length;
   const dirtyCount = Object.keys(edits).length;
 
-  // "Tinh luyện/Lên thẳng" combined Select options
-  const dichChuyenOpts = useMemo(() => [
+  // "Tinh luyện/Lên thẳng" combined Select options — máy đúc đã khóa không hiển thị, trừ khi đang là
+  // máy đích đã lưu của chính mẻ đó (giữ lại, disabled) để hiện tên thay vì Id
+  const getDichChuyenOpts = (me: HRC1_MeThepVm) => [
     {
       label: "Tinh luyện",
       options: [1, 2, 3, 4, 5].map((n) => ({ label: `TL ${n}`, value: `TL:${n}` })),
     },
     {
       label: "Lên thẳng",
-      options: phieuData.danhSachMayDuc.map((m) => ({ label: m.tenMayDuc, value: `LS:${m.id}` })),
+      options: buildMayDucOptions(phieuData.danhSachMayDuc, [me.idMayDucDich])
+        .map((o) => ({ ...o, value: `LS:${o.value}` })),
     },
-  ], [phieuData.danhSachMayDuc]);
+  ];
 
   const getDichEncoded = (me: HRC1_MeThepVm): string | undefined => {
     const e = edits[me.id];
@@ -295,7 +308,7 @@ export const LoThoiPanel = ({
     const loKlFields: { key: string; label: string }[] = [
       { key: "kllfSauThep",      label: "KL thùng LF sau khi ra thép" },
       { key: "klLan2",           label: "KL bì - Lần 2" },
-      { key: "klLan3",           label: "KL bì - Lần 3" },
+      { key: "klLan3",           label: "Khối lượng thùng LF trước khi ra thép" },
       { key: "klThepLongPhanBo", label: "KL phân bổ" },
     ];
     const negativeErrors: string[] = [];
@@ -335,6 +348,10 @@ export const LoThoiPanel = ({
       await onReload();
     } catch (e: any) {
       message.error(e?.message ?? "Lỗi lưu dữ liệu");
+      // Lỗi lưu có thể do dữ liệu đã đổi ở phía khác trong lúc phiếu đang mở (vd: Đúc vừa xác nhận
+      // mẻ sau khi trang này tải xong — khóa isLocked() dựa trên trangThaiDuc của snapshot cũ nên
+      // vẫn hiện editable) — reload để đồng bộ lại state mới nhất, khóa đúng ngay trên UI.
+      await onReload();
     } finally {
       setSaving(false);
     }
@@ -496,7 +513,7 @@ export const LoThoiPanel = ({
       },
     },
     {
-      title: "KL bì - Lần 3 (tấn)", key: "klLan3", width: 75,
+      title: "Khối lượng thùng LF trước khi ra thép", key: "klLan3", width: 75,
       render: (_, me) => {
         const klLan3Locked = readOnly || !!me.isChot;
         return (
@@ -529,6 +546,14 @@ export const LoThoiPanel = ({
       },
     },
     {
+      title: "KL đổ xỉ", key: "klDoXi", width: 75,
+      render: (_, me) => {
+        const doXi = calcKlDoXi(me.klLan2, me.klLan3);
+        const isOver = doXi != null && Math.abs(doXi) > 4;
+        return <span style={{ fontWeight: 700, color: isOver ? "#ff4d4f" : undefined }}>{doXi ?? ""}</span>;
+      },
+    },
+    {
       title: "KL phân bổ", key: "klThepLongPhanBo", width: 80,
       render: (_, me) => {
         const locked = lk(me);
@@ -548,13 +573,13 @@ export const LoThoiPanel = ({
           return (
             <Select size="small" style={{ width: 125 }}
               value={getDichEncoded(me) ?? undefined}
-              options={dichChuyenOpts}
+              options={getDichChuyenOpts(me)}
               disabled />
           );
         }
         const optsForMe = (me.trangThaiTL ?? 0) >= 1
-          ? dichChuyenOpts.slice(0, 1)
-          : dichChuyenOpts;
+          ? getDichChuyenOpts(me).slice(0, 1)
+          : getDichChuyenOpts(me);
         return (
           <Select size="small" style={{ width: 125 }} showSearch optionFilterProp="label"
             status={!getDichEncoded(me) ? "error" : undefined}
@@ -647,9 +672,11 @@ export const LoThoiPanel = ({
     { title: "Ghi chú đúc", key: "ghiChuDuc", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
   ];
 
-  // Đúc "xác nhận" chỉ là trạng thái tạm (còn "Hủy xác nhận" được) — không khóa lò thổi ở bước này.
-  // Chỉ khi mẻ đã CHỐT (isChot, khóa vĩnh viễn) mới thực sự cấm nhập/lưu. Khớp với klLan3Locked bên dưới
-  // (readOnly || isChot) và với guard IsChot ở BE UpdateMeAsync.
+  // trangThaiDuc === 1 khóa cả panel (không chỉ IsChot) — nếu không, đổi DichChuyen len_thang→tinh_luyen
+  // sẽ reset IdMayDucDich trong khi Đúc vẫn coi mẻ là "đã xác nhận" (mẻ vô định, không máy đúc nào
+  // còn thấy). Đây chỉ là khóa dựa trên snapshot đã tải (phieuData) — không thay được cho guard phía BE
+  // (UpdateMeAsync/NhanMeAsync): nếu Đúc xác nhận SAU khi trang này đã tải xong, UI vẫn hiện editable
+  // cho tới khi reload; catch ở handleSaveAll bên dưới sẽ tự reload lại khi BE từ chối lưu.
   const isLocked = (me: HRC1_MeThepVm) => readOnly || !!me.isChot || (me.trangThaiLo ?? 0) >= 1 || !!me.isGhost || me.trangThaiDuc === 1;
   const columns = buildColumns(isLocked);
 
@@ -684,7 +711,7 @@ export const LoThoiPanel = ({
       <MeThepTable
         columns={columns}
         dataSource={displayData}
-        scrollX={showChuyenMeCols ? 2110 : 1850}
+        scrollX={showChuyenMeCols ? 2185 : 1925}
         scrollY="calc(100vh - 207px)"
         onRow={(me) => ({
           style: me.isGhost ? { background: "#fff7e6", opacity: 0.85 } : undefined,
@@ -736,7 +763,11 @@ export const TinhLuyenPanel = ({
   const [xoaMeTayBusy, setXoaMeTayBusy] = useState<Set<number>>(new Set());
 
   const dirtyCount = Object.keys(edits).length;
-  const mayDucOpts = phieuData.danhSachMayDuc.map((m) => ({ label: m.tenMayDuc, value: m.id }));
+  // Máy đúc đã khóa không hiển thị, trừ khi đang là máy đích đã lưu của chính mẻ đó (giữ lại,
+  // disabled) để hiện tên thay vì Id
+  const getMayDucOpts = (me: HRC1_MeThepVm) => buildMayDucOptions(phieuData.danhSachMayDuc, [me.idMayDucDich]);
+  const getTenMayDuc = (id: number | null | undefined) =>
+    id != null ? phieuData.danhSachMayDuc.find((m) => m.id === id)?.tenMayDuc : undefined;
 
   const get = (me: HRC1_MeThepVm, f: keyof HRC1_TinhLuyenUpdateRequest) => {
     const e = edits[me.id];
@@ -753,7 +784,7 @@ export const TinhLuyenPanel = ({
       { key: "kllfSauThep", label: "KL thùng LF sau khi ra thép" },
       { key: "klLan1",      label: "KL lần 1" },
       { key: "klLan2",      label: "KL bì - Lần 2" },
-      { key: "klLan3",      label: "KL bì - Lần 3" },
+      { key: "klLan3",      label: "Khối lượng thùng LF trước khi ra thép" },
     ];
     const negativeErrors: string[] = [];
     for (const [meIdStr, req] of dirty) {
@@ -909,6 +940,36 @@ export const TinhLuyenPanel = ({
       message.error(e?.message ?? "Lỗi thêm mẻ");
     } finally {
       setThemMeTayBusy(false);
+    }
+  };
+
+  const [chuyenCaBusy, setChuyenCaBusy] = useState<Set<number>>(new Set());
+
+  // Chuyển routing mẻ sang phiếu Đúc ca trước/sau — mẻ luyện xong sát ranh giới ca (vẫn đúng ca
+  // tinh luyện), nhưng lúc đem đúc thực tế đã rơi vào ca khác. Không đổi Ca của chính TL/tiêu hao LF.
+  const handleChuyenCaDuc = async (meId: number, huong: "truoc" | "sau") => {
+    setChuyenCaBusy((prev) => new Set(prev).add(meId));
+    try {
+      await HRC1Api.chuyenCaDuc(meId, huong);
+      message.success(`Đã chuyển mẻ sang phiếu Đúc ca ${huong}`);
+      await onReload();
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi chuyển ca");
+    } finally {
+      setChuyenCaBusy((prev) => { const s = new Set(prev); s.delete(meId); return s; });
+    }
+  };
+
+  const handleHuyChuyenCaDuc = async (meId: number) => {
+    setChuyenCaBusy((prev) => new Set(prev).add(meId));
+    try {
+      await HRC1Api.huyChuyenCaDuc(meId);
+      message.success("Đã hủy chuyển ca");
+      await onReload();
+    } catch (e: any) {
+      message.error(e?.message ?? "Lỗi hủy chuyển ca");
+    } finally {
+      setChuyenCaBusy((prev) => { const s = new Set(prev); s.delete(meId); return s; });
     }
   };
 
@@ -1091,7 +1152,7 @@ export const TinhLuyenPanel = ({
       },
     },
     {
-      title: "KL bì - Lần 3 (tấn)", key: "klLan3", width: 70,
+      title: "Khối lượng thùng LF trước khi ra thép", key: "klLan3", width: 70,
       render: (_, me) => {
         const editable = !!me.isManualTL && !isLocked(me);
         return (
@@ -1123,6 +1184,14 @@ export const TinhLuyenPanel = ({
         );
       },
     },
+    {
+      title: "KL đổ xỉ", key: "klDoXi", width: 75,
+      render: (_, me) => {
+        const doXi = calcKlDoXi(me.klLan2, me.klLan3);
+        const isOver = doXi != null && Math.abs(doXi) > 4;
+        return <span style={{ fontWeight: 700, color: isOver ? "#ff4d4f" : undefined }}>{doXi ?? ""}</span>;
+      },
+    },
     { title: "Thử nghiệm", dataIndex: "isThuNghiem", width: 44, render: (v) => <Checkbox checked={!!v} disabled /> },
     {
       title: "Máy đúc", key: "idMayDucDich", width: 125,
@@ -1133,7 +1202,7 @@ export const TinhLuyenPanel = ({
           <Select size="small" style={{ width: 120 }} showSearch optionFilterProp="label"
             status={!disabled && val == null ? "error" : undefined}
             value={val}
-            options={mayDucOpts}
+            options={getMayDucOpts(me)}
             allowClear={!disabled}
             disabled={disabled}
             onChange={disabled ? undefined : (v) => set(me.id, "idMayDucDich", v ?? null)} />
@@ -1170,7 +1239,7 @@ export const TinhLuyenPanel = ({
           const isSelf = effectiveChuyenId == null || effectiveChuyenId === me.id;
           if (isSelf) {
             const mayId = get(me, "idMayDucDich") as number | null | undefined;
-            return mayDucOpts.find((o) => o.value === mayId)?.label ?? "—";
+            return getTenMayDuc(mayId) ?? "—";
           }
           return me.tenMayDucChuyen ?? "—";
         },
@@ -1185,6 +1254,56 @@ export const TinhLuyenPanel = ({
     },
     { title: "Ghi chú LT",  key: "ghiChuLo",  width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuLo  ?? "" },
     { title: "Ghi chú đúc", key: "ghiChuDuc2", width: 90, render: (_: unknown, me: HRC1_MeThepVm) => me.ghiChuDuc ?? "" },
+    {
+      title: "Chuyển ca", key: "chuyenCaDuc", width: 120,
+      render: (_, me) => {
+        if (readOnly || me.isChot || (me.trangThaiTL ?? 0) < 1 || (me.trangThaiDuc ?? 0) >= 1) return null;
+        const busy = chuyenCaBusy.has(me.id);
+        if (me.isChuyenCaDuc) {
+          return (
+            <Popconfirm
+              title="Hủy chuyển ca đúc của mẻ này?"
+              okText="Hủy chuyển" cancelText="Không"
+              onConfirm={() => handleHuyChuyenCaDuc(me.id)}>
+              <Button size="small" type="link" icon={<UndoOutlined />} loading={busy}>Đã chuyển ca</Button>
+            </Popconfirm>
+          );
+        }
+        if (!me.idMayDucDich) return null;
+        return (
+          <Space size={2}>
+            <Popconfirm
+              title="Chuyển mẻ này sang phiếu Đúc ca trước? (Ca tinh luyện giữ nguyên)"
+              okText="Chuyển ca trước" cancelText="Không"
+              onConfirm={() => handleChuyenCaDuc(me.id, "truoc")}>
+              <Tooltip title="Chuyển sang phiếu Đúc ca trước">
+                <Button size="small" icon={<ArrowLeftOutlined />} loading={busy} />
+              </Tooltip>
+            </Popconfirm>
+            <Popconfirm
+              title="Chuyển mẻ này sang phiếu Đúc ca sau? (Ca tinh luyện giữ nguyên)"
+              okText="Chuyển ca sau" cancelText="Không"
+              onConfirm={() => handleChuyenCaDuc(me.id, "sau")}>
+              <Tooltip title="Chuyển sang phiếu Đúc ca sau">
+                <Button size="small" icon={<ArrowRightOutlined />} loading={busy} />
+              </Tooltip>
+            </Popconfirm>
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Ca-Ngày Đúc", key: "caNgayDuc", width: 110,
+      render: (_, me) => {
+        if (!me.ngayDuc || !me.caDuc) return "";
+        const label = `Ca ${me.caDuc} - ${dayjs(me.ngayDuc).format("DD/MM/YYYY")}`;
+        return me.isChuyenCaDuc ? (
+          <Tooltip title="Đã chuyển ca — khác với ca tinh luyện">
+            <Tag color="orange">{label}</Tag>
+          </Tooltip>
+        ) : label;
+      },
+    },
     {
       title: "", key: "xoaTay", width: 36, fixed: "right",
       render: (_, me) => {
@@ -1248,7 +1367,7 @@ export const TinhLuyenPanel = ({
           columns={mainCols}
           dataSource={tlDisplayData}
           rowKey={(r) => `${r.id}-${r.mePhanCongId}`}
-          scrollX={showChuyenMeCols ? 2010 : 1750}
+          scrollX={showChuyenMeCols ? 2295 : 2035}
           scrollY="calc(100vh - 258px)"
           onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
         />
@@ -1503,8 +1622,17 @@ export const DucPanel = ({
     },
     { title: "STT",       key: "stt",    width: 40,  fixed: "left", render: (_, __, i) => i + 1 },
     {
-      title: "Tình trạng", key: "tinhTrang", width: 90, fixed: "left",
-      render: (_, me) => tinhTrangTag(me.trangThaiDuc, me.isChot),
+      title: "Tình trạng", key: "tinhTrang", width: 120, fixed: "left",
+      render: (_, me) => (
+        <Space size={4}>
+          {tinhTrangTag(me.trangThaiDuc, me.isChot)}
+          {/* {me.isChuyenCaDuc && (
+            <Tooltip title="TL đã chuyển mẻ này từ ca trước sang phiếu đúc ca này">
+              <Tag color="blue" style={{ fontSize: 11 }}>Chuyển ca</Tag>
+            </Tooltip>
+          )} */}
+        </Space>
+      ),
     },
     {
       title: "Tình trạng PCN", key: "tinhTrangPCN", width: 90, fixed: "left",
@@ -1516,7 +1644,7 @@ export const DucPanel = ({
     { title: "KL thùng LF sau khi ra thép",    dataIndex: "kllfSauThep",  width: 75,  render: (v) => v ?? "" },
     { title: "KL thùng&thép lỏng vào bệ xoay - Lần 1 (tấn)", dataIndex: "klLan1",       width: 75,  render: (v) => v ?? "" },
     { title: "KL bì - Lần 2 (tấn)", dataIndex: "klLan2",       width: 75,  render: (v) => v ?? "" },
-    { title: "KL bì - Lần 3 (tấn)", dataIndex: "klLan3",       width: 75,  render: (v) => v ?? "" },
+    { title: "Khối lượng thùng LF trước khi ra thép", dataIndex: "klLan3",       width: 75,  render: (v) => v ?? "" },
     { title: "KL thép lỏng", dataIndex: "klThepLong", width: 80, render: (v) => <span style={{ fontWeight: 700 }}>{v ?? ""}</span> },
     {
       title: "KL thép lỏng chốt", key: "klThepLongChot", width: 85,
@@ -1529,6 +1657,14 @@ export const DucPanel = ({
             <span style={{ fontWeight: 600, color: isTransferred ? "#aaa" : undefined }}>{v}</span>
           </Tooltip>
         );
+      },
+    },
+    {
+      title: "KL đổ xỉ", key: "klDoXi", width: 75,
+      render: (_, me) => {
+        const doXi = calcKlDoXi(me.klLan2, me.klLan3);
+        const isOver = doXi != null && Math.abs(doXi) > 4;
+        return <span style={{ fontWeight: 700, color: isOver ? "#ff4d4f" : undefined }}>{doXi ?? ""}</span>;
       },
     },
     {
@@ -1573,7 +1709,7 @@ export const DucPanel = ({
       <MeThepTable
         columns={columns}
         dataSource={sortedMes}
-        scrollX={1934}
+        scrollX={2009}
         scrollY={tableScrollY}
         onRow={(me) => ({ style: me.isManualTL ? { background: "#FFFFCC" } : undefined })}
         summary={(pageData) => {
@@ -1596,8 +1732,8 @@ export const DucPanel = ({
                 <Table.Summary.Cell index={12}>
                   <strong>{totalChot > 0 ? totalChot : ""}</strong>
                 </Table.Summary.Cell>
-                {/* remaining 11 cols */}
-                <Table.Summary.Cell index={13} colSpan={11} />
+                {/* remaining 12 cols (đã gồm klDoXi) */}
+                <Table.Summary.Cell index={13} colSpan={12} />
               </Table.Summary.Row>
             </Table.Summary>
           );
@@ -1789,7 +1925,7 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
 
   const buildExportFilename = (ext: "xlsx" | "pdf") => {
     if (!phieuData) return `HRC1_export.${ext}`;
-    const label = getScopeName(phieuData.maBm ?? "", phieuData.scope).replace(/[\s/]/g, "_");
+    const label = getScopeName(phieuData.maBm ?? "", phieuData.scope, phieuData.tenScope, phieuData.danhSachMayDuc).replace(/[\s/]/g, "_");
     const ngay = phieuData.ngaySX ? phieuData.ngaySX.toString().replace(/-/g, "") : "";
     const ca = phieuData.ca === 1 ? "CaNgay" : phieuData.ca === 2 ? "CaDem" : "";
     return `HRC1_${label}_${ngay}_${ca}.${ext}`;
@@ -1845,7 +1981,7 @@ const TaoPhieuGN = ({ readOnly = false }: TaoPhieuGNProps) => {
     if (maBm === BM_CONFIG.HRC1.HRC1_LoThoi || maBm === BM_CONFIG.HRC1.HRC1_TinhLuyen) {
       return groupLabel;
     }
-    const scopeName = getScopeName(maBm, phieuData.scope);
+    const scopeName = getScopeName(maBm, phieuData.scope, phieuData.tenScope, phieuData.danhSachMayDuc);
     return `${groupLabel} — ${scopeName}`;
   }, [phieuData]);
 

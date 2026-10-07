@@ -2,7 +2,7 @@
   "code": "CTD_BB_Phoinapnguoi",
   "prefix": "BBPNN",
   "title": "BIÊN BẢN GIAO NHẬN PHÔI NẠP NGUỘI",
-   "headerInfo": {
+  "headerInfo": {
     "company": "CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT",
     "subCompany": "HÒA PHÁT GANG THÉP"
   },
@@ -31,7 +31,8 @@
       "options": [
         { "label": "Xưởng cán 1", "value": 1 },
         { "label": "Xưởng cán 2", "value": 2 },
-        { "label": "Xưởng cán 3", "value": 3 }
+        { "label": "Xưởng cán 3", "value": 3 },
+        { "label": "Xưởng cán 4", "value": 4 }
       ]
     }
   ],
@@ -49,7 +50,11 @@
         { "title": "Mẻ", "dataIndex": "me" },
         { "title": "Mác", "dataIndex": "mac" },
         { "title": "Kích thước", "dataIndex": "kichThuoc" },
-        { "title": "Tổng số thanh", "dataIndex": "tongThanh", "type": "number" },
+        {
+          "title": "Tổng số thanh",
+          "dataIndex": "tongThanh",
+          "type": "number"
+        },
         { "title": "Tổng khối lượng", "dataIndex": "tongKL", "type": "number" },
         { "title": "Ghi chú", "dataIndex": "ghiChu" }
       ]
@@ -62,8 +67,7 @@
       "placeholder": "Nhập ghi chú nếu có..."
     }
   ],
-  "footerNotes": [
-  ],
+  "footerNotes": [],
   "signatures": [
     {
       "label": "NM.HRC1",

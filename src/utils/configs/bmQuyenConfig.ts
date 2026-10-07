@@ -20,11 +20,19 @@ export interface ExtraQuyenChucNangItem {
   vung: number;
 }
 
+/**
+ * Nguồn scope động thay cho mảng `scope` tĩnh.
+ * - "mayDuc": scope = MayDuc.Id của nhà máy `nhaMay` (bảng MayDuc) — thêm máy đúc mới không cần sửa code.
+ * Đọc scope qua useBmScopes().getScope(maBm), không đọc trực tiếp `bm.scope`.
+ */
+export type BmScopeSource = { type: "mayDuc"; nhaMay: number };
+
 export interface BieuMauQuyenItem {
   maBm: string;
   tenBm: string;
   nhom: string;
   scope?: KhuVucQuyenItem[];
+  scopeSource?: BmScopeSource;
   khuVucPhus?: KhuVucPhuItem[];
   /** Quyền chức năng riêng của BM này (value >= 6), chỉ hiện khi đang chọn đúng BM — không dùng chung với BM khác */
   extraQuyens?: ExtraQuyenChucNangItem[];
@@ -52,6 +60,7 @@ export const bmQuyenConfig = {
         { maKhuVuc: "1", tenKhuVuc: "Xưởng cán 1" },
         { maKhuVuc: "2", tenKhuVuc: "Xưởng cán 2" },
         { maKhuVuc: "3", tenKhuVuc: "Xưởng cán 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Xưởng cán 4" },
       ]
     },
     {
@@ -76,7 +85,7 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC2.HRC2_BBSL_PhoiTam,
-      tenBm: "Biên bản giao nhận phôi tấm",
+      tenBm: "Biên bản sản lượng phôi tấm",
       nhom: "NM.HRC2",
       // Không có scope vùng máy — workflow thống nhất 1 bảng
       // khuVucPhus tạo record BM_QuyenXL riêng cho từng bộ phận
@@ -129,13 +138,35 @@ export const bmQuyenConfig = {
       nhom: "NM.HRC1",
     },
     {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_BOF,
+      tenBm: "Biên bản tiêu hao nấu luyện lò thổi BOF",
+      nhom: "NM.HRC1",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Lò thổi 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Lò thổi 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Lò thổi 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Lò thổi 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Lò thổi 5" },
+      ]
+    },
+    {
+      maBm: BM_CONFIG.HRC1.HRC1_BB_TieuHao_LF,
+      tenBm: "Biên bản tiêu hao nấu luyện tinh luyện LF",
+      nhom: "NM.HRC1",
+      scope: [
+        { maKhuVuc: "1", tenKhuVuc: "Tinh luyện 1" },
+        { maKhuVuc: "2", tenKhuVuc: "Tinh luyện 2" },
+        { maKhuVuc: "3", tenKhuVuc: "Tinh luyện 3" },
+        { maKhuVuc: "4", tenKhuVuc: "Tinh luyện 4" },
+        { maKhuVuc: "5", tenKhuVuc: "Tinh luyện 5" },
+      ]
+    },
+    {
       maBm: BM_CONFIG.HRC2.HRC2_BBGN_ThepLong,
       tenBm: "Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC2",
-      scope: [
-        { maKhuVuc: "6", tenKhuVuc: "CCM1", },
-        { maKhuVuc: "7", tenKhuVuc: "CCM2" },
-      ],
+      // Scope = MayDuc.Id (NhaMay = HRC2) — lấy động từ bảng MayDuc
+      scopeSource: { type: "mayDuc", nhaMay: 2 },
       khuVucPhus: [
         { khuVucPhu: "6", tenKhuVuc: "Lò thổi 6" },
         { khuVucPhu: "7", tenKhuVuc: "Lò thổi 7" },
@@ -146,13 +177,8 @@ export const bmQuyenConfig = {
       maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
       tenBm: "Biên bản giao nhận thép lỏng",
       nhom: "NM.HRC1",
-      scope: [
-        { maKhuVuc: "1", tenKhuVuc: "TSC 1" },
-        { maKhuVuc: "2", tenKhuVuc: "TSC 2" },
-        { maKhuVuc: "3", tenKhuVuc: "Đúc vuông 1" },
-        { maKhuVuc: "4", tenKhuVuc: "Đúc vuông 2" },
-        { maKhuVuc: "5", tenKhuVuc: "Đúc vuông 3" },
-      ],
+      // Scope = MayDuc.Id (NhaMay = HRC1) — lấy động từ bảng MayDuc
+      scopeSource: { type: "mayDuc", nhaMay: 1 },
       khuVucPhus: [
         { khuVucPhu: "1", tenKhuVuc: "Lò thổi 1", targetMaBm: "HRC1_LoThoi", targetScope: "1" },
         { khuVucPhu: "2", tenKhuVuc: "Lò thổi 2", targetMaBm: "HRC1_LoThoi", targetScope: "2" },
@@ -232,12 +258,13 @@ export const bmQuyenConfig = {
     },
     {
       maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
-      tenBm: "Biên bản giao nhận phôi tấm",
+      tenBm: "Biên bản sản lượng phôi tấm",
       nhom: "NM.HRC1",
       khuVucPhus: [
         { khuVucPhu: "Duc", tenKhuVuc: "Bộ phận Đúc" },
         { khuVucPhu: "Can", tenKhuVuc: "Bộ phận Cán Tấm" },
-        { khuVucPhu: "C4", tenKhuVuc: "GĐ/PGĐ NM" },
+        // "C4" (GĐ/PGĐ NM) đã bỏ khỏi luồng — không cấp mới; user đã được cấp C4 trước đó vẫn giữ
+        // quyền (BM_QuyenXL không xóa) để xử lý tiếp các phiếu cũ còn dính luồng C4.
       ]
     },
     {
@@ -279,5 +306,10 @@ export const bmQuyenConfig = {
         { maKhuVuc: "6", tenKhuVuc: "Vê viên 2" },
       ]
     }
+      maBm: BM_CONFIG.HRC1.HRC1_STD_NXT,
+      tenBm: "STD - Nhập xuất tồn HRC1",
+      nhom: "NM.HRC1",
+    },
+
   ] as BieuMauQuyenItem[],
 };

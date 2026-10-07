@@ -6,6 +6,7 @@ import type { PhieuFilterValues } from "../components/PhieuFilterCard";
 import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
 import { BmQuyenXlApi, type BmQuyenXlModel } from "../services/BmQuyenXlApi";
 import { bmQuyenConfig } from "../utils/configs/bmQuyenConfig";
+import { useBmScopes } from "./useBmScopes";
 
 // Keyed by React Router location.key — tự động clear khi user navigate forward (key mới),
 // tự động restore khi user bấm Back (key cũ). Per-tab vì module scope.
@@ -50,6 +51,7 @@ const defaultTransform = (filters: PhieuFilterValues): Partial<SearchPhieuByUser
   kip: (filters.kip as string | null | undefined) || null,
   scope: normalizeNumber(filters.scope),
   mayDuc: normalizeNumber(filters.mayDuc),
+  tinhTrang: normalizeNumber(filters.tinhTrang),
   searchText: (filters.soPhieu || filters.searchText || null) as string | null,
 });
 
@@ -103,6 +105,9 @@ export const usePhieuSearchListHRC = ({
       .catch(() => setUserQuyenRecords(null));
   }, [effectiveUserId]);
 
+  // Scope của BM: động (scopeSource, vd máy đúc từ bảng MayDuc) hoặc tĩnh (bmQuyenConfig.scope)
+  const { getScope } = useBmScopes();
+
   /** Quyền mở rộng (extraQuyens) của 1 maBm khớp đúng vùng đang xét — xem bmQuyenConfig.ts */
   const getExtraQuyenValuesForVung = (maBm: string, loaiVung: number): number[] => {
     const bmDef = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
@@ -119,8 +124,7 @@ export const usePhieuSearchListHRC = ({
    */
   const getAllowedScopeOptions = useCallback(
     (maBm: string, customAllOptions?: Array<{ label: string; value: number }>): Array<{ label: string; value: number }> => {
-      const bmDef = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
-      const allOptions = customAllOptions ?? (bmDef?.scope ?? []).map((s) => ({
+      const allOptions = customAllOptions ?? getScope(maBm).map((s) => ({
         value: Number(s.maKhuVuc),
         label: s.tenKhuVuc,
       }));
@@ -150,7 +154,7 @@ export const usePhieuSearchListHRC = ({
       const allowed = new Set(bmRecords.map((r) => r.maKhuVuc));
       return allOptions.filter((opt) => allowed.has(String(opt.value)));
     },
-    [userQuyenRecords, effectiveFixedFilters]
+    [userQuyenRecords, effectiveFixedFilters, getScope]
   );
 
   const getAllowedBmOptions = useCallback(
@@ -221,6 +225,7 @@ export const usePhieuSearchListHRC = ({
         scope: null,
         mayDuc: null,
         searchText: null,
+        tinhTrang: null,
         ...effectiveFixedFilters,
         ...overrides,
         loaiVung,
