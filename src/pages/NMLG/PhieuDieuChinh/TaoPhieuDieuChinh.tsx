@@ -3,7 +3,7 @@ import LG_PhieuDieuChinh from "../../../utils/BM_config/LG_PhieuDieuChinh.json";
 import { Badge, Button, Card, Checkbox, Collapse, Form, Input, Modal, Popconfirm, Popover, Select, Space, Table, Tabs, Typography, message } from "antd";
 import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SettingOutlined, TableOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomFormItem from "../../../components/CustomFormItem";
 import CustomFormTableV2 from "../../../components/FormPhieuDieuChinh";
@@ -124,6 +124,8 @@ const chiTietDtoToRows = (chiTiet: PhieuDieuChinhChiTietDto[]): TableRow[] =>
     viTri: c.viTri,
     phanLoai: c.phanLoai,
     ghiChu: c.ghiChu,
+    // "Phiên bản" của dòng lúc tải — gửi lại khi Lưu để BE phát hiện người khác đã sửa (409).
+    thoiGianSua: c.thoiGianSua,
     nguoiDieuChinhGiao: c.nguoiDieuChinhGiao,
     thoiGianDieuChinhGiao: c.thoiGianDieuChinhGiao,
     nguoiDieuChinhNhan: c.nguoiDieuChinhNhan,
@@ -143,6 +145,13 @@ const TaoPhieuDieuChinh = () => {
   const [form] = Form.useForm();
 
   const [tableData, setTableData] = useState<TableRow[]>([]);
+  // ID các dòng đã lưu mà server trả về lần tải gần nhất. Khi Lưu, dòng nào có ở đây mà không còn
+  // trong bảng = người dùng đã xóa → gửi deletedIds để BE xóa mềm (không suy ra từ "vắng mặt").
+  const loadedIdsRef = useRef<Set<number>>(new Set());
+  const applyServerRows = useCallback((rows: TableRow[]) => {
+    loadedIdsRef.current = new Set(rows.filter((r) => r.id != null).map((r) => Number(r.id)));
+    setTableData(rows);
+  }, []);
   const [loading, setLoading] = useState(false);
   const [soPhieu, setSoPhieu] = useState("");
   const [phieuInfo, setPhieuInfo] = useState<{
@@ -278,6 +287,15 @@ const TaoPhieuDieuChinh = () => {
       // thiếu "key" (vd rơi vào bảng jsonData.table1 cũ) khiến 1 lần bấm xác nhận tất cả dòng.
       if (rowKey === undefined) return;
 
+      // Chưa điền Khối lượng nhập thì không cho xác nhận (hủy xác nhận vẫn được).
+      if (checked) {
+        const row = tableData.find((r) => r.key === rowKey);
+        if (!row || toNum(row.khoiLuongNhap) === null) {
+          message.warning("Vui lòng điền Khối lượng nhập trước khi xác nhận");
+          return;
+        }
+      }
+
       const idNguoiThucHien = currentUserInfo?.iD_TaiKhoan ?? null;
       const nowIso = new Date().toISOString();
       let targetId: number | null = null;
@@ -296,8 +314,8 @@ const TaoPhieuDieuChinh = () => {
       );
 
       if (targetId != null) {
-        phieuDieuChinhApi.xacNhanGiao(targetId, checked, idNguoiThucHien).catch(() => {
-          message.error("Không thể lưu xác nhận xuống hệ thống, vui lòng thử lại");
+        phieuDieuChinhApi.xacNhanGiao(targetId, checked, idNguoiThucHien).catch((err: any) => {
+          message.error(err?.response?.data?.message || "Không thể lưu xác nhận xuống hệ thống, vui lòng thử lại");
           setTableData((prev) =>
             prev.map((r) =>
               r.key === rowKey
@@ -313,7 +331,7 @@ const TaoPhieuDieuChinh = () => {
         });
       }
     },
-    [currentUserInfo]
+    [currentUserInfo, tableData]
   );
 
   // "Loại điều chỉnh" — nguồn cho các Tab (Nhập - Xuất / Nội bộ - Xuất SX) và cho hiển thị
@@ -528,7 +546,7 @@ const TaoPhieuDieuChinh = () => {
         const nguoiThucHien = userInfo?.hoVaTen ?? userInfo?.tenDangNhap ?? null;
         const chiTietRes = await phieuDieuChinhApi.syncTuNguon(idphieu, nguoiThucHien);
         const rows = chiTietDtoToRows(Array.isArray(chiTietRes) ? chiTietRes : []);
-        setTableData(rows);
+        applyServerRows(rows);
         if (rows.length > 0) {
           message.success(`Đã tải và lưu ${rows.length} dòng dữ liệu nguồn`);
         } else {
@@ -588,7 +606,7 @@ const TaoPhieuDieuChinh = () => {
     } finally {
       setLoading(false);
     }
-  }, [form, idphieu]);
+  }, [form, idphieu, applyServerRows]);
 
   const initData = useCallback(async () => {
     try {
@@ -642,13 +660,15 @@ const TaoPhieuDieuChinh = () => {
           // gán lại key duy nhất ở đây, nếu không mọi dòng sẽ cùng key=undefined và bấm xác
           // nhận 1 dòng sẽ khớp trùng tất cả các dòng (xem handleXacNhanGiao).
           const withFallbackKeys = (table1: TableRow[]) =>
-            (table1 || []).map((r, idx) => ({ ...r, key: r.key ?? `row-${idx}` }));
+            // Bỏ id/thoiGianSua cũ trong jsonData — không còn đáng tin, coi như dòng mới.
+            (table1 || []).map((r, idx) => ({ ...r, key: r.key ?? `row-${idx}`, id: undefined, thoiGianSua: undefined }));
           try {
             const chiTietRes = await phieuDieuChinhApi.getChiTiet(idPhieu);
             const chiTiet = Array.isArray(chiTietRes) ? chiTietRes : [];
             if (chiTiet.length > 0) {
-              setTableData(chiTietDtoToRows(chiTiet));
+              applyServerRows(chiTietDtoToRows(chiTiet));
             } else {
+              loadedIdsRef.current = new Set();
               setTableData(withFallbackKeys(data.table1));
             }
           } catch {
@@ -681,7 +701,7 @@ const TaoPhieuDieuChinh = () => {
     } finally {
       setLoading(false);
     }
-  }, [form, idphieu, config.signatures, config.headerFields, currentUserInfo, getCapDuyet]);
+  }, [form, idphieu, config.signatures, config.headerFields, currentUserInfo, getCapDuyet, applyServerRows]);
 
   useEffect(() => {
     initData();
@@ -741,7 +761,13 @@ const TaoPhieuDieuChinh = () => {
   // gọi lại từ phieuActionService (customPutApi) mỗi lần bấm Lưu/Gửi.
   const saveChiTiet = useCallback(async (phieuId: string, formDataParam: Record<string, unknown>) => {
     const userInfo = getUserInfo();
-    const items = ((formDataParam.table1 as TableRow[]) || []).map((row) => ({
+    const rows = (formDataParam.table1 as TableRow[]) || [];
+    const currentIds = new Set(rows.filter((r) => r.id != null).map((r) => Number(r.id)));
+    const deletedIds = [...loadedIdsRef.current].filter((id) => !currentIds.has(id));
+
+    const items = rows.map((row) => ({
+      id: row.id != null ? Number(row.id) : null,
+      thoiGianSua: row.thoiGianSua ?? null,
       idNVL: row.idNVL ?? null,
       tenNVL: row.tenNVL ?? "",
       idNVLChiTiet: row.idNVLChiTiet != null && row.idNVLChiTiet !== "" ? Number(row.idNVLChiTiet) : null,
@@ -775,8 +801,18 @@ const TaoPhieuDieuChinh = () => {
       idCtBBGN: row.idCtBBGN ?? null,
     }));
 
-    await phieuDieuChinhApi.saveChiTiet(phieuId, items, userInfo?.hoVaTen ?? userInfo?.tenDangNhap ?? null);
-  }, []);
+    try {
+      await phieuDieuChinhApi.saveChiTiet(phieuId, items, userInfo?.hoVaTen ?? userInfo?.tenDangNhap ?? null, deletedIds);
+    } catch (err: any) {
+      // 409: có dòng đã bị người khác sửa/xóa — báo rõ và tải lại phiếu để thấy số liệu mới nhất,
+      // thay vì ghi đè mất thay đổi của họ. Ném lại lỗi để luồng Lưu/Gửi dừng, không đổi trạng thái.
+      if (err?.response?.status === 409) {
+        message.error(err.response.data?.message || "Dữ liệu đã bị người khác thay đổi, vui lòng tải lại phiếu");
+        await initData();
+      }
+      throw err;
+    }
+  }, [initData]);
 
   const handleStatusChange = useCallback(async () => {
     try {

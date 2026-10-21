@@ -77,6 +77,10 @@ export interface PhieuDieuChinhChiTietDto {
 }
 
 export interface SavePhieuDieuChinhChiTietDto {
+  // Có id = dòng đã lưu (cập nhật tại chỗ); không có = dòng mới
+  id?: number | null;
+  // thoiGianSua lúc tải — BE dùng để phát hiện người khác đã sửa dòng này (409)
+  thoiGianSua?: string | null;
   idNVL?: number | null;
   tenNVL: string;
   idNVLChiTiet?: number | null;
@@ -115,17 +119,17 @@ export interface LGPhieuDieuChinhNvlDto {
 
 export const phieuDieuChinhApi = {
   getBBGN: (params: GetBBGNParams) =>
-    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/get-bbgn", { params }),
+    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/nguondulieu/bbgn", { params }),
 
   // Nguồn "Nội bộ - Xuất SX" — dữ liệu Nạp liệu lò cao (dbo.Sp_GetNVLNapLieuLoCao), cùng hình
   // dạng trả về với getBBGN (dùng chung PhieuDieuChinhBBGNDto).
   getNapLieuLoCao: (params: GetBBGNParams) =>
-    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/get-naplieulocao", { params }),
+    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/nguondulieu/nap-lieu-lo-cao", { params }),
 
   // Gộp cả 2 nguồn (BBGN + Nạp liệu lò cao) trong 1 lần gọi — mỗi dòng tự mang theo
   // loaiDieuChinh để FE phân vào đúng Tab.
   getNguon: (params: GetBBGNParams) =>
-    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/get-nguon", { params }),
+    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/nguondulieu", { params }),
 
   getChiTiet: (idPhieu: string) =>
     apiService.get<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/chi-tiet`),
@@ -133,44 +137,50 @@ export const phieuDieuChinhApi = {
   // Tải dữ liệu nguồn từ BBGN và insert thẳng vào DB cho phiếu đã lưu (giống luồng
   // "Tải dữ liệu" của Nạp liệu lò cao) — ghi đè toàn bộ chi tiết cũ của phiếu.
   syncTuBBGN: (idPhieu: string, nguoiThucHien?: string | null) =>
-    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/sync-tu-bbgn`, {
+    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/dong-bo/bbgn`, {
       nguoiThucHien: nguoiThucHien ?? null,
     }),
 
   // Tải dữ liệu nguồn "Nội bộ - Xuất SX" từ Nạp liệu lò cao và insert thẳng vào DB cho phiếu
   // đã lưu — song song với syncTuBBGN, chỉ ghi đè các dòng gắn LoaiDieuChinh = 2.
   syncTuNapLieuLoCao: (idPhieu: string, nguoiThucHien?: string | null) =>
-    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/sync-tu-naplieulocao`, {
+    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/dong-bo/nap-lieu-lo-cao`, {
       nguoiThucHien: nguoiThucHien ?? null,
     }),
 
   // Gộp cả 2 nguồn cho phiếu đã lưu — 1 lần gọi đồng bộ cả BBGN lẫn Nạp liệu lò cao.
   syncTuNguon: (idPhieu: string, nguoiThucHien?: string | null) =>
-    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/sync-tu-nguon`, {
+    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/dong-bo`, {
       nguoiThucHien: nguoiThucHien ?? null,
     }),
 
-  // Ghi đè toàn bộ chi tiết của phiếu (xóa cũ, ghi lại theo danh sách mới)
-  saveChiTiet: (idPhieu: string, items: SavePhieuDieuChinhChiTietDto[], nguoiSua?: string | null) =>
+  // Lưu chi tiết theo từng dòng (upsert theo id) + xóa mềm các dòng trong deletedIds.
+  saveChiTiet: (
+    idPhieu: string,
+    items: SavePhieuDieuChinhChiTietDto[],
+    nguoiSua?: string | null,
+    deletedIds: number[] = [],
+  ) =>
     apiService.put<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/chi-tiet`, {
       items,
+      deletedIds,
       nguoiSua: nguoiSua ?? null,
     }),
 
   // Tích/hủy tích xác nhận "Người điều chỉnh giao" cho 1 dòng chi tiết — lưu ngay xuống DB,
   // không cần chờ Lưu cả phiếu. Chỉ gọi với dòng đã có id thật (đã Lưu/đã sync BBGN).
   xacNhanGiao: (id: number, confirmed: boolean, idNguoiThucHien?: number | null) =>
-    apiService.put<PhieuDieuChinhChiTietDto>(`/api/PhieuDieuChinh/chi-tiet/xac-nhan-giao/${id}`, {
+    apiService.put<PhieuDieuChinhChiTietDto>(`/api/PhieuDieuChinh/chi-tiet/${id}/xac-nhan-giao`, {
       confirmed,
       idNguoiThucHien: idNguoiThucHien ?? null,
     }),
 
   // Danh mục NVL (LG_PhieuDieuChinh_NVL) — CRUD
   getNvlList: (onlyActive = true) =>
-    apiService.get<LGPhieuDieuChinhNvlDto[]>("/api/PhieuDieuChinh/nvl", { params: { onlyActive } }),
+    apiService.get<LGPhieuDieuChinhNvlDto[]>("/api/PhieuDieuChinh/danh-muc-nvl", { params: { onlyActive } }),
   createNvl: (tenNVL: string) =>
-    apiService.post<LGPhieuDieuChinhNvlDto>("/api/PhieuDieuChinh/nvl", { tenNVL }),
+    apiService.post<LGPhieuDieuChinhNvlDto>("/api/PhieuDieuChinh/danh-muc-nvl", { tenNVL }),
   updateNvl: (id: number, tenNVL: string, isActive: boolean) =>
-    apiService.put<LGPhieuDieuChinhNvlDto>(`/api/PhieuDieuChinh/nvl/${id}`, { tenNVL, isActive }),
-  deleteNvl: (id: number) => apiService.delete(`/api/PhieuDieuChinh/nvl/${id}`),
+    apiService.put<LGPhieuDieuChinhNvlDto>(`/api/PhieuDieuChinh/danh-muc-nvl/${id}`, { tenNVL, isActive }),
+  deleteNvl: (id: number) => apiService.delete(`/api/PhieuDieuChinh/danh-muc-nvl/${id}`),
 };
