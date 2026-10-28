@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { PhieuApi } from "../services/PhieuApi";
 import type { SearchPhieuRequest, SearchPhieuResponseModel } from "../models/Phieu";
 import type { PhieuFilterValues } from "../components/PhieuFilterCard";
 import { getThongTinUser } from "../utils/constants/GetThongTinLocalStore";
 import { isAdminUser } from "../utils/helpers/checkAdminRole";
+
+// Keyed by React Router location.key — restore khi Back, fresh khi navigate forward
+const _requestCache = new Map<string, SearchPhieuRequest>();
 
 interface PagedResponse<T> {
   data?: T[];
@@ -26,6 +30,9 @@ export interface UsePhieuSearchListOptions {
   autoLoad?: boolean;
   isViecdentoi?: boolean;
   transformFilters?: (filters: PhieuFilterValues) => Partial<SearchPhieuRequest>;
+  /** Giữ lại filter khi Back từ trang chi tiết.
+   *  true → tự lấy key từ location.key; string → dùng key tường minh */
+  persistKey?: string | true;
 }
 
 const normalizeNumber = (value: string | number | undefined): number | null => {
@@ -51,7 +58,10 @@ export const usePhieuSearchList = ({
   autoLoad = true,
   isViecdentoi = false,
   transformFilters = defaultTransform,
+  persistKey,
 }: UsePhieuSearchListOptions) => {
+  const location = useLocation();
+  const locationKey = typeof persistKey === "string" ? persistKey : location.key;
   // Kiểm tra user có phải PKH không (tenNgan = "P.KH" hoặc iD_PhongBan = 70)
   const isPKH = useMemo(() => {
     const user = getThongTinUser();
@@ -148,30 +158,41 @@ export const usePhieuSearchList = ({
       const request = buildRequest(1, pagination.pageSize, {
         ...transformed,
       });
+      if (persistKey) _requestCache.set(locationKey, request);
       fetchData(request);
     },
-    [buildRequest, fetchData, pagination.pageSize, transformFilters]
+    [buildRequest, fetchData, locationKey, pagination.pageSize, persistKey, transformFilters]
   );
 
   const handleClearFilter = useCallback(() => {
+    if (persistKey) _requestCache.delete(locationKey);
     const request = buildRequest(1, pagination.pageSize);
     fetchData(request);
-  }, [buildRequest, fetchData, pagination.pageSize]);
+  }, [buildRequest, fetchData, locationKey, pagination.pageSize, persistKey]);
 
   const onPageChange = useCallback(
     (page: number, pageSize: number) => {
       const base = currentFilter ?? buildRequest(page, pageSize);
-      fetchData({ ...base, page, pageSize });
+      const request = { ...base, page, pageSize };
+      if (persistKey) _requestCache.set(locationKey, request);
+      fetchData(request);
     },
-    [buildRequest, currentFilter, fetchData]
+    [buildRequest, currentFilter, fetchData, locationKey, persistKey]
   );
 
   useEffect(() => {
     if (autoLoad) {
+      if (persistKey) {
+        const cached = _requestCache.get(locationKey);
+        if (cached) {
+          fetchData(cached);
+          return;
+        }
+      }
       const initialRequest = buildRequest(1, initialPageSize);
       fetchData(initialRequest);
     }
-  }, [autoLoad, buildRequest, fetchData, initialPageSize]);
+  }, [autoLoad, buildRequest, fetchData, initialPageSize, locationKey, persistKey]);
 
   return {
     data,

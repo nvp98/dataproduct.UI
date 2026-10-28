@@ -2,9 +2,11 @@ import HRC1_BB_Sanluongphoi from "../../../utils/BM_config/HRC1_BB_Sanluongphoi.
 import {
   Button,
   Card,
+  Modal,
   Space,
   Table,
   Tag,
+  message,
 } from "antd";
 import {
   EyeOutlined,
@@ -15,9 +17,12 @@ import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { usePhieuSearchList } from "../../../hooks/usePhieuSearchList";
+import useRowSelection from "../../../hooks/useRowSelection";
 import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import { sanLuongPhoiApi } from "../../../services/BMDucCTDApi";
 import { BmQuyenXlApi } from "../../../services/BmQuyenXlApi";
+import { PhieuApi } from "../../../services/PhieuApi";
+import { TrangThaiPhieuConst } from "../../../utils/constants/TrangThaiPhieuConstant";
 import { isAdminUser } from "../../../utils/helpers/checkAdminRole";
 
 const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
@@ -27,6 +32,8 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
   const userObj = userStr ? JSON.parse(userStr) : {};
   const [currentFilter, setCurrentFilter] = useState<any>({});
   const [canCreatePhieu, setCanCreatePhieu] = useState(false);
+  const [canChotPhieu, setCanChotPhieu] = useState(false);
+  const [chotLoading, setChotLoading] = useState(false);
 
   useEffect(() => {
     const loadPermission = async () => {
@@ -36,6 +43,7 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
 
         if (isAdminUser(userInfo)) {
           setCanCreatePhieu(true);
+          setCanChotPhieu(true);
           return;
         }
 
@@ -49,25 +57,29 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
         const idTaiKhoan = typeof raw === "number" ? raw : Number(raw);
         if (!Number.isFinite(idTaiKhoan) || idTaiKhoan <= 0) {
           setCanCreatePhieu(false);
+          setCanChotPhieu(false);
           return;
         }
 
         const permissions = await BmQuyenXlApi.getMenuPermissions(idTaiKhoan);
         const processingSet = new Set(permissions?.processingForms ?? []);
+        const chotSet = new Set(permissions?.chotPhieuForms ?? []);
         setCanCreatePhieu(processingSet.has(config.code as string));
+        setCanChotPhieu(chotSet.has(config.code as string));
       } catch {
         setCanCreatePhieu(false);
+        setCanChotPhieu(false);
       }
     };
 
     loadPermission();
   }, [config.code, userObj]);
 
+  const handleFilterWithCapture = (filters: any) => {
+    setCurrentFilter(filters);
+    handleFilter(filters);
+  };
 
-  const handleFilterWithCapture = (filters:any) => {
-  setCurrentFilter(filters); // lưu lại filter
-  handleFilter(filters);      // vẫn gọi tìm kiếm bình thường
-};
   const fixedFilters = useMemo(
     () => ({ usercode: userObj?.maNV || "" }),
     [userObj?.maNV]
@@ -80,10 +92,20 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
     handleFilter,
     handleClearFilter,
     onPageChange,
+    refetch,
   } = usePhieuSearchList({
     maBm: config.code as string,
     fixedFilters,
+    persistKey: true,
   });
+
+  const { selectedRowKeys, setSelectedRowKeys, checkboxColumn } =
+    useRowSelection(data as TableRecord[]);
+
+  type TableRecord = SearchPhieuResponseModel & {
+    pheDuyet?: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+  };
 
   const statusConfig: Record<string, { color: string; text: string }> = {
     0: { color: "purple", text: "Đang lưu" },
@@ -95,12 +117,34 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
     6: { color: "gray", text: "Đang phê duyệt" },
   };
 
-  type TableRecord = SearchPhieuResponseModel & {
-    pheDuyet?: Array<Record<string, unknown>>;
-    [key: string]: unknown;
+  const runBatchAction = (status: number, action: "chốt" | "hủy chốt") => {
+    if (selectedRowKeys.length === 0) return;
+    Modal.confirm({
+      title: `Xác nhận ${action} phiếu`,
+      content: `Bạn có chắc muốn ${action} ${selectedRowKeys.length} phiếu đã chọn?`,
+      okText: action === "chốt" ? "Chốt" : "Hủy chốt",
+      okType: action === "chốt" ? "danger" : "primary",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          setChotLoading(true);
+          await PhieuApi.chotNhieuPhieu(selectedRowKeys, status);
+          message.success(
+            `${action === "chốt" ? "Chốt" : "Hủy chốt"} ${selectedRowKeys.length} phiếu thành công`,
+          );
+          setSelectedRowKeys([]);
+          refetch();
+        } catch {
+          message.error(`${action === "chốt" ? "Chốt" : "Hủy chốt"} phiếu thất bại. Vui lòng thử lại.`);
+        } finally {
+          setChotLoading(false);
+        }
+      },
+    });
   };
 
   const columns = [
+    checkboxColumn,
     {
       title: <b>Số Phiếu</b>,
       dataIndex: "soPhieu",
@@ -109,17 +153,12 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
         <b
           style={{ color: "#1976d2", cursor: "pointer" }}
           onClick={() => {
-            // Nếu là việc đến tôi, luôn mở trang chi tiết
             if (type === "viecdentoi") {
               return navigate(`/chitietbienbansanluongphoi/${record.idphieu}`);
             }
-
-            // Nếu phiếu đang ở trạng thái Đang lưu (0), mở trang chỉnh sửa
             if (record.tinhTrang === 0) {
               return navigate(`/taophieubienbansanluongphoi/${record.idphieu}`);
             }
-
-            // Các trạng thái khác, mở trang chi tiết
             return navigate(`/chitietbienbansanluongphoi/${record.idphieu}`);
           }}
         >
@@ -141,9 +180,7 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
       key: "ca",
       width: 150,
       ellipsis: true,
-      render: (value: number) => {
-        return value === 1 ? "Ca Ngày" : "Ca Đêm";
-      },
+      render: (value: number) => (value === 1 ? "Ca Ngày" : "Ca Đêm"),
     },
     {
       title: "Kíp",
@@ -196,7 +233,6 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
     },
   ];
 
-  // Config cho các filter fields theo model phiếu
   const filterFieldsConfig: FilterFieldConfig[] = [
     {
       key: "soPhieu",
@@ -231,65 +267,47 @@ const BienBanSanLuongPhoi = ({ type }: { type?: string }) => {
         { label: "Kíp C", value: "C" },
       ],
     },
-    // {
-    //   key: "mayduc",
-    //   label: "Máy đúc",
-    //   type: "select",
-    //   placeholder: "Chọn máy đúc",
-    //   options: [
-    //     { label: "Đúc 1", value: 1 },
-    //     { label: "Đúc 2", value: 2 },
-    //     { label: "Đúc 3", value: 3 },
-    //   ],
-    // },
   ];
-const handleExportExcel = async () => {
-  try {
-    const fromDate = currentFilter?.ngaySXFrom;
-    const toDate = currentFilter?.ngaySXTo;
 
-    const res = await sanLuongPhoiApi.exportExcelSanLuongPhoi({
-      fromDate,
-      toDate,
-    });
+  const handleExportExcel = async () => {
+    try {
+      const fromDate = currentFilter?.ngaySXFrom;
+      const toDate = currentFilter?.ngaySXTo;
 
-    const blob = new Blob([res as unknown as BlobPart], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
+      const res = await sanLuongPhoiApi.exportExcelSanLuongPhoi({ fromDate, toDate });
+      const blob = new Blob([res as unknown as BlobPart], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `TongHopSanLuongPhoi_${fromDate || ""}_${toDate || ""}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export Excel lỗi:", error);
+    }
+  };
 
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `TongHopSanLuongPhoi_${fromDate || ""}_${toDate || ""}.xlsx`;
-
-    document.body.appendChild(a);
-    a.click();
-
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Export Excel lỗi:", error);
-  }
-};
   return (
     <div>
       <PhieuFilterCard
         title={config.title}
         onFilter={handleFilterWithCapture}
-         onClearFilter={() => {
-        setCurrentFilter({});
-        handleClearFilter();
-      }}
+        onClearFilter={() => {
+          setCurrentFilter({});
+          handleClearFilter();
+        }}
         filterFields={filterFieldsConfig}
         mergeFilters={{ usercode: userObj?.maNV || "" }}
+        storageKey={true}
       />
       <Card
         extra={
           <Space>
-            <Button onClick={handleExportExcel}>
-              Xuất Excel
-            </Button>
+            <Button onClick={handleExportExcel}>Xuất Excel</Button>
             {type !== "viecdentoi" && canCreatePhieu && (
               <Button
                 type="primary"
@@ -300,9 +318,29 @@ const handleExportExcel = async () => {
               </Button>
             )}
           </Space>
-
         }
       >
+        {canChotPhieu && (
+          <div style={{ marginBottom: 12, display: "flex", gap: 12 }}>
+            <Button
+              type="primary"
+              disabled={selectedRowKeys.length === 0}
+              loading={chotLoading}
+              onClick={() => runBatchAction(TrangThaiPhieuConst.DaChot, "chốt")}
+            >
+              Chốt phiếu ({selectedRowKeys.length})
+            </Button>
+            <Button
+              type="primary"
+              danger
+              disabled={selectedRowKeys.length === 0}
+              loading={chotLoading}
+              onClick={() => runBatchAction(TrangThaiPhieuConst.HoanThanh, "hủy chốt")}
+            >
+              Hủy chốt ({selectedRowKeys.length})
+            </Button>
+          </div>
+        )}
         <Table<TableRecord>
           columns={columns}
           dataSource={data as TableRecord[]}
@@ -315,12 +353,19 @@ const handleExportExcel = async () => {
             showQuickJumper: true,
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} của ${total} phiếu`,
-            onChange: onPageChange,
+            onChange: (page, pageSize) => {
+              setSelectedRowKeys([]);
+              onPageChange(page, pageSize);
+            },
           }}
           scroll={{ x: 1100 }}
           summary={() => (
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={9} align="right">
+              <Table.Summary.Cell
+                index={0}
+                colSpan={type !== "viecdentoi" ? 10 : 9}
+                align="right"
+              >
                 <span style={{ fontWeight: 500 }}>
                   Tổng: {pagination.total} Phiếu
                 </span>
