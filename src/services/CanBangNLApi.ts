@@ -13,6 +13,7 @@ export type CanBangNLFilter = {
   ca?: number;     // 1: Ca ngày, 2: Ca đêm, undefined: cả ngày
   coAm: boolean;   // true: khối lượng ẩm, false: khô
   idLoCao?: number; // undefined: tất cả lò cao
+  includeTonSilo?: boolean; // true: hiển thị rule Tồn silo
 };
 
 export type CanBangNLTrendParams = {

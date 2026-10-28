@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Col, DatePicker, Form, Row, Select, Space, Statistic, Table, Tag, Tooltip, Typography, message } from "antd";
+import { Alert, Button, Card, Col, DatePicker, Form, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { LineChartOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
@@ -25,7 +25,7 @@ const CO_AM_OPTIONS = [
 ];
 const LO_CAO_OPTIONS = [1, 2, 3, 4, 5, 6].map((v) => ({ label: `Lò Cao ${v}`, value: v }));
 
-type FormValues = { dateRange: [Dayjs, Dayjs]; ca: number; coAm: boolean; idLoCao?: number };
+type FormValues = { dateRange: [Dayjs, Dayjs]; ca: number; coAm: boolean; idLoCao?: number; includeTonSilo: boolean };
 
 type RowType = "item" | "total" | "loss" | "rate";
 
@@ -150,6 +150,7 @@ const CanBangNL = () => {
       ca: v.ca || undefined,
       coAm: v.coAm ?? true,
       idLoCao: v.idLoCao || undefined,
+      includeTonSilo: v.includeTonSilo ?? false,
     };
     setLoading(true);
     try {
@@ -317,7 +318,7 @@ const CanBangNL = () => {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ dateRange: [dayjs(), dayjs()], ca: 1, coAm: true }}
+          initialValues={{ dateRange: [dayjs(), dayjs()], ca: 1, coAm: true, includeTonSilo: false }}
           onFinish={fetchData}
         >
           <Row gutter={16} align="bottom">
@@ -336,12 +337,17 @@ const CanBangNL = () => {
                 <Select options={CO_AM_OPTIONS} />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} md={5}>
+            <Col xs={24} sm={12} md={4}>
               <Form.Item label="Lò cao" name="idLoCao">
                 <Select options={LO_CAO_OPTIONS} allowClear placeholder="Tất cả" />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
+            <Col xs={24} sm={12} md={3}>
+              <Form.Item label="Tồn silo" name="includeTonSilo" valuePropName="checked">
+                <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={5}>
               <Form.Item>
                 <Space>
                   <Button type="primary" htmlType="submit" icon={<SearchOutlined />} loading={loading}>
