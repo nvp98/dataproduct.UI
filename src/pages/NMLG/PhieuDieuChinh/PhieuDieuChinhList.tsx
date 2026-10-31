@@ -13,8 +13,11 @@ import type { SearchPhieuResponseModel } from "../../../models/Phieu";
 import useRowSelection from "../../../hooks/useRowSelection";
 import useCheckPhieu from "../../../hooks/useCheckPhieu";
 
-const PhieuDieuChinhList = ({ type }: { type?: string }) => {
-  const config = LG_PhieuDieuChinh as any;
+// config: cấu hình biểu mẫu (mặc định phiếu NM.LG); phiếu theo phòng ban (vd NMTKVV) truyền config riêng.
+const PhieuDieuChinhList = ({ type, config: configProp }: { type?: string; config?: any }) => {
+  const config = configProp ?? (LG_PhieuDieuChinh as any);
+  const taoPath: string = config.taoPath ?? "/taophieudieuchinh";
+  const chiTietPath: string = config.chiTietPath ?? "/chitietphieudieuchinh";
   const navigate = useNavigate();
   const userInfoStr = localStorage.getItem("userinfo");
   const userInfoObj = userInfoStr ? JSON.parse(userInfoStr) : {};
@@ -66,12 +69,12 @@ const PhieuDieuChinhList = ({ type }: { type?: string }) => {
 
   const goToDetail = (record: TableRecord) => {
     if (type === "viecdentoi" || type === "xemphieu") {
-      return navigate(`/chitietphieudieuchinh/${record.idphieu}`);
+      return navigate(`${chiTietPath}/${record.idphieu}`);
     }
     if (record.tinhTrang === 0 || record.tinhTrang === 3 || record.tinhTrang === 7) {
-      return navigate(`/taophieudieuchinh/${record.idphieu}`);
+      return navigate(`${taoPath}/${record.idphieu}`);
     }
-    return navigate(`/chitietphieudieuchinh/${record.idphieu}`);
+    return navigate(`${chiTietPath}/${record.idphieu}`);
   };
 
   const columns = [
@@ -88,26 +91,18 @@ const PhieuDieuChinhList = ({ type }: { type?: string }) => {
       width: 250,
     },
     {
-      title: "Ngày",
+      title: "Quy trình",
+      dataIndex: "maBm",
+      key: "maBm",
+      width: 220,
+      ellipsis: true,
+    },
+    {
+      title: "Ngày sản xuất",
       dataIndex: "ngaySX",
       key: "ngaySX",
-      width: 150,
+      width: 190,
       render: (value: string) => (value ? dayjs(value).format("DD/MM/YYYY") : "-"),
-    },
-    {
-      title: "Ca",
-      dataIndex: "ca",
-      key: "ca",
-      width: 90,
-      align: "center" as const,
-      render: (value: number | string) => (value ? `Ca ${value}` : "-"),
-    },
-    {
-      title: "Kíp",
-      dataIndex: "kip",
-      key: "kip",
-      width: 90,
-      ellipsis: true,
     },
     {
       title: "Trạng thái",
@@ -163,7 +158,7 @@ const PhieuDieuChinhList = ({ type }: { type?: string }) => {
       width: 90,
       render: (_: unknown, record: TableRecord) => (
         <Space>
-          <Button type="text" icon={<EyeOutlined />} onClick={() => navigate(`/chitietphieudieuchinh/${record.idphieu}`)} />
+          <Button type="text" icon={<EyeOutlined />} onClick={() => navigate(`${chiTietPath}/${record.idphieu}`)} />
         </Space>
       ),
     },
@@ -178,20 +173,9 @@ const PhieuDieuChinhList = ({ type }: { type?: string }) => {
     },
     {
       key: "ngaySX",
-      label: "Ngày",
+      label: "Ngày sản xuất",
       type: "dateRange",
       placeholder: "Khoảng ngày",
-    },
-    {
-      key: "kip",
-      label: "Kíp",
-      type: "select",
-      placeholder: "Chọn kíp",
-      options: [
-        { label: "Kíp A", value: "A" },
-        { label: "Kíp B", value: "B" },
-        { label: "Kíp C", value: "C" },
-      ],
     },
   ];
 
@@ -211,7 +195,7 @@ const PhieuDieuChinhList = ({ type }: { type?: string }) => {
       <Card
         extra={
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/taophieudieuchinh")}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate(taoPath)}>
               Tạo phiếu mới
             </Button>
           </Space>
@@ -231,7 +215,7 @@ const PhieuDieuChinhList = ({ type }: { type?: string }) => {
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} phiếu`,
             onChange: onPageChange,
           }}
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1100 }}
           summary={() => (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={7} align="right">

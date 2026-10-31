@@ -1,5 +1,6 @@
 import { SIDEBAR_CONST } from "../constants/sidebarConstant";
 import { BM_CONFIG } from "./BieuMauConst";
+import { PHIEU_DIEU_CHINH_NM } from "./phieuDieuChinhNM";
 
 export interface KhuVucQuyenItem {
   maKhuVuc: string;
@@ -196,10 +197,16 @@ export const bmQuyenConfig = {
       nhom: "NM.NL",
     },
     {
-      maBm: BM_CONFIG.NMLG.NMLG_BM_PhieuDieuChinh,
+      maBm: BM_CONFIG.PCN.NMLG_BM_PhieuDieuChinh,
       tenBm: "Phiếu điều chỉnh số liệu NM.LG",
-      nhom: "NM.NMLG",
+      nhom: "P.CN",
     },
+    // Phiếu điều chỉnh theo phòng ban (NM.TKVV, NM.NL, NM.LC...) — danh sách ở phieuDieuChinhNM.ts
+    ...PHIEU_DIEU_CHINH_NM.map((nm) => ({
+      maBm: nm.maBm,
+      tenBm: `Phiếu điều chỉnh số liệu ${nm.ten}`,
+      nhom: "P.CN",
+    })),
     {
       maBm: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,
       tenBm: "Biên bản tồn silo lò cao",

@@ -1,7 +1,9 @@
 {
   "code": "NMLG_BM_PhieuDieuChinh",
-  "title": "PHIẾU ĐIỀU CHỈNH SỐ LIỆU NM.LG",
+  "title": "PHIẾU ĐIỀU CHỈNH SỐ LIỆU",
   "prefix": "NMLG_PDC",
+  "ID_PhongBan": 63,
+  "coNoiBo": true,
   "headerInfo": {
     "company": "HÒA PHÁT DUNG QUẤT",
     "subCompany": "CÔNG TY CỔ PHẦN THÉP"
@@ -19,27 +21,6 @@
       "type": "date",
       "key": "NgaySX",
       "required": true
-    },
-    {
-      "label": "Ca",
-      "type": "select",
-      "key": "ca",
-      "required": true,
-      "options": [
-        { "label": "Ca 1", "value": 1 },
-        { "label": "Ca 2", "value": 2 }
-      ]
-    },
-    {
-      "label": "Kíp",
-      "type": "select",
-      "key": "kip",
-      "required": true,
-      "options": [
-        { "label": "Kíp A", "value": "A" },
-        { "label": "Kíp B", "value": "B" },
-        { "label": "Kíp C", "value": "C" }
-      ]
     }
   ],
 
@@ -56,7 +37,7 @@
         { "title": "Thứ tự", "dataIndex": "thuTu", "width": 60, "readonly": true, "type": "number", "fixed": "left" },
         { "title": "Loại điều chỉnh", "dataIndex": "loaiDieuChinh", "width": 105 , "type": "select", "fixed": "left"
         , "options": [
-          { "label": "Nhập - Xuất", "value": 1 },
+          { "label": "Nhập", "value": 1 },
           { "label": "Nội bộ - Xuất SX", "value": 2 }
         ]},
          { "title": "Loại số điều chỉnh", "dataIndex": "loaiSoDieuChinh", "width": 110 , "type": "select", "fixed": "left"
@@ -65,10 +46,10 @@
           { "label": "Sau ẩm", "value": 2 }
         ]},
         { "title": "Tên NVL", "dataIndex": "tenNVL", "width": 150, "isLabel": true, "fixed": "left" },
-        { "title": "Tên NVL chi tiết", "dataIndex": "idNVLChiTiet", "width": 160, "type": "select" },
         { "title": "ID Nhóm NVL", "dataIndex": "idNhomNVL", "width": 130, "type": "number" },
         { "title": "ĐVT", "dataIndex": "dvt", "width": 80},
         { "title": "Mã lô", "dataIndex": "maLo", "width": 120, "isLabel": true },
+        { "title": "Ca", "dataIndex": "idCa", "width": 90 },
         { "title": "Độ ẩm (%)", "dataIndex": "doAm", "width": 70, "type": "float" },
         {
           "title": "Bên xuất",
@@ -80,7 +61,7 @@
           ]
         },
         {
-          "title": "Bên nhập",
+          "title": "Bên nhận",
           "children": [
             { "title": "Phòng ban", "dataIndex": "phongBanNhap", "width": 160, "isLabel": true },
             { "title": "Xưởng", "dataIndex": "xuongNhap", "width": 160, "isLabel": true },
@@ -88,7 +69,6 @@
             { "title": "KL quy khô", "dataIndex": "khoiLuongQuyKhoNhap", "width": 100, "type": "float", "isLabel": true }
           ]
         },
-        { "title": "Người điều chỉnh giao", "dataIndex": "nguoiDieuChinhGiao", "width": 170 },
         { "title": "Người điều chỉnh nhận", "dataIndex": "nguoiDieuChinhNhan", "width": 170 },   
         { "title": "Ghi chú", "dataIndex": "ghiChu", "width": 150 },
         { "title": "Vị trí", "dataIndex": "viTri", "width": 100 },

@@ -1,19 +1,20 @@
 import apiService from "./ApiService";
 
+// Nguồn Nạp liệu lò cao ("Nội bộ - Xuất SX"), chia sẵn theo lò cao
 export interface PhieuDieuChinhBBGNDto {
-  // 1 = từ SP_Get_BBGN (Nhập - Xuất), 2 = từ Sp_GetNVLNapLieuLoCao (Nội bộ - Xuất SX)
+  // 2 = từ Nạp liệu lò cao (Nội bộ - Xuất SX)
   loaiDieuChinh: number;
   idCtBBGN: number;
-  kip: string | null;
-  ca: string | null;
+  // ID lò cao (Tbl_LoCao) tra từ xưởng nhận
+  idLoCao: number | null;
+  // Ca của dòng nguồn (1/2)
+  idCa: number | null;
   thoiGianXuLyBG: string | null;
-  // Bên giao — tên Xưởng/Phòng ban (join sẵn trong SP_Get_BBGN)
   idXuongBG: number | null;
   tenXuongGiao: string | null;
   idPhongBanGiao: number | null;
   tenPhongBanGiao: string | null;
   tenNganPhongBanGiao: string | null;
-  // Bên nhận — tên Xưởng/Phòng ban
   idXuongBN: number | null;
   tenXuongNhan: string | null;
   idPhongBanNhan: number | null;
@@ -30,13 +31,90 @@ export interface PhieuDieuChinhBBGNDto {
   ghiChu: string | null;
 }
 
-export interface GetBBGNParams {
+export interface GetNguonParams {
   ngay: string; // yyyy-MM-dd
-  ca?: number;
-  kip?: string;
+  // Phòng ban của phiếu (từ file cấu hình biểu mẫu) — giới hạn lò cao/xưởng theo LG_PDC_Scope_PhongBan
+  idPhongBan?: number;
+  // Phiếu đã lưu: đọc các dòng phiếu đang giữ trong database (bản chụp ghi lúc "Tải dữ liệu nguồn").
+  // Bỏ trống (phiếu mới chưa lưu): xem trước thẳng từ nguồn BBGN, chưa ghi gì.
+  idPhieu?: string;
 }
 
-// Chi tiết Phiếu điều chỉnh — ánh xạ bảng LG_PhieuDieuChinh_ChiTiet
+// Kết quả "Tải dữ liệu nguồn" của phiếu đã lưu: số dòng Nhập/Xuất đã ghi vào database cho phiếu
+export interface DongBoBBGNResult {
+  soDongNhap: number;
+  soDongXuat: number;
+  /** Dòng bỏ qua vì đang do phiếu khác (còn hiệu lực) của cùng bên giữ */
+  soDongBoQua: number;
+}
+
+// Ca của dòng: 1 = ca ngày, 2 = ca đêm
+export const tenCa = (idCa: number | string | null | undefined): string =>
+  String(idCa) === "1" ? "Ca ngày" : String(idCa) === "2" ? "Ca đêm" : "—";
+
+// Loại điều chỉnh của phần Nhập / Xuất, cùng giá trị LoaiDieuChinh ở backend (2 = Nội bộ):
+// 1 = Nhập (xưởng nhận thuộc phòng ban), 3 = Xuất (xưởng giao thuộc phòng ban)
+export const LOAI_BBGN_NHAP = 1;
+export const LOAI_BBGN_XUAT = 3;
+export type LoaiBBGN = typeof LOAI_BBGN_NHAP | typeof LOAI_BBGN_XUAT;
+
+// 1 dòng BBGN ở phần Nhập/Xuất — kèm số điều chỉnh của CẢ 2 bên (số của bên kia đọc từ dòng của bên kia, theo idCtBBGN).
+// Độ ẩm lấy từ BBGN, không nhập tay.
+export interface PhieuDieuChinhBBGNLineDto {
+  idCtBBGN: number;
+  idVatTu: number | null;
+  tenVatTu: string | null;
+  maLo: string | null;
+  idCa: number | null;
+  thoiGianXuLyBG: string | null;
+  idXuongGiao: number | null;
+  tenXuongGiao: string | null;
+  tenPhongBanGiao: string | null;
+  idXuongNhan: number | null;
+  tenXuongNhan: string | null;
+  tenPhongBanNhan: string | null;
+  // Id tab chứa dòng = xưởng của bên đang xem (Nhập: xưởng nhận, Xuất: xưởng giao)
+  idTab: number | null;
+  doAm: number | null;
+  loaiSoDieuChinh: number | null;
+  khoiLuongXuat: number | null;
+  klQuyKhoXuat: number | null;
+  ghiChuXuat: string | null;
+  nguoiXuat: number | null;
+  thoiGianXuat: string | null;
+  khoiLuongNhap: number | null;
+  klQuyKhoNhap: number | null;
+  ghiChuNhap: string | null;
+  nguoiNhap: number | null;
+  thoiGianNhap: string | null;
+}
+
+export interface GetBBGNParams {
+  ngay: string; // yyyy-MM-dd
+  // Phòng ban của phiếu (từ file cấu hình biểu mẫu) — giới hạn phạm vi xưởng theo LG_PDC_Scope_PhongBan
+  idPhongBan?: number;
+}
+
+// Số điều chỉnh của 1 bên cho 1 dòng BBGN. KL quy khô do BE tự tính từ khối lượng + loại số + độ ẩm.
+// Mỗi phiếu có dòng riêng trong LG_PhieuDieuChinh_ChiTiet (Nhập = loại 1, Xuất = loại 3) nên kèm thông tin mô tả dòng BBGN.
+export interface SavePhieuDieuChinhBBGNDto {
+  idCtBBGN: number;
+  idVatTu?: number | null;
+  tenVatTu?: string | null;
+  maLo?: string | null;
+  tenXuongGiao?: string | null;
+  tenPhongBanGiao?: string | null;
+  tenXuongNhan?: string | null;
+  tenPhongBanNhan?: string | null;
+  loaiSoDieuChinh?: number | null;
+  khoiLuong?: number | null;
+  doAm?: number | null;
+  ghiChu?: string | null;
+  // Chỉ để ghi vào thông báo lỗi cho dễ nhận ra dòng
+  moTa?: string | null;
+}
+
+// Chi tiết Phiếu điều chỉnh (phần Nội bộ - Xuất SX) — ánh xạ bảng LG_PhieuDieuChinh_ChiTiet
 export interface PhieuDieuChinhChiTietDto {
   id: number;
   idPhieu: string;
@@ -61,19 +139,21 @@ export interface PhieuDieuChinhChiTietDto {
   viTri: string | null;
   phanLoai: string | null;
   ghiChu: string | null;
-  nguoiDieuChinhGiao: number | null;
-  thoiGianDieuChinhGiao: string | null;
   nguoiDieuChinhNhan: number | null;
   thoiGianDieuChinhNhan: string | null;
-  // 0 = chưa xác nhận (còn sửa được), 1 = đã xác nhận (khóa dòng)
-  trangThai: number;
   nguoiTao: string | null;
   thoiGianTao: string;
   nguoiSua: string | null;
   thoiGianSua: string | null;
-  // Khóa liên kết ngược tới dòng BBGN nguồn — dùng để khớp lại dòng cũ khi bấm "Tải dữ liệu"
-  // lần sau, tránh mất số liệu điều chỉnh tay đã nhập cho dòng này (null nếu dòng nhập tay).
+  // Khóa liên kết ngược tới dòng nguồn — dùng để khớp lại dòng cũ khi bấm "Tải dữ liệu" lần sau,
+  // tránh mất số liệu điều chỉnh tay đã nhập cho dòng này (null nếu dòng nhập tay).
   idCtBBGN: number | null;
+  // ID lò cao của dòng — dùng chia dòng vào các tab lò cao
+  idLoCao: number | null;
+  // Ca của dòng (1/2)
+  idCa: number | null;
+  // Phòng ban của phiếu (từ file cấu hình biểu mẫu)
+  idPhongBan: number | null;
 }
 
 export interface SavePhieuDieuChinhChiTietDto {
@@ -102,56 +182,82 @@ export interface SavePhieuDieuChinhChiTietDto {
   viTri?: string | null;
   phanLoai?: string | null;
   ghiChu?: string | null;
-  nguoiDieuChinhGiao?: number | null;
-  thoiGianDieuChinhGiao?: string | null;
   nguoiDieuChinhNhan?: number | null;
   thoiGianDieuChinhNhan?: string | null;
-  trangThai?: number | null;
   idCtBBGN?: number | null;
+  idLoCao?: number | null;
+  idCa?: number | null;
+  // Phòng ban của phiếu (từ file cấu hình biểu mẫu)
+  idPhongBan?: number | null;
 }
 
-// Danh mục NVL cho Phiếu điều chỉnh — ánh xạ bảng LG_PhieuDieuChinh_NVL (PRODUCT_FORM)
-export interface LGPhieuDieuChinhNvlDto {
+// Lò cao hiển thị thành tab — chỉ lò còn trong cả Tbl_LoCao lẫn LG_PB_Map_Xuong_LoCao
+
+// Xưởng của 1 phòng ban — mỗi xưởng 1 tab trong phiếu theo phòng ban
+export interface PhieuDieuChinhXuongDto {
   id: number;
-  tenNVL: string;
-  isActive: boolean;
+  ten: string;
 }
 
 export const phieuDieuChinhApi = {
-  getBBGN: (params: GetBBGNParams) =>
-    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/nguondulieu/bbgn", { params }),
+  // ─── Danh mục ───────────────────────────────────────────────────────────
+  getDanhMucXuong: (idPhongBan: number) =>
+    apiService.get<PhieuDieuChinhXuongDto[]>("/api/PhieuDieuChinh/danh-muc-xuong", { params: { idPhongBan } }),
 
-  // Nguồn "Nội bộ - Xuất SX" — dữ liệu Nạp liệu lò cao (dbo.Sp_GetNVLNapLieuLoCao), cùng hình
-  // dạng trả về với getBBGN (dùng chung PhieuDieuChinhBBGNDto).
-  getNapLieuLoCao: (params: GetBBGNParams) =>
+  // ─── Nhập / Xuất từ BBGN ────────────────────────────────────────────────
+  // Các dòng BBGN của các xưởng lò cao theo Ngày/Ca/Kíp (loai = 1 Nhập | 3 Xuất), kèm số điều chỉnh của cả 2 bên.
+  getBBGN: (loai: LoaiBBGN, params: GetBBGNParams) =>
+    apiService.get<PhieuDieuChinhBBGNLineDto[]>(`/api/PhieuDieuChinh/bbgn/${loai}`, { params }),
+
+  // "Tải dữ liệu nguồn" của phiếu ĐÃ LƯU: ghi các dòng BBGN Nhập/Xuất vào database cho phiếu. Chạy lại thì thêm dòng mới,
+  // làm mới mô tả và giữ nguyên số đã điều chỉnh.
+  dongBoBBGN: (idPhieu: string, body: { idPhongBan: number; ngay?: string; idNguoiThucHien?: number | null }) =>
+    apiService.post<DongBoBBGNResult>(`/api/PhieuDieuChinh/bbgn/dong-bo/${idPhieu}`, body),
+
+  // Lưu số điều chỉnh của 1 bên vào phiếu. Bên kia đã nhập mà khối lượng khác → BE trả 400 (kèm message), không lưu.
+  // Bên `loai` xóa số điều chỉnh của bên kia cho 1 dòng BBGN — bắt buộc ghi chú (lý do)
+  resetBenKiaBBGN: (
+    loai: LoaiBBGN,
+    idPhieu: string,
+    idCtBBGN: number,
+    ghiChu: string,
+    idNguoiThucHien?: number | null,
+  ) =>
+    apiService.post<{ success: boolean }>(`/api/PhieuDieuChinh/bbgn/${loai}/${idPhieu}/reset`, {
+      idCtBBGN,
+      ghiChu,
+      idNguoiThucHien: idNguoiThucHien ?? null,
+    }),
+
+  saveBBGN: (
+    loai: LoaiBBGN,
+    idPhieu: string,
+    items: SavePhieuDieuChinhBBGNDto[],
+    idNguoiThucHien?: number | null,
+    idPhongBan?: number | null,
+  ) =>
+    apiService.put<{ success: boolean }>(`/api/PhieuDieuChinh/bbgn/${loai}/${idPhieu}`, {
+      items,
+      idNguoiThucHien: idNguoiThucHien ?? null,
+      idPhongBan: idPhongBan ?? null,
+    }),
+
+  // ─── Nội bộ - Xuất vào sản xuất (Nạp liệu lò cao) ───────────────────────
+  // Nguồn Nạp liệu lò cao theo Ngày/Ca/Kíp, chia theo lò cao — dùng cho phiếu mới chưa lưu.
+  getNapLieuLoCao: (params: GetNguonParams) =>
     apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/nguondulieu/nap-lieu-lo-cao", { params }),
 
-  // Gộp cả 2 nguồn (BBGN + Nạp liệu lò cao) trong 1 lần gọi — mỗi dòng tự mang theo
-  // loaiDieuChinh để FE phân vào đúng Tab.
-  getNguon: (params: GetBBGNParams) =>
-    apiService.get<PhieuDieuChinhBBGNDto[]>("/api/PhieuDieuChinh/nguondulieu", { params }),
-
+  // idLoCao: chỉ lấy dòng của lò cao đó (BE lọc); bỏ trống = lấy tất cả
+  // Toàn bộ dòng Nội bộ của phiếu; dòng thuộc xưởng nào do idLoCao (= ID xưởng nhận)
   getChiTiet: (idPhieu: string) =>
-    apiService.get<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/chi-tiet`),
+    apiService.get<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/chi-tiet/${idPhieu}`),
 
-  // Tải dữ liệu nguồn từ BBGN và insert thẳng vào DB cho phiếu đã lưu (giống luồng
-  // "Tải dữ liệu" của Nạp liệu lò cao) — ghi đè toàn bộ chi tiết cũ của phiếu.
-  syncTuBBGN: (idPhieu: string, nguoiThucHien?: string | null) =>
-    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/dong-bo/bbgn`, {
+  // Tải dữ liệu nguồn Nạp liệu lò cao và insert thẳng vào DB cho phiếu đã lưu, chia theo lò cao —
+  // chỉ ghi đè các dòng gắn LoaiDieuChinh = 2.
+  syncTuNapLieuLoCao: (idPhieu: string, nguoiThucHien?: string | null, idPhongBan?: number) =>
+    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/dong-bo/nap-lieu-lo-cao/${idPhieu}`, {
       nguoiThucHien: nguoiThucHien ?? null,
-    }),
-
-  // Tải dữ liệu nguồn "Nội bộ - Xuất SX" từ Nạp liệu lò cao và insert thẳng vào DB cho phiếu
-  // đã lưu — song song với syncTuBBGN, chỉ ghi đè các dòng gắn LoaiDieuChinh = 2.
-  syncTuNapLieuLoCao: (idPhieu: string, nguoiThucHien?: string | null) =>
-    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/dong-bo/nap-lieu-lo-cao`, {
-      nguoiThucHien: nguoiThucHien ?? null,
-    }),
-
-  // Gộp cả 2 nguồn cho phiếu đã lưu — 1 lần gọi đồng bộ cả BBGN lẫn Nạp liệu lò cao.
-  syncTuNguon: (idPhieu: string, nguoiThucHien?: string | null) =>
-    apiService.post<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/dong-bo`, {
-      nguoiThucHien: nguoiThucHien ?? null,
+      idPhongBan: idPhongBan ?? null,
     }),
 
   // Lưu chi tiết theo từng dòng (upsert theo id) + xóa mềm các dòng trong deletedIds.
@@ -161,26 +267,10 @@ export const phieuDieuChinhApi = {
     nguoiSua?: string | null,
     deletedIds: number[] = [],
   ) =>
-    apiService.put<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/${idPhieu}/chi-tiet`, {
+    apiService.put<PhieuDieuChinhChiTietDto[]>(`/api/PhieuDieuChinh/chi-tiet/${idPhieu}`, {
       items,
       deletedIds,
       nguoiSua: nguoiSua ?? null,
     }),
 
-  // Tích/hủy tích xác nhận "Người điều chỉnh giao" cho 1 dòng chi tiết — lưu ngay xuống DB,
-  // không cần chờ Lưu cả phiếu. Chỉ gọi với dòng đã có id thật (đã Lưu/đã sync BBGN).
-  xacNhanGiao: (id: number, confirmed: boolean, idNguoiThucHien?: number | null) =>
-    apiService.put<PhieuDieuChinhChiTietDto>(`/api/PhieuDieuChinh/chi-tiet/${id}/xac-nhan-giao`, {
-      confirmed,
-      idNguoiThucHien: idNguoiThucHien ?? null,
-    }),
-
-  // Danh mục NVL (LG_PhieuDieuChinh_NVL) — CRUD
-  getNvlList: (onlyActive = true) =>
-    apiService.get<LGPhieuDieuChinhNvlDto[]>("/api/PhieuDieuChinh/danh-muc-nvl", { params: { onlyActive } }),
-  createNvl: (tenNVL: string) =>
-    apiService.post<LGPhieuDieuChinhNvlDto>("/api/PhieuDieuChinh/danh-muc-nvl", { tenNVL }),
-  updateNvl: (id: number, tenNVL: string, isActive: boolean) =>
-    apiService.put<LGPhieuDieuChinhNvlDto>(`/api/PhieuDieuChinh/danh-muc-nvl/${id}`, { tenNVL, isActive }),
-  deleteNvl: (id: number) => apiService.delete(`/api/PhieuDieuChinh/danh-muc-nvl/${id}`),
 };

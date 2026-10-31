@@ -13,6 +13,7 @@ import {
 import { Tooltip } from "antd";
 import { NavLink } from "react-router-dom";
 import { BM_CONFIG } from "./BieuMauConst";
+import { PHIEU_DIEU_CHINH_NM, getPhieuDieuChinhNMPaths } from "./phieuDieuChinhNM";
 
 /** Trường maBM dùng để so khớp với MaBM trong bảng BM_QuyenXL khi lọc menu theo quyền (XULY / PHEDUYET). */
 export type MenuItemWithMaBM = {
@@ -543,16 +544,32 @@ export const menuConfig = [
                 </NavLink>
               </Tooltip>
             ),
-          }, 
+          },
+        ]
+      },
+      {
+        key: "sub2-9",
+        label: "P.CN",
+        children: [
           {
-            key: "sub2-8-4",
-            maBM: BM_CONFIG.NMLG.NMLG_BM_PhieuDieuChinh,
+            key: "sub2-9-1",
+            maBM: BM_CONFIG.PCN.NMLG_BM_PhieuDieuChinh,
             label: (
               <Tooltip title="Phiếu điều chỉnh dữ liệu NM.LG">
-                <NavLink to="/phieudieuchinh">Phiếu điều chỉnh</NavLink>
+                <NavLink to="/phieudieuchinh">Phiếu điều chỉnh NM.LG</NavLink>
               </Tooltip>
             ),
           },
+          // Phiếu điều chỉnh theo phòng ban (NM.TKVV, NM.NL, NM.LC...) — danh sách ở phieuDieuChinhNM.ts
+          ...PHIEU_DIEU_CHINH_NM.map((nm, i) => ({
+            key: `sub2-9-${i + 2}`,
+            maBM: nm.maBm,
+            label: (
+              <Tooltip title={`Phiếu điều chỉnh dữ liệu ${nm.ten}`}>
+                <NavLink to={getPhieuDieuChinhNMPaths(nm).danhSach}>Phiếu điều chỉnh {nm.ten}</NavLink>
+              </Tooltip>
+            ),
+          })),
         ]
       }
     ],

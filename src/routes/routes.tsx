@@ -107,6 +107,7 @@ import ThongKePhieuCTD from "../pages/NMCTD/ThongKe/ThongKePhieuCTD";
 import ThongKePhieuLG from "../pages/NMLG/ThongKe/ThongKePhieuLG";
 import PhanBoDuLieuPage from "../pages/NMLG/PhanBoDuLieu/PhanBoDuLieuPage";
 import PhieuDieuChinhList from "../pages/NMLG/PhieuDieuChinh/PhieuDieuChinhList";
+import { phieuDieuChinhNMRoutes } from "./phieuDieuChinhNMRoutes";
 import TaoPhieuDieuChinh from "../pages/NMLG/PhieuDieuChinh/TaoPhieuDieuChinh";
 import PhuLieuHRC1 from "../pages/KhoDuLieu/NM.HRC1/PhuLieuHRC1";
 
@@ -1546,6 +1547,8 @@ export const routes = [
           </RequireAuth>
         ),
       },
+      // Phiếu điều chỉnh theo phòng ban (NM.TKVV, NM.NL, NM.LC...): cùng trang với phiếu NM.LG, truyền cấu hình riêng
+      ...phieuDieuChinhNMRoutes,
       {
         path: "giaonhantheplong",
         element: (
