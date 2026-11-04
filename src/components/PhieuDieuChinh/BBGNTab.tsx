@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { message } from "antd";
-import { phieuDieuChinhApi, type LoaiBBGN } from "../../services/PhieuDieuChinhApi";
+import { LOAI_BBGN_NHAP, phieuDieuChinhApi, type LoaiBBGN } from "../../services/PhieuDieuChinhApi";
 import BBGNDieuChinhTable, { type BBGNRow } from "../../pages/NMLG/PhieuDieuChinh/BBGNDieuChinhTable";
 import XuongTabs, { type XuongItem } from "./XuongTabs";
 
@@ -53,10 +53,26 @@ const BBGNTab = ({
           idphieu
             ? async (row, lyDo) => {
                 try {
-                  await phieuDieuChinhApi.resetBenKiaBBGN(loai, idphieu, row.idCtBBGN, lyDo, idNguoiThucHien ?? null);
+                  // Gửi kèm KL bên kia đang hiện trên màn hình: bên kia vừa sửa thì BE từ chối, không reset nhầm số mới
+                  const klDangThay = loai === LOAI_BBGN_NHAP ? row.khoiLuongXuat : row.khoiLuongNhap;
+                  await phieuDieuChinhApi.resetBenKiaBBGN(loai, idphieu, row.idCtBBGN, lyDo, idNguoiThucHien ?? null, klDangThay);
                   message.success("Đã reset số điều chỉnh của bên kia.");
                 } catch (err: any) {
                   message.error(err?.response?.data?.message || "Không thể reset.");
+                  throw err;
+                }
+              }
+            : undefined
+        }
+        onResetLoaiSo={
+          idphieu
+            ? async (row, lyDo) => {
+                try {
+                  await phieuDieuChinhApi.resetLoaiSoBBGN(
+                    loai, idphieu, row.idCtBBGN, lyDo, idNguoiThucHien ?? null, row.loaiSoBenKia ?? null);
+                  message.success("Đã reset Loại số điều chỉnh của cả 2 bên.");
+                } catch (err: any) {
+                  message.error(err?.response?.data?.message || "Không thể reset loại số.");
                   throw err;
                 }
               }

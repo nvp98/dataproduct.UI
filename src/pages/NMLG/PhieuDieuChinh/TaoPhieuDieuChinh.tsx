@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import LG_PhieuDieuChinh from "../../../utils/BM_config/LG_PhieuDieuChinh.json";
-import { Button, Card, Form, Input, Space, Tabs, Typography, message } from "antd";
+import { Button, Card, Form, Input, Modal, Space, Tabs, Typography, message } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -431,8 +431,15 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
       const itemsBBGN = taoItemsLuu(loai, bbgnRows);
       if (itemsBBGN.length === 0) continue;
       try {
-        await phieuDieuChinhApi.saveBBGN(loai, phieuId, itemsBBGN, userInfo?.iD_TaiKhoan ?? null, phamViPhongBanId);
-        setRows(bbgnRows.map((r) => ({ ...r, dirty: false })));
+        // Interceptor của apiService trả thẳng dữ liệu (response.data) dù kiểu khai báo là AxiosResponse
+        const kq = (await phieuDieuChinhApi.saveBBGN(
+          loai, phieuId, itemsBBGN, userInfo?.iD_TaiKhoan ?? null, phamViPhongBanId,
+        )) as unknown as { phienBan?: Record<string, string | null> };
+        // Cập nhật phiên bản dòng vừa lưu để lần Lưu sau không bị báo "người khác vừa sửa" với chính mình
+        setRows(bbgnRows.map((r) => {
+          const pb = kq?.phienBan?.[String(r.idCtBBGN)];
+          return { ...r, dirty: false, thoiGianPhienBan: pb !== undefined ? pb : r.thoiGianPhienBan };
+        }));
       } catch (err: any) {
         const noiDung = err?.response?.data?.message || "Không thể lưu số điều chỉnh " + (loai === LOAI_BBGN_NHAP ? "Nhập" : "Xuất");
         message.error({
@@ -452,11 +459,11 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
 
     const items = rows.map((row) => ({
       id: row.id != null ? Number(row.id) : null,
-      thoiGianSua: row.thoiGianSua ?? null,
       idNVL: row.idNVL ?? null,
       tenNVL: row.tenNVL ?? "",
       idNVLChiTiet: row.idNVLChiTiet != null && row.idNVLChiTiet !== "" ? Number(row.idNVLChiTiet) : null,
       idNhomNVL: row.idNhomNVL ?? null,
+      tenNhomNVL: row.tenNhomNVL ?? null,
       dvt: "Tấn",
       maLo: row.maLo ?? null,
       thuTu: row.thuTu ?? null,
@@ -498,6 +505,24 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
     }
   }, [initData, bbgnNhan, bbgnXuat, coNoiBo, phamViPhongBanId]);
 
+  // Chặn gửi khi còn dòng bên mình đã điều chỉnh mà bên kia chưa nhập khớp — đọc trạng thái thật trong DB (sau khi đã lưu)
+  const truocKhiGui = useCallback(async (phieuId: string) => {
+    const res: unknown = await phieuDieuChinhApi.kiemTraGui(phieuId);
+    const dongChua = Array.isArray(res) ? (res as string[]) : [];
+    if (dongChua.length === 0) return;
+    Modal.warning({
+      title: "Chưa thể gửi phiếu",
+      width: 560,
+      content: (
+        <div style={{ whiteSpace: "pre-line" }}>
+          {"Còn dòng chưa được bên kia nhập khớp số điều chỉnh. Phiếu đã được lưu nhưng chưa gửi; hãy chờ bên kia hoàn tất rồi gửi lại:\n\n" +
+            dongChua.map((d) => `• ${d}`).join("\n")}
+        </div>
+      ),
+    });
+    throw new Error(`Chưa thể gửi: còn ${dongChua.length} dòng chưa được bên kia nhập khớp.`);
+  }, []);
+
   const handleStatusChange = useCallback(async () => {
     try {
       await form.validateFields();
@@ -531,6 +556,7 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
       phieuMaBm: config.code,
       pheDuyet: phieuInfo.pheDuyet ?? [],
       customPutApi: saveChiTiet,
+      truocKhiGui,
       onStatusChange: handleStatusChange,
       onSuccess: handleActionSuccess,
       onError: (error) => { console.error("Action error:", error); },
@@ -538,7 +564,7 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
 
     if (buttons.length === 0) return null;
     return phieuActionService.renderActionButtons(buttons, idphieu || "", getFormData);
-  }, [idphieu, phieuInfo, getFormData, saveChiTiet, handleStatusChange, handleActionSuccess, config.code]);
+  }, [idphieu, phieuInfo, getFormData, saveChiTiet, truocKhiGui, handleStatusChange, handleActionSuccess, config.code]);
 
   // ─── Tab lò cao × tab con loại điều chỉnh ───────────────────────────────────
   // 1 phiếu duy nhất (1 header, 1 lần Lưu) nhưng chia bảng chi tiết thành các Tab theo lò cao (danh
@@ -691,7 +717,6 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
                   <NoiBoTab
                     tableData={tableData}
                     setTableData={setTableData}
-                    table1Section={table1Section}
                     xuongList={xuongList}
                     activeXuong={activeXuong}
                     onChangeXuong={setActiveXuong}

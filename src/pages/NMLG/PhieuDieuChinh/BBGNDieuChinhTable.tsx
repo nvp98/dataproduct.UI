@@ -1,7 +1,7 @@
 
 import { useMemo, useState } from "react";
 import { Badge, Button, Collapse, Empty, Input, InputNumber, Popconfirm, Select, Space, Table, Tooltip, message } from "antd";
-import { FilterOutlined, UndoOutlined } from "@ant-design/icons";
+import { FilterOutlined, LockOutlined, UndoOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
   LOAI_BBGN_NHAP,
@@ -106,6 +106,7 @@ export const taoItemsLuu = (
       tenXuongNhan: r.tenXuongNhan,
       tenPhongBanNhan: r.tenPhongBanNhan,
       loaiSoDieuChinh: r.loaiSoDieuChinh,
+      thoiGianPhienBan: r.thoiGianPhienBan ?? null,
 
       khoiLuong:
         loai === LOAI_BBGN_NHAP
@@ -138,12 +139,15 @@ interface BBGNDieuChinhTableProps {
   filterKey?: string;
   /** Reset số điều chỉnh của bên kia (gọi API); ném lỗi nếu thất bại. Không truyền = ẩn nút Reset (vd phiếu chưa lưu). */
   onReset?: (row: BBGNRow, lyDo: string) => Promise<void>;
+  /** Reset Loại số điều chỉnh của cả 2 bên cho 1 dòng (gọi API); ném lỗi nếu thất bại. Không truyền = ẩn nút. */
+  onResetLoaiSo?: (row: BBGNRow, lyDo: string) => Promise<void>;
 }
 
 // Bộ lọc giống bảng Nội bộ: Loại số điều chỉnh / Tên NVL / Phòng ban giao / Phòng ban nhận / Xưởng giao / Xưởng nhận.
 // Chỉ ảnh hưởng hiển thị — `rows` (nguồn sự thật) vẫn giữ đủ dòng bị ẩn, nên sửa/lưu không bị mất dòng.
 type FilterShape = {
   loaiSoDieuChinh?: number;
+  idCa?: number;
   tenVatTu?: string;
   tenPhongBanGiao?: string;
   tenPhongBanNhan?: string;
@@ -156,8 +160,6 @@ const uniqueOptions = (rows: BBGNRow[], field: keyof FilterShape) =>
     new Set(rows.map((r) => r[field]).filter((v) => v !== null && v !== undefined && v !== ""))
   ).map((v) => ({ label: String(v), value: v as string | number }));
 
-const OWN_BG = "#fffbe6";
-
 const BBGNDieuChinhTable = ({
   loai,
   rows,
@@ -168,6 +170,7 @@ const BBGNDieuChinhTable = ({
   filter,
   filterKey,
   onReset,
+  onResetLoaiSo,
 }: BBGNDieuChinhTableProps) => {
   const laNhan = loai === LOAI_BBGN_NHAP;
 
@@ -191,6 +194,7 @@ const BBGNDieuChinhTable = ({
     () =>
       tabRows.filter((r) => {
         if (filters.loaiSoDieuChinh != null && r.loaiSoDieuChinh !== filters.loaiSoDieuChinh) return false;
+        if (filters.idCa != null && r.idCa !== filters.idCa) return false;
         if (filters.tenVatTu && r.tenVatTu !== filters.tenVatTu) return false;
         if (filters.tenPhongBanGiao && r.tenPhongBanGiao !== filters.tenPhongBanGiao) return false;
         if (filters.tenPhongBanNhan && r.tenPhongBanNhan !== filters.tenPhongBanNhan) return false;
@@ -270,22 +274,22 @@ const BBGNDieuChinhTable = ({
   };
 
   const columns: ColumnsType<BBGNRow> = useMemo(() => {
-    const nguoiVaThoiGian = (id: number | null) =>
-      id ? (
+    // Người điều chỉnh + thời gian điều chỉnh (dd/MM/yyyy HH:mm)
+    const nguoiVaThoiGian = (id: number | null, thoiGian?: string | null) => {
+      if (!id) return "";
+      const d = thoiGian ? new Date(thoiGian) : null;
+      const p2 = (n: number) => String(n).padStart(2, "0");
+      const gio =
+        d && !Number.isNaN(d.getTime())
+          ? `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}`
+          : null;
+      return (
         <div style={{ lineHeight: 1.3 }}>
           <div>{nguoiKyMap.get(Number(id)) ?? `#${id}`}</div>
+          {gio && <div style={{ fontSize: 12, color: "#8c8c8c" }}>{gio}</div>}
         </div>
-      ) : (
-        ""
       );
-
-    const ownCell = () => ({
-      style: { background: OWN_BG },
-    });
-
-    const ownHeader = () => ({
-      style: { background: OWN_BG },
-    });
+    };
 
     /**
      * Cột khối lượng: chỉ nhập được số của bên mình (tab Nhập → KL nhập, tab Xuất → KL xuất);
@@ -343,12 +347,45 @@ const BBGNDieuChinhTable = ({
         fmt(v)
       );
 
+    /**
+     * Cột ghi chú của từng bên: bên mình sửa được, bên kia chỉ đọc
+     * (nơi hiện dòng "[Reset bởi bên ...]" sau khi reset).
+     */
+    const ghiChuCot = (
+      title: string,
+      field: "ghiChuNhap" | "ghiChuXuat"
+    ) => ({
+      title,
+      width: 180,
+      render: (_: unknown, r: BBGNRow) => {
+        const value = r[field] ?? "";
+        if (editable && (field === "ghiChuNhap") === laNhan) {
+          return (
+            <Input
+              size="small"
+              value={value}
+              maxLength={500}
+              onChange={(e) =>
+                patchRow(r.idCtBBGN, { [field]: e.target.value } as Partial<BBGNRow>)
+              }
+            />
+          );
+        }
+        return <div style={{ whiteSpace: "pre-line" }}>{value}</div>;
+      },
+    });
+
     return [
       {
         title: "STT",
         width: 50,
         align: "center",
         render: (_: unknown, __: BBGNRow, i: number) => i + 1,
+      },
+      {
+        title: "Nhóm NVL",
+        dataIndex: "tenNhomNVL",
+        width: 130,
       },
       {
         title: "Tên NVL",
@@ -387,11 +424,15 @@ const BBGNDieuChinhTable = ({
         title: "Loại số điều chỉnh",
         dataIndex: "loaiSoDieuChinh",
         width: 130,
-        render: (v: number | null, row: BBGNRow) =>
-          editable ? (
+        render: (v: number | null, row: BBGNRow) => {
+          if (!editable) return LOAI_SO_OPTIONS.find((o) => o.value === v)?.label ?? "";
+          // Bên kia đã chọn loại số → bên mình theo, khóa; muốn đổi phải Reset loại số (cả 2 bên chọn lại)
+          const khoaTheoBenKia = row.loaiSoBenKia != null;
+          return (
             <Select
               size="small"
-              allowClear
+              allowClear={!khoaTheoBenKia}
+              disabled={khoaTheoBenKia}
               placeholder="Chọn"
               value={v ?? undefined}
               style={{ width: "100%" }}
@@ -405,17 +446,14 @@ const BBGNDieuChinhTable = ({
                 })
               }
             />
-          ) : (
-            LOAI_SO_OPTIONS.find((o) => o.value === v)?.label ?? ""
-          ),
+          );
+        },
       },
       {
         title: "KL xuất",
         dataIndex: "khoiLuongXuat",
         width: 130,
         align: "right",
-        onCell: laNhan ? undefined : ownCell,
-        onHeaderCell: laNhan ? undefined : ownHeader,
         render: khoiLuongCell("khoiLuongXuat"),
       },
       {
@@ -423,7 +461,6 @@ const BBGNDieuChinhTable = ({
         dataIndex: "klQuyKhoXuat",
         width: 120,
         align: "right",
-        onCell: laNhan ? undefined : ownCell,
         render: quyKhoCell("klQuyKhoXuat"),
       },
       {
@@ -431,8 +468,6 @@ const BBGNDieuChinhTable = ({
         dataIndex: "khoiLuongNhap",
         width: 130,
         align: "right",
-        onCell: laNhan ? ownCell : undefined,
-        onHeaderCell: laNhan ? ownHeader : undefined,
         render: khoiLuongCell("khoiLuongNhap"),
       },
       {
@@ -440,7 +475,6 @@ const BBGNDieuChinhTable = ({
         dataIndex: "klQuyKhoNhap",
         width: 120,
         align: "right",
-        onCell: laNhan ? ownCell : undefined,
         render: quyKhoCell("klQuyKhoNhap"),
       },
       {
@@ -472,52 +506,17 @@ const BBGNDieuChinhTable = ({
           );
         },
       },
-      {
-        title: "Ghi chú",
-        width: 180,
-        render: (_: unknown, r: BBGNRow) => {
-          const value =
-            (laNhan ? r.ghiChuNhap : r.ghiChuXuat) ?? "";
-          // Ghi chú của bên kia (chỉ đọc) — nơi hiện dòng "[Reset bởi bên ...]" sau khi reset
-          const ghiChuBenKia = ((laNhan ? r.ghiChuXuat : r.ghiChuNhap) ?? "").trim();
-
-          return (
-            <div>
-              {editable ? (
-                <Input
-                  size="small"
-                  value={value}
-                  maxLength={500}
-                  onChange={(e) =>
-                    patchRow(
-                      r.idCtBBGN,
-                      laNhan
-                        ? { ghiChuNhap: e.target.value }
-                        : { ghiChuXuat: e.target.value }
-                    )
-                  }
-                />
-              ) : (
-                value
-              )}
-              {ghiChuBenKia && (
-                <div style={{ marginTop: 2, fontSize: 12, color: "#8c8c8c", whiteSpace: "pre-line" }}>
-                  Ghi chú bên {laNhan ? "xuất" : "nhận"}: {ghiChuBenKia}
-                </div>
-              )}
-            </div>
-          );
-        },
-      },
+      ghiChuCot("Ghi chú bên giao", "ghiChuXuat"),
+      ghiChuCot("Ghi chú bên nhận", "ghiChuNhap"),
       {
         title: "Người điều chỉnh nhận",
         width: 190,
-        render: (_: unknown, r: BBGNRow) => nguoiVaThoiGian(r.nguoiNhap),
+        render: (_: unknown, r: BBGNRow) => nguoiVaThoiGian(r.nguoiNhap, r.thoiGianNhap),
       },
       {
         title: "Người điều chỉnh giao",
         width: 190,
-        render: (_: unknown, r: BBGNRow) => nguoiVaThoiGian(r.nguoiXuat),
+        render: (_: unknown, r: BBGNRow) => nguoiVaThoiGian(r.nguoiXuat, r.thoiGianXuat),
       },
       {
         title: "Thao tác",
@@ -525,11 +524,25 @@ const BBGNDieuChinhTable = ({
         fixed: "right",
         render: (_: unknown, r: BBGNRow) => {
           const klBenKia = laNhan ? r.khoiLuongXuat : r.khoiLuongNhap;
-          if (!editable || !onReset || klBenKia == null) return null;
+          const coKL = !!onReset && klBenKia != null;
+          const coLoai = !!onResetLoaiSo && r.loaiSoBenKia != null;
+          if (!editable || (!coKL && !coLoai)) return null;
           const lyDo = ((laNhan ? r.ghiChuNhap : r.ghiChuXuat) ?? "").trim();
+          if (r.phieuBenKiaKhoa) {
+            return (
+              <Tooltip title={`Phiếu ${r.soPhieuBenKia ?? "bên kia"} đã gửi — cần thu hồi phiếu đó trước khi reset`}>
+                <Button size="small" icon={<LockOutlined />} disabled />
+              </Tooltip>
+            );
+          }
           return (
             <Popconfirm
-              title={`Reset KL bên ${laNhan ? "xuất" : "nhận"} (${fmt(klBenKia)})?`}
+              title={
+                `Reset ${[
+                  coKL ? `KL bên ${laNhan ? "xuất" : "nhận"} (${fmt(klBenKia)})` : null,
+                  coLoai ? "Loại số điều chỉnh của cả 2 bên" : null,
+                ].filter(Boolean).join(" và ")}?`
+              }
               description={lyDo ? `Lý do: ${lyDo}` : undefined}
               okText="Reset"
               cancelText="Hủy"
@@ -554,36 +567,56 @@ const BBGNDieuChinhTable = ({
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, editable, laNhan, nguoiKyMap, onReset, dangReset]);
+  }, [rows, editable, laNhan, nguoiKyMap, onReset, onResetLoaiSo, dangReset]);
 
-  // Reset số của bên kia cho đúng 1 dòng, lý do = Ghi chú của dòng đó
+  // Reset cho đúng 1 dòng, lý do = Ghi chú của dòng đó. Một thao tác gồm (tùy dòng đang có gì):
+  // - Reset KL của bên kia (nếu bên kia đã nhập KL)
+  // - Reset Loại số điều chỉnh của cả 2 bên (nếu bên kia đã chọn loại số, bên mình đang bị khóa theo)
   const resetDong = async (row: BBGNRow, lyDo: string) => {
-    if (!onReset) return;
+    const klCu = laNhan ? row.khoiLuongXuat : row.khoiLuongNhap;
+    const resetKL = klCu != null && !!onReset;
+    const resetLoai = row.loaiSoBenKia != null && !!onResetLoaiSo;
+    if (!resetKL && !resetLoai) return;
     setDangReset(row.idCtBBGN);
     try {
-      const klCu = laNhan ? row.khoiLuongXuat : row.khoiLuongNhap;
-      await onReset(row, lyDo);
-      // Dòng ghi chú giống hệt dòng BE nối vào ghi chú bên kia (LG_PhieuDieuChinhRepository.ResetBenKiaBBGNAsync)
+      if (resetKL) await onReset!(row, lyDo);
+      if (resetLoai) await onResetLoaiSo!(row, lyDo);
+
+      // Các dòng ghi chú giống hệt dòng BE nối vào ghi chú của bên mình (ResetBenKiaBBGNAsync / ResetLoaiSoBBGNAsync)
       const bayGio = new Date();
       const p2 = (n: number) => String(n).padStart(2, "0");
-      const dong =
-        `[Reset bởi bên ${laNhan ? "nhận" : "xuất"} ` +
-        `${p2(bayGio.getDate())}/${p2(bayGio.getMonth() + 1)}/${bayGio.getFullYear()} ${p2(bayGio.getHours())}:${p2(bayGio.getMinutes())}` +
-        ` (KL cũ ${klCu == null ? "" : Number(Number(klCu).toFixed(3))}): ${lyDo.trim()}]`;
-      const noiGhiChu = (cu?: string | null) => (cu && cu.trim() ? `${cu}\n${dong}` : dong);
-      // Xóa số bên kia + hiện dòng lý do trong ghi chú bên kia ngay trên bảng (không đánh dấu dirty; không tải lại
-      // để giữ các chỉnh sửa chưa lưu của bên mình)
+      const luc = `${p2(bayGio.getDate())}/${p2(bayGio.getMonth() + 1)}/${bayGio.getFullYear()} ${p2(bayGio.getHours())}:${p2(bayGio.getMinutes())}`;
+      const ben = laNhan ? "nhận" : "xuất";
+      const cacDong: string[] = [];
+      if (resetKL)
+        cacDong.push(`[Reset bởi bên ${ben} ${luc} (KL cũ ${Number(Number(klCu).toFixed(3))}): ${lyDo.trim()}]`);
+      if (resetLoai)
+        cacDong.push(
+          `[Reset loại số bởi bên ${ben} ${luc} (loại cũ ${(row.loaiSoDieuChinh ?? row.loaiSoBenKia) === 1 ? "Trước ẩm" : "Sau ẩm"}): ${lyDo.trim()}]`
+        );
+      // Ghi chú hiện tại chính là lý do vừa gõ thì thay luôn (lý do đã nằm trong dòng reset), tránh hiện lặp
+      const noiGhiChu = (cu?: string | null) =>
+        [cu && cu.trim() && cu.trim() !== lyDo.trim() ? cu : null, ...cacDong].filter(Boolean).join("\n");
+
+      // Cập nhật ngay trên bảng (không đánh dấu dirty; không tải lại để giữ các chỉnh sửa chưa lưu của bên mình)
       onChange(
-        rows.map((r) =>
-          r.idCtBBGN !== row.idCtBBGN
-            ? r
-            : laNhan
-              ? { ...r, khoiLuongXuat: null, klQuyKhoXuat: null, nguoiXuat: null, thoiGianXuat: null, ghiChuXuat: noiGhiChu(r.ghiChuXuat) }
-              : { ...r, khoiLuongNhap: null, klQuyKhoNhap: null, nguoiNhap: null, thoiGianNhap: null, ghiChuNhap: noiGhiChu(r.ghiChuNhap) }
-        )
+        rows.map((r) => {
+          if (r.idCtBBGN !== row.idCtBBGN) return r;
+          const next: BBGNRow = { ...r };
+          if (resetKL) {
+            if (laNhan) Object.assign(next, { khoiLuongXuat: null, klQuyKhoXuat: null, nguoiXuat: null, thoiGianXuat: null });
+            else Object.assign(next, { khoiLuongNhap: null, klQuyKhoNhap: null, nguoiNhap: null, thoiGianNhap: null });
+          }
+          if (resetLoai) {
+            Object.assign(next, { loaiSoDieuChinh: null, loaiSoBenKia: null, klQuyKhoNhap: null, klQuyKhoXuat: null });
+          }
+          if (laNhan) next.ghiChuNhap = noiGhiChu(r.ghiChuNhap);
+          else next.ghiChuXuat = noiGhiChu(r.ghiChuXuat);
+          return next;
+        })
       );
     } catch {
-      // Lỗi đã được hiển thị bởi onReset
+      // Lỗi đã được hiển thị bởi onReset / onResetLoaiSo
     } finally {
       setDangReset(null);
     }
@@ -607,11 +640,19 @@ const BBGNDieuChinhTable = ({
             ),
             children: (
               <Space wrap size="small">
-                {filterSelect("Loại số điều chỉnh", "loaiSoDieuChinh", LOAI_SO_OPTIONS, 160)}
                 {filterSelect("Tên NVL", "tenVatTu", uniqueOptions(tabRows, "tenVatTu"))}
+                {filterSelect(
+                  "Ca",
+                  "idCa",
+                  Array.from(new Set(tabRows.map((r) => r.idCa).filter((v): v is number => v != null)))
+                    .sort((a, b) => a - b)
+                    .map((v) => ({ label: tenCa(v), value: v })),
+                  120
+                )}
+                {filterSelect("Loại số điều chỉnh", "loaiSoDieuChinh", LOAI_SO_OPTIONS, 160)}
                 {filterSelect("Phòng ban bên giao", "tenPhongBanGiao", uniqueOptions(tabRows, "tenPhongBanGiao"))}
-                {filterSelect("Phòng ban bên nhận", "tenPhongBanNhan", uniqueOptions(tabRows, "tenPhongBanNhan"))}
                 {filterSelect("Xưởng bên giao", "tenXuongGiao", uniqueOptions(tabRows, "tenXuongGiao"))}
+                {filterSelect("Phòng ban bên nhận", "tenPhongBanNhan", uniqueOptions(tabRows, "tenPhongBanNhan"))}
                 {filterSelect("Xưởng bên nhận", "tenXuongNhan", uniqueOptions(tabRows, "tenXuongNhan"))}
                 {activeFilterCount > 0 && (
                   <Button size="small" onClick={() => setF(() => ({}))}>

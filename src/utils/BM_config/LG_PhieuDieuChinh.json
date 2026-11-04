@@ -45,8 +45,8 @@
           { "label": "Trước ẩm", "value": 1 },
           { "label": "Sau ẩm", "value": 2 }
         ]},
+        { "title": "Nhóm NVL", "dataIndex": "tenNhomNVL", "width": 130, "fixed": "left" },
         { "title": "Tên NVL", "dataIndex": "tenNVL", "width": 150, "isLabel": true, "fixed": "left" },
-        { "title": "ID Nhóm NVL", "dataIndex": "idNhomNVL", "width": 130, "type": "number" },
         { "title": "ĐVT", "dataIndex": "dvt", "width": 80},
         { "title": "Mã lô", "dataIndex": "maLo", "width": 120, "isLabel": true },
         { "title": "Ca", "dataIndex": "idCa", "width": 90 },

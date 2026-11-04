@@ -63,6 +63,7 @@ export type LoaiBBGN = typeof LOAI_BBGN_NHAP | typeof LOAI_BBGN_XUAT;
 export interface PhieuDieuChinhBBGNLineDto {
   idCtBBGN: number;
   idVatTu: number | null;
+  tenNhomNVL?: string | null;
   tenVatTu: string | null;
   maLo: string | null;
   idCa: number | null;
@@ -87,6 +88,13 @@ export interface PhieuDieuChinhBBGNLineDto {
   ghiChuNhap: string | null;
   nguoiNhap: number | null;
   thoiGianNhap: string | null;
+  /** Phiếu của bên kia đã gửi/khóa → không reset được số của bên kia cho tới khi phiếu đó được thu hồi */
+  phieuBenKiaKhoa?: boolean;
+  soPhieuBenKia?: string | null;
+  /** Loại số bên kia đã lưu — có giá trị thì bên mình bị khóa theo, muốn đổi phải Reset loại số */
+  loaiSoBenKia?: number | null;
+  /** Thời gian điều chỉnh của bên đang xem lúc tải — gửi lại khi Lưu để phát hiện người khác sửa chen */
+  thoiGianPhienBan?: string | null;
 }
 
 export interface GetBBGNParams {
@@ -110,6 +118,8 @@ export interface SavePhieuDieuChinhBBGNDto {
   khoiLuong?: number | null;
   doAm?: number | null;
   ghiChu?: string | null;
+  // Phiên bản dòng lúc tải màn hình — người khác đã sửa chen thì BE từ chối lưu
+  thoiGianPhienBan?: string | null;
   // Chỉ để ghi vào thông báo lỗi cho dễ nhận ra dòng
   moTa?: string | null;
 }
@@ -122,6 +132,7 @@ export interface PhieuDieuChinhChiTietDto {
   tenNVL: string;
   idNVLChiTiet: number | null;
   idNhomNVL: number | null;
+  tenNhomNVL?: string | null;
   dvt: string | null;
   maLo: string | null;
   thuTu: number | null;
@@ -143,8 +154,6 @@ export interface PhieuDieuChinhChiTietDto {
   thoiGianDieuChinhNhan: string | null;
   nguoiTao: string | null;
   thoiGianTao: string;
-  nguoiSua: string | null;
-  thoiGianSua: string | null;
   // Khóa liên kết ngược tới dòng nguồn — dùng để khớp lại dòng cũ khi bấm "Tải dữ liệu" lần sau,
   // tránh mất số liệu điều chỉnh tay đã nhập cho dòng này (null nếu dòng nhập tay).
   idCtBBGN: number | null;
@@ -159,12 +168,11 @@ export interface PhieuDieuChinhChiTietDto {
 export interface SavePhieuDieuChinhChiTietDto {
   // Có id = dòng đã lưu (cập nhật tại chỗ); không có = dòng mới
   id?: number | null;
-  // thoiGianSua lúc tải — BE dùng để phát hiện người khác đã sửa dòng này (409)
-  thoiGianSua?: string | null;
   idNVL?: number | null;
   tenNVL: string;
   idNVLChiTiet?: number | null;
   idNhomNVL?: number | null;
+  tenNhomNVL?: string | null;
   dvt?: string | null;
   maLo?: string | null;
   thuTu?: number | null;
@@ -222,12 +230,36 @@ export const phieuDieuChinhApi = {
     idCtBBGN: number,
     ghiChu: string,
     idNguoiThucHien?: number | null,
+    // KL của bên kia đang hiện trên màn hình — khác số trong DB (bên kia vừa sửa) thì BE từ chối để xem lại
+    klBenKiaDangThay?: number | null,
   ) =>
     apiService.post<{ success: boolean }>(`/api/PhieuDieuChinh/bbgn/${loai}/${idPhieu}/reset`, {
       idCtBBGN,
       ghiChu,
       idNguoiThucHien: idNguoiThucHien ?? null,
+      klBenKiaDangThay: klBenKiaDangThay ?? null,
     }),
+
+  // Reset Loại số điều chỉnh của cả 2 bên cho 1 dòng (bắt buộc có lý do)
+  resetLoaiSoBBGN: (
+    loai: LoaiBBGN,
+    idPhieu: string,
+    idCtBBGN: number,
+    ghiChu: string,
+    idNguoiThucHien?: number | null,
+    // Loại số của bên kia đang hiện trên màn hình — khác số trong DB (bên kia vừa đổi) thì BE từ chối để xem lại
+    loaiSoBenKiaDangThay?: number | null,
+  ) =>
+    apiService.post<{ success: boolean }>(`/api/PhieuDieuChinh/bbgn/${loai}/${idPhieu}/reset-loai-so`, {
+      idCtBBGN,
+      ghiChu,
+      idNguoiThucHien: idNguoiThucHien ?? null,
+      loaiSoBenKiaDangThay: loaiSoBenKiaDangThay ?? null,
+    }),
+
+  // Trước khi gửi phiếu: các dòng chưa được bên kia nhập khớp (rỗng = được gửi)
+  kiemTraGui: (idPhieu: string) =>
+    apiService.get<string[]>(`/api/PhieuDieuChinh/bbgn/kiem-tra-gui/${idPhieu}`),
 
   saveBBGN: (
     loai: LoaiBBGN,
@@ -236,7 +268,7 @@ export const phieuDieuChinhApi = {
     idNguoiThucHien?: number | null,
     idPhongBan?: number | null,
   ) =>
-    apiService.put<{ success: boolean }>(`/api/PhieuDieuChinh/bbgn/${loai}/${idPhieu}`, {
+    apiService.put<{ success: boolean; phienBan?: Record<string, string | null> }>(`/api/PhieuDieuChinh/bbgn/${loai}/${idPhieu}`, {
       items,
       idNguoiThucHien: idNguoiThucHien ?? null,
       idPhongBan: idPhongBan ?? null,

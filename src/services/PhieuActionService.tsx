@@ -72,6 +72,8 @@ export interface PhieuActionServiceParams {
     idphieu: string,
     formData: Record<string, unknown>,
   ) => Promise<any>;
+  // Chạy sau khi đã lưu (customPutApi) và TRƯỚC khi đổi trạng thái khi bấm Lưu và Gửi: ném lỗi để chặn gửi
+  truocKhiGui?: (idphieu: string) => Promise<void>;
   // Callback được gọi sau khi thay đổi trạng thái thành công
   // Nhận vào idPhieu và trạng thái mới
   onStatusChange?: (idPhieu: string, newStatus: number) => void | Promise<void>;
@@ -501,6 +503,7 @@ export const phieuActionService = {
       tinhTrang,
       isClone,
       customPutApi,
+      truocKhiGui,
       onStatusChange,
       currentUserId,
       currentUserPhongBanId,
@@ -763,6 +766,7 @@ export const phieuActionService = {
                 formDataParam as Record<string, unknown>,
               );
             }
+            await truocKhiGui?.(phieuIdParam);
             await PhieuApi.changeStatus(
               phieuIdParam,
               sendTargetStatus,
@@ -968,6 +972,7 @@ export const phieuActionService = {
                 formDataParam as Record<string, unknown>,
               );
             }
+            await truocKhiGui?.(phieuIdParam);
             await PhieuApi.changeStatus(
               phieuIdParam,
               sendTargetStatus,
@@ -1046,6 +1051,7 @@ export const phieuActionService = {
                 formDataParam as Record<string, unknown>,
               );
             }
+            await truocKhiGui?.(phieuIdParam);
             await PhieuApi.changeStatus(
               phieuIdParam,
               sendTargetStatus,

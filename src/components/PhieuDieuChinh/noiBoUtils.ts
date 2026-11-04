@@ -86,6 +86,7 @@ export const chiTietDtoToRows = (chiTiet: PhieuDieuChinhChiTietDto[]): TableRow[
     tenNVL: c.tenNVL,
     idNVLChiTiet: c.idNVLChiTiet,
     idNhomNVL: c.idNhomNVL,
+    tenNhomNVL: c.tenNhomNVL ?? null,
     dvt: c.dvt,
     maLo: c.maLo,
     thuTu: c.thuTu ?? idx + 1,
@@ -103,8 +104,6 @@ export const chiTietDtoToRows = (chiTiet: PhieuDieuChinhChiTietDto[]): TableRow[
     viTri: c.viTri,
     phanLoai: c.phanLoai,
     ghiChu: c.ghiChu,
-    // "Phiên bản" của dòng lúc tải — gửi lại khi Lưu để BE phát hiện người khác đã sửa (409).
-    thoiGianSua: c.thoiGianSua,
     nguoiDieuChinhNhan: c.nguoiDieuChinhNhan,
     thoiGianDieuChinhNhan: c.thoiGianDieuChinhNhan,
     // Khóa liên kết ngược tới dòng BBGN nguồn — giữ lại để khi Lưu không bị mất, và để lần
