@@ -21,7 +21,7 @@ import { TaiKhoanApi } from "../../../services/TaiKhoanService";
 import { taoItemsLuu, type BBGNRow } from "./BBGNDieuChinhTable";
 import BBGNTab from "../../../components/PhieuDieuChinh/BBGNTab";
 import NoiBoTab from "../../../components/PhieuDieuChinh/NoiBoTab";
-import type { XuongItem } from "../../../components/PhieuDieuChinh/XuongTabs";
+import { TONG_HOP_KEY, type XuongItem } from "../../../components/PhieuDieuChinh/XuongTabs";
 import { chiTietDtoToRows, renumberThuTu, toNum, LOAI_NOI_BO, type TableRow } from "../../../components/PhieuDieuChinh/noiBoUtils";
 import "../../../styles/phieuDieuChinhCompact.css";
 
@@ -588,7 +588,7 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
           .filter((x) => Number.isFinite(x.id))
           .sort((a, b) => a.id - b.id);
         setXuongList(list);
-        setActiveXuong((cur) => (cur && list.some((x) => String(x.id) === cur) ? cur : list.length ? String(list[0].id) : ""));
+        setActiveXuong((cur) => (cur && (cur === TONG_HOP_KEY || list.some((x) => String(x.id) === cur)) ? cur : list.length ? String(list[0].id) : ""));
       })
       .catch(() => {
         if (huy) return;

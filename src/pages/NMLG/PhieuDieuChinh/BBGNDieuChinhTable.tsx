@@ -126,6 +126,82 @@ export const taoItemsLuu = (
           .join(" - ") || null,
     }));
 
+/**
+ * Áp thay đổi của bên đang xem lên 1 dòng và tính lại KL quy khô của bên mình.
+ * Dùng chung cho bảng chi tiết và tab Tổng hợp.
+ */
+export const apDungThayDoi = (r: BBGNRow, change: Partial<BBGNRow>, laNhan: boolean): BBGNRow => {
+  const next: BBGNRow = {
+    ...r,
+    ...change,
+    dirty: true,
+  };
+
+  // Loại số điều chỉnh là của riêng bên đang xem → chỉ tính lại KL quy khô của bên mình;
+  // số của bên kia giữ nguyên như đã lưu.
+  const nguoiHienTai = layIdNguoiDung();
+  const fKl = laNhan ? "khoiLuongNhap" : "khoiLuongXuat";
+  const fQk = laNhan ? "klQuyKhoNhap" : "klQuyKhoXuat";
+  // Nhập KL quy khô → tính ngược KL; còn lại (nhập KL, đổi loại số...) → tính KL quy khô từ KL.
+  // Cả 2 trường hợp đều tính lại KL quy khô từ KL đã làm tròn để số hiển thị trùng số sẽ lưu.
+  if (fQk in change) {
+    next[fKl] = tinhKhoiLuongTuQuyKho(change[fQk] as number | null, next.loaiSoDieuChinh, next.doAm);
+  }
+  next[fQk] = tinhQuyKho(next[fKl], next.loaiSoDieuChinh, next.doAm);
+  // Ghi nhận người sửa ngay khi sửa khối lượng (BE cũng ghi lại khi Lưu, làm vậy để cột
+  // "Người điều chỉnh" hiện luôn mà không cần tải lại).
+  if (fKl in change || fQk in change) {
+    const coKl = next[fKl] != null;
+    const nguoi = laNhan ? "nguoiNhap" : "nguoiXuat";
+    const thoiGian = laNhan ? "thoiGianNhap" : "thoiGianXuat";
+    next[nguoi] = coKl ? nguoiHienTai : null;
+    next[thoiGian] = coKl ? new Date().toISOString() : null;
+  }
+
+  return next;
+};
+
+/**
+ * Kết quả của Reset trên 1 dòng (sau khi API đã thành công): xóa số của bên kia / loại số và nối dòng
+ * "[Reset ...]" vào ghi chú của bên mình — giống hệt dòng BE nối (ResetBenKiaBBGNAsync / ResetLoaiSoBBGNAsync).
+ * Không đánh dấu dirty. Dùng chung cho bảng chi tiết và tab Tổng hợp.
+ */
+export const apDungReset = (
+  r: BBGNRow,
+  laNhan: boolean,
+  lyDo: string,
+  resetKL: boolean,
+  resetLoai: boolean,
+  klCu: number | null
+): BBGNRow => {
+  const bayGio = new Date();
+  const p2 = (n: number) => String(n).padStart(2, "0");
+  const luc = `${p2(bayGio.getDate())}/${p2(bayGio.getMonth() + 1)}/${bayGio.getFullYear()} ${p2(bayGio.getHours())}:${p2(bayGio.getMinutes())}`;
+  const ben = laNhan ? "nhận" : "xuất";
+  const cacDong: string[] = [];
+  if (resetKL)
+    cacDong.push(`[Reset bởi bên ${ben} ${luc} (KL cũ ${Number(Number(klCu).toFixed(3))}): ${lyDo.trim()}]`);
+  if (resetLoai)
+    cacDong.push(
+      `[Reset loại số bởi bên ${ben} ${luc} (loại cũ ${(r.loaiSoDieuChinh ?? r.loaiSoBenKia) === 1 ? "Trước ẩm" : "Sau ẩm"}): ${lyDo.trim()}]`
+    );
+  // Ghi chú hiện tại chính là lý do vừa gõ thì thay luôn (lý do đã nằm trong dòng reset), tránh hiện lặp
+  const noiGhiChu = (cu?: string | null) =>
+    [cu && cu.trim() && cu.trim() !== lyDo.trim() ? cu : null, ...cacDong].filter(Boolean).join("\n");
+
+  const next: BBGNRow = { ...r };
+  if (resetKL) {
+    if (laNhan) Object.assign(next, { khoiLuongXuat: null, klQuyKhoXuat: null, nguoiXuat: null, thoiGianXuat: null });
+    else Object.assign(next, { khoiLuongNhap: null, klQuyKhoNhap: null, nguoiNhap: null, thoiGianNhap: null });
+  }
+  if (resetLoai) {
+    Object.assign(next, { loaiSoDieuChinh: null, loaiSoBenKia: null, klQuyKhoNhap: null, klQuyKhoXuat: null });
+  }
+  if (laNhan) next.ghiChuNhap = noiGhiChu(r.ghiChuNhap);
+  else next.ghiChuXuat = noiGhiChu(r.ghiChuXuat);
+  return next;
+};
+
 interface BBGNDieuChinhTableProps {
   /** 1 = Nhập, 3 = Xuất */
   loai: LoaiBBGN;
@@ -232,44 +308,7 @@ const BBGNDieuChinhTable = ({
     change: Partial<BBGNRow>
   ) => {
     onChange(
-      rows.map((r) => {
-        if (r.idCtBBGN !== idCtBBGN) {
-          return r;
-        }
-
-        const next: BBGNRow = {
-          ...r,
-          ...change,
-          dirty: true,
-        };
-
-        // Loại số điều chỉnh là của riêng bên đang xem → chỉ tính lại KL quy khô của bên mình;
-        // số của bên kia giữ nguyên như đã lưu.
-        const nguoiHienTai = layIdNguoiDung();
-        const fKl = laNhan ? "khoiLuongNhap" : "khoiLuongXuat";
-        const fQk = laNhan ? "klQuyKhoNhap" : "klQuyKhoXuat";
-        // Nhập KL quy khô → tính ngược KL; còn lại (nhập KL, đổi loại số...) → tính KL quy khô từ KL.
-        // Cả 2 trường hợp đều tính lại KL quy khô từ KL đã làm tròn để số hiển thị trùng số sẽ lưu.
-        if (fQk in change) {
-          next[fKl] = tinhKhoiLuongTuQuyKho(
-            change[fQk] as number | null,
-            next.loaiSoDieuChinh,
-            next.doAm
-          );
-        }
-        next[fQk] = tinhQuyKho(next[fKl], next.loaiSoDieuChinh, next.doAm);
-        // Ghi nhận người sửa ngay khi sửa khối lượng (BE cũng ghi lại khi Lưu, làm vậy để cột
-        // "Người điều chỉnh" hiện luôn mà không cần tải lại).
-        if (fKl in change || fQk in change) {
-          const coKl = next[fKl] != null;
-          const nguoi = laNhan ? "nguoiNhap" : "nguoiXuat";
-          const thoiGian = laNhan ? "thoiGianNhap" : "thoiGianXuat";
-          next[nguoi] = coKl ? nguoiHienTai : null;
-          next[thoiGian] = coKl ? new Date().toISOString() : null;
-        }
-
-        return next;
-      })
+      rows.map((r) => (r.idCtBBGN !== idCtBBGN ? r : apDungThayDoi(r, change, laNhan)))
     );
   };
 
@@ -582,38 +621,11 @@ const BBGNDieuChinhTable = ({
       if (resetKL) await onReset!(row, lyDo);
       if (resetLoai) await onResetLoaiSo!(row, lyDo);
 
-      // Các dòng ghi chú giống hệt dòng BE nối vào ghi chú của bên mình (ResetBenKiaBBGNAsync / ResetLoaiSoBBGNAsync)
-      const bayGio = new Date();
-      const p2 = (n: number) => String(n).padStart(2, "0");
-      const luc = `${p2(bayGio.getDate())}/${p2(bayGio.getMonth() + 1)}/${bayGio.getFullYear()} ${p2(bayGio.getHours())}:${p2(bayGio.getMinutes())}`;
-      const ben = laNhan ? "nhận" : "xuất";
-      const cacDong: string[] = [];
-      if (resetKL)
-        cacDong.push(`[Reset bởi bên ${ben} ${luc} (KL cũ ${Number(Number(klCu).toFixed(3))}): ${lyDo.trim()}]`);
-      if (resetLoai)
-        cacDong.push(
-          `[Reset loại số bởi bên ${ben} ${luc} (loại cũ ${(row.loaiSoDieuChinh ?? row.loaiSoBenKia) === 1 ? "Trước ẩm" : "Sau ẩm"}): ${lyDo.trim()}]`
-        );
-      // Ghi chú hiện tại chính là lý do vừa gõ thì thay luôn (lý do đã nằm trong dòng reset), tránh hiện lặp
-      const noiGhiChu = (cu?: string | null) =>
-        [cu && cu.trim() && cu.trim() !== lyDo.trim() ? cu : null, ...cacDong].filter(Boolean).join("\n");
-
       // Cập nhật ngay trên bảng (không đánh dấu dirty; không tải lại để giữ các chỉnh sửa chưa lưu của bên mình)
       onChange(
-        rows.map((r) => {
-          if (r.idCtBBGN !== row.idCtBBGN) return r;
-          const next: BBGNRow = { ...r };
-          if (resetKL) {
-            if (laNhan) Object.assign(next, { khoiLuongXuat: null, klQuyKhoXuat: null, nguoiXuat: null, thoiGianXuat: null });
-            else Object.assign(next, { khoiLuongNhap: null, klQuyKhoNhap: null, nguoiNhap: null, thoiGianNhap: null });
-          }
-          if (resetLoai) {
-            Object.assign(next, { loaiSoDieuChinh: null, loaiSoBenKia: null, klQuyKhoNhap: null, klQuyKhoXuat: null });
-          }
-          if (laNhan) next.ghiChuNhap = noiGhiChu(r.ghiChuNhap);
-          else next.ghiChuXuat = noiGhiChu(r.ghiChuXuat);
-          return next;
-        })
+        rows.map((r) =>
+          r.idCtBBGN !== row.idCtBBGN ? r : apDungReset(r, laNhan, lyDo, resetKL, resetLoai, klCu)
+        )
       );
     } catch {
       // Lỗi đã được hiển thị bởi onReset / onResetLoaiSo

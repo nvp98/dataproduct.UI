@@ -7,6 +7,7 @@ import type { ColumnsType } from "antd/es/table";
 import { tenCa } from "../../services/PhieuDieuChinhApi";
 import { tinhKhoiLuongTuQuyKho } from "../../pages/NMLG/PhieuDieuChinh/BBGNDieuChinhTable";
 import XuongTabs, { type XuongItem } from "./XuongTabs";
+import TongHopTable, { type DongTongHop, type ThayDoiKL } from "./TongHopTable";
 import { LOAI_NOI_BO, recomputeRows, toNum, type TableRow } from "./noiBoUtils";
 
 interface Props {
@@ -308,8 +309,68 @@ const NoiBoTab = ({
     ];
   }, [locked, nguoiKyMap, patchRow, xoaDong]);
 
+  // Tổng hợp: KL nhập / quy khô nhập của mọi dòng Nội bộ, cộng theo xưởng
+  const dongTongHop: DongTongHop[] = tableData
+    .filter((r) => Number(r.loaiDieuChinh) === LOAI_NOI_BO)
+    .map((r) => ({
+      tenNhom: r.tenNhomNVL,
+      tenNVL: r.tenNVL,
+      maLo: r.maLo,
+      idCa: r.idCa != null && r.idCa !== "" ? Number(r.idCa) : null,
+      ref: String(r.key),
+      idXuong: xuongCuaDong(r),
+      doAm: toNum(r.doAm),
+      loaiSo: toNum(r.loaiSoDieuChinh),
+      kl: toNum(r.khoiLuongNhap),
+      quyKho: toNum(r.khoiLuongQuyKhoNhap),
+    }));
+
+  // Sửa từ tab Tổng hợp: Loại số cho mọi dòng của dòng tổng hợp; KL / KL quy khô cho đúng 1 dòng
+  const doiLoaiSo = (refs: string[], loaiSo: number | null) => {
+    const tap = new Set(refs);
+    setTableData((prev) =>
+      recomputeRows(
+        prev.map((r) => (tap.has(String(r.key)) ? { ...r, loaiSoDieuChinh: loaiSo } : r)),
+        prev,
+        currentUserId
+      )
+    );
+  };
+
+  const doiKL = (ref: string, change: ThayDoiKL) => {
+    const row = tableData.find((r) => String(r.key) === ref);
+    if (!row) return;
+    if ("quyKho" in change) {
+      const loaiSo = toNum(row.loaiSoDieuChinh);
+      const kl = tinhKhoiLuongTuQuyKho(change.quyKho, loaiSo, toNum(row.doAm));
+      if (change.quyKho != null && kl == null) {
+        message.warning(
+          loaiSo == null
+            ? "Chọn Loại số điều chỉnh trước khi nhập KL quy khô."
+            : "Cần nhập Độ ẩm (Sau ẩm) mới tính ngược được từ KL quy khô."
+        );
+        return;
+      }
+      patchRow(row.key, { khoiLuongNhap: kl });
+    } else {
+      patchRow(row.key, { khoiLuongNhap: change.kl });
+    }
+  };
+
   return (
-    <XuongTabs xuongList={xuongList} activeXuong={activeXuong} onChange={onChangeXuong}>
+    <XuongTabs
+      xuongList={xuongList}
+      activeXuong={activeXuong}
+      onChange={onChangeXuong}
+      tongHop={<TongHopTable
+          rows={dongTongHop}
+          xuongList={xuongList}
+          loading={loading}
+          editable={!locked}
+          onChangeLoaiSo={doiLoaiSo}
+          onChangeKL={doiKL}
+        />}
+    >
       <div>
         <Collapse
           size="small"

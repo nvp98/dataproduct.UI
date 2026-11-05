@@ -6,17 +6,23 @@ export interface XuongItem {
   tenXuong: string;
 }
 
+/** Khóa của tab "Tổng hợp" (không trùng id xưởng vì id xưởng là số) */
+export const TONG_HOP_KEY = "tonghop";
+
 // Mỗi xưởng của phòng ban (tên lấy từ API) 1 Tab — dùng chung cho cả 3 phần Nhập / Xuất / Nội bộ; chung
 // activeXuong ở component cha nên đổi phần vẫn giữ nguyên xưởng đang xem.
+// Có truyền `tongHop` thì thêm tab "Tổng hợp" ở cuối; chọn tab đó thì hiện `tongHop` thay cho `children`.
 const XuongTabs = ({
   xuongList,
   activeXuong,
   onChange,
+  tongHop,
   children,
 }: {
   xuongList: XuongItem[];
   activeXuong: string;
   onChange: (key: string) => void;
+  tongHop?: ReactNode;
   children: ReactNode;
 }) =>
   xuongList.length === 0 ? (
@@ -28,9 +34,12 @@ const XuongTabs = ({
         activeKey={activeXuong}
         onChange={onChange}
         style={{ marginBottom: 4 }}
-        items={xuongList.map((x) => ({ key: String(x.id), label: x.tenXuong }))}
+        items={[
+          ...xuongList.map((x) => ({ key: String(x.id), label: x.tenXuong })),
+          ...(tongHop ? [{ key: TONG_HOP_KEY, label: "Tổng hợp" }] : []),
+        ]}
       />
-      {children}
+      {activeXuong === TONG_HOP_KEY && tongHop ? tongHop : children}
     </>
   );
 
