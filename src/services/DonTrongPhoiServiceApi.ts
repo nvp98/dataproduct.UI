@@ -11,6 +11,8 @@ export interface DonTrongPhoi {
   tenVatTu?: string | null;
   isSync?: number | null;
   isLock?: number | null;
+  idPB?: number | null;
+  idXuong?: number | null;
 }
 
 export interface DonTrongPhoiPayload {
@@ -19,6 +21,9 @@ export interface DonTrongPhoiPayload {
   mac?: string | null;
   kichThuoc?: string | null;
   isXacNhan?: number | null;
+  // Bỏ trống = dùng chung; có giá trị = riêng nhà máy / xưởng
+  idPB?: number | null;
+  idXuong?: number | null;
 }
 
 export interface DonTrongPhoiSearchResponse {
@@ -41,6 +46,7 @@ export const DonTrongPhoiServiceApi = {
     kichThuoc?: string;
     isXacNhan?: number | null;
     maVatTu?: string;
+    idXuong?: number;
     page?: number;
     pageSize?: number;
   }): Promise<DonTrongPhoiSearchResponse> => {
@@ -50,6 +56,7 @@ export const DonTrongPhoiServiceApi = {
     if (params.kichThuoc) q.kichThuoc = params.kichThuoc;
     if (params.isXacNhan != null) q.isXacNhan = params.isXacNhan;
     if (params.maVatTu) q.maVatTu = params.maVatTu;
+    if (params.idXuong != null) q.idXuong = params.idXuong;
     if (params.page) q.page = params.page;
     if (params.pageSize) q.pageSize = params.pageSize;
     const res = (await apiService.get("/api/DonTrongPhoi/search", { params: q })) as DonTrongPhoiSearchResponse;

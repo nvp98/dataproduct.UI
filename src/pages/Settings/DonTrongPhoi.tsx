@@ -35,6 +35,7 @@ import {
 } from "../../services/DonTrongPhoiServiceApi";
 import type { DonTrongPhoi, DonTrongPhoiPayload, ImportDonTrongPhoiResult } from "../../services/DonTrongPhoiServiceApi";
 import type { ColumnType } from "antd/es/table";
+import { useDanhMucMasterOptions } from "../../hooks/useDanhMucMasterOptions";
 
 type FilterState = {
   searchKey?: string;
@@ -42,11 +43,13 @@ type FilterState = {
   kichThuoc?: string;
   isXacNhan?: number | null;
   maVatTu?: string;
+  idXuong?: number;
 };
 
 const QuanLyDonTrongPhoi = () => {
   const [searchForm] = Form.useForm();
   const [modalForm] = Form.useForm();
+  const { phongBanOptions, xuongOptions, tenPhongBan, tenXuong } = useDanhMucMasterOptions();
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -95,6 +98,7 @@ const QuanLyDonTrongPhoi = () => {
       kichThuoc: values.kichThuoc?.trim() || undefined,
       isXacNhan: values.isXacNhan ?? undefined,
       maVatTu: values.maVatTu?.trim() || undefined,
+      idXuong: values.idXuong ?? undefined,
     });
   };
 
@@ -117,6 +121,8 @@ const QuanLyDonTrongPhoi = () => {
       mac: record.mac ?? undefined,
       kichThuoc: record.kichThuoc ?? undefined,
       isXacNhan: record.isXacNhan === 1,
+      idPB: record.idPB ?? undefined,
+      idXuong: record.idXuong ?? undefined,
     });
     setModalVisible(true);
   };
@@ -136,6 +142,8 @@ const QuanLyDonTrongPhoi = () => {
         mac: values.mac?.trim() || null,
         kichThuoc: values.kichThuoc?.trim() || null,
         isXacNhan: values.isXacNhan ? 1 : 0,
+        idPB: values.idPB ?? null,
+        idXuong: values.idXuong ?? null,
       };
       setModalLoading(true);
       if (editingRecord) {
@@ -265,6 +273,20 @@ const QuanLyDonTrongPhoi = () => {
         render: (v: string | null) => v ?? "-",
       },
       {
+        title: "BP/NM",
+        dataIndex: "idPB",
+        key: "idPB",
+        width: 120,
+        render: (v: number | null) => tenPhongBan(v) ?? "-",
+      },
+      {
+        title: "Xưởng",
+        dataIndex: "idXuong",
+        key: "idXuong",
+        width: 180,
+        render: (v: number | null) => (v == null ? <Tag>Dùng chung</Tag> : tenXuong(v)),
+      },
+      {
         title: "Mã Vật Tư",
         dataIndex: "maVatTu",
         key: "maVatTu",
@@ -327,7 +349,7 @@ const QuanLyDonTrongPhoi = () => {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data]
+    [data, tenPhongBan, tenXuong]
   );
 
   return (
@@ -382,6 +404,11 @@ const QuanLyDonTrongPhoi = () => {
             <Col xs={24} md={5}>
               <Form.Item label="Mã Vật Tư" name="maVatTu">
                 <Input placeholder="Tìm theo mã vật tư..." allowClear />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={5}>
+              <Form.Item label="Xưởng (riêng)" name="idXuong">
+                <Select allowClear showSearch optionFilterProp="label" placeholder="Tất cả" options={xuongOptions} />
               </Form.Item>
             </Col>
             <Col xs={24} md={4}>
@@ -474,6 +501,22 @@ const QuanLyDonTrongPhoi = () => {
               precision={3}
             />
           </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="idPB" label="BP/NM">
+                <Select allowClear showSearch optionFilterProp="label" placeholder="Dùng chung" options={phongBanOptions} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="idXuong"
+                label="Xưởng"
+                tooltip="Bỏ trống = dùng chung (NM.CTD). Chọn xưởng khi đơn trọng riêng cho xưởng đó; khi tra cứu, đơn trọng riêng xưởng được ưu tiên."
+              >
+                <Select allowClear showSearch optionFilterProp="label" placeholder="Dùng chung" options={xuongOptions} />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item name="isXacNhan" label="Xác nhận" valuePropName="checked">
             <Switch checkedChildren="Đã xác nhận" unCheckedChildren="Chưa xác nhận" />
           </Form.Item>

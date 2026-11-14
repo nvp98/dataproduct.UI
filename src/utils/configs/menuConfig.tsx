@@ -62,6 +62,24 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub1-1.3",
+            maBM: BM_CONFIG.KDL.KDL_HRC1_DPV_LenhSanXuat,
+            label: (
+              <Tooltip title="Quản lý Lệnh sản xuất Xưởng Đúc phôi vuông">
+                <NavLink to="/hrc1-dpv-lenhsanxuat">LSX Đúc phôi vuông</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub1-1.4",
+            maBM: BM_CONFIG.KDL.KDL_HRC1_DPV_CSDL,
+            label: (
+              <Tooltip title="CSDL Xưởng Đúc phôi vuông — tự động kéo từ BKM + thép lỏng">
+                <NavLink to="/hrc1-dpv-csdl">CSDL Đúc phôi vuông</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       // {
@@ -202,6 +220,30 @@ export const menuConfig = [
             label: (
               <Tooltip title="Cân bằng nguyên liệu: đối chiếu dữ liệu giao nhận và dữ liệu vào lò">
                 <NavLink to="/canbangnl">Cân bằng nguyên liệu</NavLink>
+              </Tooltip>
+            ),
+          },
+        ],
+      },
+      {
+        key: "sub1-7",
+        label: "Động lực",
+        children: [
+          {
+            key: "sub1-7-1",
+            maBM: BM_CONFIG.KDL.KDL_DongLuc_DuLieu,
+            label: (
+              <Tooltip title="Dữ liệu động lực theo ca kéo từ EMS">
+                <NavLink to="/dongluc-dulieu">Dữ liệu động lực</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub1-7-2",
+            maBM: BM_CONFIG.KDL.KDL_DongLuc_Tag,
+            label: (
+              <Tooltip title="Danh mục tag EMS: tag nào kéo về, mã header, mã xưởng">
+                <NavLink to="/dongluc-tag">Danh mục tag</NavLink>
               </Tooltip>
             ),
           },

@@ -118,7 +118,10 @@ import TonSiloTKVV from "../pages/NMTKVV/TonSilo/TonSilo";
 import TaoPhieuTonSiloTKVV from "../pages/NMTKVV/TonSilo/TaoPhieuTonSilo";
 import ChiTietTonSiloTKVV from "../pages/NMTKVV/TonSilo/ChiTietTonSilo";
 import PhuLieuHRC1 from "../pages/KhoDuLieu/NM.HRC1/PhuLieuHRC1";
-import CanBangNL from "../pages/KhoDuLieu/CanBangNL/CanBangNL";
+import QuanLyLenhSanXuatDPV from "../pages/NM.HRC1/DucPhoiVuong/QuanLyLenhSanXuat";
+import DuLieuDongLuc from "../pages/KhoDuLieu/DongLuc/DuLieuDongLuc";
+import KdlForm from "../pages/KhoDuLieu/KdlForm";
+import QuanLyTagDongLuc from "../pages/KhoDuLieu/DongLuc/QuanLyTagDongLuc";import CanBangNL from "../pages/KhoDuLieu/CanBangNL/CanBangNL";
 
 export const routes = [
   {
@@ -1911,6 +1914,46 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <PhuLieuHRC1 />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1-dpv-lenhsanxuat",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyLenhSanXuatDPV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1-dpv-csdl",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <KdlForm maForm="HRC1_DPV_CSDL" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "dongluc-dulieu",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <DuLieuDongLuc />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "dongluc-tag",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <QuanLyTagDongLuc />
             </RequireRole>
           </RequireAuth>
         ),
