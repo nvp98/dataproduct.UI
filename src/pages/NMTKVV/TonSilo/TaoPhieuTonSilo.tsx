@@ -947,17 +947,13 @@ const TaoPhieuTonSilo = () => {
     );
   }, []);
 
-  // doAmText chỉ cho sửa khi: cột Xuất có giá trị VÀ là dòng đầu tiên của NVL
+  // doAmText chỉ cho sửa khi: loại NVL có khối lượng (nhap hoặc nhapAuto > 0) VÀ là dòng đầu tiên của NVL
   const readonlyCellGetter = useCallback(
     (dataIndex: string, record: any): boolean => {
       if (dataIndex !== "doAmText") return false;
-      const xuat = record.xuat;
-      const xuatHasValue =
-        xuat !== "" &&
-        xuat != null &&
-        !isNaN(parseFloat(String(xuat))) &&
-        parseFloat(String(xuat)) !== 0;
-      if (!xuatHasValue) return true;
+      const hasWeight = (val: any) =>
+        val !== "" && val != null && !isNaN(parseFloat(String(val))) && parseFloat(String(val)) !== 0;
+      if (!hasWeight(record.nhap) && !hasWeight(record.nhapAuto)) return true;
       return !firstNvlRowKeySet.has(record.key);
     },
     [firstNvlRowKeySet],
