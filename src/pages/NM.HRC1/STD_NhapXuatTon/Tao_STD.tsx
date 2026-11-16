@@ -35,6 +35,7 @@ const Tao_STD_HRC1 = () => {
   const [table1Data, setTable1Data] = useState<STD_NXT_HRC1_Table1Row[]>([]);
   const [table2Data, setTable2Data] = useState<STD_NXT_HRC1_Table2Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [relatedStatusMap, setRelatedStatusMap] = useState<Record<string, STD_NXT_RelatedPhieuStatusItem>>({});
   const [canPhanBo, setCanPhanBo] = useState(true);
   const [isLockedByChot, setIsLockedByChot] = useState(false);
@@ -122,7 +123,9 @@ const Tao_STD_HRC1 = () => {
       const summary: NXTSummaryDto_HRC1[] = Object.keys(grouped).map((name) => {
         const g = grouped[name];
         const tongSuDung = g.tonDau + g.nhap - g.tonCuoi;
-        const chenh = Math.abs(tongSuDung - g.sdss);
+        // Giữ dấu (không abs) — phải khớp với công thức có dấu dùng ở SummaryTableSTD_HRC1
+        // và payload gửi PhanBoAsync, nếu không BE sẽ luôn throw chenhLechDiff khi âm (abs vs có dấu).
+        const chenh = tongSuDung - g.sdss;
         return {
           PhuLieuID: g.id,
           TenNguyenLieu: name,
@@ -197,6 +200,8 @@ const Tao_STD_HRC1 = () => {
       tyLeLF: item.tyLeLF ?? item.TyLeLF ?? null,
       KLPB_BOF: item.klpB_BOF ?? item.klpb_BOF ?? item.KLPB_BOF ?? null,
       KLPB_LF: item.klpB_LF ?? item.klpb_LF ?? item.KLPB_LF ?? null,
+      KLTK_BOF: item.kltK_BOF ?? item.kltk_BOF ?? item.KLTK_BOF ?? null,
+      KLTK_LF: item.kltK_LF ?? item.kltk_LF ?? item.KLTK_LF ?? null,
     }));
   }, []);
 
@@ -661,7 +666,32 @@ const Tao_STD_HRC1 = () => {
     [form, idphieu, loadRelatedPhieuStatuses, refreshSummaryAndStatus]
   );
 
+  const handleResetAllSummary = useCallback(
+    async (rows: Array<STD_NXT_HRC1_PhanBoDto & { IsPhanBo: boolean }>) => {
+      if (!idphieu || rows.length === 0) return;
+      setLoading(true);
+      try {
+        // Gộp thành 1 request duy nhất (xử lý tuần tự trong 1 transaction ở BE) thay vì bắn song song
+        // N request thu-hoi-phan-bo/khong-phan-bo — tránh tranh lock SQL Server gây lỗi transient.
+        await STD_NXT_HRC1ServiceApi.resetAllPhanBo({
+          IdPhieu: idphieu,
+          NgaySX: rows[0].NgaySX,
+          Ca: rows[0].Ca,
+          Items: rows.map((r) => ({ PhuLieuID: r.PhuLieuID, IsPhanBo: r.IsPhanBo })),
+        });
+        message.success(`Đã reset ${rows.length} phụ liệu về trạng thái ban đầu.`);
+      } catch (err: any) {
+        message.error(err?.message || "Reset tất cả thất bại. Vui lòng thử lại.");
+      } finally {
+        await refreshSummaryAndStatus();
+        setLoading(false);
+      }
+    },
+    [idphieu, refreshSummaryAndStatus]
+  );
+
   const handleFilterData = useCallback(async () => {
+    setRefreshing(true);
     try {
       const values = await form.validateFields(["NgaySX", "ca"]);
       const ngay = values.NgaySX ? values.NgaySX.format("YYYY-MM-DD") : null;
@@ -764,6 +794,8 @@ const Tao_STD_HRC1 = () => {
     } catch (error: any) {
       console.error("Lọc dữ liệu thất bại:", error);
       message.error(error?.message || "Không thể lọc dữ liệu");
+    } finally {
+      setRefreshing(false);
     }
   }, [form, config.layout1, setTable1Data, table1Data, idphieu, loadRelatedPhieuStatuses, mapDetailsResponse, mapSummaryResponse]);
 
@@ -806,6 +838,7 @@ const Tao_STD_HRC1 = () => {
             <Button
               type="primary"
               onClick={handleFilterData}
+              loading={refreshing}
               style={{
                 height: 35,
                 width: "100%",
@@ -841,11 +874,13 @@ const Tao_STD_HRC1 = () => {
                         onPhanBo={handlePhanBoSummary}
                         onThuHoi={handleThuHoiSummary}
                         onKhongPhanBo={handleKhongPhanBoSummary}
+                        onResetAll={handleResetAllSummary}
                         canPhanBo={canPhanBo}
                         idPhieu={idphieu ?? undefined}
                         editable={true}
                         loading={loading}
                         lockedTooltip={isLockedByChot ? "Đã có phiếu được chốt" : undefined}
+                        khuVucConfig={kvList}
                       />
                     ),
                   },
