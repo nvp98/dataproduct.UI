@@ -13,6 +13,7 @@ import {
   DatePicker,
   Form,
   Input,
+  message,
   Modal,
   Popconfirm,
   Select,
@@ -20,7 +21,7 @@ import {
   Table,
 } from "antd";
 // import PdfMakeExample from "../../components/PdfMakeExample";
-import { DeleteTwoTone, EyeOutlined } from "@ant-design/icons";
+import { DeleteTwoTone, EyeOutlined, SyncOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
@@ -47,6 +48,9 @@ const SanLuongPhoi = ({}: { type?: string }) => {
   });
   const [editForm] = Form.useForm();
   const [filters, setFilters] = useState<any>({});
+  const [syncModal, setSyncModal] = useState(false);
+  const [syncDate, setSyncDate] = useState<dayjs.Dayjs | null>(null);
+  const [syncLoading, setSyncLoading] = useState(false);
 
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : {};
@@ -66,6 +70,25 @@ const SanLuongPhoi = ({}: { type?: string }) => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleSyncBkMis = async () => {
+    if (!syncDate) {
+      message.warning("Vui lòng chọn ngày đồng bộ");
+      return;
+    }
+    setSyncLoading(true);
+    try {
+      await phoiGiaoNhanApi.syncBkMis(syncDate.format("YYYY-MM-DD"));
+      message.success("Đồng bộ BKMis thành công");
+      setSyncModal(false);
+      setSyncDate(null);
+      fetchData(filters);
+    } catch {
+      message.error("Đồng bộ thất bại");
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   // Xử lý khi nhấn nút Lọc
   const handleFilter = (filterValues: any) => {
@@ -288,7 +311,13 @@ const SanLuongPhoi = ({}: { type?: string }) => {
         onClearFilter={handleClearFilter}
         filterFields={filterFieldsConfig}
       />
-      <Card>
+      <Card
+        extra={
+          <Button icon={<SyncOutlined />} onClick={() => setSyncModal(true)}>
+            Đồng bộ BKMis
+          </Button>
+        }
+      >
         <Table
           columns={columns}
           dataSource={data}
@@ -319,6 +348,27 @@ const SanLuongPhoi = ({}: { type?: string }) => {
           )}
         />
       </Card>
+      <Modal
+        title="Đồng bộ dữ liệu BKMis"
+        open={syncModal}
+        onCancel={() => { setSyncModal(false); setSyncDate(null); }}
+        onOk={handleSyncBkMis}
+        okText="Đồng bộ"
+        cancelText="Hủy"
+        confirmLoading={syncLoading}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Ngày đồng bộ" required>
+            <DatePicker
+              style={{ width: "100%" }}
+              value={syncDate}
+              onChange={setSyncDate}
+              format="DD/MM/YYYY"
+              placeholder="Chọn ngày"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
       <Modal
         title={
           editModal.record

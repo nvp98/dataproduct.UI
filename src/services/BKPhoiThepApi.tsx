@@ -6,6 +6,8 @@ export const phoiGiaoNhanApi = {
     apiService.put("/api/BKPhoiThep/st-dachuyen-bulk", data),
   stThuHoiBulk: (data: Array<{ id: number; soThuHoi: number }>) =>
     apiService.put("/api/BKPhoiThep/st-thuhoi-bulk", data),
+  syncBkMis: (ngaySX: string) =>
+    apiService.post("/api/BKPhoiThep/sync-bkmis", { ngaySX }),
 
   //   getDetail: (id: string) => apiService.get(`/api/phoigionhan/${id}`),
 };
