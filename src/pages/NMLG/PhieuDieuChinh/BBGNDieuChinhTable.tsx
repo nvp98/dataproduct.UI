@@ -1,4 +1,4 @@
-
+﻿
 import { useMemo, useState } from "react";
 import { Badge, Button, Collapse, Empty, Input, InputNumber, Popconfirm, Select, Space, Table, Tooltip, message } from "antd";
 import { FilterOutlined, LockOutlined, UndoOutlined } from "@ant-design/icons";
@@ -197,8 +197,9 @@ export const apDungReset = (
   if (resetLoai) {
     Object.assign(next, { loaiSoDieuChinh: null, loaiSoBenKia: null, klQuyKhoNhap: null, klQuyKhoXuat: null });
   }
-  if (laNhan) next.ghiChuNhap = noiGhiChu(r.ghiChuNhap);
-  else next.ghiChuXuat = noiGhiChu(r.ghiChuXuat);
+  // Reset xong xóa trắng ghi chú của bên mình để nhập lại (BE cũng xóa)
+  if (laNhan) next.ghiChuNhap = null;
+  else next.ghiChuXuat = null;
   return next;
 };
 
@@ -224,6 +225,7 @@ interface BBGNDieuChinhTableProps {
 type FilterShape = {
   loaiSoDieuChinh?: number;
   idCa?: number;
+  tenNhomNVL?: string;
   tenVatTu?: string;
   tenPhongBanGiao?: string;
   tenPhongBanNhan?: string;
@@ -271,6 +273,7 @@ const BBGNDieuChinhTable = ({
       tabRows.filter((r) => {
         if (filters.loaiSoDieuChinh != null && r.loaiSoDieuChinh !== filters.loaiSoDieuChinh) return false;
         if (filters.idCa != null && r.idCa !== filters.idCa) return false;
+        if (filters.tenNhomNVL && r.tenNhomNVL !== filters.tenNhomNVL) return false;
         if (filters.tenVatTu && r.tenVatTu !== filters.tenVatTu) return false;
         if (filters.tenPhongBanGiao && r.tenPhongBanGiao !== filters.tenPhongBanGiao) return false;
         if (filters.tenPhongBanNhan && r.tenPhongBanNhan !== filters.tenPhongBanNhan) return false;
@@ -340,7 +343,6 @@ const BBGNDieuChinhTable = ({
       editable && (field === "khoiLuongNhap") === laNhan ? (
         <InputNumber
           size="small"
-          min={0}
           step={0.001}
           precision={3}
           value={v}
@@ -365,7 +367,6 @@ const BBGNDieuChinhTable = ({
       editable && (field === "klQuyKhoNhap") === laNhan ? (
         <InputNumber
           size="small"
-          min={0}
           step={0.001}
           precision={3}
           value={v}
@@ -560,7 +561,6 @@ const BBGNDieuChinhTable = ({
       {
         title: "Thao tác",
         width:  90,
-        fixed: "right",
         render: (_: unknown, r: BBGNRow) => {
           const klBenKia = laNhan ? r.khoiLuongXuat : r.khoiLuongNhap;
           const coKL = !!onReset && klBenKia != null;
@@ -652,6 +652,7 @@ const BBGNDieuChinhTable = ({
             ),
             children: (
               <Space wrap size="small">
+                {filterSelect("Nhóm NVL", "tenNhomNVL", uniqueOptions(tabRows, "tenNhomNVL"))}
                 {filterSelect("Tên NVL", "tenVatTu", uniqueOptions(tabRows, "tenVatTu"))}
                 {filterSelect(
                   "Ca",

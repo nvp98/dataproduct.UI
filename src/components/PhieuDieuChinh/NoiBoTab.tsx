@@ -2,7 +2,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { Badge, Button, Collapse, Empty, Input, InputNumber, Popconfirm, Select, Space, Table, message } from "antd";
-import { DeleteOutlined, FilterOutlined } from "@ant-design/icons";
+import { DeleteOutlined, FilterOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { tenCa } from "../../services/PhieuDieuChinhApi";
 import { tinhKhoiLuongTuQuyKho } from "../../pages/NMLG/PhieuDieuChinh/BBGNDieuChinhTable";
@@ -136,7 +136,62 @@ const NoiBoTab = ({
     [setTableData]
   );
 
+  // Thêm dòng thủ công vào xưởng đang xem (idLoCao = ID xưởng nhận, như dòng tải từ nguồn).
+  // Dòng không có idCtBBGN = nhập tay → cho sửa Tên NVL / Lô / Xưởng giao.
+  const themDong = useCallback(() => {
+    const xuong = xuongList.find((x) => String(x.id) === activeXuong);
+    if (!xuong) {
+      message.warning("Hãy chọn một xưởng trước khi thêm dòng");
+      return;
+    }
+    const row: TableRow = {
+      key: `thucong-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      idCtBBGN: null,
+      idLoCao: xuong.id,
+      idCa: null,
+      idNVL: null,
+      tenNVL: "",
+      tenNhomNVL: "",
+      loaiDieuChinh: LOAI_NOI_BO,
+      idNVLChiTiet: null,
+      idNhomNVL: null,
+      dvt: "",
+      maLo: "",
+      phongBanXuat: "",
+      xuongXuat: "",
+      phongBanNhap: "",
+      xuongNhap: xuong.tenXuong,
+      khoiLuongXuat: null,
+      khoiLuongQuyKhoXuat: null,
+      khoiLuongNhap: null,
+      khoiLuongQuyKhoNhap: null,
+      doAm: null,
+      loaiSoDieuChinh: null,
+      viTri: "",
+      phanLoai: "",
+      ghiChu: "",
+      nguoiDieuChinhNhan: null,
+      thoiGianDieuChinhNhan: null,
+    } as TableRow;
+    setTableData((prev) => [...prev, row]);
+  }, [activeXuong, xuongList, setTableData]);
+
   const columns: ColumnsType<TableRow> = useMemo(() => {
+    // Ô văn bản: dòng nhập tay (không có idCtBBGN) sửa được, dòng từ nguồn chỉ xem
+    const oText = (field: keyof TableRow & string, width?: number) =>
+      (v: string | null, row: TableRow) =>
+        !locked && row.idCtBBGN == null ? (
+          <Input
+            size="small"
+            value={v ?? ""}
+            maxLength={200}
+            style={width ? { width } : undefined}
+            onChange={(e) => patchRow(row.key, { [field]: e.target.value } as Partial<TableRow>)}
+          />
+        ) : (
+          v
+        );
+
     const nguoiVaThoiGian = (id: number | null, thoiGian?: string | null) => {
       if (!id) return "";
       const d = thoiGian ? new Date(thoiGian) : null;
@@ -156,10 +211,32 @@ const NoiBoTab = ({
     return [
       { title: "STT", width: 50, align: "center", render: (_: unknown, __: TableRow, i: number) => i + 1 },
       { title: "Nhóm NVL", dataIndex: "tenNhomNVL", width: 130 },
-      { title: "Tên NVL", dataIndex: "tenNVL", width: 180 },
-      { title: "Lô", dataIndex: "maLo", width: 110 },
-      { title: "Ca", dataIndex: "idCa", width: 90, render: (v: number | null) => tenCa(v) },
-      { title: "Xưởng giao", dataIndex: "xuongXuat", width: 150 },
+      { title: "Tên NVL", dataIndex: "tenNVL", width: 180, render: oText("tenNVL") },
+      { title: "Lô", dataIndex: "maLo", width: 110, render: oText("maLo") },
+      {
+        title: "Ca",
+        dataIndex: "idCa",
+        width: 110,
+        // Dòng nhập tay (không có idCtBBGN) chọn Ca ngày / Ca đêm; dòng từ nguồn chỉ xem
+        render: (v: number | string | null, row: TableRow) =>
+          !locked && row.idCtBBGN == null ? (
+            <Select
+              size="small"
+              allowClear
+              placeholder="Chọn ca"
+              value={v != null && v !== "" ? Number(v) : undefined}
+              style={{ width: "100%" }}
+              options={[
+                { value: 1, label: tenCa(1) },
+                { value: 2, label: tenCa(2) },
+              ]}
+              onChange={(val) => patchRow(row.key, { idCa: val ?? null })}
+            />
+          ) : (
+            tenCa(v)
+          ),
+      },
+      { title: "Xưởng giao", dataIndex: "xuongXuat", width: 150, render: oText("xuongXuat") },
       { title: "Xưởng nhận", dataIndex: "xuongNhap", width: 150 },
       {
         title: "Độ ẩm (%)",
@@ -202,29 +279,15 @@ const NoiBoTab = ({
           ),
       },
       {
+        // Nội bộ: KL xuất = KL nhập (recomputeRows đồng bộ), nên chỉ hiện cột xuất; nhập liệu ghi vào khoiLuongNhap
         title: "KL xuất",
         dataIndex: "khoiLuongXuat",
-        width: 110,
-        align: "right",
-        render: (v: number | null) => fmt(v),
-      },
-      {
-        title: "KL quy khô xuất",
-        dataIndex: "khoiLuongQuyKhoXuat",
-        width: 120,
-        align: "right",
-        render: (v: number | null) => fmt(v),
-      },
-      {
-        title: "KL nhập",
-        dataIndex: "khoiLuongNhap",
         width: 130,
         align: "right",
         render: (v: number | string | null, row: TableRow) =>
           !locked ? (
             <InputNumber
               size="small"
-              min={0}
               step={0.001}
               precision={3}
               value={toNum(v)}
@@ -236,8 +299,8 @@ const NoiBoTab = ({
           ),
       },
       {
-        title: "KL quy khô nhập",
-        dataIndex: "khoiLuongQuyKhoNhap",
+        title: "KL quy khô xuất",
+        dataIndex: "khoiLuongQuyKhoXuat",
         width: 120,
         align: "right",
         // Nhập KL quy khô → tính ngược KL (cùng loại số điều chỉnh và độ ẩm), như tab Nhập / Xuất
@@ -245,7 +308,6 @@ const NoiBoTab = ({
           !locked ? (
             <InputNumber
               size="small"
-              min={0}
               step={0.001}
               precision={3}
               value={toNum(v)}
@@ -372,6 +434,14 @@ const NoiBoTab = ({
         />}
     >
       <div>
+        {!locked && (
+          <div style={{ marginBottom: 8 }}>
+            <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={themDong}>
+              Thêm dòng
+            </Button>
+          </div>
+        )}
+
         <Collapse
           size="small"
           className="pdc-compact-filters"

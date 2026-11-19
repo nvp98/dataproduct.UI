@@ -18,6 +18,7 @@ import {
   type LoaiBBGN,
 } from "../../../services/PhieuDieuChinhApi";
 import { TaiKhoanApi } from "../../../services/TaiKhoanService";
+import { getAllowedScope } from "../../../utils/helpers/checkAdminRole";
 import { taoItemsLuu, type BBGNRow } from "./BBGNDieuChinhTable";
 import BBGNTab from "../../../components/PhieuDieuChinh/BBGNTab";
 import NoiBoTab from "../../../components/PhieuDieuChinh/NoiBoTab";
@@ -583,9 +584,12 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
       .getDanhMucXuong(phamViPhongBanId)
       .then((res) => {
         if (huy) return;
+        // Phân quyền xưởng như THONGKE_HRC1: scope (MaKhuVuc) = ID xưởng trên chính MaBm. null = không giới hạn.
+        const xuongDuocPhep = getAllowedScope(config.code);
         const list: XuongItem[] = (Array.isArray(res) ? res : [])
           .map((x) => ({ id: Number(x.id), tenXuong: x.ten }))
           .filter((x) => Number.isFinite(x.id))
+          .filter((x) => xuongDuocPhep === null || xuongDuocPhep.includes(String(x.id)))
           .sort((a, b) => a.id - b.id);
         setXuongList(list);
         setActiveXuong((cur) => (cur && (cur === TONG_HOP_KEY || list.some((x) => String(x.id) === cur)) ? cur : list.length ? String(list[0].id) : ""));
@@ -598,7 +602,7 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
     return () => {
       huy = true;
     };
-  }, [phamViPhongBanId]);
+  }, [phamViPhongBanId, config.code]);
 
   // Chi tiết Nội bộ của phiếu đã lưu: tải 1 lần cho cả phiếu (BE chỉ trả dòng loại Nội bộ), vào chung tableData.
   // Tab xưởng dùng chung với Nhập / Xuất nên không cần tải theo từng tab; chỉ tải lại khi tải lại phiếu

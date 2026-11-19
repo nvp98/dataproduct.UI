@@ -14,6 +14,7 @@ import {
 import { PlusOutlined, DeleteOutlined, EditOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import { BmQuyenXlApi } from "../../services/BmQuyenXlApi";
 import { TaiKhoanApi } from "../../services/TaiKhoanService";
+import { phieuDieuChinhApi } from "../../services/PhieuDieuChinhApi";
 import { bmQuyenConfig } from "../../utils/configs/bmQuyenConfig";
 import { isAdminUser } from "../../utils/helpers/checkAdminRole";
 
@@ -34,11 +35,15 @@ interface BmRow {
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-const getScopeOptions = (maBm?: string) => {
+const getScopeOptions = (
+  maBm?: string,
+  dynamicScopes?: Record<string, { value: string; label: string }[]>
+) => {
   const bm = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
   return [
     { value: ALL_KHU_VUC, label: "Tất cả" },
-    ...(bm?.scope ?? []).map((s) => ({ value: s.maKhuVuc, label: s.tenKhuVuc })),
+    ...(dynamicScopes?.[maBm ?? ""] ??
+      (bm?.scope ?? []).map((s) => ({ value: s.maKhuVuc, label: s.tenKhuVuc }))),
   ];
 };
 
@@ -184,6 +189,16 @@ function buildBmRowsFromRecords(records: any[]): BmRow[] {
       byQuyen.get(r.quyenChucNang)!.push(r.displayVal);
     }
 
+    // Phiếu điều chỉnh: bỏ "Tất cả" khi đã có xưởng cụ thể.
+    const bmDef = bmQuyenConfig.danhSachBieuMau.find((b) => b.maBm === maBm);
+    if (bmDef?.nhom === "P.CN" && (bmDef.scope || bmDef.scopeDynamic)) {
+      for (const [quyen, kvs] of byQuyen) {
+        if (kvs.some((v) => v !== ALL_KHU_VUC)) {
+          byQuyen.set(quyen, kvs.filter((v) => v !== ALL_KHU_VUC));
+        }
+      }
+    }
+
     const byKvSet = new Map<string, { kvs: string[]; quyens: number[] }>();
     for (const [quyen, kvs] of byQuyen) {
       const kvsSorted = [...new Set(kvs)].sort();
@@ -233,6 +248,9 @@ const PhanQuyenBieuMau = () => {
   const [filterBmInModal, setFilterBmInModal] = useState<string | undefined>();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [filterTaiKhoan, setFilterTaiKhoan] = useState<number | undefined>();
+  const [dynamicScopes, setDynamicScopes] = useState<
+    Record<string, { value: string; label: string }[]>
+  >({});
 
   useEffect(() => {
     const userStr = localStorage.getItem("userinfo");
@@ -266,6 +284,41 @@ const PhanQuyenBieuMau = () => {
     loadData();
     loadUsers();
   }, []);
+
+  useEffect(() => {
+    const maBms = [...new Set(
+      bmRows
+        .map((row) => row.maBm)
+        .filter((maBm): maBm is string => !!maBm)
+    )];
+    const huy = { value: false };
+
+    void Promise.all(maBms.map(async (maBm) => {
+      const bm = bmQuyenConfig.danhSachBieuMau.find((item) => item.maBm === maBm);
+      if (!bm?.scopeDynamic || bm.idPhongBan == null) return null;
+      try {
+        const res = await phieuDieuChinhApi.getDanhMucXuong(bm.idPhongBan);
+        const options = (Array.isArray(res) ? res : [])
+          .map((x) => ({ value: String(x.id), label: x.ten }))
+          .filter((x) => !!x.value);
+        return [maBm, options] as const;
+      } catch {
+        message.error(`Không tải được danh sách xưởng của ${bm.tenBm}`);
+        return null;
+      }
+    })).then((results) => {
+      if (huy.value) return;
+      setDynamicScopes((prev) => {
+        const next = { ...prev };
+        for (const result of results) {
+          if (result) next[result[0]] = result[1];
+        }
+        return next;
+      });
+    });
+
+    return () => { huy.value = true; };
+  }, [bmRows]);
 
   // ── group dataSource theo user ─────────────────────────────────────────────
 
@@ -721,7 +774,7 @@ const PhanQuyenBieuMau = () => {
                             ? getKvpAsScopeOptions(bmRow.maBm)
                             : useMergedScopeMode(bmRow.maBm)
                               ? getMergedScopeOptions(bmRow.maBm)
-                              : getScopeOptions(bmRow.maBm)
+                              : getScopeOptions(bmRow.maBm, dynamicScopes)
                           ) as { value: string; label: string }[]
                         }
                         onChange={(vals) => handleKhuVucChange(bmRow.key, subRow.key, vals)}

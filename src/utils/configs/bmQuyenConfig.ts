@@ -26,6 +26,10 @@ export interface BieuMauQuyenItem {
   tenBm: string;
   nhom: string;
   scope?: KhuVucQuyenItem[];
+  /** ID phong ban khi scope xưởng được tai truc tiep tu API danh-muc-xuong. */
+  idPhongBan?: number;
+  /** Scope xưởng tải động thay vì khai báo scope trong frontend. */
+  scopeDynamic?: boolean;
   khuVucPhus?: KhuVucPhuItem[];
   /** Quyền chức năng riêng của BM này (value >= 6), chỉ hiện khi đang chọn đúng BM — không dùng chung với BM khác */
   extraQuyens?: ExtraQuyenChucNangItem[];
@@ -196,16 +200,22 @@ export const bmQuyenConfig = {
       tenBm: "Biên bản theo dõi ben phế",
       nhom: "NM.NL",
     },
+    // Phiếu điều chỉnh: giống THONGKE_HRC1 (scope = tab) nhưng scope = xưởng, lấy từ bảng LG_PDC_Scope_PhongBan
+    // qua API (scopeDynamic + idPhongBan). Phiếu không có Scope nên danh sách do PhieuDieuChinhSearchFilterProvider (BE) xử lý.
     {
       maBm: BM_CONFIG.PCN.NMLG_BM_PhieuDieuChinh,
       tenBm: "Phiếu điều chỉnh số liệu NM.LG",
       nhom: "P.CN",
+      idPhongBan: 63,
+      scopeDynamic: true,
     },
     // Phiếu điều chỉnh theo phòng ban (NM.TKVV, NM.NL, NM.LC...) — danh sách ở phieuDieuChinhNM.ts
     ...PHIEU_DIEU_CHINH_NM.map((nm) => ({
       maBm: nm.maBm,
       tenBm: `Phiếu điều chỉnh số liệu ${nm.ten}`,
       nhom: "P.CN",
+      idPhongBan: nm.ID_PhongBan,
+      scopeDynamic: true,
     })),
     {
       maBm: BM_CONFIG.NMLG.NMLG_BM_TonSiloLoCao,

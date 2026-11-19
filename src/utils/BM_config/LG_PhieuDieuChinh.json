@@ -86,7 +86,7 @@
       "label": "Người lập phiếu",
       "type": "selectNguoiKy",
       "key": "nguoiLapPhieu_NM.LG",
-      "maphongBan": "NM.LG",
+      "maphongBan": "P.CN",
       "capDuyet": 0,
       "isChon": true,
       "required": true

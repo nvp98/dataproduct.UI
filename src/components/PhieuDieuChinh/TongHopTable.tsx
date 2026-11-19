@@ -160,7 +160,7 @@ const gop = (rows: DongTongHop[]): DongKetQua[] => {
         kl: a.coKl ? Number(a.kl.toFixed(3)) : null,
         quyKho: a.coQuyKho ? Number(a.quyKho.toFixed(3)) : null,
         doAm:
-          a.tongKl > 0
+          a.tongKl !== 0
             ? Number((a.tongKlAm / a.tongKl).toFixed(2))
             : a.soAm > 0
               ? Number((a.tongAm / a.soAm).toFixed(2))
@@ -229,7 +229,6 @@ const TongHopTable = ({ rows, xuongList, loading, editable, onChangeLoaiSo, onCh
     return (
       <InputNumber
         size="small"
-        min={0}
         step={0.001}
         precision={3}
         value={v ?? null}
