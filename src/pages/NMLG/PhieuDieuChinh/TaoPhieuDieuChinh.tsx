@@ -721,6 +721,7 @@ const TaoPhieuDieuChinh = ({ config: configProp }: { config?: any }) => {
                   <NoiBoTab
                     tableData={tableData}
                     setTableData={setTableData}
+                    nhanRows={bbgnNhan}
                     xuongList={xuongList}
                     activeXuong={activeXuong}
                     onChangeXuong={setActiveXuong}

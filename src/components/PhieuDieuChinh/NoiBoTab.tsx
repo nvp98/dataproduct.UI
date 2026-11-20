@@ -5,7 +5,7 @@ import { Badge, Button, Collapse, Empty, Input, InputNumber, Popconfirm, Select,
 import { DeleteOutlined, FilterOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { tenCa } from "../../services/PhieuDieuChinhApi";
-import { tinhKhoiLuongTuQuyKho } from "../../pages/NMLG/PhieuDieuChinh/BBGNDieuChinhTable";
+import { tinhKhoiLuongTuQuyKho, type BBGNRow } from "../../pages/NMLG/PhieuDieuChinh/BBGNDieuChinhTable";
 import XuongTabs, { type XuongItem } from "./XuongTabs";
 import TongHopTable, { type DongTongHop, type ThayDoiKL } from "./TongHopTable";
 import { LOAI_NOI_BO, recomputeRows, toNum, type TableRow } from "./noiBoUtils";
@@ -14,6 +14,8 @@ interface Props {
   /** Toàn bộ dòng chi tiết của phiếu (state ở component cha vì khi Lưu cần đọc) */
   tableData: TableRow[];
   setTableData: Dispatch<SetStateAction<TableRow[]>>;
+  /** Dòng tab Nhập — nguồn danh sách Tên NVL cho dòng thêm tay */
+  nhanRows: BBGNRow[];
   xuongList: XuongItem[];
   activeXuong: string;
   onChangeXuong: (key: string) => void;
@@ -57,6 +59,7 @@ const uniqueOptions = (rows: TableRow[], field: string) =>
 const NoiBoTab = ({
   tableData,
   setTableData,
+  nhanRows,
   xuongList,
   activeXuong,
   onChangeXuong,
@@ -65,6 +68,16 @@ const NoiBoTab = ({
   nguoiKyMap,
   currentUserId,
 }: Props) => {
+  // Danh sách NVL của tab Nhập (không trùng theo idVatTu) để chọn khi thêm dòng Nội bộ
+  const nvlNhapOptions = useMemo(() => {
+    const map = new Map<number, { label: string; value: number; tenNhomNVL: string | null }>();
+    nhanRows.forEach((r) => {
+      if (r.idVatTu == null || !r.tenVatTu || map.has(r.idVatTu)) return;
+      map.set(r.idVatTu, { label: r.tenVatTu, value: r.idVatTu, tenNhomNVL: r.tenNhomNVL ?? null });
+    });
+    return Array.from(map.values());
+  }, [nhanRows]);
+
   // Dòng Nội bộ thuộc xưởng nào (idLoCao = ID xưởng nhận). Dòng chưa rõ xưởng (hoặc xưởng không còn trong danh sách)
   // hiện ở xưởng đầu tiên để không bị "biến mất" — không có tab riêng cho dòng này.
   // Dòng cũ lưu idLoCao là mã lò (chưa phải ID xưởng) thì tra theo tên xưởng nhận để vẫn về đúng tab.
@@ -211,7 +224,36 @@ const NoiBoTab = ({
     return [
       { title: "STT", width: 50, align: "center", render: (_: unknown, __: TableRow, i: number) => i + 1 },
       { title: "Nhóm NVL", dataIndex: "tenNhomNVL", width: 130 },
-      { title: "Tên NVL", dataIndex: "tenNVL", width: 180, render: oText("tenNVL") },
+      {
+        title: "Tên NVL",
+        dataIndex: "tenNVL",
+        width: 180,
+        // Dòng nhập tay: chọn từ NVL của tab Nhập → lưu idNVL (+ tên, nhóm); dòng từ nguồn chỉ xem
+        render: (v: string | null, row: TableRow) =>
+          !locked && row.idCtBBGN == null ? (
+            <Select
+              size="small"
+              showSearch
+              allowClear
+              placeholder="Chọn NVL từ tab Nhập"
+              style={{ width: "100%" }}
+              optionFilterProp="label"
+              options={nvlNhapOptions}
+              value={row.idNVL != null ? Number(row.idNVL) : undefined}
+              notFoundContent="Tab Nhập chưa có NVL"
+              onChange={(val, opt) => {
+                const o = Array.isArray(opt) ? undefined : (opt as { label?: string; tenNhomNVL?: string | null });
+                patchRow(row.key, {
+                  idNVL: val ?? null,
+                  tenNVL: val != null ? String(o?.label ?? "") : "",
+                  tenNhomNVL: val != null ? o?.tenNhomNVL ?? "" : "",
+                });
+              }}
+            />
+          ) : (
+            v
+          ),
+      },
       { title: "Lô", dataIndex: "maLo", width: 110, render: oText("maLo") },
       {
         title: "Ca",
@@ -369,7 +411,7 @@ const NoiBoTab = ({
           ),
       },
     ];
-  }, [locked, nguoiKyMap, patchRow, xoaDong]);
+  }, [locked, nguoiKyMap, patchRow, xoaDong, nvlNhapOptions]);
 
   // Tổng hợp: KL nhập / quy khô nhập của mọi dòng Nội bộ, cộng theo xưởng
   const dongTongHop: DongTongHop[] = tableData
