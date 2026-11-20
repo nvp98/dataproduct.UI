@@ -30,7 +30,8 @@ export const BM_CONFIG = {
         THONGKE_HRC1: 'THONGKE_HRC1',
         HRC1_BB_TieuHao_BOF: 'HRC1_BB_TieuHao_BOF',
         HRC1_BB_TieuHao_LF: 'HRC1_BB_TieuHao_LF',
-        HRC1_STD_NXT: 'HRC1_STD_NXT'
+        HRC1_STD_NXT: 'HRC1_STD_NXT',
+        HRC1_BCSX_DPV: 'HRC1_BCSX_DPV',             // BM.14/QT.05.11 Biên bản chốt số liệu Xưởng ĐPV
     },
     NMLG: {
         NMLG_BM_NapLieuLoCao: 'NMLG_BM_NapLieuLoCao',
@@ -51,6 +52,7 @@ export const BM_CONFIG = {
         KDL_HRC1_PhuLieu:   'KDL_HRC1_PhuLieu',
         KDL_HRC1_DPV_LenhSanXuat: 'KDL_HRC1_DPV_LenhSanXuat', // Đúc phôi vuông — quản trị LSX
         KDL_HRC1_DPV_CSDL:  'KDL_HRC1_DPV_CSDL',  // Đúc phôi vuông — CSDL (Kho dữ liệu động, form HRC1_DPV_CSDL)
+        KDL_HRC1_DPV_DinhMuc: 'KDL_HRC1_DPV_DinhMuc', // Đúc phôi vuông — Định mức tiêu hao sản xuất
         KDL_NL_NguyenLieu:  'KDL_NL_NguyenLieu',
         KDL_HRC2_LuyenThep: 'KDL_HRC2_LuyenThep',
         KDL_HRC2_PhuLieu:   'KDL_HRC2_PhuLieu',

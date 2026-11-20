@@ -1,0 +1,54 @@
+{
+  "code": "HRC1_BCSX_DPV",
+  "prefix": "BCSX_DPV",
+  "title": "BIÊN BẢN CHỐT SỐ LIỆU XƯỞNG ĐÚC PHÔI VUÔNG",
+  "headerInfo": {
+    "company": "CÔNG TY CỔ PHẦN THÉP",
+    "subCompany": "HÒA PHÁT DUNG QUẤT"
+  },
+  "isoInfo": {
+    "code": "BM.14/QT.05.11",
+    "effectiveDate": "01/10/2026",
+    "revision": "03"
+  },
+  "headerFields": [
+    {
+      "label": "Ngày sản xuất (08h ngày này → 08h ngày sau)",
+      "type": "date",
+      "key": "NgaySX",
+      "required": true
+    }
+  ],
+  "signatures": [
+    {
+      "label": "P.KH (Người lập)",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_PKH",
+      "maphongBan": "P.KH",
+      "capDuyet": 0,
+      "capduyet": 0,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "NM.HRC1",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_HRC1",
+      "maphongBan": "NM.HRC1",
+      "capDuyet": 1,
+      "capduyet": 1,
+      "isChon": true,
+      "required": true
+    },
+    {
+      "label": "P.CNLT",
+      "type": "selectNguoiKy",
+      "key": "nguoiKy_PCNLT",
+      "maphongBan": "P.CNLT",
+      "capDuyet": 2,
+      "capduyet": 2,
+      "isChon": true,
+      "required": true
+    }
+  ]
+}

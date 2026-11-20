@@ -311,12 +311,19 @@ export const bmQuyenConfig = {
       tenBm: "STD - Nhập xuất tồn HRC1",
       nhom: "NM.HRC1",
     },
+    {
+      // Ký: P.KH lập → NM.HRC1 → P.CNLT
+      maBm: BM_CONFIG.HRC1.HRC1_BCSX_DPV,
+      tenBm: "Biên bản chốt số liệu Xưởng Đúc phôi vuông",
+      nhom: "NM.HRC1",
+    },
 
     // ─── Kho dữ liệu (vung 5 — quyền XEM) ────────────────────────────────────
     { maBm: BM_CONFIG.KDL.KDL_HRC1_SanLuong,  tenBm: "Sản lượng phôi HRC1",        nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_HRC1_PhuLieu,   tenBm: "Phụ liệu HRC1",              nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_HRC1_DPV_LenhSanXuat, tenBm: "Lệnh sản xuất Đúc phôi vuông HRC1", nhom: "Kho dữ liệu" },
-    { maBm: BM_CONFIG.KDL.KDL_HRC1_DPV_CSDL,  tenBm: "CSDL Đúc phôi vuông HRC1",   nhom: "Kho dữ liệu" },
+    { maBm: BM_CONFIG.KDL.KDL_HRC1_DPV_CSDL,    tenBm: "CSDL Đúc phôi vuông HRC1",       nhom: "Kho dữ liệu" },
+    { maBm: BM_CONFIG.KDL.KDL_HRC1_DPV_DinhMuc, tenBm: "Định mức tiêu hao DPV HRC1",     nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_NL_NguyenLieu,  tenBm: "Nguyên vật liệu NL",         nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_HRC2_LuyenThep, tenBm: "Dữ liệu luyện thép HRC2",   nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_HRC2_PhuLieu,   tenBm: "Phụ liệu HRC2",              nhom: "Kho dữ liệu" },

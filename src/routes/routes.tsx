@@ -110,6 +110,9 @@ import PhanBoDuLieuPage from "../pages/NMLG/PhanBoDuLieu/PhanBoDuLieuPage";
 import BienBanSanLuongTKVV from "../pages/NMTKVV/BienBanSanLuong/BienBanSanLuong";
 import TaoPhieuBienBanSanLuongTKVV from "../pages/NMTKVV/BienBanSanLuong/TaoPhieuBienBanSanLuong";
 import ChiTietBienBanSanLuongTKVV from "../pages/NMTKVV/BienBanSanLuong/ChiTietBienBanSanLuong";
+import BCSXDPV from "../pages/NM.HRC1/BCSX_DPV/BCSXDPV";
+import TaoPhieuBCSXDPV from "../pages/NM.HRC1/BCSX_DPV/TaoPhieuBCSXDPV";
+import ChiTietBCSXDPV from "../pages/NM.HRC1/BCSX_DPV/ChiTietBCSXDPV";
 import QuanLyNVLTKVV from "../pages/NMTKVV/QuanLyNVLTKVV/QuanLyNVLTKVV";
 import BaoCaoSanLuongChiPhiTKVV from "../pages/NMTKVV/BaoCaoSanLuongChiPhi/BaoCaoSanLuongChiPhi";
 import TaoPhieuBaoCaoSanLuongChiPhiTKVV from "../pages/NMTKVV/BaoCaoSanLuongChiPhi/TaoPhieuBaoCaoSanLuongChiPhi";
@@ -119,6 +122,7 @@ import TaoPhieuTonSiloTKVV from "../pages/NMTKVV/TonSilo/TaoPhieuTonSilo";
 import ChiTietTonSiloTKVV from "../pages/NMTKVV/TonSilo/ChiTietTonSilo";
 import PhuLieuHRC1 from "../pages/KhoDuLieu/NM.HRC1/PhuLieuHRC1";
 import QuanLyLenhSanXuatDPV from "../pages/NM.HRC1/DucPhoiVuong/QuanLyLenhSanXuat";
+import DinhMucTieuHaoDPV from "../pages/NM.HRC1/DucPhoiVuong/DinhMucTieuHao";
 import DuLieuDongLuc from "../pages/KhoDuLieu/DongLuc/DuLieuDongLuc";
 import KdlForm from "../pages/KhoDuLieu/KdlForm";
 import QuanLyTagDongLuc from "../pages/KhoDuLieu/DongLuc/QuanLyTagDongLuc";import CanBangNL from "../pages/KhoDuLieu/CanBangNL/CanBangNL";
@@ -1469,6 +1473,67 @@ export const routes = [
           </RequireAuth>
         ),
       },
+      // ─── Biên bản chốt số liệu Xưởng ĐPV HRC1 (BM.14/QT.05.11, HRC1_BCSX_DPV) ───
+      {
+        path: "hrc1_bcsx_dpv",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BCSXDPV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "viecdentoi/hrc1_bcsx_dpv",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BCSXDPV type="viecdentoi" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "xemphieu/hrc1_bcsx_dpv",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <BCSXDPV type="xemphieu" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieu_hrc1_bcsx_dpv",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuBCSXDPV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "taophieu_hrc1_bcsx_dpv/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <TaoPhieuBCSXDPV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "chitiet_hrc1_bcsx_dpv/:id",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <ChiTietBCSXDPV />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
       {
         path: "baocaoslcptkvv",
         element: (
@@ -1934,6 +1999,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <KdlForm maForm="HRC1_DPV_CSDL" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1-dpv-dinhmucsanxuat",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <DinhMucTieuHaoDPV />
             </RequireRole>
           </RequireAuth>
         ),

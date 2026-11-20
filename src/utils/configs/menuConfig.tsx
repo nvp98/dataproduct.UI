@@ -80,6 +80,15 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub1-1.5",
+            maBM: BM_CONFIG.KDL.KDL_HRC1_DPV_DinhMuc,
+            label: (
+              <Tooltip title="Quản lý định mức tiêu hao sản xuất Xưởng Đúc phôi vuông">
+                <NavLink to="/hrc1-dpv-dinhmucsanxuat">Định mức DPV</NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       // {
@@ -585,6 +594,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub2-7-7",
+            maBM: BM_CONFIG.HRC1.HRC1_BCSX_DPV,
+            label: (
+              <Tooltip title="BM.14/QT.05.11 (Biên bản chốt số liệu Xưởng Đúc phôi vuông)">
+                <NavLink to="/hrc1_bcsx_dpv">
+                  BM.14/QT.05.11 (BB chốt số liệu X.ĐPV)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -961,6 +981,17 @@ export const menuConfig = [
               </Tooltip>
             ),
           },
+          {
+            key: "sub3-6-7",
+            maBM: BM_CONFIG.HRC1.HRC1_BCSX_DPV,
+            label: (
+              <Tooltip title="BM.14/QT.05.11 (Biên bản chốt số liệu Xưởng Đúc phôi vuông)">
+                <NavLink to="/viecdentoi/hrc1_bcsx_dpv">
+                  BM.14/QT.05.11 (BB chốt số liệu X.ĐPV)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
         ],
       },
       {
@@ -1143,6 +1174,17 @@ export const menuConfig = [
               <Tooltip title="BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)">
                 <NavLink to="/xemphieu/hrc1_tieuhaotinhluyenlf">
                   BM.14/QT.05.10 (BB Tiêu hao tinh luyện LF)
+                </NavLink>
+              </Tooltip>
+            ),
+          },
+          {
+            key: "sub4-1-7",
+            maBM: BM_CONFIG.HRC1.HRC1_BCSX_DPV,
+            label: (
+              <Tooltip title="BM.14/QT.05.11 (Biên bản chốt số liệu Xưởng Đúc phôi vuông)">
+                <NavLink to="/xemphieu/hrc1_bcsx_dpv">
+                  BM.14/QT.05.11 (BB chốt số liệu X.ĐPV)
                 </NavLink>
               </Tooltip>
             ),

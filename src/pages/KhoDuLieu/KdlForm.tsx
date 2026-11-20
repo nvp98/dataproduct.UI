@@ -3,9 +3,9 @@ import { SearchOutlined, ReloadOutlined, SyncOutlined, DownloadOutlined } from "
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
-import { KdlApi, KDL_KIEU_DL } from "../../services/KdlApi";
-import type { KdlCauTruc, KdlDong, KdlLoc, KdlNhom, KdlSyncLog } from "../../services/KdlApi";
-import { KdlBangChiTiet, KdlBangTongHop } from "../../components/KdlBangDong";
+import { KdlApi, KDL_KIEU_DL, KDL_LOAI_DU_LIEU, KDL_LOAI_DU_LIEU_THEO_CHIEU } from "../../services/KdlApi";
+import type { KdlCauTruc, KdlChieuTH, KdlDong, KdlDongTongHopCT, KdlLoc, KdlNhom, KdlSyncLog } from "../../services/KdlApi";
+import { KdlBangChiTiet, KdlBangTongHop, KdlBangTongHopChiTiet, KdlBangTongHopTheoChieu } from "../../components/KdlBangDong";
 import { layCotLa } from "../../utils/kdlCot";
 
 // Trang xem dữ liệu Kho dữ liệu động cho 1 form (KDL_Form). Cột, nhãn chiều, bộ lọc và tab tổng hợp
@@ -52,6 +52,11 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
   const [tongHop, setTongHop] = useState<KdlNhom[]>([]);
   const [tongHopLoading, setTongHopLoading] = useState(false);
 
+  // Tab "Tổng hợp chi tiết": dòng đối tượng xen dòng Tổng ca / ngày / tháng / năm
+  const [thChiTiet, setThChiTiet] = useState<KdlDongTongHopCT[]>([]);
+  const [thChiTietLoading, setThChiTietLoading] = useState(false);
+  const [thVuotGioiHan, setThVuotGioiHan] = useState(false);
+
   const [syncLoading, setSyncLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [lanGanNhat, setLanGanNhat] = useState<KdlSyncLog | null>(null);
@@ -72,9 +77,11 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
   );
 
   const tabsTongHop = useMemo(() => {
-    const ds: { key: string; label: string; nhom: { field: string; label: string }[] }[] = [];
+    // chieu: tab dạng xen dòng (Theo ca/ngày/tháng/năm từng giá trị + dòng Tổng) — cần chiều NgaySX; không có thì bảng phẳng
+    const ds: { key: string; label: string; nhom: { field: string; label: string }[]; chieu?: KdlChieuTH }[] = [];
     const co = (f: string) => !!nhanTruong[f];
     const nhan = (f: string, macDinh: string) => nhanTruong[f] ?? macDinh;
+    const theoChieu = (f: KdlChieuTH) => (co("NgaySX") ? f : undefined);
     if (co("Kip")) ds.push({ key: "kip", label: "Tổng hợp theo kíp", nhom: [{ field: "Kip", label: nhan("Kip", "Kíp") }] });
     if (co("CaSX"))
       ds.push({
@@ -85,9 +92,12 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
           { field: "CaSX", label: nhan("CaSX", "Ca") },
         ],
       });
-    if (co("Mac")) ds.push({ key: "sp", label: `Theo ${nhan("Mac", "sản phẩm").toLowerCase()}`, nhom: [{ field: "Mac", label: nhan("Mac", "Sản phẩm") }] });
-    if (co("LenhSanXuat")) ds.push({ key: "lenh", label: `Theo ${nhan("LenhSanXuat", "lệnh")}`, nhom: [{ field: "LenhSanXuat", label: nhan("LenhSanXuat", "Lệnh") }] });
-    if (co("MayDuc")) ds.push({ key: "tb", label: `Theo ${nhan("MayDuc", "thiết bị").toLowerCase()}`, nhom: [{ field: "MayDuc", label: nhan("MayDuc", "Thiết bị") }] });
+    if (co("Mac"))
+      ds.push({ key: "sp", label: `Theo ${nhan("Mac", "sản phẩm").toLowerCase()}`, nhom: [{ field: "Mac", label: nhan("Mac", "Sản phẩm") }], chieu: theoChieu("Mac") });
+    if (co("LenhSanXuat"))
+      ds.push({ key: "lenh", label: `Theo ${nhan("LenhSanXuat", "lệnh")}`, nhom: [{ field: "LenhSanXuat", label: nhan("LenhSanXuat", "Lệnh") }], chieu: theoChieu("LenhSanXuat") });
+    if (co("MayDuc"))
+      ds.push({ key: "tb", label: `Theo ${nhan("MayDuc", "thiết bị").toLowerCase()}`, nhom: [{ field: "MayDuc", label: nhan("MayDuc", "Thiết bị") }], chieu: theoChieu("MayDuc") });
     return ds;
   }, [nhanTruong]);
 
@@ -127,6 +137,29 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
     }
   };
 
+  const docLoaiDuLieu = (): string => searchForm.getFieldValue("loaiDuLieu") ?? "tatCa";
+
+  /** Tab dạng xen dòng tổng: "Tổng hợp chi tiết" (thChiTiet) hoặc tab theo chiều (Mác / LSX / Máy đúc). */
+  const laTabXenDong = (tabKey: string) => tabKey === "thChiTiet" || !!tabsTongHop.find((t) => t.key === tabKey)?.chieu;
+
+  const fetchTongHopChiTiet = async (applied: KdlLoc = loc, loaiDuLieu = docLoaiDuLieu(), tabKey = tab) => {
+    const chieu = tabsTongHop.find((t) => t.key === tabKey)?.chieu;
+    setThChiTietLoading(true);
+    try {
+      const res = chieu
+        ? await KdlApi.getTongHopTheoChieu(maForm, applied, chieu, loaiDuLieu)
+        : await KdlApi.getTongHopChiTiet(maForm, applied, loaiDuLieu);
+      setThChiTiet(res.data);
+      setThVuotGioiHan(res.vuotGioiHan);
+    } catch (error: unknown) {
+      message.error(getErrorMessage(error, "Không thể tải tổng hợp chi tiết"));
+    } finally {
+      setThChiTietLoading(false);
+    }
+  };
+
+  const coTabThChiTiet = !!nhanTruong.NgaySX;
+
   useEffect(() => {
     const f = defaultLoc();
     searchForm.setFieldsValue({ khoangNgay: [dayjs(f.tuNgay), dayjs(f.denNgay)] });
@@ -163,7 +196,8 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
 
   const apDung = (applied: KdlLoc) => {
     fetchData(1, pagination.pageSize, applied);
-    if (tab !== "chiTiet") fetchTongHop(tab, applied);
+    if (laTabXenDong(tab)) fetchTongHopChiTiet(applied);
+    else if (tab !== "chiTiet") fetchTongHop(tab, applied);
   };
 
   const handleReset = () => {
@@ -193,7 +227,10 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
   const handleExport = async () => {
     setExportLoading(true);
     try {
-      await KdlApi.exportExcel(maForm, readLoc());
+      const chieu = tabsTongHop.find((t) => t.key === tab)?.chieu;
+      if (tab === "thChiTiet") await KdlApi.exportTongHopChiTiet(maForm, readLoc(), docLoaiDuLieu());
+      else if (chieu) await KdlApi.exportTongHopTheoChieu(maForm, readLoc(), chieu, docLoaiDuLieu());
+      else await KdlApi.exportExcel(maForm, readLoc());
     } catch {
       message.error("Không thể xuất Excel");
     } finally {
@@ -298,6 +335,16 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
                 </Form.Item>
               </Col>
             ))}
+            {laTabXenDong(tab) && (
+              <Col xs={12} md={3}>
+                <Form.Item label="Loại dữ liệu" name="loaiDuLieu" initialValue="tatCa">
+                  <Select
+                    options={(tab === "thChiTiet" ? KDL_LOAI_DU_LIEU : KDL_LOAI_DU_LIEU_THEO_CHIEU).map((o) => ({ ...o }))}
+                    onChange={(v: string) => fetchTongHopChiTiet(loc, v)}
+                  />
+                </Form.Item>
+              </Col>
+            )}
             <Col xs={12} md={3}>
               <Form.Item label={nhanTruong.Me ?? "Mã"} name="searchKey">
                 <Input allowClear placeholder="Tìm…" />
@@ -322,10 +369,45 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
           activeKey={tab}
           onChange={(k) => {
             setTab(k);
-            if (k !== "chiTiet") fetchTongHop(k);
+            // Bảng chi tiết và bảng theo chiều dùng chung state → xóa để không vẽ dòng của tab cũ
+            if (laTabXenDong(k)) {
+              setThChiTiet([]);
+              fetchTongHopChiTiet(loc, docLoaiDuLieu(), k);
+            }
+            else if (k !== "chiTiet") fetchTongHop(k);
           }}
-          items={[{ key: "chiTiet", label: "Chi tiết" }, ...tabsTongHop.map((t) => ({ key: t.key, label: t.label }))]}
+          items={[
+            { key: "chiTiet", label: "Chi tiết" },
+            ...(coTabThChiTiet ? [{ key: "thChiTiet", label: "Tổng hợp chi tiết" }] : []),
+            ...tabsTongHop.map((t) => ({ key: t.key, label: t.label })),
+          ]}
         />
+        {cauTruc && laTabXenDong(tab) && (
+          <>
+            {thVuotGioiHan && (
+              <Alert
+                style={{ marginBottom: 12 }}
+                type="warning"
+                showIcon
+                message="Khoảng ngày quá lớn: chỉ lấy 50.000 đối tượng đầu, các dòng tổng chưa đủ. Hãy thu hẹp khoảng ngày."
+              />
+            )}
+            {tab === "thChiTiet" ? (
+              <KdlBangTongHopChiTiet cot={cauTruc.cot} keys={cauTruc.keys} data={thChiTiet} loading={thChiTietLoading} />
+            ) : (
+              tabTongHop?.chieu && (
+                <KdlBangTongHopTheoChieu
+                  cot={cauTruc.cot}
+                  keys={cauTruc.keys}
+                  chieu={tabTongHop.nhom[0]}
+                  nhanTruong={nhanTruong}
+                  data={thChiTiet}
+                  loading={thChiTietLoading}
+                />
+              )
+            )}
+          </>
+        )}
         {cauTruc && tab === "chiTiet" && (
           <KdlBangChiTiet
             cot={cauTruc.cot}
@@ -345,7 +427,7 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
             }}
           />
         )}
-        {cauTruc && tabTongHop && (
+        {cauTruc && tabTongHop && !tabTongHop.chieu && (
           <KdlBangTongHop cot={cauTruc.cot} keys={cauTruc.keys} nhom={tabTongHop.nhom} data={tongHop} loading={tongHopLoading} />
         )}
       </Card>

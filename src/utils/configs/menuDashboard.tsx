@@ -59,6 +59,11 @@ export const MenuDataDashboard = [
         maBm: BM_CONFIG.HRC1.HRC1_BBGN_ThepLong,
       },
       {
+        code: "hrc1_bcsx_dpv",
+        title: "BM.14/QT.05.11 BIÊN BẢN CHỐT SỐ LIỆU XƯỞNG ĐÚC PHÔI VUÔNG",
+        maBm: BM_CONFIG.HRC1.HRC1_BCSX_DPV,
+      },
+      {
         code: "bbgnphoitam_hrc1",
         title: "BM.29/QT.05.12 BIÊN BẢN SẢN LƯỢNG PHÔI TẤM",
         maBm: BM_CONFIG.HRC1.HRC1_BBSL_PhoiTam,
