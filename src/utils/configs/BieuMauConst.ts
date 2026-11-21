@@ -53,6 +53,7 @@ export const BM_CONFIG = {
         KDL_HRC1_DPV_LenhSanXuat: 'KDL_HRC1_DPV_LenhSanXuat', // Đúc phôi vuông — quản trị LSX
         KDL_HRC1_DPV_CSDL:  'KDL_HRC1_DPV_CSDL',  // Đúc phôi vuông — CSDL (Kho dữ liệu động, form HRC1_DPV_CSDL)
         KDL_HRC1_DPV_DinhMuc: 'KDL_HRC1_DPV_DinhMuc', // Đúc phôi vuông — Định mức tiêu hao sản xuất
+        KDL_HRC1_DPV_GN:    'KDL_HRC1_DPV_GN',    // Đúc phôi vuông — Giao nhận (Kho dữ liệu động, form HRC1_DPV_GN)
         KDL_NL_NguyenLieu:  'KDL_NL_NguyenLieu',
         KDL_HRC2_LuyenThep: 'KDL_HRC2_LuyenThep',
         KDL_HRC2_PhuLieu:   'KDL_HRC2_PhuLieu',

@@ -233,15 +233,17 @@ const TaoPhieuBCSXDPV = () => {
     setGoiYLoading(true);
     try {
       const g = await HRC1BCSXApi.getGoiY(dayjs(ngay).format("YYYY-MM-DD"));
-      // Giữ nguyên NVL (nhập tay); 3 vùng còn lại thay bằng số gợi ý
-      setCt((c) => ({
-        ...c,
+      // Thay cả 4 vùng bằng số gợi ý; NVL lấy từ Giao nhận (Phân bổ BBGN + Tổng hợp theo nhóm)
+      setCt({
         thepLong: ganKhoa(g.thepLong),
         dien: ganKhoa(g.dien),
+        nguyenVatLieu: ganKhoa(g.nguyenVatLieu),
         thanhPham: ganKhoa(g.thanhPham),
-      }));
+      });
       setCanhBao(g.canhBao);
-      message.success(`Đã lấy ${g.thepLong.length} dòng thép lỏng, ${g.dien.length} dòng điện, ${g.thanhPham.length} dòng thành phẩm.`);
+      message.success(
+        `Đã lấy ${g.thepLong.length} dòng thép lỏng, ${g.dien.length} dòng điện, ${g.nguyenVatLieu.length} dòng NVL, ${g.thanhPham.length} dòng thành phẩm.`
+      );
     } catch (error: any) {
       message.error(error?.message || "Không lấy được dữ liệu từ Kho dữ liệu.");
     } finally {
@@ -394,8 +396,8 @@ const TaoPhieuBCSXDPV = () => {
               title="Lấy dữ liệu từ Kho dữ liệu"
               description={
                 coDuLieu
-                  ? "Thay số liệu Thép lỏng, Điện, Thành phẩm hiện có bằng số lấy từ CSDL Đúc phôi vuông (NVL giữ nguyên)?"
-                  : "Lấy Thép lỏng, Điện, Thành phẩm từ CSDL Đúc phôi vuông theo Ngày sản xuất?"
+                  ? "Thay số liệu cả 4 vùng hiện có bằng số lấy từ CSDL Đúc phôi vuông (Thép lỏng, Điện, Thành phẩm) và Giao nhận (NVL)?"
+                  : "Lấy Thép lỏng, Điện, Thành phẩm từ CSDL Đúc phôi vuông và NVL từ Giao nhận theo Ngày sản xuất?"
               }
               okText="Lấy dữ liệu"
               cancelText="Hủy"

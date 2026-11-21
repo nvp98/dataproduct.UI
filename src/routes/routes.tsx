@@ -125,6 +125,7 @@ import QuanLyLenhSanXuatDPV from "../pages/NM.HRC1/DucPhoiVuong/QuanLyLenhSanXua
 import DinhMucTieuHaoDPV from "../pages/NM.HRC1/DucPhoiVuong/DinhMucTieuHao";
 import DuLieuDongLuc from "../pages/KhoDuLieu/DongLuc/DuLieuDongLuc";
 import KdlForm from "../pages/KhoDuLieu/KdlForm";
+import GiaoNhanDPV from "../pages/KhoDuLieu/NM.HRC1/GiaoNhanDPV";
 import QuanLyTagDongLuc from "../pages/KhoDuLieu/DongLuc/QuanLyTagDongLuc";import CanBangNL from "../pages/KhoDuLieu/CanBangNL/CanBangNL";
 
 export const routes = [
@@ -1999,6 +2000,16 @@ export const routes = [
           <RequireAuth>
             <RequireRole allowedRoles={["admin", "user"]}>
               <KdlForm maForm="HRC1_DPV_CSDL" />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "hrc1-dpv-giaonhan",
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={["admin", "user"]}>
+              <GiaoNhanDPV />
             </RequireRole>
           </RequireAuth>
         ),

@@ -81,6 +81,15 @@ export const menuConfig = [
             ),
           },
           {
+            key: "sub1-1.6",
+            maBM: BM_CONFIG.KDL.KDL_HRC1_DPV_GN,
+            label: (
+              <Tooltip title="Giao nhận Xưởng Đúc phôi vuông — tự động kéo từ biên bản giao nhận (BM_11)">
+                <NavLink to="/hrc1-dpv-giaonhan">Giao nhận Đúc phôi vuông</NavLink>
+              </Tooltip>
+            ),
+          },
+          {
             key: "sub1-1.5",
             maBM: BM_CONFIG.KDL.KDL_HRC1_DPV_DinhMuc,
             label: (

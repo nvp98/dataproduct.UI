@@ -1,6 +1,7 @@
 import { Alert, Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Tabs, message } from "antd";
 import { SearchOutlined, ReloadOutlined, SyncOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { KdlApi, KDL_KIEU_DL, KDL_LOAI_DU_LIEU, KDL_LOAI_DU_LIEU_THEO_CHIEU } from "../../services/KdlApi";
@@ -33,11 +34,19 @@ const defaultLoc = (): KdlLoc => ({
   denNgay: dayjs().format("YYYY-MM-DD"),
 });
 
-interface KdlFormProps {
-  maForm: string;
+/** Tab riêng của 1 form, gắn sau các tab dữ liệu (vd cấu hình mapping). Nhận khoảng ngày đang lọc. */
+export interface KdlTabThem {
+  key: string;
+  label: string;
+  render: (khoang: { tuNgay: string; denNgay: string }) => ReactNode;
 }
 
-const KdlForm = ({ maForm }: KdlFormProps) => {
+interface KdlFormProps {
+  maForm: string;
+  tabThem?: KdlTabThem[];
+}
+
+const KdlForm = ({ maForm, tabThem }: KdlFormProps) => {
   const [searchForm] = Form.useForm();
   const [nhapTayForm] = Form.useForm();
   const [cauTruc, setCauTruc] = useState<KdlCauTruc | null>(null);
@@ -263,6 +272,8 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
   };
 
   const tabTongHop = tabsTongHop.find((t) => t.key === tab);
+  // Đang ở tab riêng của form: ẩn bảng dữ liệu và các bộ lọc ngoài khoảng ngày
+  const tabRieng = tabThem?.find((t) => t.key === tab);
 
   return (
     <div>
@@ -314,21 +325,21 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
                 <DatePicker.RangePicker format="DD/MM/YYYY" allowClear={false} style={{ width: "100%" }} />
               </Form.Item>
             </Col>
-            {nhanTruong.CaSX && (
+            {!tabRieng && nhanTruong.CaSX && (
               <Col xs={12} md={3}>
                 <Form.Item label={nhanTruong.CaSX} name="caSX">
                   <Select allowClear placeholder="Tất cả" options={CA_OPTIONS} />
                 </Form.Item>
               </Col>
             )}
-            {nhanTruong.Kip && (
+            {!tabRieng && nhanTruong.Kip && (
               <Col xs={12} md={3}>
                 <Form.Item label={nhanTruong.Kip} name="kip">
                   <Select allowClear placeholder="Tất cả" options={KIP_OPTIONS} />
                 </Form.Item>
               </Col>
             )}
-            {CHIEU_LOC.filter((c) => nhanTruong[c.field]).map((c) => (
+            {!tabRieng && CHIEU_LOC.filter((c) => nhanTruong[c.field]).map((c) => (
               <Col xs={12} md={3} key={c.field}>
                 <Form.Item label={nhanTruong[c.field]} name={c.param}>
                   <Input allowClear />
@@ -345,11 +356,13 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
                 </Form.Item>
               </Col>
             )}
-            <Col xs={12} md={3}>
-              <Form.Item label={nhanTruong.Me ?? "Mã"} name="searchKey">
-                <Input allowClear placeholder="Tìm…" />
-              </Form.Item>
-            </Col>
+            {!tabRieng && (
+              <Col xs={12} md={3}>
+                <Form.Item label={nhanTruong.Me ?? "Mã"} name="searchKey">
+                  <Input allowClear placeholder="Tìm…" />
+                </Form.Item>
+              </Col>
+            )}
             <Col xs={24} md={4} style={{ display: "flex", alignItems: "flex-end", paddingBottom: 24 }}>
               <Space>
                 <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
@@ -374,14 +387,16 @@ const KdlForm = ({ maForm }: KdlFormProps) => {
               setThChiTiet([]);
               fetchTongHopChiTiet(loc, docLoaiDuLieu(), k);
             }
-            else if (k !== "chiTiet") fetchTongHop(k);
+            else if (k !== "chiTiet") fetchTongHop(k);   // tab riêng: fetchTongHop tự bỏ qua
           }}
           items={[
             { key: "chiTiet", label: "Chi tiết" },
             ...(coTabThChiTiet ? [{ key: "thChiTiet", label: "Tổng hợp chi tiết" }] : []),
             ...tabsTongHop.map((t) => ({ key: t.key, label: t.label })),
+            ...(tabThem ?? []).map((t) => ({ key: t.key, label: t.label })),
           ]}
         />
+        {tabRieng?.render({ tuNgay: loc.tuNgay, denNgay: loc.denNgay })}
         {cauTruc && laTabXenDong(tab) && (
           <>
             {thVuotGioiHan && (

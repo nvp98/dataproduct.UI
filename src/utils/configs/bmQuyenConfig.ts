@@ -324,6 +324,7 @@ export const bmQuyenConfig = {
     { maBm: BM_CONFIG.KDL.KDL_HRC1_DPV_LenhSanXuat, tenBm: "Lệnh sản xuất Đúc phôi vuông HRC1", nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_HRC1_DPV_CSDL,    tenBm: "CSDL Đúc phôi vuông HRC1",       nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_HRC1_DPV_DinhMuc, tenBm: "Định mức tiêu hao DPV HRC1",     nhom: "Kho dữ liệu" },
+    { maBm: BM_CONFIG.KDL.KDL_HRC1_DPV_GN,      tenBm: "Giao nhận Đúc phôi vuông HRC1",  nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_NL_NguyenLieu,  tenBm: "Nguyên vật liệu NL",         nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_HRC2_LuyenThep, tenBm: "Dữ liệu luyện thép HRC2",   nhom: "Kho dữ liệu" },
     { maBm: BM_CONFIG.KDL.KDL_HRC2_PhuLieu,   tenBm: "Phụ liệu HRC2",              nhom: "Kho dữ liệu" },
